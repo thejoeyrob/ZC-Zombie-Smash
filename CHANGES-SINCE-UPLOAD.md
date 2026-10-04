@@ -1,7 +1,7 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.8.8** (`VERSION.txt`, cache `zombie-smash-v7.8.8-self-update`).
+Current: version **7.9.0** (`VERSION.txt`, cache `zombie-smash-v7.9.0-retro-title`).
 Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
@@ -99,11 +99,15 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 - The mini Mantises use the original rendered `boss-drmantis-stage3.webp` again (the flat drawn `zombie-mantismini.webp` from 7.8.6 was deleted, along with its `sw.js` entry), drawn larger (`height` 44, about 64 px on screen) so the detail reads. Spawn rate/cap from 7.8.6 kept (every 1.2-1.9 s, up to 8). Test bot still beats Dr Mantis.
 - Note: `weapon-tea.webp` and `weapon-glowstick-*.webp` are still procedurally drawn (no image generator was available); replace them with rendered art of the same file names if wanted.
 
-### 7.8.8 - Self-updating app, version label (current)
+### 7.8.8 - Self-updating app, version label
 - Cause investigated: a user screenshot showed an old layout (little arrows under the joystick, console not filling the screen) although every GitHub Pages deployment of 7.6-7.8.7 had succeeded; the phone was running a stale installed copy.
 - `game.js`: the service worker is registered with `updateViaCache:'none'`, checks for a new release at start, whenever the app returns to the foreground, and every 10 min; when a new worker takes over, the page reloads itself as soon as no run is in progress (immediately at the menu/pause, otherwise on the next pause or when the app is backgrounded). Verified with a simulated release (page reloaded itself, old cache deleted).
 - The start screen now ends with `NO LOGIN - ALL SKINS UNLOCKED - V<version>` (read from the `?v=` on `game.js`), so the running version is visible.
 - `fit()`: on iOS home-screen apps that report a 0 top safe-area inset, assume 20 px so the header never sits under the status bar.
+
+### 7.9.0 - Retro arcade title screen (current)
+- `showStart()` in `game.js` now builds an arcade title screen instead of the banner picture: a pixel-art attract scene on a small canvas (150 px wide, scaled up with `image-rendering:pixelated`) of a red moon, city skyline and a perspective street where Joey auto-shoots zombies (the real `player-transparent` and zombie sprites drawn at low resolution, bullets, muzzle flash, pixel bursts, floating score pops; `titleScene()`); a slamming two-line logo (ZOMBIE green over SMASH red, extruded text-shadow, `slam` animation), typewriter "HOLD THE LINE", an arcade score row (`1UP <name>` / `HI <best score> <name>` from `scores.best`), a monospace framed name field, blinking "PRESS START", a CONTINUE button when a saved run exists, a scrolling ticker of the seven boss names, and the version line. CRT scanlines, vignette and a slight flicker are overlaid.
+- Same ids and handlers as before (`#startForm`, `#username`, `#startButton`, `data-action="continue"`), so name validation, saved-run continue and the loading state work unchanged; the post-load text is now `PRESS START`. The scene stops itself when the title is dismissed, pauses while the tab is hidden and is static for reduced-motion users. CSS is a `/* 7.9.0 */` block at the end of `game.css`. No new image files.
 
 ---
 
