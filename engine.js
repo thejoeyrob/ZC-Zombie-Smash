@@ -116,7 +116,7 @@ class Game{
   if(!this.shots.some(s=>s.kind==='chain'&&s.life>0))this.bossMove(b,dt);
   b.wind=b.attack>.6&&b.attack<1.1?1:0;
   // Debo: the chain lunges through the thrown barrel as it reaches Joey's line.
-  if(b.chainIn!=null){b.chainIn-=dt;if(b.chainIn<=0){b.chainIn=null;if(this.barrels.some(x=>x.thrown&&!x.dead)){const dx=b.tx-b.x,dy=b.ty-b.y,l=Math.hypot(dx,dy)||1;this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.6});}}}
+  if(b.chainIn!=null){b.chainIn-=dt;if(b.chainIn<=0){b.chainIn=null;if(this.barrels.some(x=>x.thrown&&!x.dead)){const dx=b.tx-b.x,dy=b.ty-b.y,l=Math.hypot(dx,dy)||1;this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.45,ext:.26,hold:.2,ret:.4});}}}
   // Dr Mantis form 3: mini Mantises walk down from the top and sides, one shot each.
   if(b.bossId==='drmantis'&&b.stage===3&&b.phaseGrace<=0){b.miniIn=(b.miniIn??1.4)-dt;if(b.miniIn<=0){b.miniIn=2.3+this.rand()*.8;if(this.enemies.filter(z=>z.type==='mantismini'&&!z.dead).length<5){const r=this.rand(),side=r<.34?-1:r<.67?1:0,z=side?this.spawn('mantismini',side<0?-12:W+12,22+this.rand()*90,true):this.spawn('mantismini',30+this.rand()*(W-60),-24,true);if(side)z.vx=-side*34;}}}
   // Fat Amy form 3: stop and shake, charge at where Joey stands, then retreat.
@@ -136,8 +136,8 @@ class Game{
     else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*80,vy:85,kind:'handcuffs',r:11,life:7,age:0});b.attack=3.2;}
     break;
    case 'debo':
-    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});b.attack=3.3;}
-    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-1.05;b.attack=5.2;}
+    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.55,ext:.26,hold:.2,ret:.4});b.attack=3.3;}
+    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-.71;b.attack=5.2;}
     break;
    case 'discoman':if(b.stage===1)fan('disco',2,.4,110,12);else fan('tea',3,.34,115,11);b.attack=2.9;break;
    case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,130,11);b.attack=2.1;}else{fan('coffee',3,.3,135,11);b.attack=2.7;}break;
@@ -155,7 +155,7 @@ class Game{
   if(b.attack<50)b.attack*=.88;
   this.emit('bossAttack',{id:b.bossId});
  }
- updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco','handcuffs'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r*.75+8){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
+ updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const ex=s.ext||.45,hd=s.hold||.3,rt=s.ret||.65,q=s.age<s.wind?0:s.age<s.wind+ex?(s.age-s.wind)/ex:s.age<s.wind+ex+hd?1:Math.max(0,1-(s.age-s.wind-ex-hd)/rt);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+ex+hd+rt)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco','handcuffs'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r*.75+8){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
   this.shots=this.shots.filter(s=>s.life>0&&s.y<H+35&&s.x>-60&&s.x<W+60);}
  killBoss(){const b=this.boss,def=BOSSES.find(d=>d.id===b.bossId);if(b.dead)return;b.dead=true;this.kills++;this.addPoints(def.points*this.multiplier,b.x,b.y);this.bossesDown.push(b.bossId);this.shots=[];this.enemies=[];this.bullets=[];this.burst(b.x,b.y,def.accent,35,120);this.scene={kind:'down',bossId:b.bossId,stage:b.stage,phase:0,time:0,duration:3.4};this.resetInput();this.emit('bossDown');this.boss=null;}
  end(reason){if(this.over||this.scene?.kind==='loss')return;const id=this.boss?.bossId;this.dangerSource=id;this.scene={kind:'loss',bossId:id,phase:0,time:0,duration:id?3.2:1.1,reason};this.resetInput();this.emit('death');}

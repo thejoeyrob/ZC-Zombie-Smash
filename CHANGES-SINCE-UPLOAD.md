@@ -1,7 +1,7 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.8.2** (`VERSION.txt`, cache `zombie-smash-v7.8.2-tuning`).
+Current: version **7.8.3** (`VERSION.txt`, cache `zombie-smash-v7.8.3-debo-chain`).
 Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
@@ -74,11 +74,14 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 - If the status bar would cover the header buttons, the console is nudged down by up to ~11 px (bottom bezel edge is cropped by the same amount) and the header row is moved just below the bar (`--hs` CSS variable, `.sb-overlap` class, end of `game.css`); header buttons keep at least 26 px height. Verified at 375x667 (fills the screen exactly), 390x844 and 375x600.
 - `manifest.webmanifest`: added `"display_override":["fullscreen","standalone"]` (Android installs can hide their status bar; iOS ignores it).
 
-### 7.8.2 - No joystick slide, tougher bosses, single coloured glow sticks (current)
+### 7.8.2 - No joystick slide, tougher bosses, single coloured glow sticks
 - **No slide after release** (`engine.js` step, `game.js`): Joey's speed now equals the stick input immediately (the old smoothing `p.vx += (target-p.vx)*dt*16` is gone), so he stops the instant the thumb lifts; the flick burst only applies while the finger is still down (`stickId!==null`) and is cancelled on release. Measured: movement after release is just the 40 ms of sampling latency (about 7 px), none afterwards.
 - **Boss difficulty**: boss health x1.4 (`spawnBoss`), aimed-shot speed factor `V` .72 -> .95, all attack gaps x0.88 (`if(b.attack<50)b.attack*=.88`), plus these per-boss changes. **Jordan**: ember speed 120 -> 150 (x`V`), gap 2.6s -> 1.7s (form 1) and 3.2s -> 2.3s (form 2). Others: Glowing form 2 gap 3.2s, Debo chain 3.3s / barrel 5.2s, Disco 2.9s, Sloth 2.1s/2.7s, Fat Amy 2.7s/2.1s, Mantis 2.7s/2.5s/3.1s (before the x0.88).
   Checked with a simulated player (flawless dodging, and a version with a 0.25 s reaction delay, pistol only, 5 runs per boss): every boss is beaten in 24-74 s with 0-1 hits, i.e. every pattern stays dodgeable and no boss is a wall; fights are about 40% longer than before. Real play will be harder than the bot.
 - **Glowing Humanity form 1**: one glow stick per attack, colour different each time (never the same twice in a row) from green, pink, blue, orange, yellow, violet (`GLOW` in `engine.js`, `s.color`, drawn 1.6x). Gap 2 s. New sprites `weapon-glowstick-<colour>.webp` replace the old two-stick `weapon-glowstick.webp` (deleted); `renderer.js` preload list and `sw.js` `ASSETS` updated.
+
+### 7.8.3 - Faster Debo chain (current)
+- Chain shots now carry their own timings (`wind`, `ext`, `hold`, `ret`; `updateShots` in `engine.js`, defaults .45/.3/.65). Debo's chain (both the form 1 attack and the form 2 barrel combo): wind-up .8 -> .55 s (barrel combo .6 -> .45 s), lunge .45 -> .26 s, hold .3 -> .2 s, retract .65 -> .4 s. Wind-up plus lunge is 0.8 s (was 1.25 s); the whole chain lasts 1.4 s (was 2.2 s). The barrel combo launch is now `T-.71` so the chain still reaches full length at the instant the barrel lands (checked: 0.00 s apart). Test bot still beats Debo (30-35 s, 0 hits).
 
 ---
 
