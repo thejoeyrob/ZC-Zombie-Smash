@@ -1,0 +1,75 @@
+# Changes made since your last upload
+
+Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
+Current: version **7.7.0** (`VERSION.txt`, cache `zombie-smash-v7.7.0-boss-rework`).
+Everything below was made by Claude Code in five commits on `main`. To see the exact diff:
+
+    git diff a826f4e HEAD                 # everything
+    git diff a826f4e HEAD -- engine.js    # one file
+
+`changes-since-upload.patch` in this repo is the same diff for all text files (images and `SHA256SUMS.txt` excluded).
+
+Files **not touched**: `audio.js`, `scores.js`, `legacy-board.json`, fonts, icons, console skins, boss and zombie art, music, sfx, `vercel.json`, `404.html`.
+Release routine used each time (no build step exists): edit files, bump `?v=` in `index.html` and `manifest.webmanifest`, change the `CACHE` name in `sw.js`, add new files to `ASSETS` in `sw.js`, update `VERSION.txt`, regenerate `SHA256SUMS.txt`.
+
+---
+
+## Commits, oldest first
+
+### 7.6 - `c0d295a` Fit the game to each skin, cheat, welcome picture
+- **Per-skin screen fit.** The nine console skins have different screen windows, so each window was measured from the artwork and stored as `"win":[left,top,right,bottom]` (pixels in the 900x1600 art) on every entry of `SKINS` in `game-data.js`.
+  `fitSkin(skin)` in `game.js` (called from `applySkin`) turns that into CSS variables on `<body>`: `--wx --wy --ww --wh` (window in the 375x667 cabinet), `--ss` (uniform scale of the 343x486 game screen), `--sx --sy` (its position), `--dy --sd` (control-deck top and scale), `--hh` (header height).
+  A new `/* v7.6 */` block at the end of `game.css` uses them for `.screen`, `.overlay` (menus/welcome now sit exactly in the window), `#toast`, `.control-deck` (scale capped at .94), `.console-header` (inset 36px, clears the corner screws) and `.top-button`.
+- **Cheat: 10 hearts (5 red + 5 gold).** `engine.js`: new `maxLives` (default 5), `setTenHearts(on)`, heart pickups and `skipBoss` respect `maxLives`. `game.js`: new checkbox in the admin "Bosses & Cheats" panel (`data-cheat="tenHearts"`); the HUD hearts are now `<span class="heart [gold] [empty]">` elements (two rows of five when 10). Practice-only like the other cheats.
+- **Welcome/install picture.** New `game-banner.webp` (760x400 crop of `game-preview.webp`, rows 80-480, shows the sloth boss and horde) replaces `game-preview.webp` in `showStart()` and `install()`; `.start-art` is now a 1.9:1 `object-fit: cover` image. The comic-intro art/copy heights shrink with the window.
+- Zombies 20% bigger and 16% slower (replaced in 7.6.2), spawn margin 30 -> 36.
+- Added `.nojekyll` (README_FIRST said it was included; it was not), README_FIRST note, `game-banner.webp` added to `ASSETS`.
+
+### 7.6.1 - `b2ba385` Joystick, Joey speed, speed pickup
+- **Joystick** (`game.js`): measured from where the thumb lands (`stickOrigin`), full deflection at 28% of the pad width, dead zone .06, response curve `|v|^0.85`, touch area enlarged by a `#joystick:before` pseudo-element.
+- **Joey's speed** (`engine.js`): `250` -> `212` px/s with smoothed acceleration (`p.vx`, factor `dt*16`); edge clamp 21 -> 28.
+- **New pickup `speed`** (art already existed: `pickup-speed.webp`): +55% movement for 7s (`p.speedUp`), banner "SPEED UP", joystick glows (`#joystick.sped`). Drop table is now heart (when low) / grenade 48% / shield 14% / speed 14% / guns 24%.
+- **Zombies start slower**: spawn speed is multiplied by `min(1, .85 + (wave-1)*.0375)` (full speed by wave 5), on top of the existing per-wave ramp.
+
+### 7.6.2 - `91f1a6e` Bigger sprites
+- Zombies: `height` x1.45, hitbox `r` x1.3, `speed` x.8 (applied once to the `ENEMIES` table in `engine.js`).
+- Joey drawn 70x91 (was 54x70) in `renderer.js`, with matching shadow, shield ring, muzzle flash; zombie-contact radius `r+15` (was `+12`).
+- Boss sprites drawn 20% larger (113/139 px tall, 130 wide); zombie health bar 40px wide.
+
+### 7.6.3 - `a66e873` Gentler boss attacks (superseded by 7.7.0)
+- First pass at reducing attack volume: longer gaps, fewer projectiles, ~28% slower boss shots, smaller projectile hitbox (`s.r*.75+8`, still in force), toxic zombie spit 100 -> 85 speed and every 5s.
+
+### 7.7.0 - `9f7b6e1` Boss rework (current)
+All in `engine.js` (`bossMove`, `updateBoss`, `explodeBarrel`, `spawnBoss`, `ENEMIES`) plus small `renderer.js` changes.
+
+**Movement (all bosses).** Bosses roam to random waypoints in x 52-291, y 80-152 (about a third of the way down), in every direction with smoothed velocity (`46 + 8*form` px/s). A guard keeps them at least `(player.y+28)/2` = 194 px from Joey (half the zombie walk, 388 px). Boss hitbox `r` 31 -> 36.
+
+**Attacks.** Gap between attacks is 2.4-5.6 s. Aimed projectiles use speed `value*.72`; thrown handcuffs and donuts use fixed velocities.
+
+| Boss | Form 1 | Form 2 | Form 3 |
+|---|---|---|---|
+| Jordan | 1 fire ember, every 2.6s | 3 embers (fan), every 3.2s | - |
+| Disco Man | 2 bouncing disco balls, every 3.2s | 3 spinning cups of English tea, every 3.2s | - |
+| Glowing Humanity | 2 neon glow sticks, every 3.0s | 2 spinning handcuffs thrown down and outward, bouncing off the side walls, every 3.6s | - |
+| Debo | Chain with the D (unchanged, wind-up .8s), every 3.6s | Throws the spinning `prop-barrel` at Joey's line; the chain launches so it reaches full extension through the barrel at the moment it lands and the barrel explodes. Blast radius = 10% of screen width (34.3 px), hurts Joey; shooting the barrel early explodes it where it is, and if that is near Debo it damages him (9). Every 5.6s | - |
+| Caffeinated Sloth | 1 coffee, every 2.4s | 3 coffees (fan), every 3.0s | - |
+| Fat Amy | 1 missile at Joey, every 3.0s | single burger or donut (random) at Joey, every 2.4s | 2 donuts thrown down and outward bouncing off the sides, then she stops (1.3s), shakes with a red dashed aim line (1s), charges at Joey's position at 270 px/s, then retreats at 150 px/s; ~7s cycle |
+| Dr Mantis | 1 severed arm (`bodypart`), every 3.0s | 2 venom (fan), every 2.8s | arm + 2 venom every 3.4s, plus mini Mantises (see below) |
+
+All Fat Amy projectiles now share the same hitbox/draw size (`r` 11).
+Mini Mantises: new enemy `mantismini` (art `boss-drmantis-stage3.webp`, 1 HP so any gun kills it in one shot, 150 points, ~44 px tall). During form 3 one spawns every 2.3-3.1 s (max 5 alive) from the top or the left/right edge and walks down like a normal zombie; they do not count toward the wave and are cleared when the boss dies.
+New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), `chainIn`, `wp`, `miniIn`; thrown barrels live in `game.barrels` with `thrown:true, small:true`.
+
+**New art** (drawn procedurally, exported as WebP): `weapon-tea.webp`, `weapon-glowstick.webp`; both added to the preload list in `renderer.js` and to `ASSETS` in `sw.js`. `weapon-missile.webp` is again used (Fat Amy form 1).
+`renderer.js`: per-weapon spin speeds, thrown barrel rotates, boss shake offset, Fat Amy's dashed charge line.
+
+---
+
+## Current gameplay constants (for quick reference)
+- World 343x412; Joey line y = 360; Joey speed 212 px/s (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
+- Zombies: height x1.45, hitbox x1.3, speed x.8, spawn speed x`min(1,.85+(wave-1)*.0375)` then the old `1+min(.6,(wave-1)*.035)` ramp.
+- Boss projectile hit test: distance < `r*.75 + 8` from Joey.
+- Skin window fit: see `SKINS[].win` and `fitSkin()`.
+
+## Not verified
+Real-phone play (joystick feel, boss difficulty), GitHub Pages settings page (not readable from the tool used), and the admin cheat with the real admin code (tested with a mocked admin response).
