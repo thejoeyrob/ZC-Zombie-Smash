@@ -137,7 +137,7 @@ class Game{
     break;
    case 'debo':
     if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.55,ext:.26,hold:.2,ret:.4});b.attack=3.3;}
-    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-.71;b.attack=5.2;}
+    else{const T=1.6,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-.71;b.attack=5.2;}
     break;
    case 'discoman':if(b.stage===1)fan('disco',2,.4,110,12);else fan('tea',3,.34,115,11);b.attack=2.9;break;
    case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,130,11);b.attack=2.1;}else{fan('coffee',3,.3,135,11);b.attack=2.7;}break;

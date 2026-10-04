@@ -1,7 +1,7 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.8.3** (`VERSION.txt`, cache `zombie-smash-v7.8.3-debo-chain`).
+Current: version **7.8.4** (`VERSION.txt`, cache `zombie-smash-v7.8.4-barrel-speed`).
 Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
@@ -80,8 +80,11 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
   Checked with a simulated player (flawless dodging, and a version with a 0.25 s reaction delay, pistol only, 5 runs per boss): every boss is beaten in 24-74 s with 0-1 hits, i.e. every pattern stays dodgeable and no boss is a wall; fights are about 40% longer than before. Real play will be harder than the bot.
 - **Glowing Humanity form 1**: one glow stick per attack, colour different each time (never the same twice in a row) from green, pink, blue, orange, yellow, violet (`GLOW` in `engine.js`, `s.color`, drawn 1.6x). Gap 2 s. New sprites `weapon-glowstick-<colour>.webp` replace the old two-stick `weapon-glowstick.webp` (deleted); `renderer.js` preload list and `sw.js` `ASSETS` updated.
 
-### 7.8.3 - Faster Debo chain (current)
+### 7.8.3 - Faster Debo chain
 - Chain shots now carry their own timings (`wind`, `ext`, `hold`, `ret`; `updateShots` in `engine.js`, defaults .45/.3/.65). Debo's chain (both the form 1 attack and the form 2 barrel combo): wind-up .8 -> .55 s (barrel combo .6 -> .45 s), lunge .45 -> .26 s, hold .3 -> .2 s, retract .65 -> .4 s. Wind-up plus lunge is 0.8 s (was 1.25 s); the whole chain lasts 1.4 s (was 2.2 s). The barrel combo launch is now `T-.71` so the chain still reaches full length at the instant the barrel lands (checked: 0.00 s apart). Test bot still beats Debo (30-35 s, 0 hits).
+
+### 7.8.4 - Faster barrel throw (current)
+- Debo form 2: barrel flight time `T` 2.3 -> 1.6 s (about 40% faster, ~160 px/s); the chain launch time follows (`T-.71`) so the chain still reaches full length at the moment the barrel lands (checked: 0.00 s apart). Test bot still beats Debo (30-34 s, 0 hits).
 
 ---
 
