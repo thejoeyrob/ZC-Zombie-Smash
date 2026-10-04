@@ -1,1 +1,1 @@
-7.8.1-full-screen
+7.8.2-tuning

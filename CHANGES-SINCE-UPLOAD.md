@@ -1,7 +1,7 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.8.1** (`VERSION.txt`, cache `zombie-smash-v7.8.1-full-screen`).
+Current: version **7.8.2** (`VERSION.txt`, cache `zombie-smash-v7.8.2-tuning`).
 Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
@@ -69,16 +69,23 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 - **Deck position** (`game.css`, end of file): joystick `left 22 -> 28px, top 25 -> 19px`; fire button `right 21 -> 27px, top 25 -> 19px` (6 px up and 6 px towards the centre each).
 - **Fuller screen** (`fit()` in `game.js`): the console scales uniformly (same proportions) to the largest size that fits; it previously also reserved the bottom safe-area inset (e.g. the iPhone home-indicator strip) and now only reserves the top inset, so it is larger on height-limited screens. On tall phones the console is width-limited and the leftover height is filled by the existing blurred skin backdrop, because stretching it would change the proportions.
 
-### 7.8.1 - Full-screen fit under the status bar (current)
+### 7.8.1 - Full-screen fit under the status bar
 - `fit()` in `game.js` now scales the console to the whole viewport (`min(w/375, h/667)`, same proportions, no reserved margins) and draws it under the translucent iPhone status bar (`apple-mobile-web-app-status-bar-style` was already `black-translucent`). A web page cannot hide the iOS status bar itself; this only stops wasting the space.
 - If the status bar would cover the header buttons, the console is nudged down by up to ~11 px (bottom bezel edge is cropped by the same amount) and the header row is moved just below the bar (`--hs` CSS variable, `.sb-overlap` class, end of `game.css`); header buttons keep at least 26 px height. Verified at 375x667 (fills the screen exactly), 390x844 and 375x600.
 - `manifest.webmanifest`: added `"display_override":["fullscreen","standalone"]` (Android installs can hide their status bar; iOS ignores it).
+
+### 7.8.2 - No joystick slide, tougher bosses, single coloured glow sticks (current)
+- **No slide after release** (`engine.js` step, `game.js`): Joey's speed now equals the stick input immediately (the old smoothing `p.vx += (target-p.vx)*dt*16` is gone), so he stops the instant the thumb lifts; the flick burst only applies while the finger is still down (`stickId!==null`) and is cancelled on release. Measured: movement after release is just the 40 ms of sampling latency (about 7 px), none afterwards.
+- **Boss difficulty**: boss health x1.4 (`spawnBoss`), aimed-shot speed factor `V` .72 -> .95, all attack gaps x0.88 (`if(b.attack<50)b.attack*=.88`), plus these per-boss changes. **Jordan**: ember speed 120 -> 150 (x`V`), gap 2.6s -> 1.7s (form 1) and 3.2s -> 2.3s (form 2). Others: Glowing form 2 gap 3.2s, Debo chain 3.3s / barrel 5.2s, Disco 2.9s, Sloth 2.1s/2.7s, Fat Amy 2.7s/2.1s, Mantis 2.7s/2.5s/3.1s (before the x0.88).
+  Checked with a simulated player (flawless dodging, and a version with a 0.25 s reaction delay, pistol only, 5 runs per boss): every boss is beaten in 24-74 s with 0-1 hits, i.e. every pattern stays dodgeable and no boss is a wall; fights are about 40% longer than before. Real play will be harder than the bot.
+- **Glowing Humanity form 1**: one glow stick per attack, colour different each time (never the same twice in a row) from green, pink, blue, orange, yellow, violet (`GLOW` in `engine.js`, `s.color`, drawn 1.6x). Gap 2 s. New sprites `weapon-glowstick-<colour>.webp` replace the old two-stick `weapon-glowstick.webp` (deleted); `renderer.js` preload list and `sw.js` `ASSETS` updated.
 
 ---
 
 ## Current gameplay constants (for quick reference)
 - World 343x412; Joey line y = 360; Joey speed 212 px/s; joystick full speed at 14 px drag (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
 - Zombies: height x1.45, hitbox x1.3, speed x.8, spawn speed x`min(1,.85+(wave-1)*.0375)` then the old `1+min(.6,(wave-1)*.035)` ramp.
+- Boss health x1.4; boss shots speed factor .95; boss gaps x0.88.
 - Boss projectile hit test: distance < `r*.75 + 8` from Joey.
 - Skin window fit: see `SKINS[].win` and `fitSkin()`.
 

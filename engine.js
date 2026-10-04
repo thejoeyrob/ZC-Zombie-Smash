@@ -18,6 +18,7 @@ const ENEMIES={
 };
 // 7.6.2: zombies are 45% larger (hitbox +30%) and 20% slower so the extra size doesn't make them feel faster.
 for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.45);s.r=Math.round(s.r*1.3);s.speed=+(s.speed*.8).toFixed(1)}
+const GLOW=['green','pink','blue','orange','yellow','violet'];
 const GUNS={
  pistol:{name:'PISTOL',delay:.22,damage:1.5,speed:600,ammo:Infinity,art:'bullet-pistol.webp'},
  smg:{name:'SMG',delay:.09,damage:1.15,speed:660,ammo:100,art:'bullet-smg.webp'},
@@ -43,7 +44,7 @@ class Game{
  step(dt){if(!this.active||this.over)return;dt=Math.min(dt,.05);this.t+=dt;this.shake=Math.max(0,this.shake-dt*16);this.bannerLeft=Math.max(0,this.bannerLeft-dt);this.effects=this.effects.filter(f=>(f.life-=dt)>0);this.pops=this.pops.filter(p=>(p.life-=dt)>0);for(const f of this.effects){f.x+=(f.vx||0)*dt;f.y+=(f.vy||0)*dt;}
   if(this.scene){this.scene.time+=dt;if(this.scene.time>=this.scene.duration)this.advanceScene();return;}
   const p=this.player;p.inv=Math.max(0,p.inv-dt);p.cool=Math.max(0,p.cool-dt);p.shield=Math.max(0,p.shield-dt);p.rapid=Math.max(0,p.rapid-dt);p.fireFx=Math.max(0,p.fireFx-dt);
-  p.speedUp=Math.max(0,(p.speedUp||0)-dt);{const target=this.input.axis*212*(p.speedUp>0?1.55:1);p.vx=(p.vx||0)+(target-(p.vx||0))*Math.min(1,dt*16);if(!target&&Math.abs(p.vx)<1)p.vx=0;p.x=clamp(p.x+p.vx*dt,28,W-28);}p.y=H-52;
+  p.speedUp=Math.max(0,(p.speedUp||0)-dt);{const target=this.input.axis*212*(p.speedUp>0?1.55:1);p.vx=target;p.x=clamp(p.x+p.vx*dt,28,W-28);}p.y=H-52;
   if(this.hitStop>0){this.hitStop-=dt;return;}
   if(this.nextIn>0){this.nextIn-=dt;if(this.nextIn<=0)this.prepareWave(this.wave+1);this.updatePickups(dt);return;}
   if(this.comboLeft>0){this.comboLeft-=dt;if(this.comboLeft<=0)this.resetCombo();}
@@ -92,7 +93,7 @@ class Game{
  aimedShot(x,y,kind,speed=120,r=9,offset=0){const a=Math.atan2(this.player.y-y,this.player.x-x)+offset;this.shots.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,kind,r,life:5,age:0});}
  queueBoss(id,stage=1){const def=BOSSES.find(b=>b.id===id);if(!def)return;this.boss=null;this.enemies=[];this.shots=[];this.bullets=[];this.grenades=[];this.pickups=[];this.scene={kind:'arrival',bossId:id,phase:0,time:0,duration:.7,startStage:stage};this.resetInput();this.emit('entrance',{id});this.emit('music',{track:id==='discoman'?'disco':'boss'});}
  advanceScene(){const s=this.scene;if(!s)return;if(s.kind==='arrival'&&s.phase<2){s.phase++;s.time=0;s.duration=s.phase===1?2.1:2.8;this.emit('panel',{phase:s.phase});return;}this.scene=null;if(s.kind==='arrival')this.spawnBoss(s.bossId,s.startStage||1);if(s.kind==='down'){this.nextIn=1.2;this.banner='BOSS DOWN · KEEP MOVING';this.bannerLeft=1.2;this.drop(W/2,H-75,'heart');this.drop(W/2+60,H-130,'dmr');}if(s.kind==='mutation'){this.player.inv=1.5;if(this.boss)this.boss.phaseGrace=1.4;this.emit('music',{track:this.boss?.bossId==='discoman'?'disco':'boss'});}if(s.kind==='loss'){this.over=true;this.active=false;this.emit('over',{reason:s.reason});}}
- spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:36,vx:0,vy:0,mode:'idle',shake:0,maxHp:b.hp,hp:b.hp*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
+ spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:36,vx:0,vy:0,mode:'idle',shake:0,maxHp:b.hp*1.4,hp:b.hp*1.4*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
  setTenHearts(on){this.practice=true;this.maxLives=on?10:5;this.player.lives=on?10:Math.min(this.player.lives,5);}
  skipBoss(id,stage=1){this.practice=true;this.active=true;this.over=false;this.nextIn=0;this.player.lives=this.maxLives||5;this.player.grenades=9;this.player.inv=2;this.spawned=this.target;this.resolved=this.target;const def=BOSSES.find(b=>b.id===id);this.wave=def.wave;this.queueBoss(id,clamp(stage,1,def.stages));}
  bossMove(b,dt){
@@ -127,30 +128,31 @@ class Game{
   }
   if(b.attack>0)return;
   b.cycle++;b.attack=3;
-  const V=.72,fan=(kind,n,gap,speed,r)=>{for(let i=0;i<n;i++)this.aimedShot(b.x,b.y,kind,speed*V,r,(i-(n-1)/2)*gap);};
+  const V=.95,fan=(kind,n,gap,speed,r)=>{for(let i=0;i<n;i++)this.aimedShot(b.x,b.y,kind,speed*V,r,(i-(n-1)/2)*gap);};
   switch(b.bossId){
-   case 'jordan':fan('ember',b.stage>1?3:1,.3,120,8);b.attack=b.stage>1?3.2:2.6;break;
+   case 'jordan':fan('ember',b.stage>1?3:1,.3,150,8);b.attack=b.stage>1?2.3:1.7;break;
    case 'glowinghumanity':
-    if(b.stage===1){fan('glowstick',2,.4,115,10);b.attack=3;}
-    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*75,vy:80,kind:'handcuffs',r:11,life:7,age:0});b.attack=3.6;}
+    if(b.stage===1){fan('glowstick',1,0,125,11);const s=this.shots.at(-1);let k;do{k=Math.floor(this.rand()*GLOW.length)}while(k===b.lastGlow);b.lastGlow=k;s.color=GLOW[k];b.attack=2;}
+    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*80,vy:85,kind:'handcuffs',r:11,life:7,age:0});b.attack=3.2;}
     break;
    case 'debo':
-    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});b.attack=3.6;}
-    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-1.05;b.attack=5.6;}
+    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});b.attack=3.3;}
+    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-1.05;b.attack=5.2;}
     break;
-   case 'discoman':if(b.stage===1)fan('disco',2,.4,105,12);else fan('tea',3,.34,110,11);b.attack=3.2;break;
-   case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,125,11);b.attack=2.4;}else{fan('coffee',3,.3,130,11);b.attack=3;}break;
+   case 'discoman':if(b.stage===1)fan('disco',2,.4,110,12);else fan('tea',3,.34,115,11);b.attack=2.9;break;
+   case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,130,11);b.attack=2.1;}else{fan('coffee',3,.3,135,11);b.attack=2.7;}break;
    case 'fatamy':
-    if(b.stage===1){fan('missile',1,0,115,11);b.attack=3;}
-    else if(b.stage===2){fan(this.rand()<.5?'burger':'donut',1,0,115,11);b.attack=2.4;}
+    if(b.stage===1){fan('missile',1,0,120,11);b.attack=2.7;}
+    else if(b.stage===2){fan(this.rand()<.5?'burger':'donut',1,0,120,11);b.attack=2.1;}
     else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*85,vy:70,kind:'donut',r:11,life:7,age:0});b.mode='prep';b.modeT=1.3;b.attack=99;}
     break;
    case 'drmantis':
-    if(b.stage===1){fan('bodypart',1,0,120,12);b.attack=3;}
-    else if(b.stage===2){fan('venom',2,.32,125,10);b.attack=2.8;}
-    else{fan('bodypart',1,0,120,12);fan('venom',2,.4,125,10);b.attack=3.4;}
+    if(b.stage===1){fan('bodypart',1,0,125,12);b.attack=2.7;}
+    else if(b.stage===2){fan('venom',2,.32,130,10);b.attack=2.5;}
+    else{fan('bodypart',1,0,125,12);fan('venom',2,.4,130,10);b.attack=3.1;}
     break;
   }
+  if(b.attack<50)b.attack*=.88;
   this.emit('bossAttack',{id:b.bossId});
  }
  updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco','handcuffs'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r*.75+8){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}

@@ -3,14 +3,14 @@ new file mode 100644
 index 0000000..e69de29
 diff --git a/CHANGES-SINCE-UPLOAD.md b/CHANGES-SINCE-UPLOAD.md
 new file mode 100644
-index 0000000..edf266e
+index 0000000..fd6eb3a
 --- /dev/null
 +++ b/CHANGES-SINCE-UPLOAD.md
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,93 @@
 +# Changes made since your last upload
 +
 +Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-+Current: version **7.8.1** (`VERSION.txt`, cache `zombie-smash-v7.8.1-full-screen`).
++Current: version **7.8.2** (`VERSION.txt`, cache `zombie-smash-v7.8.2-tuning`).
 +Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 +
 +    git diff a826f4e HEAD                 # everything
@@ -78,16 +78,23 @@ index 0000000..edf266e
 +- **Deck position** (`game.css`, end of file): joystick `left 22 -> 28px, top 25 -> 19px`; fire button `right 21 -> 27px, top 25 -> 19px` (6 px up and 6 px towards the centre each).
 +- **Fuller screen** (`fit()` in `game.js`): the console scales uniformly (same proportions) to the largest size that fits; it previously also reserved the bottom safe-area inset (e.g. the iPhone home-indicator strip) and now only reserves the top inset, so it is larger on height-limited screens. On tall phones the console is width-limited and the leftover height is filled by the existing blurred skin backdrop, because stretching it would change the proportions.
 +
-+### 7.8.1 - Full-screen fit under the status bar (current)
++### 7.8.1 - Full-screen fit under the status bar
 +- `fit()` in `game.js` now scales the console to the whole viewport (`min(w/375, h/667)`, same proportions, no reserved margins) and draws it under the translucent iPhone status bar (`apple-mobile-web-app-status-bar-style` was already `black-translucent`). A web page cannot hide the iOS status bar itself; this only stops wasting the space.
 +- If the status bar would cover the header buttons, the console is nudged down by up to ~11 px (bottom bezel edge is cropped by the same amount) and the header row is moved just below the bar (`--hs` CSS variable, `.sb-overlap` class, end of `game.css`); header buttons keep at least 26 px height. Verified at 375x667 (fills the screen exactly), 390x844 and 375x600.
 +- `manifest.webmanifest`: added `"display_override":["fullscreen","standalone"]` (Android installs can hide their status bar; iOS ignores it).
++
++### 7.8.2 - No joystick slide, tougher bosses, single coloured glow sticks (current)
++- **No slide after release** (`engine.js` step, `game.js`): Joey's speed now equals the stick input immediately (the old smoothing `p.vx += (target-p.vx)*dt*16` is gone), so he stops the instant the thumb lifts; the flick burst only applies while the finger is still down (`stickId!==null`) and is cancelled on release. Measured: movement after release is just the 40 ms of sampling latency (about 7 px), none afterwards.
++- **Boss difficulty**: boss health x1.4 (`spawnBoss`), aimed-shot speed factor `V` .72 -> .95, all attack gaps x0.88 (`if(b.attack<50)b.attack*=.88`), plus these per-boss changes. **Jordan**: ember speed 120 -> 150 (x`V`), gap 2.6s -> 1.7s (form 1) and 3.2s -> 2.3s (form 2). Others: Glowing form 2 gap 3.2s, Debo chain 3.3s / barrel 5.2s, Disco 2.9s, Sloth 2.1s/2.7s, Fat Amy 2.7s/2.1s, Mantis 2.7s/2.5s/3.1s (before the x0.88).
++  Checked with a simulated player (flawless dodging, and a version with a 0.25 s reaction delay, pistol only, 5 runs per boss): every boss is beaten in 24-74 s with 0-1 hits, i.e. every pattern stays dodgeable and no boss is a wall; fights are about 40% longer than before. Real play will be harder than the bot.
++- **Glowing Humanity form 1**: one glow stick per attack, colour different each time (never the same twice in a row) from green, pink, blue, orange, yellow, violet (`GLOW` in `engine.js`, `s.color`, drawn 1.6x). Gap 2 s. New sprites `weapon-glowstick-<colour>.webp` replace the old two-stick `weapon-glowstick.webp` (deleted); `renderer.js` preload list and `sw.js` `ASSETS` updated.
 +
 +---
 +
 +## Current gameplay constants (for quick reference)
 +- World 343x412; Joey line y = 360; Joey speed 212 px/s; joystick full speed at 14 px drag (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
 +- Zombies: height x1.45, hitbox x1.3, speed x.8, spawn speed x`min(1,.85+(wave-1)*.0375)` then the old `1+min(.6,(wave-1)*.035)` ramp.
++- Boss health x1.4; boss shots speed factor .95; boss gaps x0.88.
 +- Boss projectile hit test: distance < `r*.75 + 8` from Joey.
 +- Skin window fit: see `SKINS[].win` and `fitSkin()`.
 +
@@ -108,14 +115,14 @@ index 984cb01..4eb0d8f 100644
  - Fixed 375 x 667 console; 343 x 412 arena. Every element scales together.
  - Longer playfield extends down; top/left/right gameplay positions stay fixed.
 diff --git a/VERSION.txt b/VERSION.txt
-index 108bd20..1966dea 100644
+index 108bd20..89c0630 100644
 --- a/VERSION.txt
 +++ b/VERSION.txt
 @@ -1 +1 @@
 -7.5.0-consolidated-classic
-+7.8.1-full-screen
++7.8.2-tuning
 diff --git a/engine.js b/engine.js
-index 18ba022..8914ca7 100644
+index 18ba022..3d49bfc 100644
 --- a/engine.js
 +++ b/engine.js
 @@ -1,4 +1,4 @@
@@ -124,7 +131,7 @@ index 18ba022..8914ca7 100644
  (() => {
  'use strict';
  const {W,H,BOSSES}=window.ZSData;
-@@ -13,8 +13,11 @@ const ENEMIES={
+@@ -13,8 +13,12 @@ const ENEMIES={
   brute:{hp:9,speed:19,r:21,points:700,art:'zombie-brute.webp',height:65},
   titan:{hp:15,speed:17,r:24,points:1050,art:'zombie-titan.webp',height:75},
   fuse:{hp:3,speed:33,r:14,points:380,art:'zombie-fuse.webp',height:52},
@@ -134,10 +141,11 @@ index 18ba022..8914ca7 100644
  };
 +// 7.6.2: zombies are 45% larger (hitbox +30%) and 20% slower so the extra size doesn't make them feel faster.
 +for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.45);s.r=Math.round(s.r*1.3);s.speed=+(s.speed*.8).toFixed(1)}
++const GLOW=['green','pink','blue','orange','yellow','violet'];
  const GUNS={
   pistol:{name:'PISTOL',delay:.22,damage:1.5,speed:600,ammo:Infinity,art:'bullet-pistol.webp'},
   smg:{name:'SMG',delay:.09,damage:1.15,speed:660,ammo:100,art:'bullet-smg.webp'},
-@@ -27,20 +30,20 @@ class Game{
+@@ -27,20 +31,20 @@ class Game{
   constructor({onEvent=()=>{},seed=Date.now()}={}){this.onEvent=onEvent;this.seed=seed>>>0;this.reset();}
   rand(){this.seed=(1664525*this.seed+1013904223)>>>0;return this.seed/4294967296;}
   emit(type,data={}){this.onEvent(type,data)}
@@ -158,11 +166,11 @@ index 18ba022..8914ca7 100644
    if(this.scene){this.scene.time+=dt;if(this.scene.time>=this.scene.duration)this.advanceScene();return;}
    const p=this.player;p.inv=Math.max(0,p.inv-dt);p.cool=Math.max(0,p.cool-dt);p.shield=Math.max(0,p.shield-dt);p.rapid=Math.max(0,p.rapid-dt);p.fireFx=Math.max(0,p.fireFx-dt);
 -  p.x=clamp(p.x+this.input.axis*250*dt,21,W-21);p.y=H-52;
-+  p.speedUp=Math.max(0,(p.speedUp||0)-dt);{const target=this.input.axis*212*(p.speedUp>0?1.55:1);p.vx=(p.vx||0)+(target-(p.vx||0))*Math.min(1,dt*16);if(!target&&Math.abs(p.vx)<1)p.vx=0;p.x=clamp(p.x+p.vx*dt,28,W-28);}p.y=H-52;
++  p.speedUp=Math.max(0,(p.speedUp||0)-dt);{const target=this.input.axis*212*(p.speedUp>0?1.55:1);p.vx=target;p.x=clamp(p.x+p.vx*dt,28,W-28);}p.y=H-52;
    if(this.hitStop>0){this.hitStop-=dt;return;}
    if(this.nextIn>0){this.nextIn-=dt;if(this.nextIn<=0)this.prepareWave(this.wave+1);this.updatePickups(dt);return;}
    if(this.comboLeft>0){this.comboLeft-=dt;if(this.comboLeft<=0)this.resetCombo();}
-@@ -50,13 +53,14 @@ class Game{
+@@ -50,13 +54,14 @@ class Game{
    for(const z of this.enemies){if(z.dead)continue;z.age+=dt;z.flash=Math.max(0,z.flash-dt);z.attack-=dt;let speed=z.speed;
     if(z.type==='runner'&&z.age>2){const phase=(z.age-2)%3.2;if(phase<.45){speed=2;z.charge=1}else if(phase<1){speed*=2.6;z.charge=2}else z.charge=0;}
     if(z.type==='berserker')z.x=clamp(z.baseX+Math.sin(z.age*2.7)*28,20,W-20);
@@ -181,7 +189,7 @@ index 18ba022..8914ca7 100644
    this.updateBullets(dt);this.updateShots(dt);this.updatePickups(dt);this.updateGrenades(dt);this.enemies=this.enemies.filter(z=>!z.dead);this.barrels=this.barrels.filter(b=>!b.dead);
    if(!this.scene&&!this.boss&&this.spawned>=this.target&&this.resolved>=this.target&&!this.enemies.length&&!this.over){const def=BOSSES.find(b=>b.wave===this.wave&&!this.bossesDown.includes(b.id));if(def)this.queueBoss(def.id);else{this.nextIn=1.55;this.banner='WAVE CLEAR';this.bannerLeft=1.55;this.emit('clear');}}
   }
-@@ -68,7 +72,7 @@ class Game{
+@@ -68,7 +73,7 @@ class Game{
   damage(z,amount,source='pistol'){if(z.dead||this.scene||z.boss&&z.phaseGrace>0)return;const shield=z.type==='bulwark'&&(z.age%3.5)<2&&source!=='grenade'&&source!=='chain'&&source!=='dmr';if(shield){amount*=.28;this.emit('ricochet');}z.hp-=amount;z.flash=.07;this.burst(z.x,z.y,shield?'#8de8ff':'#fbd078',3,35);if(z.boss){
     // Each form owns a health segment. Excess damage never skips a reveal or a form.
     const floor=z.maxHp*(z.stages-z.stage)/z.stages;
@@ -190,7 +198,7 @@ index 18ba022..8914ca7 100644
     else if(z.hp<=0)this.killBoss();return;}
  
    if(z.hp<=0){z.dead=true;this.resolve(z);this.kills++;this.combo++;this.comboLeft=7;const previous=this.multiplier;this.multiplier=this.combo>=30?10:this.combo>=20?4:this.combo>=10?2:1;const points=z.points*this.multiplier;this.addPoints(points,z.x,z.y);if(this.multiplier>previous)this.emit('boost',{multiplier:this.multiplier});this.burst(z.x,z.y,z.type==='fuse'?'#9cff65':'#bfd595',8,60);this.emit('kill',{type:z.type});if(z.type==='fuse')this.explode(z.x,z.y,85,6,false);if(this.kills%12===0||this.rand()<.045)this.drop(z.x,z.y);}
-@@ -79,8 +83,8 @@ class Game{
+@@ -79,8 +84,8 @@ class Game{
   hurt(reason){const p=this.player;if(this.over||this.scene||p.inv>0||p.shield>0||this.invincible)return;p.lives--;p.inv=1.25;this.shake=2;this.resetCombo();this.emit('hurt');if(p.lives<=0)this.end(reason);}
   equip(gun,ammo=null){const g=GUNS[gun];if(!g)return;this.player.gun=gun;this.player.ammo=ammo??g.ammo;this.banner=g.name+' READY';this.bannerLeft=1.2;}
   useStored(gun){const p=this.player;if(!this.active||!p.inventory?.[gun]||!GUNS[gun]||this.scene||this.over||gun===p.gun)return false;const ammo=p.inventory[gun];if(p.gun!=='pistol'&&p.ammo>0)p.inventory[p.gun]=p.ammo;p.inventory[gun]=0;this.equip(gun,ammo);this.emit('weaponUse',{gun});return true;}
@@ -201,14 +209,14 @@ index 18ba022..8914ca7 100644
   grenade(){const p=this.player;if(!this.active||this.over||this.scene||this.nextIn>0||p.grenades<=0)return false;p.grenades--;const tx=p.x,ty=Math.max(48,p.y-H*.50);this.grenades.push({sx:p.x,sy:p.y-20,x:p.x,y:p.y-20,tx,ty,age:0,duration:.52});this.emit('throw');return true;}
   updateGrenades(dt){for(const g of this.grenades){g.age+=dt;const q=clamp(g.age/g.duration,0,1);g.x=g.sx+(g.tx-g.sx)*q;g.y=g.sy+(g.ty-g.sy)*q-Math.sin(q*Math.PI)*35;if(q>=1)this.explode(g.tx,g.ty,125,20,true);}this.grenades=this.grenades.filter(g=>g.age<g.duration);}
   explode(x,y,r,damage,grenade){this.effects.push({kind:'ring',x,y,r,life:.48,total:.48,color:grenade?'#ffd27b':'#92ee56'});this.burst(x,y,grenade?'#ffb341':'#a2ed55',24,160);if(grenade){this.shake=3;this.hitStop=.025;this.emit('explosion');}for(const z of [...this.enemies,...(this.boss?[this.boss]:[])])if(!z.dead&&Math.hypot(z.x-x,z.y-y)<r+z.r)this.damage(z,damage,grenade?'grenade':'chain');this.shots=this.shots.filter(s=>Math.hypot(s.x-x,s.y-y)>r);for(const barrel of this.barrels)if(!barrel.dead&&Math.hypot(barrel.x-x,barrel.y-y)<r*.85)this.explodeBarrel(barrel);}
-@@ -88,20 +92,68 @@ class Game{
+@@ -88,20 +93,69 @@ class Game{
   aimedShot(x,y,kind,speed=120,r=9,offset=0){const a=Math.atan2(this.player.y-y,this.player.x-x)+offset;this.shots.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,kind,r,life:5,age:0});}
   queueBoss(id,stage=1){const def=BOSSES.find(b=>b.id===id);if(!def)return;this.boss=null;this.enemies=[];this.shots=[];this.bullets=[];this.grenades=[];this.pickups=[];this.scene={kind:'arrival',bossId:id,phase:0,time:0,duration:.7,startStage:stage};this.resetInput();this.emit('entrance',{id});this.emit('music',{track:id==='discoman'?'disco':'boss'});}
   advanceScene(){const s=this.scene;if(!s)return;if(s.kind==='arrival'&&s.phase<2){s.phase++;s.time=0;s.duration=s.phase===1?2.1:2.8;this.emit('panel',{phase:s.phase});return;}this.scene=null;if(s.kind==='arrival')this.spawnBoss(s.bossId,s.startStage||1);if(s.kind==='down'){this.nextIn=1.2;this.banner='BOSS DOWN · KEEP MOVING';this.bannerLeft=1.2;this.drop(W/2,H-75,'heart');this.drop(W/2+60,H-130,'dmr');}if(s.kind==='mutation'){this.player.inv=1.5;if(this.boss)this.boss.phaseGrace=1.4;this.emit('music',{track:this.boss?.bossId==='discoman'?'disco':'boss'});}if(s.kind==='loss'){this.over=true;this.active=false;this.emit('over',{reason:s.reason});}}
 - spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:31,maxHp:b.hp,hp:b.hp*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
 - skipBoss(id,stage=1){this.practice=true;this.active=true;this.over=false;this.nextIn=0;this.player.lives=5;this.player.grenades=9;this.player.inv=2;this.spawned=this.target;this.resolved=this.target;const def=BOSSES.find(b=>b.id===id);this.wave=def.wave;this.queueBoss(id,clamp(stage,1,def.stages));}
 - updateBoss(dt){const b=this.boss;if(!b||b.dead)return;b.phaseGrace=Math.max(0,(b.phaseGrace||0)-dt);b.age+=dt;b.flash=Math.max(0,b.flash-dt);b.attack-=dt;if(!this.shots.some(s=>s.kind==='chain'&&s.life>0)){const targetX=W/2+Math.sin(b.age*(.6+b.stage*.13))*Math.min(95,62+b.stage*11);b.x+=clamp(targetX-b.x,-90*dt,90*dt);b.y=105+Math.sin(b.age*.8)*7;}if(b.attack>.6&&b.attack<1.1)b.wind=1;else b.wind=0;if(b.attack>0)return;b.cycle++;b.attack=Math.max(.9,2.3-b.stage*.28);
-+ spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:36,vx:0,vy:0,mode:'idle',shake:0,maxHp:b.hp,hp:b.hp*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
++ spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:36,vx:0,vy:0,mode:'idle',shake:0,maxHp:b.hp*1.4,hp:b.hp*1.4*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
 + setTenHearts(on){this.practice=true;this.maxLives=on?10:5;this.player.lives=on?10:Math.min(this.player.lives,5);}
 + skipBoss(id,stage=1){this.practice=true;this.active=true;this.over=false;this.nextIn=0;this.player.lives=this.maxLives||5;this.player.grenades=9;this.player.inv=2;this.spawned=this.target;this.resolved=this.target;const def=BOSSES.find(b=>b.id===id);this.wave=def.wave;this.queueBoss(id,clamp(stage,1,def.stages));}
 + bossMove(b,dt){
@@ -243,7 +251,7 @@ index 18ba022..8914ca7 100644
 +  }
 +  if(b.attack>0)return;
 +  b.cycle++;b.attack=3;
-+  const V=.72,fan=(kind,n,gap,speed,r)=>{for(let i=0;i<n;i++)this.aimedShot(b.x,b.y,kind,speed*V,r,(i-(n-1)/2)*gap);};
++  const V=.95,fan=(kind,n,gap,speed,r)=>{for(let i=0;i<n;i++)this.aimedShot(b.x,b.y,kind,speed*V,r,(i-(n-1)/2)*gap);};
    switch(b.bossId){
 -   case 'jordan':for(let i=-1;i<=1;i++)this.aimedShot(b.x,b.y,'ember',112+b.stage*12,8,i*.25);break;
 -   case 'glowinghumanity':for(let i=-2;i<=2;i++)this.aimedShot(b.x,b.y,b.stage===2&&i===0?'bodypart':'venom',105+b.stage*5,i===0?13:9,i*.22);break;
@@ -253,28 +261,29 @@ index 18ba022..8914ca7 100644
 -   case 'fatamy':this.aimedShot(b.x-20,b.y,b.cycle%2?'burger':'donut',110,18,-.2);this.aimedShot(b.x+20,b.y,'donut',130,14,.2);break;
 -   case 'drmantis':for(let i=-1;i<=1;i++)this.aimedShot(b.x,b.y,b.stage===3?'venom':'missile',140+b.stage*12,10,i*.27);if(b.stage>=2&&b.cycle%3===0&&this.enemies.length<3){this.spawn('runner',b.x-35,b.y+40,true);this.spawn('runner',b.x+35,b.y+40,true);}break;
 -  }this.emit('bossAttack',{id:b.bossId});
-+   case 'jordan':fan('ember',b.stage>1?3:1,.3,120,8);b.attack=b.stage>1?3.2:2.6;break;
++   case 'jordan':fan('ember',b.stage>1?3:1,.3,150,8);b.attack=b.stage>1?2.3:1.7;break;
 +   case 'glowinghumanity':
-+    if(b.stage===1){fan('glowstick',2,.4,115,10);b.attack=3;}
-+    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*75,vy:80,kind:'handcuffs',r:11,life:7,age:0});b.attack=3.6;}
++    if(b.stage===1){fan('glowstick',1,0,125,11);const s=this.shots.at(-1);let k;do{k=Math.floor(this.rand()*GLOW.length)}while(k===b.lastGlow);b.lastGlow=k;s.color=GLOW[k];b.attack=2;}
++    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*80,vy:85,kind:'handcuffs',r:11,life:7,age:0});b.attack=3.2;}
 +    break;
 +   case 'debo':
-+    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});b.attack=3.6;}
-+    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-1.05;b.attack=5.6;}
++    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});b.attack=3.3;}
++    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-1.05;b.attack=5.2;}
 +    break;
-+   case 'discoman':if(b.stage===1)fan('disco',2,.4,105,12);else fan('tea',3,.34,110,11);b.attack=3.2;break;
-+   case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,125,11);b.attack=2.4;}else{fan('coffee',3,.3,130,11);b.attack=3;}break;
++   case 'discoman':if(b.stage===1)fan('disco',2,.4,110,12);else fan('tea',3,.34,115,11);b.attack=2.9;break;
++   case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,130,11);b.attack=2.1;}else{fan('coffee',3,.3,135,11);b.attack=2.7;}break;
 +   case 'fatamy':
-+    if(b.stage===1){fan('missile',1,0,115,11);b.attack=3;}
-+    else if(b.stage===2){fan(this.rand()<.5?'burger':'donut',1,0,115,11);b.attack=2.4;}
++    if(b.stage===1){fan('missile',1,0,120,11);b.attack=2.7;}
++    else if(b.stage===2){fan(this.rand()<.5?'burger':'donut',1,0,120,11);b.attack=2.1;}
 +    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*85,vy:70,kind:'donut',r:11,life:7,age:0});b.mode='prep';b.modeT=1.3;b.attack=99;}
 +    break;
 +   case 'drmantis':
-+    if(b.stage===1){fan('bodypart',1,0,120,12);b.attack=3;}
-+    else if(b.stage===2){fan('venom',2,.32,125,10);b.attack=2.8;}
-+    else{fan('bodypart',1,0,120,12);fan('venom',2,.4,125,10);b.attack=3.4;}
++    if(b.stage===1){fan('bodypart',1,0,125,12);b.attack=2.7;}
++    else if(b.stage===2){fan('venom',2,.32,130,10);b.attack=2.5;}
++    else{fan('bodypart',1,0,125,12);fan('venom',2,.4,130,10);b.attack=3.1;}
 +    break;
 +  }
++  if(b.attack<50)b.attack*=.88;
 +  this.emit('bossAttack',{id:b.bossId});
   }
 - updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r+10){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
@@ -344,7 +353,7 @@ index 2316c04..0e40490 100644
 +.top-button{height:calc(100% - 4px)}
 +.sb-overlap .wordmark{font-size:12px}.sb-overlap .wordmark small{font-size:5.5px}
 diff --git a/game.js b/game.js
-index 85bd43f..a9c3592 100644
+index 85bd43f..8adebd2 100644
 --- a/game.js
 +++ b/game.js
 @@ -5,16 +5,16 @@ const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{retur
@@ -393,7 +402,7 @@ index 85bd43f..a9c3592 100644
 -function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}padGrenade=grenade;game.setInput(axis,fire)}
 -function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,usableH=h-top-bottom;const scale=Math.min(w/375,usableH/667),key=w+'x'+h+'@'+scale.toFixed(4);if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(top+usableH/2)+'px';renderer.resize()}
 +function hud(){const p=game.player;$('joystick').classList.toggle('sped',(p.speedUp||0)>0);$('waveValue').textContent=game.wave;$('leftValue').textContent=game.boss?'BOSS':Math.max(0,game.target-game.resolved);$('scoreValue').textContent=game.score.toLocaleString();$('bestValue').textContent=scores.getBest(run?.name||read('zs7-name','')).toLocaleString();{const max=game.maxLives||5,l=Math.max(0,p.lives),el=$('healthValue');el.classList.toggle('tenhearts',max>5);el.innerHTML=Array.from({length:max},(_,i)=>`<span class="heart${i>=5?' gold':''}${i<l?'':' empty'}">${i<l?'♥':'♡'}</span>`).join(' ')}$('healthValue').setAttribute('aria-label',p.lives+' hearts');$('gunValue').textContent=ZSEngine.GUNS[p.gun].name;$('ammoValue').textContent=!Number.isFinite(p.ammo)||game.infiniteAmmo?'∞':p.ammo;$('baseValue').textContent=game.breaches+'/10';$('grenadeValue').textContent=p.grenades;$('grenadeButton').classList.toggle('empty',p.grenades===0);$('grenadeButton').setAttribute('aria-label','Throw grenade, '+p.grenades+' remaining');$('boostText').textContent='BOOST ×'+game.multiplier;$('boostFill').style.width=Math.max(0,game.comboLeft/7*100)+'%';$('comboText').textContent=game.combo>=30?'×10 · KEEP IT GOING':((game.combo<10?10:game.combo<20?20:30)-game.combo)+' KILLS TO ×'+(game.combo<10?2:game.combo<20?4:10);for(const gun of ['smg','shotgun','dmr','burst']){const el=$('inv-'+gun);const active=p.gun===gun,ammo=active?p.ammo:(p.inventory?.[gun]||0);if(el)el.textContent=ammo||'—';const btn=document.querySelector(`[data-weapon="${gun}"]`);if(btn){btn.disabled=active||!(ammo>0);btn.classList.toggle('ready',ammo>0);btn.classList.toggle('equipped',active);btn.setAttribute('aria-label',`${active?'Equipped':'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`)}}$('mapLabel').textContent=MAPS[Math.min(6,Math.floor((game.wave-1)/2))].name;$('headerName').textContent=run?.name||'JOEY ROB VS DR MANTIS'}
-+function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}if(performance.now()<flickUntil&&Math.sign(axis)!==-flickDir)axis=flickDir;padGrenade=grenade;game.setInput(axis,fire)}
++function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}if(stickId!==null&&performance.now()<flickUntil&&Math.sign(axis)!==-flickDir)axis=flickDir;padGrenade=grenade;game.setInput(axis,fire)}
 +function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,scale=Math.min(w/375,h/667),edge0=(h-667*scale)/2,T=Math.max(edge0,top+2-11*scale),shift=Math.max(0,top+2-(T+3*scale))/scale,key=w+'x'+h+'@'+scale.toFixed(4)+'/'+top;if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);document.documentElement.style.setProperty('--hs',shift.toFixed(1)+'px');document.body.classList.toggle('sb-overlap',shift>6);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(T+333.5*scale)+'px';renderer.resize()}
  function frame(now){fit();const dt=Math.min(.1,(now-lastTime)/1000||0);lastTime=now;if(!paused&&!landscape&&!document.hidden&&ready){inputs();accumulator+=dt;let steps=0;while(accumulator>=1/60&&steps++<6){game.step(1/60);accumulator-=1/60}saveClock+=dt;if(saveClock>5){saveClock=0;save()}}else accumulator=0;renderer.draw(game);cinematic();hud();requestAnimationFrame(frame)}
 -const stick=$('joystick');function moveStick(e){if(e.pointerId!==stickId)return;const r=stick.getBoundingClientRect(),raw=(e.clientX-(r.left+r.width/2))/(r.width*.34),value=Math.max(-1,Math.min(1,raw));touchAxis=Math.abs(value)<.1?0:Math.sign(value)*(Math.abs(value)-.1)/.9;$('stickKnob').style.transform=`translateX(${value*25}px)`;stick.setAttribute('aria-valuenow',Math.round(touchAxis*100))}
@@ -402,7 +411,7 @@ index 85bd43f..a9c3592 100644
 +// Floating stick: wherever the thumb lands on the pad becomes the centre; only dragging sideways steers.
 +// Past full deflection the centre follows the thumb so reversing is instant, and a quick flick gives a short full-speed burst.
 +function moveStick(e){if(e.pointerId!==stickId||stickOrigin===null)return;const range=stick.getBoundingClientRect().width*.16,list=e.getCoalescedEvents?.().length?e.getCoalescedEvents():[e];for(const ev of list){let dx=ev.clientX-stickOrigin;if(dx>range){stickOrigin+=dx-range;dx=range}else if(dx<-range){stickOrigin+=dx+range;dx=-range}const now=performance.now();stickHist.push([now,ev.clientX]);while(stickHist.length>1&&now-stickHist[0][0]>150)stickHist.shift();stickVal=dx/range;const a=Math.abs(stickVal);touchAxis=a<.1?0:Math.sign(stickVal)*Math.pow((a-.1)/.9,.8);const moved=ev.clientX-stickHist[0][1];if(Math.abs(moved)>range*.4){flickDir=Math.sign(moved);flickUntil=now+170}}$('stickKnob').style.transform=`translateX(${stickVal*25}px)`;stick.setAttribute('aria-valuenow',Math.round(touchAxis*100))}
-+stick.addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();stickId=e.pointerId;stickOrigin=e.clientX;stickHist=[[performance.now(),e.clientX]];stickVal=0;touchAxis=0;stick.setPointerCapture(e.pointerId);audio.unlock()});stick.addEventListener('pointermove',moveStick);for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,e=>{if(e.pointerId===stickId){stickId=null;stickOrigin=null;touchAxis=0;stickVal=0;$('stickKnob').style.transform='translateX(0)';stick.setAttribute('aria-valuenow','0')}});
++stick.addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();stickId=e.pointerId;stickOrigin=e.clientX;stickHist=[[performance.now(),e.clientX]];stickVal=0;touchAxis=0;stick.setPointerCapture(e.pointerId);audio.unlock()});stick.addEventListener('pointermove',moveStick);for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,e=>{if(e.pointerId===stickId){stickId=null;stickOrigin=null;flickUntil=0;touchAxis=0;stickVal=0;$('stickKnob').style.transform='translateX(0)';stick.setAttribute('aria-valuenow','0')}});
  $('fireButton').addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();fireId=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);touchFire=true;e.currentTarget.classList.add('pressed');audio.unlock();game.fire()});for(const type of ['pointerup','pointercancel','lostpointercapture'])$('fireButton').addEventListener(type,e=>{if(e.pointerId===fireId){touchFire=false;fireId=null;e.currentTarget.classList.remove('pressed')}});
  $('grenadeButton').addEventListener('pointerdown',e=>{if(paused)return;e.preventDefault();audio.unlock();game.grenade()});$('weaponRack').addEventListener('click',e=>{const b=e.target.closest('[data-weapon]');if(!b||paused)return;if(game.useStored(b.dataset.weapon)){audio.sfx('pickup');toast(ZSEngine.GUNS[b.dataset.weapon].name+' equipped')}});$('menuButton').onclick=menu;$('pauseButton').onclick=()=>{if(!game.active){showStart();return}if(paused&&panel==='menu')closePanel();else menu()};
  addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;if(['ArrowLeft','ArrowRight','Space','KeyA','KeyD','KeyG','KeyP','Escape'].includes(e.code))e.preventDefault();if(e.code==='Escape'||e.code==='KeyP'){if(!e.repeat){if(panel&&game.active)closePanel();else menu()}return}if(paused)return;keys.add(e.code);if(e.code==='Space'&&!e.repeat){audio.unlock();game.fire()}if(e.code==='KeyG'&&!e.repeat)game.grenade()});addEventListener('keyup',e=>keys.delete(e.code));
@@ -414,7 +423,7 @@ index 85bd43f..a9c3592 100644
  addEventListener('resize',()=>{lastFit=''});visualViewport?.addEventListener('resize',()=>{lastFit=''});screen.orientation?.addEventListener('change',()=>{lastFit=''});addEventListener('blur',()=>{clearInput();if(game.active&&!panel){pause();menu()}});document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();if(game.active&&!panel)menu()}});addEventListener('pagehide',save);addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
  applySkin(read('zs7-skin','toxic'));showStart();requestAnimationFrame(frame);renderer.load(fraction=>{const line=$('loadingLine');if(line)line.textContent='Loading game artwork · '+Math.round(fraction*100)+'%'}).then(()=>{ready=true;if(panel==='start'){const b=$('startButton');b.disabled=false;b.textContent='PLAY ZOMBIE SMASH';$('loadingLine').textContent='NO LOGIN · ALL SKINS UNLOCKED'}renderer.draw(game)}).catch(error=>{const line=$('loadingLine');if(line)line.textContent='Artwork download interrupted. Reload to retry.';toast(error.message)});scores.flush();
 diff --git a/index.html b/index.html
-index 7f2abfc..12d5d13 100644
+index 7f2abfc..6702d37 100644
 --- a/index.html
 +++ b/index.html
 @@ -3,7 +3,7 @@
@@ -422,7 +431,7 @@ index 7f2abfc..12d5d13 100644
  <meta name="theme-color" content="#111416"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zombie Smash">
  <meta name="description" content="Joey Rob versus Dr Mantis and the fallen heroes. A portrait arcade game. Pick a name. Hold the line.">
 -<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.5"><link rel="icon" href="./icon-192.png?v=7.5"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.5"><link rel="stylesheet" href="./game.css?v=7.5">
-+<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.1"><link rel="icon" href="./icon-192.png?v=7.8.1"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.1"><link rel="stylesheet" href="./game.css?v=7.8.1">
++<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.2"><link rel="icon" href="./icon-192.png?v=7.8.2"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.2"><link rel="stylesheet" href="./game.css?v=7.8.2">
  </head><body>
  <div id="bleed" aria-hidden="true"></div>
  <main id="cabinet" aria-label="Zombie Smash portrait console">
@@ -431,10 +440,10 @@ index 7f2abfc..12d5d13 100644
  <div id="rotateGate" hidden><img src="./icon-192.png" alt=""><h1>TURN TO PORTRAIT</h1><p>Your game is paused.<br>The whole console stays in proportion.</p><svg viewBox="0 0 60 72" aria-hidden="true"><rect x="16" y="7" width="28" height="54" rx="4"/><path d="M27 54h6"/></svg></div>
  <noscript>Enable JavaScript to play Zombie Smash.</noscript>
 -<script src="./game-data.js?v=7.5"></script><script src="./engine.js?v=7.5"></script><script src="./renderer.js?v=7.5"></script><script src="./audio.js?v=7.5"></script><script src="./scores.js?v=7.5"></script><script src="./game.js?v=7.5"></script>
-+<script src="./game-data.js?v=7.8.1"></script><script src="./engine.js?v=7.8.1"></script><script src="./renderer.js?v=7.8.1"></script><script src="./audio.js?v=7.8.1"></script><script src="./scores.js?v=7.8.1"></script><script src="./game.js?v=7.8.1"></script>
++<script src="./game-data.js?v=7.8.2"></script><script src="./engine.js?v=7.8.2"></script><script src="./renderer.js?v=7.8.2"></script><script src="./audio.js?v=7.8.2"></script><script src="./scores.js?v=7.8.2"></script><script src="./game.js?v=7.8.2"></script>
  </body></html>
 diff --git a/manifest.webmanifest b/manifest.webmanifest
-index 96df531..8985bc7 100644
+index 96df531..88cbb7d 100644
 --- a/manifest.webmanifest
 +++ b/manifest.webmanifest
 @@ -5,15 +5,15 @@
@@ -451,15 +460,15 @@ index 96df531..8985bc7 100644
 -    {"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png","purpose":"any"},
 -    {"src":"./icon-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"any"},
 -    {"src":"./icon-maskable-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"maskable"}
-+    {"src":"./icon-192.png?v=7.8.1","sizes":"192x192","type":"image/png","purpose":"any"},
-+    {"src":"./icon-512.png?v=7.8.1","sizes":"512x512","type":"image/png","purpose":"any"},
-+    {"src":"./icon-maskable-512.png?v=7.8.1","sizes":"512x512","type":"image/png","purpose":"maskable"}
++    {"src":"./icon-192.png?v=7.8.2","sizes":"192x192","type":"image/png","purpose":"any"},
++    {"src":"./icon-512.png?v=7.8.2","sizes":"512x512","type":"image/png","purpose":"any"},
++    {"src":"./icon-maskable-512.png?v=7.8.2","sizes":"512x512","type":"image/png","purpose":"maskable"}
    ],
 -  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png"}]}]
-+  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.1","sizes":"192x192","type":"image/png"}]}]
++  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.2","sizes":"192x192","type":"image/png"}]}]
  }
 diff --git a/renderer.js b/renderer.js
-index df73dcf..492aa12 100644
+index df73dcf..152199f 100644
 --- a/renderer.js
 +++ b/renderer.js
 @@ -1,7 +1,7 @@
@@ -467,7 +476,7 @@ index df73dcf..492aa12 100644
  'use strict';
  const {W,H,BOSSES,MAPS}=ZSData,{ENEMIES,GUNS,clamp}=ZSEngine;
 -const files=[...MAPS.map(m=>m.file),...Object.values(ENEMIES).map(e=>e.art),...BOSSES.flatMap(b=>b.sprites),'player-transparent.webp','player-fire.webp','player-hit.webp','player-portrait.webp','player-wounded.webp','player-victory.webp','joey-reaction-close.webp','prop-barrel.webp',...Object.values(GUNS).map(g=>g.art),...['heart','clock','speed','shield','bomb','smg','dmr'].map(k=>'pickup-'+k+'.webp'),...['chain','ember','coffee','missile','burger','donut','handcuffs','venom','bodypart','disco'].map(k=>'weapon-'+k+'.webp')];
-+const files=[...MAPS.map(m=>m.file),...Object.values(ENEMIES).map(e=>e.art),...BOSSES.flatMap(b=>b.sprites),'player-transparent.webp','player-fire.webp','player-hit.webp','player-portrait.webp','player-wounded.webp','player-victory.webp','joey-reaction-close.webp','prop-barrel.webp',...Object.values(GUNS).map(g=>g.art),...['heart','clock','speed','shield','bomb','smg','dmr'].map(k=>'pickup-'+k+'.webp'),...['chain','ember','coffee','missile','burger','donut','handcuffs','venom','bodypart','disco','tea','glowstick'].map(k=>'weapon-'+k+'.webp')];
++const files=[...MAPS.map(m=>m.file),...Object.values(ENEMIES).map(e=>e.art),...BOSSES.flatMap(b=>b.sprites),'player-transparent.webp','player-fire.webp','player-hit.webp','player-portrait.webp','player-wounded.webp','player-victory.webp','joey-reaction-close.webp','prop-barrel.webp',...Object.values(GUNS).map(g=>g.art),...['heart','clock','speed','shield','bomb','smg','dmr'].map(k=>'pickup-'+k+'.webp'),...['chain','ember','coffee','missile','burger','donut','handcuffs','venom','bodypart','disco','tea'].concat(['green','pink','blue','orange','yellow','violet'].map(c=>'glowstick-'+c)).map(k=>'weapon-'+k+'.webp')];
  class Renderer{
   constructor(canvas){this.canvas=canvas;this.c=canvas.getContext('2d',{alpha:false,desynchronized:true});this.images={};this.bounds={};this.reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;this.resize();}
   resize(){const dpr=Math.min(3,devicePixelRatio||1),r=this.canvas.getBoundingClientRect(),scale=Math.max(.5,r.width/W);this.canvas.width=Math.max(1,Math.round(W*dpr*scale));this.canvas.height=Math.max(1,Math.round(H*dpr*scale));this.c.setTransform(this.canvas.width/W,0,0,this.canvas.height/H,0,0);this.c.imageSmoothingEnabled=true;this.c.imageSmoothingQuality='high';}
@@ -489,19 +498,19 @@ index df73dcf..492aa12 100644
 - shot(s){const c=this.c;if(s.kind==='chain'){if(s.age<s.wind){c.save();c.setLineDash([5,5]);c.strokeStyle='#ffd26877';c.beginPath();c.moveTo(s.ox,s.oy);c.lineTo(s.ox+s.dx*s.reach,s.oy+s.dy*s.reach);c.stroke();c.restore();return;}const length=Math.hypot(s.x-s.ox,s.y-s.oy);for(let d=0;d<length;d+=10){const q=d/length,x=s.ox+(s.x-s.ox)*q,y=s.oy+(s.y-s.oy)*q;c.save();c.translate(x,y);c.rotate(Math.atan2(s.dy,s.dx));c.strokeStyle=d%20?'#fff0ac':'#a97520';c.lineWidth=2;c.beginPath();c.ellipse(0,0,6,3,0,0,Math.PI*2);c.stroke();c.restore();}this.fit('weapon-chain.webp',s.x-22,s.y-22,44,44);return;}c.save();c.translate(s.x,s.y);if(s.kind==='missile')c.rotate(Math.atan2(s.vy,s.vx)+Math.PI/4);else c.rotate(s.age*(s.kind==='disco'?3:1.7));this.fit('weapon-'+s.kind+'.webp',-s.r*1.4,-s.r*1.4,s.r*2.8,s.r*2.8);c.restore();}
 + barrel(b){if(!b||b.dead)return;if(b.thrown){const c=this.c;c.save();c.translate(b.x,b.y);c.rotate(b.rot);this.fit('prop-barrel.webp',-14,-18,28,36);c.restore();}else this.fit('prop-barrel.webp',b.x-15,b.y-20,30,40);}
 + enemy(z,g){if(z.dead)return;const c=this.c,def=z.boss?BOSSES.find(b=>b.id===z.bossId):null,h=z.boss?(z.bossId==='drmantis'&&z.stage===3?139:113):z.height,w=z.boss?130:h*.82;c.fillStyle='#0006';c.beginPath();c.ellipse(z.x,z.y+h*.34,w*.29,5,0,0,Math.PI*2);c.fill();if(z.charge===1){c.strokeStyle='#fa994d';c.lineWidth=1.5;c.beginPath();c.arc(z.x,z.y,w*.5,0,Math.PI*2);c.stroke();}if(z.boss&&z.wind){this.text('ATTACK!',z.x,z.y-h*.62-5,9,'#ffb04c');}const wobble=this.reduced?0:Math.sin(z.age*(z.type==='runner'?16:8))*1.4,art=def?def.sprites[z.stage-1]:z.type==='helmet'&&z.hp<2.2?'zombie-normal.webp':z.art;const jx=z.shake?Math.sin(z.age*70)*2.6:0;if(z.mode==='shake'){c.save();c.setLineDash([6,5]);c.strokeStyle='#ff5a4acc';c.lineWidth=2;c.beginPath();c.moveTo(z.x,z.y);c.lineTo(g.player.x,g.player.y);c.stroke();c.restore();}this.fit(art,z.x-w/2+jx,z.y-h*.55+wobble,w,h,{bright:z.flash>0});if(z.type==='bulwark'&&(z.age%3.5)<2){c.strokeStyle='#82dffeaa';c.lineWidth=2;c.beginPath();c.arc(z.x,z.y+2,23,.1,Math.PI-.1);c.stroke();}if(!z.boss&&z.maxHp>2&&z.hp<z.maxHp){c.fillStyle='#080808';c.fillRect(z.x-20,z.y-h*.58-3,40,3);c.fillStyle='#ddb969';c.fillRect(z.x-20,z.y-h*.58-3,40*z.hp/z.maxHp,3);}}
-+ shot(s){const c=this.c;if(s.kind==='chain'){if(s.age<s.wind){c.save();c.setLineDash([5,5]);c.strokeStyle='#ffd26877';c.beginPath();c.moveTo(s.ox,s.oy);c.lineTo(s.ox+s.dx*s.reach,s.oy+s.dy*s.reach);c.stroke();c.restore();return;}const length=Math.hypot(s.x-s.ox,s.y-s.oy);for(let d=0;d<length;d+=10){const q=d/length,x=s.ox+(s.x-s.ox)*q,y=s.oy+(s.y-s.oy)*q;c.save();c.translate(x,y);c.rotate(Math.atan2(s.dy,s.dx));c.strokeStyle=d%20?'#fff0ac':'#a97520';c.lineWidth=2;c.beginPath();c.ellipse(0,0,6,3,0,0,Math.PI*2);c.stroke();c.restore();}this.fit('weapon-chain.webp',s.x-22,s.y-22,44,44);return;}c.save();c.translate(s.x,s.y);if(s.kind==='missile')c.rotate(Math.atan2(s.vy,s.vx)+Math.PI/4);else c.rotate(s.age*({disco:3,handcuffs:5,glowstick:5,tea:4,bodypart:3.5}[s.kind]||1.7));this.fit('weapon-'+s.kind+'.webp',-s.r*1.4,-s.r*1.4,s.r*2.8,s.r*2.8);c.restore();}
++ shot(s){const c=this.c;if(s.kind==='chain'){if(s.age<s.wind){c.save();c.setLineDash([5,5]);c.strokeStyle='#ffd26877';c.beginPath();c.moveTo(s.ox,s.oy);c.lineTo(s.ox+s.dx*s.reach,s.oy+s.dy*s.reach);c.stroke();c.restore();return;}const length=Math.hypot(s.x-s.ox,s.y-s.oy);for(let d=0;d<length;d+=10){const q=d/length,x=s.ox+(s.x-s.ox)*q,y=s.oy+(s.y-s.oy)*q;c.save();c.translate(x,y);c.rotate(Math.atan2(s.dy,s.dx));c.strokeStyle=d%20?'#fff0ac':'#a97520';c.lineWidth=2;c.beginPath();c.ellipse(0,0,6,3,0,0,Math.PI*2);c.stroke();c.restore();}this.fit('weapon-chain.webp',s.x-22,s.y-22,44,44);return;}c.save();c.translate(s.x,s.y);if(s.kind==='missile')c.rotate(Math.atan2(s.vy,s.vx)+Math.PI/4);else c.rotate(s.age*({disco:3,handcuffs:5,glowstick:5,tea:4,bodypart:3.5}[s.kind]||1.7));{const k=s.kind==='glowstick'?1.6:1,f=s.kind==='glowstick'?'weapon-glowstick-'+(s.color||'green')+'.webp':'weapon-'+s.kind+'.webp';this.fit(f,-s.r*1.4*k,-s.r*1.4*k,s.r*2.8*k,s.r*2.8*k);}c.restore();}
  }
  window.ZSRenderer=Renderer;window.ZSRenderer.assets=[...new Set(files)];
  })();
 diff --git a/sw.js b/sw.js
-index 8d20283..e9be0a1 100644
+index 8d20283..73686b9 100644
 --- a/sw.js
 +++ b/sw.js
 @@ -1,5 +1,5 @@
 -const CACHE='zombie-smash-v7.5.0-f284267950';
 -const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
-+const CACHE='zombie-smash-v7.8.1-full-screen';
-+const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-banner.webp","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-glowstick.webp","./weapon-tea.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
++const CACHE='zombie-smash-v7.8.2-tuning';
++const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-banner.webp","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-glowstick-blue.webp","./weapon-glowstick-green.webp","./weapon-glowstick-orange.webp","./weapon-glowstick-pink.webp","./weapon-glowstick-violet.webp","./weapon-glowstick-yellow.webp","./weapon-tea.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
  // Install the complete release atomically, including music and every boss form.
  self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
  async function ready(){const clients=await self.clients.matchAll({includeUncontrolled:true});for(const client of clients)client.postMessage({type:'OFFLINE_READY'});}
