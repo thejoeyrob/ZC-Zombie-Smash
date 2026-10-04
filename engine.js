@@ -54,7 +54,7 @@ class Game{
    if(z.type==='berserker')z.x=clamp(z.baseX+Math.sin(z.age*2.7)*28,20,W-20);
    if(['brute','titan','armored'].includes(z.type))z.x+=clamp(p.x-z.x,-1,1)*11*dt;
    z.y+=speed*dt;
-   if(z.type==='toxic'&&z.attack<=0&&z.y>25&&z.y<p.y-70){this.aimedShot(z.x,z.y,'venom',100,8);z.attack=4.2;}
+   if(z.type==='toxic'&&z.attack<=0&&z.y>25&&z.y<p.y-70){this.aimedShot(z.x,z.y,'venom',85,8);z.attack=5;}
    if(z.type==='fuse'&&z.y>p.y-16){z.dead=true;this.resolve(z);this.explode(z.x,z.y,60,3,false);if(Math.hypot(z.x-p.x,z.y-p.y)<72)this.hurt('The Fuse detonated too close.');}
    if(Math.hypot(z.x-p.x,z.y-p.y)<z.r+15){this.hurt('The horde reached Joey Rob.');z.y+=18;}
    if(z.y>H+20){z.dead=true;this.resolve(z);if(!z.minion){this.breaches++;this.resetCombo();this.emit('breach');this.banner='BASE BREACH';this.bannerLeft=.9;if(this.breaches>=10)this.end('The camp was overrun.');}}
@@ -93,18 +93,20 @@ class Game{
  spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:31,maxHp:b.hp,hp:b.hp*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
  setTenHearts(on){this.practice=true;this.maxLives=on?10:5;this.player.lives=on?10:Math.min(this.player.lives,5);}
  skipBoss(id,stage=1){this.practice=true;this.active=true;this.over=false;this.nextIn=0;this.player.lives=this.maxLives||5;this.player.grenades=9;this.player.inv=2;this.spawned=this.target;this.resolved=this.target;const def=BOSSES.find(b=>b.id===id);this.wave=def.wave;this.queueBoss(id,clamp(stage,1,def.stages));}
- updateBoss(dt){const b=this.boss;if(!b||b.dead)return;b.phaseGrace=Math.max(0,(b.phaseGrace||0)-dt);b.age+=dt;b.flash=Math.max(0,b.flash-dt);b.attack-=dt;if(!this.shots.some(s=>s.kind==='chain'&&s.life>0)){const targetX=W/2+Math.sin(b.age*(.6+b.stage*.13))*Math.min(95,62+b.stage*11);b.x+=clamp(targetX-b.x,-90*dt,90*dt);b.y=105+Math.sin(b.age*.8)*7;}if(b.attack>.6&&b.attack<1.1)b.wind=1;else b.wind=0;if(b.attack>0)return;b.cycle++;b.attack=Math.max(.9,2.3-b.stage*.28);
+ updateBoss(dt){const b=this.boss;if(!b||b.dead)return;b.phaseGrace=Math.max(0,(b.phaseGrace||0)-dt);b.age+=dt;b.flash=Math.max(0,b.flash-dt);b.attack-=dt;if(!this.shots.some(s=>s.kind==='chain'&&s.life>0)){const targetX=W/2+Math.sin(b.age*(.6+b.stage*.13))*Math.min(95,62+b.stage*11);b.x+=clamp(targetX-b.x,-90*dt,90*dt);b.y=105+Math.sin(b.age*.8)*7;}if(b.attack>.6&&b.attack<1.1)b.wind=1;else b.wind=0;if(b.attack>0)return;b.cycle++;b.attack=Math.max(1.7,3.1-b.stage*.25);
+  // 7.6.3: gentler, in-character attacks. Fewer projectiles, slower shots, longer gaps.
+  const V=.72,fan=(kind,n,gap,speed,r)=>{for(let i=0;i<n;i++)this.aimedShot(b.x,b.y,kind,speed*V,r,(i-(n-1)/2)*gap);};
   switch(b.bossId){
-   case 'jordan':for(let i=-1;i<=1;i++)this.aimedShot(b.x,b.y,'ember',112+b.stage*12,8,i*.25);break;
-   case 'glowinghumanity':for(let i=-2;i<=2;i++)this.aimedShot(b.x,b.y,b.stage===2&&i===0?'bodypart':'venom',105+b.stage*5,i===0?13:9,i*.22);break;
-   case 'debo':{const dx=this.player.x-b.x,dy=this.player.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.65});if(b.stage===2)for(const offset of [-.28,.28])this.aimedShot(b.x,b.y,'handcuffs',125,11,offset);b.attack=2.7;break;}
-   case 'caffeinatedsloth':for(const offset of [-.24,0,.24])this.aimedShot(b.x,b.y,b.stage>1?'venom':'coffee',150+b.stage*16,11,offset);b.attack=b.stage>1?.78:1.08;break;
-   case 'discoman':for(let i=-2;i<=2;i++)this.aimedShot(b.x,b.y,'disco',105+b.stage*20,12,i*.32);b.attack=1.9;break;
-   case 'fatamy':this.aimedShot(b.x-20,b.y,b.cycle%2?'burger':'donut',110,18,-.2);this.aimedShot(b.x+20,b.y,'donut',130,14,.2);break;
-   case 'drmantis':for(let i=-1;i<=1;i++)this.aimedShot(b.x,b.y,b.stage===3?'venom':'missile',140+b.stage*12,10,i*.27);if(b.stage>=2&&b.cycle%3===0&&this.enemies.length<3){this.spawn('runner',b.x-35,b.y+40,true);this.spawn('runner',b.x+35,b.y+40,true);}break;
+   case 'jordan':fan('ember',b.stage>1?3:2,.3,118+b.stage*10,8);break;
+   case 'glowinghumanity':if(b.stage===1)fan('venom',3,.3,110,10);else{for(let i=0;i<6;i++){const a=Math.PI*(.2+.6*i/5);this.shots.push({x:b.x,y:b.y,vx:Math.cos(a)*85,vy:Math.sin(a)*85,kind:'venom',r:10,life:5,age:0});}fan('venom',1,0,115,13);}break;
+   case 'debo':{const dx=this.player.x-b.x,dy=this.player.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});if(b.stage===2)fan('handcuffs',2,.5,130,11);b.attack=3.5;break;}
+   case 'caffeinatedsloth':fan('coffee',b.stage>1?3:2,b.stage>1?.28:.3,130+b.stage*10,11);b.attack=b.stage>1?1.7:2.1;break;
+   case 'discoman':fan('disco',3,.34,100+b.stage*12,12);b.attack=2.7;break;
+   case 'fatamy':if(b.cycle%2)fan('burger',b.stage>2?2:1,.3,105,18);else fan('donut',2,.4,115,14);b.attack=2.8;break;
+   case 'drmantis':if(b.stage===1)fan('venom',2,.3,125,10);else{fan('bodypart',1,0,120,13);fan('venom',b.stage===3?3:2,.3,125,10);}if(b.stage>=2&&b.cycle%4===0&&this.enemies.length<2){this.spawn('runner',b.x-35,b.y+40,true);this.spawn('runner',b.x+35,b.y+40,true);}break;
   }this.emit('bossAttack',{id:b.bossId});
  }
- updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r+10){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
+ updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r*.75+8){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
   this.shots=this.shots.filter(s=>s.life>0&&s.y<H+35&&s.x>-60&&s.x<W+60);}
  killBoss(){const b=this.boss,def=BOSSES.find(d=>d.id===b.bossId);if(b.dead)return;b.dead=true;this.kills++;this.addPoints(def.points*this.multiplier,b.x,b.y);this.bossesDown.push(b.bossId);this.shots=[];this.enemies=[];this.bullets=[];this.burst(b.x,b.y,def.accent,35,120);this.scene={kind:'down',bossId:b.bossId,stage:b.stage,phase:0,time:0,duration:3.4};this.resetInput();this.emit('bossDown');this.boss=null;}
  end(reason){if(this.over||this.scene?.kind==='loss')return;const id=this.boss?.bossId;this.dangerSource=id;this.scene={kind:'loss',bossId:id,phase:0,time:0,duration:id?3.2:1.1,reason};this.resetInput();this.emit('death');}
