@@ -57,3 +57,18 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
 @keyframes reveal{from{transform:scale(.88)}to{transform:scale(1)}}
 .scene-figures.dual .scene-art{width:0;min-width:0;flex:1 1 0}
 #cinematic{grid-template-columns:minmax(0,1fr);justify-content:stretch;align-items:stretch}
+
+/* v7.6 — every skin has its own measured window. The game screen, menus, header and
+   control deck are placed from --wx/--wy/--ww/--wh (set per skin in game.js fitSkin). */
+.console-header{top:3px;left:36px;right:36px;height:var(--hh,34px)}
+.top-button{width:62px;height:calc(var(--hh,34px) - 6px);padding:5px}
+.wordmark{font-size:14px}
+.screen{left:var(--sx,16px);top:var(--sy,58px);width:343px;height:486px;transform:scale(var(--ss,1));transform-origin:0 0;border-radius:0;box-shadow:inset 0 0 8px #000}
+.overlay{inset:auto;left:var(--wx,16px);top:var(--wy,55px);width:var(--ww,343px);height:var(--wh,450px)}
+#toast{top:calc(var(--wy,55px) + var(--wh,450px) - 40px)}
+.control-deck{top:var(--dy,520px);height:123px;transform:scale(var(--sd,1));transform-origin:50% 0}
+.start-art{height:auto;aspect-ratio:1.9;width:100%;object-fit:cover;object-position:center;background:#090e0e}
+#healthValue.tenhearts{display:grid;grid-template-columns:repeat(5,1fr);gap:0 1px;line-height:11px;font-size:10px;letter-spacing:0;min-width:64px}
+.hud-bottom #healthValue .heart{color:#ff4455}.hud-bottom #healthValue .heart.gold{color:#ffc93c;text-shadow:0 0 4px #ffb30088}.hud-bottom #healthValue .heart.empty{color:#74806f}
+.story-art{height:min(220px,calc(var(--wh,450px)*.42))}
+.story-copy{min-height:78px}

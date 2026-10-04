@@ -14,6 +14,9 @@ For an existing installation, reopen the app after the new worker downloads.
 The new release is cached atomically; it does not erase your player name or scores.
 
 WHAT CHANGED
+- 7.6: each console skin's real screen window is measured; the game screen, menus, header and
+  controls are placed and scaled to fit it. Zombies 20% larger and 16% slower. Admin cheat: 10 hearts
+  (5 red + 5 gold). Welcome picture re-cropped to fit its frame. .nojekyll added for GitHub Pages.
 - Standalone classic portrait game. No login or community screens.
 - Fixed 375 x 667 console; 343 x 412 arena. Every element scales together.
 - Longer playfield extends down; top/left/right gameplay positions stay fixed.
