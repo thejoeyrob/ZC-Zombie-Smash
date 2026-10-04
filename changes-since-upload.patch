@@ -3,14 +3,14 @@ new file mode 100644
 index 0000000..e69de29
 diff --git a/CHANGES-SINCE-UPLOAD.md b/CHANGES-SINCE-UPLOAD.md
 new file mode 100644
-index 0000000..d460307
+index 0000000..7612474
 --- /dev/null
 +++ b/CHANGES-SINCE-UPLOAD.md
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,102 @@
 +# Changes made since your last upload
 +
 +Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-+Current: version **7.8.4** (`VERSION.txt`, cache `zombie-smash-v7.8.4-barrel-speed`).
++Current: version **7.8.5** (`VERSION.txt`, cache `zombie-smash-v7.8.5-fewer-drops`).
 +Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 +
 +    git diff a826f4e HEAD                 # everything
@@ -92,8 +92,11 @@ index 0000000..d460307
 +### 7.8.3 - Faster Debo chain
 +- Chain shots now carry their own timings (`wind`, `ext`, `hold`, `ret`; `updateShots` in `engine.js`, defaults .45/.3/.65). Debo's chain (both the form 1 attack and the form 2 barrel combo): wind-up .8 -> .55 s (barrel combo .6 -> .45 s), lunge .45 -> .26 s, hold .3 -> .2 s, retract .65 -> .4 s. Wind-up plus lunge is 0.8 s (was 1.25 s); the whole chain lasts 1.4 s (was 2.2 s). The barrel combo launch is now `T-.71` so the chain still reaches full length at the instant the barrel lands (checked: 0.00 s apart). Test bot still beats Debo (30-35 s, 0 hits).
 +
-+### 7.8.4 - Faster barrel throw (current)
++### 7.8.4 - Faster barrel throw
 +- Debo form 2: barrel flight time `T` 2.3 -> 1.6 s (about 40% faster, ~160 px/s); the chain launch time follows (`T-.71`) so the chain still reaches full length at the moment the barrel lands (checked: 0.00 s apart). Test bot still beats Debo (30-34 s, 0 hits).
++
++### 7.8.5 - Fewer special drops (current)
++- `engine.js` kill drops: a drop now happens on every 20th kill or a 2.2% chance (was every 12th or 4.5%), i.e. about 1 drop per 15 kills instead of 1 per 8.5. Drop mix when health is above 2 hearts: grenade 20% (was 48%), shield 18% (was 14%), speed-up 16% (was 14%), guns 46% (was 24%); the "heart when low on health" rule is unchanged. Measured over 1000 kills: grenade drops 55 -> 12 (about one per 83 kills instead of one per 18). Boss-down rewards (heart + DMR) unchanged.
 +
 +---
 +
@@ -121,14 +124,14 @@ index 984cb01..4eb0d8f 100644
  - Fixed 375 x 667 console; 343 x 412 arena. Every element scales together.
  - Longer playfield extends down; top/left/right gameplay positions stay fixed.
 diff --git a/VERSION.txt b/VERSION.txt
-index 108bd20..4b870a5 100644
+index 108bd20..b3dd2aa 100644
 --- a/VERSION.txt
 +++ b/VERSION.txt
 @@ -1 +1 @@
 -7.5.0-consolidated-classic
-+7.8.4-barrel-speed
++7.8.5-fewer-drops
 diff --git a/engine.js b/engine.js
-index 18ba022..1e563f6 100644
+index 18ba022..544e28b 100644
 --- a/engine.js
 +++ b/engine.js
 @@ -1,4 +1,4 @@
@@ -195,7 +198,7 @@ index 18ba022..1e563f6 100644
    this.updateBullets(dt);this.updateShots(dt);this.updatePickups(dt);this.updateGrenades(dt);this.enemies=this.enemies.filter(z=>!z.dead);this.barrels=this.barrels.filter(b=>!b.dead);
    if(!this.scene&&!this.boss&&this.spawned>=this.target&&this.resolved>=this.target&&!this.enemies.length&&!this.over){const def=BOSSES.find(b=>b.wave===this.wave&&!this.bossesDown.includes(b.id));if(def)this.queueBoss(def.id);else{this.nextIn=1.55;this.banner='WAVE CLEAR';this.bannerLeft=1.55;this.emit('clear');}}
   }
-@@ -68,7 +73,7 @@ class Game{
+@@ -68,10 +73,10 @@ class Game{
   damage(z,amount,source='pistol'){if(z.dead||this.scene||z.boss&&z.phaseGrace>0)return;const shield=z.type==='bulwark'&&(z.age%3.5)<2&&source!=='grenade'&&source!=='chain'&&source!=='dmr';if(shield){amount*=.28;this.emit('ricochet');}z.hp-=amount;z.flash=.07;this.burst(z.x,z.y,shield?'#8de8ff':'#fbd078',3,35);if(z.boss){
     // Each form owns a health segment. Excess damage never skips a reveal or a form.
     const floor=z.maxHp*(z.stages-z.stage)/z.stages;
@@ -203,14 +206,18 @@ index 18ba022..1e563f6 100644
 +   if(z.stage<z.stages&&z.hp<=floor){z.hp=floor;z.stage++;z.attack=1.35;z.wind=0;z.mode='idle';z.shake=0;z.chainIn=null;this.barrels=this.barrels.filter(x=>!x.thrown);this.shots=[];this.bullets=[];this.grenades=[];this.emit('mutation',{stage:z.stage});this.scene={kind:'mutation',phase:0,time:0,duration:z.stage===3?2.8:1.8,bossId:z.bossId,stage:z.stage};this.resetInput();}
     else if(z.hp<=0)this.killBoss();return;}
  
-   if(z.hp<=0){z.dead=true;this.resolve(z);this.kills++;this.combo++;this.comboLeft=7;const previous=this.multiplier;this.multiplier=this.combo>=30?10:this.combo>=20?4:this.combo>=10?2:1;const points=z.points*this.multiplier;this.addPoints(points,z.x,z.y);if(this.multiplier>previous)this.emit('boost',{multiplier:this.multiplier});this.burst(z.x,z.y,z.type==='fuse'?'#9cff65':'#bfd595',8,60);this.emit('kill',{type:z.type});if(z.type==='fuse')this.explode(z.x,z.y,85,6,false);if(this.kills%12===0||this.rand()<.045)this.drop(z.x,z.y);}
+-  if(z.hp<=0){z.dead=true;this.resolve(z);this.kills++;this.combo++;this.comboLeft=7;const previous=this.multiplier;this.multiplier=this.combo>=30?10:this.combo>=20?4:this.combo>=10?2:1;const points=z.points*this.multiplier;this.addPoints(points,z.x,z.y);if(this.multiplier>previous)this.emit('boost',{multiplier:this.multiplier});this.burst(z.x,z.y,z.type==='fuse'?'#9cff65':'#bfd595',8,60);this.emit('kill',{type:z.type});if(z.type==='fuse')this.explode(z.x,z.y,85,6,false);if(this.kills%12===0||this.rand()<.045)this.drop(z.x,z.y);}
++  if(z.hp<=0){z.dead=true;this.resolve(z);this.kills++;this.combo++;this.comboLeft=7;const previous=this.multiplier;this.multiplier=this.combo>=30?10:this.combo>=20?4:this.combo>=10?2:1;const points=z.points*this.multiplier;this.addPoints(points,z.x,z.y);if(this.multiplier>previous)this.emit('boost',{multiplier:this.multiplier});this.burst(z.x,z.y,z.type==='fuse'?'#9cff65':'#bfd595',8,60);this.emit('kill',{type:z.type});if(z.type==='fuse')this.explode(z.x,z.y,85,6,false);if(this.kills%20===0||this.rand()<.022)this.drop(z.x,z.y);}
+  }
+  resolve(z){if(z.resolved)return;z.resolved=true;if(!z.minion)this.resolved++;}
+  addPoints(n,x,y){this.score+=Math.round(n);this.pops.push({x,y,text:'+'+Math.round(n).toLocaleString(),life:.9});if(this.pops.length>12)this.pops.shift();}
 @@ -79,8 +84,8 @@ class Game{
   hurt(reason){const p=this.player;if(this.over||this.scene||p.inv>0||p.shield>0||this.invincible)return;p.lives--;p.inv=1.25;this.shake=2;this.resetCombo();this.emit('hurt');if(p.lives<=0)this.end(reason);}
   equip(gun,ammo=null){const g=GUNS[gun];if(!g)return;this.player.gun=gun;this.player.ammo=ammo??g.ammo;this.banner=g.name+' READY';this.bannerLeft=1.2;}
   useStored(gun){const p=this.player;if(!this.active||!p.inventory?.[gun]||!GUNS[gun]||this.scene||this.over||gun===p.gun)return false;const ammo=p.inventory[gun];if(p.gun!=='pistol'&&p.ammo>0)p.inventory[p.gun]=p.ammo;p.inventory[gun]=0;this.equip(gun,ammo);this.emit('weaponUse',{gun});return true;}
 - drop(x,y,forced){const types=['grenade','shield','heart','smg','shotgun','burst','dmr'];let type=forced;if(!type){const r=this.rand();type=this.player.lives<=2&&r<.35?'heart':r<.56?'grenade':r<.72?'shield':types[3+Math.floor(this.rand()*4)];}this.pickups.push({x:clamp(x,20,W-20),y:clamp(y,20,H-45),type,life:13,age:0});}
 - updatePickups(dt){const p=this.player;for(const item of this.pickups){item.age+=dt;item.life-=dt;item.y=Math.min(H-52,item.y+37*dt);if(Math.hypot(item.x-p.x,item.y-p.y)<28){if(GUNS[item.type]){const p=this.player;if((p.inventory[item.type]||0)>0||(p.gun===item.type&&p.ammo>0)){this.addPoints(200,item.x,item.y);this.banner=GUNS[item.type].name+' ALREADY STORED';this.bannerLeft=.9;}else{p.inventory[item.type]=GUNS[item.type].ammo;this.banner=GUNS[item.type].name+' STORED';this.bannerLeft=1.2;}}else if(item.type==='heart')p.lives=Math.min(5,p.lives+1);else if(item.type==='grenade')p.grenades=Math.min(9,p.grenades+2);else if(item.type==='shield')p.shield=7;item.life=0;this.emit('pickup',{type:item.type});}}this.pickups=this.pickups.filter(i=>i.life>0);}
-+ drop(x,y,forced){const types=['grenade','shield','heart','smg','shotgun','burst','dmr'];let type=forced;if(!type){const r=this.rand();type=this.player.lives<=2&&r<.35?'heart':r<.48?'grenade':r<.62?'shield':r<.76?'speed':types[3+Math.floor(this.rand()*4)];}this.pickups.push({x:clamp(x,20,W-20),y:clamp(y,20,H-45),type,life:13,age:0});}
++ drop(x,y,forced){const types=['grenade','shield','heart','smg','shotgun','burst','dmr'];let type=forced;if(!type){const r=this.rand();type=this.player.lives<=2&&r<.35?'heart':r<.20?'grenade':r<.38?'shield':r<.54?'speed':types[3+Math.floor(this.rand()*4)];}this.pickups.push({x:clamp(x,20,W-20),y:clamp(y,20,H-45),type,life:13,age:0});}
 + updatePickups(dt){const p=this.player;for(const item of this.pickups){item.age+=dt;item.life-=dt;item.y=Math.min(H-52,item.y+37*dt);if(Math.hypot(item.x-p.x,item.y-p.y)<28){if(GUNS[item.type]){const p=this.player;if((p.inventory[item.type]||0)>0||(p.gun===item.type&&p.ammo>0)){this.addPoints(200,item.x,item.y);this.banner=GUNS[item.type].name+' ALREADY STORED';this.bannerLeft=.9;}else{p.inventory[item.type]=GUNS[item.type].ammo;this.banner=GUNS[item.type].name+' STORED';this.bannerLeft=1.2;}}else if(item.type==='heart')p.lives=Math.min(this.maxLives||5,p.lives+1);else if(item.type==='grenade')p.grenades=Math.min(9,p.grenades+2);else if(item.type==='speed'){p.speedUp=7;this.banner='SPEED UP';this.bannerLeft=1;}else if(item.type==='shield')p.shield=7;item.life=0;this.emit('pickup',{type:item.type});}}this.pickups=this.pickups.filter(i=>i.life>0);}
   grenade(){const p=this.player;if(!this.active||this.over||this.scene||this.nextIn>0||p.grenades<=0)return false;p.grenades--;const tx=p.x,ty=Math.max(48,p.y-H*.50);this.grenades.push({sx:p.x,sy:p.y-20,x:p.x,y:p.y-20,tx,ty,age:0,duration:.52});this.emit('throw');return true;}
   updateGrenades(dt){for(const g of this.grenades){g.age+=dt;const q=clamp(g.age/g.duration,0,1);g.x=g.sx+(g.tx-g.sx)*q;g.y=g.sy+(g.ty-g.sy)*q-Math.sin(q*Math.PI)*35;if(q>=1)this.explode(g.tx,g.ty,125,20,true);}this.grenades=this.grenades.filter(g=>g.age<g.duration);}
@@ -429,7 +436,7 @@ index 85bd43f..8adebd2 100644
  addEventListener('resize',()=>{lastFit=''});visualViewport?.addEventListener('resize',()=>{lastFit=''});screen.orientation?.addEventListener('change',()=>{lastFit=''});addEventListener('blur',()=>{clearInput();if(game.active&&!panel){pause();menu()}});document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();if(game.active&&!panel)menu()}});addEventListener('pagehide',save);addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
  applySkin(read('zs7-skin','toxic'));showStart();requestAnimationFrame(frame);renderer.load(fraction=>{const line=$('loadingLine');if(line)line.textContent='Loading game artwork · '+Math.round(fraction*100)+'%'}).then(()=>{ready=true;if(panel==='start'){const b=$('startButton');b.disabled=false;b.textContent='PLAY ZOMBIE SMASH';$('loadingLine').textContent='NO LOGIN · ALL SKINS UNLOCKED'}renderer.draw(game)}).catch(error=>{const line=$('loadingLine');if(line)line.textContent='Artwork download interrupted. Reload to retry.';toast(error.message)});scores.flush();
 diff --git a/index.html b/index.html
-index 7f2abfc..4f22b05 100644
+index 7f2abfc..0f16855 100644
 --- a/index.html
 +++ b/index.html
 @@ -3,7 +3,7 @@
@@ -437,7 +444,7 @@ index 7f2abfc..4f22b05 100644
  <meta name="theme-color" content="#111416"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zombie Smash">
  <meta name="description" content="Joey Rob versus Dr Mantis and the fallen heroes. A portrait arcade game. Pick a name. Hold the line.">
 -<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.5"><link rel="icon" href="./icon-192.png?v=7.5"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.5"><link rel="stylesheet" href="./game.css?v=7.5">
-+<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.4"><link rel="icon" href="./icon-192.png?v=7.8.4"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.4"><link rel="stylesheet" href="./game.css?v=7.8.4">
++<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.5"><link rel="icon" href="./icon-192.png?v=7.8.5"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.5"><link rel="stylesheet" href="./game.css?v=7.8.5">
  </head><body>
  <div id="bleed" aria-hidden="true"></div>
  <main id="cabinet" aria-label="Zombie Smash portrait console">
@@ -446,10 +453,10 @@ index 7f2abfc..4f22b05 100644
  <div id="rotateGate" hidden><img src="./icon-192.png" alt=""><h1>TURN TO PORTRAIT</h1><p>Your game is paused.<br>The whole console stays in proportion.</p><svg viewBox="0 0 60 72" aria-hidden="true"><rect x="16" y="7" width="28" height="54" rx="4"/><path d="M27 54h6"/></svg></div>
  <noscript>Enable JavaScript to play Zombie Smash.</noscript>
 -<script src="./game-data.js?v=7.5"></script><script src="./engine.js?v=7.5"></script><script src="./renderer.js?v=7.5"></script><script src="./audio.js?v=7.5"></script><script src="./scores.js?v=7.5"></script><script src="./game.js?v=7.5"></script>
-+<script src="./game-data.js?v=7.8.4"></script><script src="./engine.js?v=7.8.4"></script><script src="./renderer.js?v=7.8.4"></script><script src="./audio.js?v=7.8.4"></script><script src="./scores.js?v=7.8.4"></script><script src="./game.js?v=7.8.4"></script>
++<script src="./game-data.js?v=7.8.5"></script><script src="./engine.js?v=7.8.5"></script><script src="./renderer.js?v=7.8.5"></script><script src="./audio.js?v=7.8.5"></script><script src="./scores.js?v=7.8.5"></script><script src="./game.js?v=7.8.5"></script>
  </body></html>
 diff --git a/manifest.webmanifest b/manifest.webmanifest
-index 96df531..ccb8977 100644
+index 96df531..0f350a0 100644
 --- a/manifest.webmanifest
 +++ b/manifest.webmanifest
 @@ -5,15 +5,15 @@
@@ -466,12 +473,12 @@ index 96df531..ccb8977 100644
 -    {"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png","purpose":"any"},
 -    {"src":"./icon-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"any"},
 -    {"src":"./icon-maskable-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"maskable"}
-+    {"src":"./icon-192.png?v=7.8.4","sizes":"192x192","type":"image/png","purpose":"any"},
-+    {"src":"./icon-512.png?v=7.8.4","sizes":"512x512","type":"image/png","purpose":"any"},
-+    {"src":"./icon-maskable-512.png?v=7.8.4","sizes":"512x512","type":"image/png","purpose":"maskable"}
++    {"src":"./icon-192.png?v=7.8.5","sizes":"192x192","type":"image/png","purpose":"any"},
++    {"src":"./icon-512.png?v=7.8.5","sizes":"512x512","type":"image/png","purpose":"any"},
++    {"src":"./icon-maskable-512.png?v=7.8.5","sizes":"512x512","type":"image/png","purpose":"maskable"}
    ],
 -  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png"}]}]
-+  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.4","sizes":"192x192","type":"image/png"}]}]
++  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.5","sizes":"192x192","type":"image/png"}]}]
  }
 diff --git a/renderer.js b/renderer.js
 index df73dcf..152199f 100644
@@ -509,13 +516,13 @@ index df73dcf..152199f 100644
  window.ZSRenderer=Renderer;window.ZSRenderer.assets=[...new Set(files)];
  })();
 diff --git a/sw.js b/sw.js
-index 8d20283..fd49297 100644
+index 8d20283..303dd8e 100644
 --- a/sw.js
 +++ b/sw.js
 @@ -1,5 +1,5 @@
 -const CACHE='zombie-smash-v7.5.0-f284267950';
 -const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
-+const CACHE='zombie-smash-v7.8.4-barrel-speed';
++const CACHE='zombie-smash-v7.8.5-fewer-drops';
 +const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-banner.webp","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-glowstick-blue.webp","./weapon-glowstick-green.webp","./weapon-glowstick-orange.webp","./weapon-glowstick-pink.webp","./weapon-glowstick-violet.webp","./weapon-glowstick-yellow.webp","./weapon-tea.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
  // Install the complete release atomically, including music and every boss form.
  self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
