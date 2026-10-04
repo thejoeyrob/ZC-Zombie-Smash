@@ -1,7 +1,7 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.8.0** (`VERSION.txt`, cache `zombie-smash-v7.8.0-stick-fill`).
+Current: version **7.8.1** (`VERSION.txt`, cache `zombie-smash-v7.8.1-full-screen`).
 Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
@@ -63,11 +63,16 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 **New art** (drawn procedurally, exported as WebP): `weapon-tea.webp`, `weapon-glowstick.webp`; both added to the preload list in `renderer.js` and to `ASSETS` in `sw.js`. `weapon-missile.webp` is again used (Fat Amy form 1).
 `renderer.js`: per-weapon spin speeds, thrown barrel rotates, boss shake offset, Fat Amy's dashed charge line.
 
-### 7.8.0 - Floating joystick, deck position, fuller screen (current)
+### 7.8.0 - Floating joystick, deck position, fuller screen
 - **Joystick** (`game.js`, `moveStick` and the pointer handlers): the whole pad (plus a 14px invisible margin) is the pick-up area. Wherever the thumb first touches becomes the centre, so pressing a side does nothing until the thumb is dragged. Full speed at a drag of 16% of the pad width (~14 px); dead zone 10% of that; response curve `|v|^0.8`. Past full deflection the centre follows the thumb, so reversing is quick. A quick flick (about 6 px within 150 ms) gives a 170 ms full-speed burst even if the thumb is lifted straight away. Uses coalesced pointer events. State: `stickOrigin`, `stickHist`, `flickDir`, `flickUntil`; `inputs()` applies the burst; `clearInput()` cancels it.
   Measured with simulated touches: press-only on either edge = 0 movement; flick right/left = about +-40..50 px; slow pull is proportional.
 - **Deck position** (`game.css`, end of file): joystick `left 22 -> 28px, top 25 -> 19px`; fire button `right 21 -> 27px, top 25 -> 19px` (6 px up and 6 px towards the centre each).
 - **Fuller screen** (`fit()` in `game.js`): the console scales uniformly (same proportions) to the largest size that fits; it previously also reserved the bottom safe-area inset (e.g. the iPhone home-indicator strip) and now only reserves the top inset, so it is larger on height-limited screens. On tall phones the console is width-limited and the leftover height is filled by the existing blurred skin backdrop, because stretching it would change the proportions.
+
+### 7.8.1 - Full-screen fit under the status bar (current)
+- `fit()` in `game.js` now scales the console to the whole viewport (`min(w/375, h/667)`, same proportions, no reserved margins) and draws it under the translucent iPhone status bar (`apple-mobile-web-app-status-bar-style` was already `black-translucent`). A web page cannot hide the iOS status bar itself; this only stops wasting the space.
+- If the status bar would cover the header buttons, the console is nudged down by up to ~11 px (bottom bezel edge is cropped by the same amount) and the header row is moved just below the bar (`--hs` CSS variable, `.sb-overlap` class, end of `game.css`); header buttons keep at least 26 px height. Verified at 375x667 (fills the screen exactly), 390x844 and 375x600.
+- `manifest.webmanifest`: added `"display_override":["fullscreen","standalone"]` (Android installs can hide their status bar; iOS ignores it).
 
 ---
 

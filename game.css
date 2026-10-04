@@ -77,3 +77,7 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
 /* 7.8: joystick and fire button sit 6px higher and 6px closer to the centre. */
 #joystick{left:28px;top:19px}
 .fire-button{right:27px;top:19px}
+/* 7.8.1: the console fills the whole screen, under the translucent status bar; the header drops just below it. */
+.console-header{top:calc(3px + var(--hs,0px));height:max(26px,calc(var(--hh,34px) + 1px - var(--hs,0px)))}
+.top-button{height:calc(100% - 4px)}
+.sb-overlap .wordmark{font-size:12px}.sb-overlap .wordmark small{font-size:5.5px}

@@ -3,14 +3,14 @@ new file mode 100644
 index 0000000..e69de29
 diff --git a/CHANGES-SINCE-UPLOAD.md b/CHANGES-SINCE-UPLOAD.md
 new file mode 100644
-index 0000000..dcce2e7
+index 0000000..edf266e
 --- /dev/null
 +++ b/CHANGES-SINCE-UPLOAD.md
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,86 @@
 +# Changes made since your last upload
 +
 +Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-+Current: version **7.8.0** (`VERSION.txt`, cache `zombie-smash-v7.8.0-stick-fill`).
++Current: version **7.8.1** (`VERSION.txt`, cache `zombie-smash-v7.8.1-full-screen`).
 +Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 +
 +    git diff a826f4e HEAD                 # everything
@@ -72,11 +72,16 @@ index 0000000..dcce2e7
 +**New art** (drawn procedurally, exported as WebP): `weapon-tea.webp`, `weapon-glowstick.webp`; both added to the preload list in `renderer.js` and to `ASSETS` in `sw.js`. `weapon-missile.webp` is again used (Fat Amy form 1).
 +`renderer.js`: per-weapon spin speeds, thrown barrel rotates, boss shake offset, Fat Amy's dashed charge line.
 +
-+### 7.8.0 - Floating joystick, deck position, fuller screen (current)
++### 7.8.0 - Floating joystick, deck position, fuller screen
 +- **Joystick** (`game.js`, `moveStick` and the pointer handlers): the whole pad (plus a 14px invisible margin) is the pick-up area. Wherever the thumb first touches becomes the centre, so pressing a side does nothing until the thumb is dragged. Full speed at a drag of 16% of the pad width (~14 px); dead zone 10% of that; response curve `|v|^0.8`. Past full deflection the centre follows the thumb, so reversing is quick. A quick flick (about 6 px within 150 ms) gives a 170 ms full-speed burst even if the thumb is lifted straight away. Uses coalesced pointer events. State: `stickOrigin`, `stickHist`, `flickDir`, `flickUntil`; `inputs()` applies the burst; `clearInput()` cancels it.
 +  Measured with simulated touches: press-only on either edge = 0 movement; flick right/left = about +-40..50 px; slow pull is proportional.
 +- **Deck position** (`game.css`, end of file): joystick `left 22 -> 28px, top 25 -> 19px`; fire button `right 21 -> 27px, top 25 -> 19px` (6 px up and 6 px towards the centre each).
 +- **Fuller screen** (`fit()` in `game.js`): the console scales uniformly (same proportions) to the largest size that fits; it previously also reserved the bottom safe-area inset (e.g. the iPhone home-indicator strip) and now only reserves the top inset, so it is larger on height-limited screens. On tall phones the console is width-limited and the leftover height is filled by the existing blurred skin backdrop, because stretching it would change the proportions.
++
++### 7.8.1 - Full-screen fit under the status bar (current)
++- `fit()` in `game.js` now scales the console to the whole viewport (`min(w/375, h/667)`, same proportions, no reserved margins) and draws it under the translucent iPhone status bar (`apple-mobile-web-app-status-bar-style` was already `black-translucent`). A web page cannot hide the iOS status bar itself; this only stops wasting the space.
++- If the status bar would cover the header buttons, the console is nudged down by up to ~11 px (bottom bezel edge is cropped by the same amount) and the header row is moved just below the bar (`--hs` CSS variable, `.sb-overlap` class, end of `game.css`); header buttons keep at least 26 px height. Verified at 375x667 (fills the screen exactly), 390x844 and 375x600.
++- `manifest.webmanifest`: added `"display_override":["fullscreen","standalone"]` (Android installs can hide their status bar; iOS ignores it).
 +
 +---
 +
@@ -103,12 +108,12 @@ index 984cb01..4eb0d8f 100644
  - Fixed 375 x 667 console; 343 x 412 arena. Every element scales together.
  - Longer playfield extends down; top/left/right gameplay positions stay fixed.
 diff --git a/VERSION.txt b/VERSION.txt
-index 108bd20..509ab07 100644
+index 108bd20..1966dea 100644
 --- a/VERSION.txt
 +++ b/VERSION.txt
 @@ -1 +1 @@
 -7.5.0-consolidated-classic
-+7.8.0-stick-fill
++7.8.1-full-screen
 diff --git a/engine.js b/engine.js
 index 18ba022..8914ca7 100644
 --- a/engine.js
@@ -307,10 +312,10 @@ index 060477c..e2cd58b 100644
    "MAPS": [
      {
 diff --git a/game.css b/game.css
-index 2316c04..890d684 100644
+index 2316c04..0e40490 100644
 --- a/game.css
 +++ b/game.css
-@@ -57,3 +57,23 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
+@@ -57,3 +57,27 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
  @keyframes reveal{from{transform:scale(.88)}to{transform:scale(1)}}
  .scene-figures.dual .scene-art{width:0;min-width:0;flex:1 1 0}
  #cinematic{grid-template-columns:minmax(0,1fr);justify-content:stretch;align-items:stretch}
@@ -334,8 +339,12 @@ index 2316c04..890d684 100644
 +/* 7.8: joystick and fire button sit 6px higher and 6px closer to the centre. */
 +#joystick{left:28px;top:19px}
 +.fire-button{right:27px;top:19px}
++/* 7.8.1: the console fills the whole screen, under the translucent status bar; the header drops just below it. */
++.console-header{top:calc(3px + var(--hs,0px));height:max(26px,calc(var(--hh,34px) + 1px - var(--hs,0px)))}
++.top-button{height:calc(100% - 4px)}
++.sb-overlap .wordmark{font-size:12px}.sb-overlap .wordmark small{font-size:5.5px}
 diff --git a/game.js b/game.js
-index 85bd43f..60f0d57 100644
+index 85bd43f..a9c3592 100644
 --- a/game.js
 +++ b/game.js
 @@ -5,16 +5,16 @@ const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{retur
@@ -385,7 +394,7 @@ index 85bd43f..60f0d57 100644
 -function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,usableH=h-top-bottom;const scale=Math.min(w/375,usableH/667),key=w+'x'+h+'@'+scale.toFixed(4);if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(top+usableH/2)+'px';renderer.resize()}
 +function hud(){const p=game.player;$('joystick').classList.toggle('sped',(p.speedUp||0)>0);$('waveValue').textContent=game.wave;$('leftValue').textContent=game.boss?'BOSS':Math.max(0,game.target-game.resolved);$('scoreValue').textContent=game.score.toLocaleString();$('bestValue').textContent=scores.getBest(run?.name||read('zs7-name','')).toLocaleString();{const max=game.maxLives||5,l=Math.max(0,p.lives),el=$('healthValue');el.classList.toggle('tenhearts',max>5);el.innerHTML=Array.from({length:max},(_,i)=>`<span class="heart${i>=5?' gold':''}${i<l?'':' empty'}">${i<l?'♥':'♡'}</span>`).join(' ')}$('healthValue').setAttribute('aria-label',p.lives+' hearts');$('gunValue').textContent=ZSEngine.GUNS[p.gun].name;$('ammoValue').textContent=!Number.isFinite(p.ammo)||game.infiniteAmmo?'∞':p.ammo;$('baseValue').textContent=game.breaches+'/10';$('grenadeValue').textContent=p.grenades;$('grenadeButton').classList.toggle('empty',p.grenades===0);$('grenadeButton').setAttribute('aria-label','Throw grenade, '+p.grenades+' remaining');$('boostText').textContent='BOOST ×'+game.multiplier;$('boostFill').style.width=Math.max(0,game.comboLeft/7*100)+'%';$('comboText').textContent=game.combo>=30?'×10 · KEEP IT GOING':((game.combo<10?10:game.combo<20?20:30)-game.combo)+' KILLS TO ×'+(game.combo<10?2:game.combo<20?4:10);for(const gun of ['smg','shotgun','dmr','burst']){const el=$('inv-'+gun);const active=p.gun===gun,ammo=active?p.ammo:(p.inventory?.[gun]||0);if(el)el.textContent=ammo||'—';const btn=document.querySelector(`[data-weapon="${gun}"]`);if(btn){btn.disabled=active||!(ammo>0);btn.classList.toggle('ready',ammo>0);btn.classList.toggle('equipped',active);btn.setAttribute('aria-label',`${active?'Equipped':'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`)}}$('mapLabel').textContent=MAPS[Math.min(6,Math.floor((game.wave-1)/2))].name;$('headerName').textContent=run?.name||'JOEY ROB VS DR MANTIS'}
 +function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}if(performance.now()<flickUntil&&Math.sign(axis)!==-flickDir)axis=flickDir;padGrenade=grenade;game.setInput(axis,fire)}
-+function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,usableH=h-top;const scale=Math.min(w/375,usableH/667),key=w+'x'+h+'@'+scale.toFixed(4);if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(top+usableH/2)+'px';renderer.resize()}
++function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,scale=Math.min(w/375,h/667),edge0=(h-667*scale)/2,T=Math.max(edge0,top+2-11*scale),shift=Math.max(0,top+2-(T+3*scale))/scale,key=w+'x'+h+'@'+scale.toFixed(4)+'/'+top;if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);document.documentElement.style.setProperty('--hs',shift.toFixed(1)+'px');document.body.classList.toggle('sb-overlap',shift>6);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(T+333.5*scale)+'px';renderer.resize()}
  function frame(now){fit();const dt=Math.min(.1,(now-lastTime)/1000||0);lastTime=now;if(!paused&&!landscape&&!document.hidden&&ready){inputs();accumulator+=dt;let steps=0;while(accumulator>=1/60&&steps++<6){game.step(1/60);accumulator-=1/60}saveClock+=dt;if(saveClock>5){saveClock=0;save()}}else accumulator=0;renderer.draw(game);cinematic();hud();requestAnimationFrame(frame)}
 -const stick=$('joystick');function moveStick(e){if(e.pointerId!==stickId)return;const r=stick.getBoundingClientRect(),raw=(e.clientX-(r.left+r.width/2))/(r.width*.34),value=Math.max(-1,Math.min(1,raw));touchAxis=Math.abs(value)<.1?0:Math.sign(value)*(Math.abs(value)-.1)/.9;$('stickKnob').style.transform=`translateX(${value*25}px)`;stick.setAttribute('aria-valuenow',Math.round(touchAxis*100))}
 -stick.addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();stickId=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);audio.unlock()});stick.addEventListener('pointermove',moveStick);for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,e=>{if(e.pointerId===stickId){stickId=null;touchAxis=0;$('stickKnob').style.transform='translateX(0)';stick.setAttribute('aria-valuenow','0')}});
@@ -405,7 +414,7 @@ index 85bd43f..60f0d57 100644
  addEventListener('resize',()=>{lastFit=''});visualViewport?.addEventListener('resize',()=>{lastFit=''});screen.orientation?.addEventListener('change',()=>{lastFit=''});addEventListener('blur',()=>{clearInput();if(game.active&&!panel){pause();menu()}});document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();if(game.active&&!panel)menu()}});addEventListener('pagehide',save);addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
  applySkin(read('zs7-skin','toxic'));showStart();requestAnimationFrame(frame);renderer.load(fraction=>{const line=$('loadingLine');if(line)line.textContent='Loading game artwork · '+Math.round(fraction*100)+'%'}).then(()=>{ready=true;if(panel==='start'){const b=$('startButton');b.disabled=false;b.textContent='PLAY ZOMBIE SMASH';$('loadingLine').textContent='NO LOGIN · ALL SKINS UNLOCKED'}renderer.draw(game)}).catch(error=>{const line=$('loadingLine');if(line)line.textContent='Artwork download interrupted. Reload to retry.';toast(error.message)});scores.flush();
 diff --git a/index.html b/index.html
-index 7f2abfc..718eadb 100644
+index 7f2abfc..12d5d13 100644
 --- a/index.html
 +++ b/index.html
 @@ -3,7 +3,7 @@
@@ -413,7 +422,7 @@ index 7f2abfc..718eadb 100644
  <meta name="theme-color" content="#111416"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zombie Smash">
  <meta name="description" content="Joey Rob versus Dr Mantis and the fallen heroes. A portrait arcade game. Pick a name. Hold the line.">
 -<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.5"><link rel="icon" href="./icon-192.png?v=7.5"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.5"><link rel="stylesheet" href="./game.css?v=7.5">
-+<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.0"><link rel="icon" href="./icon-192.png?v=7.8.0"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.0"><link rel="stylesheet" href="./game.css?v=7.8.0">
++<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.1"><link rel="icon" href="./icon-192.png?v=7.8.1"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.1"><link rel="stylesheet" href="./game.css?v=7.8.1">
  </head><body>
  <div id="bleed" aria-hidden="true"></div>
  <main id="cabinet" aria-label="Zombie Smash portrait console">
@@ -422,25 +431,32 @@ index 7f2abfc..718eadb 100644
  <div id="rotateGate" hidden><img src="./icon-192.png" alt=""><h1>TURN TO PORTRAIT</h1><p>Your game is paused.<br>The whole console stays in proportion.</p><svg viewBox="0 0 60 72" aria-hidden="true"><rect x="16" y="7" width="28" height="54" rx="4"/><path d="M27 54h6"/></svg></div>
  <noscript>Enable JavaScript to play Zombie Smash.</noscript>
 -<script src="./game-data.js?v=7.5"></script><script src="./engine.js?v=7.5"></script><script src="./renderer.js?v=7.5"></script><script src="./audio.js?v=7.5"></script><script src="./scores.js?v=7.5"></script><script src="./game.js?v=7.5"></script>
-+<script src="./game-data.js?v=7.8.0"></script><script src="./engine.js?v=7.8.0"></script><script src="./renderer.js?v=7.8.0"></script><script src="./audio.js?v=7.8.0"></script><script src="./scores.js?v=7.8.0"></script><script src="./game.js?v=7.8.0"></script>
++<script src="./game-data.js?v=7.8.1"></script><script src="./engine.js?v=7.8.1"></script><script src="./renderer.js?v=7.8.1"></script><script src="./audio.js?v=7.8.1"></script><script src="./scores.js?v=7.8.1"></script><script src="./game.js?v=7.8.1"></script>
  </body></html>
 diff --git a/manifest.webmanifest b/manifest.webmanifest
-index 96df531..ee99304 100644
+index 96df531..8985bc7 100644
 --- a/manifest.webmanifest
 +++ b/manifest.webmanifest
-@@ -11,9 +11,9 @@
+@@ -5,15 +5,15 @@
+   "description":"Hold the line. Seven bosses, explosive arcade combat and your next high score. No login.",
+   "start_url":"./",
+   "scope":"./",
+-  "display":"standalone",
++  "display":"standalone","display_override":["fullscreen","standalone"],
+   "orientation":"portrait-primary",
+   "background_color":"#0b120d",
    "theme_color":"#122115",
    "categories":["games","entertainment"],
    "icons":[
 -    {"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png","purpose":"any"},
 -    {"src":"./icon-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"any"},
 -    {"src":"./icon-maskable-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"maskable"}
-+    {"src":"./icon-192.png?v=7.8.0","sizes":"192x192","type":"image/png","purpose":"any"},
-+    {"src":"./icon-512.png?v=7.8.0","sizes":"512x512","type":"image/png","purpose":"any"},
-+    {"src":"./icon-maskable-512.png?v=7.8.0","sizes":"512x512","type":"image/png","purpose":"maskable"}
++    {"src":"./icon-192.png?v=7.8.1","sizes":"192x192","type":"image/png","purpose":"any"},
++    {"src":"./icon-512.png?v=7.8.1","sizes":"512x512","type":"image/png","purpose":"any"},
++    {"src":"./icon-maskable-512.png?v=7.8.1","sizes":"512x512","type":"image/png","purpose":"maskable"}
    ],
 -  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png"}]}]
-+  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.0","sizes":"192x192","type":"image/png"}]}]
++  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.1","sizes":"192x192","type":"image/png"}]}]
  }
 diff --git a/renderer.js b/renderer.js
 index df73dcf..492aa12 100644
@@ -478,13 +494,13 @@ index df73dcf..492aa12 100644
  window.ZSRenderer=Renderer;window.ZSRenderer.assets=[...new Set(files)];
  })();
 diff --git a/sw.js b/sw.js
-index 8d20283..f1c2e1f 100644
+index 8d20283..e9be0a1 100644
 --- a/sw.js
 +++ b/sw.js
 @@ -1,5 +1,5 @@
 -const CACHE='zombie-smash-v7.5.0-f284267950';
 -const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
-+const CACHE='zombie-smash-v7.8.0-stick-fill';
++const CACHE='zombie-smash-v7.8.1-full-screen';
 +const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-banner.webp","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-glowstick.webp","./weapon-tea.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
  // Install the complete release atomically, including music and every boss form.
  self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));

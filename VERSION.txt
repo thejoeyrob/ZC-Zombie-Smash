@@ -1,1 +1,1 @@
-7.8.0-stick-fill
+7.8.1-full-screen
