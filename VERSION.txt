@@ -1,1 +1,1 @@
-7.6.3-gentler-bosses
+7.7.0-boss-rework

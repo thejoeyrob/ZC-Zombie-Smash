@@ -13,7 +13,8 @@ const ENEMIES={
  brute:{hp:9,speed:19,r:21,points:700,art:'zombie-brute.webp',height:65},
  titan:{hp:15,speed:17,r:24,points:1050,art:'zombie-titan.webp',height:75},
  fuse:{hp:3,speed:33,r:14,points:380,art:'zombie-fuse.webp',height:52},
- bulwark:{hp:9,speed:20,r:19,points:650,art:'zombie-bulwark.webp',height:61}
+ bulwark:{hp:9,speed:20,r:19,points:650,art:'zombie-bulwark.webp',height:61},
+ mantismini:{hp:1,speed:36,r:11,points:150,art:'boss-drmantis-stage3.webp',height:30}
 };
 // 7.6.2: zombies are 45% larger (hitbox +30%) and 20% slower so the extra size doesn't make them feel faster.
 for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.45);s.r=Math.round(s.r*1.3);s.speed=+(s.speed*.8).toFixed(1)}
@@ -36,7 +37,7 @@ class Game{
  prepareWave(n){this.wave=n;this.target=Math.min(34,8+n*2);this.spawned=0;this.resolved=0;this.spawnIn=.55;this.nextIn=0;this.boss=null;this.banner=n>14?'INFINITE SURVIVAL':`WAVE ${n}`;this.bannerLeft=1.8;this.player.inv=Math.max(this.player.inv,1.1);this.spawnBarrels();this.emit('wave',{wave:n});this.emit('music',{track:'main'});}
 
  spawnBarrels(){this.barrels=[];const count=1+Math.floor(this.rand()*Math.min(5,2+Math.floor(this.wave/3)));for(let i=0;i<count;i++){let x,y;for(let tries=0;tries<40;tries++){x=32+this.rand()*(W-64);y=95+this.rand()*(H-195);if(this.barrels.every(b=>Math.hypot(b.x-x,b.y-y)>44))break;}if(this.barrels.some(b=>Math.hypot(b.x-x,b.y-y)<=44))continue;this.barrels.push({id:this.nextId++,x,y,hp:2,dead:false});}}
- explodeBarrel(barrel){if(!barrel||barrel.dead)return;barrel.dead=true;const r=W*.20;this.effects.push({kind:'barrelBlast',x:barrel.x,y:barrel.y,r,life:.58,total:.58,color:'#ff9d35'});this.shake=Math.max(this.shake,2.6);this.emit('explosion');for(const z of [...this.enemies,...(this.boss?[this.boss]:[])])if(!z.dead&&Math.hypot(z.x-barrel.x,z.y-barrel.y)<r+z.r)this.damage(z,z.boss?9:12,'barrel');for(const other of this.barrels)if(!other.dead&&other!==barrel&&Math.hypot(other.x-barrel.x,other.y-barrel.y)<r*.9)this.explodeBarrel(other);}
+ explodeBarrel(barrel){if(!barrel||barrel.dead)return;barrel.dead=true;const r=barrel.small?W*.10:W*.20;this.effects.push({kind:'barrelBlast',x:barrel.x,y:barrel.y,r,life:.58,total:.58,color:'#ff9d35'});this.shake=Math.max(this.shake,2.6);this.emit('explosion');for(const z of [...this.enemies,...(this.boss?[this.boss]:[])])if(!z.dead&&Math.hypot(z.x-barrel.x,z.y-barrel.y)<r+z.r)this.damage(z,z.boss?9:12,'barrel');if(barrel.thrown&&this.boss&&Math.hypot(this.player.x-barrel.x,this.player.y-barrel.y)<r+14)this.hurt(BOSSES.find(d=>d.id===this.boss.bossId).playerLoss);for(const other of this.barrels)if(!other.dead&&other!==barrel&&Math.hypot(other.x-barrel.x,other.y-barrel.y)<r*.9)this.explodeBarrel(other);}
  chooseType(){const w=this.wave,r=this.rand();if(w<3)return r<.76?'normal':'runner';if(w<5)return r<.45?'normal':r<.65?'runner':r<.85?'helmet':'fuse';if(w<8)return r<.25?'normal':r<.40?'runner':r<.57?'helmet':r<.73?'toxic':r<.88?'fuse':'bulwark';const pool=['normal','runner','helmet','toxic','armored','berserker','brute','fuse','bulwark',...(w>10?['titan']:[])];return pool[Math.floor(r*pool.length)];}
  spawn(type=this.chooseType(),x=null,y=-28,minion=false){const spec=ENEMIES[type],z={id:this.nextId++,type,...spec,maxHp:spec.hp,x:x??(36+this.rand()*(W-72)),y,age:0,attack:2+this.rand()*2,flash:0,dead:false,minion,charge:0,baseX:0};z.baseX=z.x;z.speed*=(1+Math.min(.6,(this.wave-1)*.035))*Math.min(1,.85+(this.wave-1)*.0375);this.enemies.push(z);if(!minion)this.spawned++;return z;}
  step(dt){if(!this.active||this.over)return;dt=Math.min(dt,.05);this.t+=dt;this.shake=Math.max(0,this.shake-dt*16);this.bannerLeft=Math.max(0,this.bannerLeft-dt);this.effects=this.effects.filter(f=>(f.life-=dt)>0);this.pops=this.pops.filter(p=>(p.life-=dt)>0);for(const f of this.effects){f.x+=(f.vx||0)*dt;f.y+=(f.vy||0)*dt;}
@@ -53,12 +54,13 @@ class Game{
    if(z.type==='runner'&&z.age>2){const phase=(z.age-2)%3.2;if(phase<.45){speed=2;z.charge=1}else if(phase<1){speed*=2.6;z.charge=2}else z.charge=0;}
    if(z.type==='berserker')z.x=clamp(z.baseX+Math.sin(z.age*2.7)*28,20,W-20);
    if(['brute','titan','armored'].includes(z.type))z.x+=clamp(p.x-z.x,-1,1)*11*dt;
-   z.y+=speed*dt;
+   z.y+=speed*dt;if(z.vx){z.x+=z.vx*dt;z.vx*=Math.max(0,1-dt*.7);if(Math.abs(z.vx)<2)z.vx=0;}
    if(z.type==='toxic'&&z.attack<=0&&z.y>25&&z.y<p.y-70){this.aimedShot(z.x,z.y,'venom',85,8);z.attack=5;}
    if(z.type==='fuse'&&z.y>p.y-16){z.dead=true;this.resolve(z);this.explode(z.x,z.y,60,3,false);if(Math.hypot(z.x-p.x,z.y-p.y)<72)this.hurt('The Fuse detonated too close.');}
    if(Math.hypot(z.x-p.x,z.y-p.y)<z.r+15){this.hurt('The horde reached Joey Rob.');z.y+=18;}
    if(z.y>H+20){z.dead=true;this.resolve(z);if(!z.minion){this.breaches++;this.resetCombo();this.emit('breach');this.banner='BASE BREACH';this.bannerLeft=.9;if(this.breaches>=10)this.end('The camp was overrun.');}}
   }
+  for(const br of this.barrels)if(br.thrown&&!br.dead){br.age+=dt;br.x+=br.vx*dt;br.y+=br.vy*dt;br.rot+=dt*5;if(br.age>=br.T)this.explodeBarrel(br);}
   this.updateBullets(dt);this.updateShots(dt);this.updatePickups(dt);this.updateGrenades(dt);this.enemies=this.enemies.filter(z=>!z.dead);this.barrels=this.barrels.filter(b=>!b.dead);
   if(!this.scene&&!this.boss&&this.spawned>=this.target&&this.resolved>=this.target&&!this.enemies.length&&!this.over){const def=BOSSES.find(b=>b.wave===this.wave&&!this.bossesDown.includes(b.id));if(def)this.queueBoss(def.id);else{this.nextIn=1.55;this.banner='WAVE CLEAR';this.bannerLeft=1.55;this.emit('clear');}}
  }
@@ -70,7 +72,7 @@ class Game{
  damage(z,amount,source='pistol'){if(z.dead||this.scene||z.boss&&z.phaseGrace>0)return;const shield=z.type==='bulwark'&&(z.age%3.5)<2&&source!=='grenade'&&source!=='chain'&&source!=='dmr';if(shield){amount*=.28;this.emit('ricochet');}z.hp-=amount;z.flash=.07;this.burst(z.x,z.y,shield?'#8de8ff':'#fbd078',3,35);if(z.boss){
    // Each form owns a health segment. Excess damage never skips a reveal or a form.
    const floor=z.maxHp*(z.stages-z.stage)/z.stages;
-   if(z.stage<z.stages&&z.hp<=floor){z.hp=floor;z.stage++;z.attack=1.35;z.wind=0;this.shots=[];this.bullets=[];this.grenades=[];this.emit('mutation',{stage:z.stage});this.scene={kind:'mutation',phase:0,time:0,duration:z.stage===3?2.8:1.8,bossId:z.bossId,stage:z.stage};this.resetInput();}
+   if(z.stage<z.stages&&z.hp<=floor){z.hp=floor;z.stage++;z.attack=1.35;z.wind=0;z.mode='idle';z.shake=0;z.chainIn=null;this.barrels=this.barrels.filter(x=>!x.thrown);this.shots=[];this.bullets=[];this.grenades=[];this.emit('mutation',{stage:z.stage});this.scene={kind:'mutation',phase:0,time:0,duration:z.stage===3?2.8:1.8,bossId:z.bossId,stage:z.stage};this.resetInput();}
    else if(z.hp<=0)this.killBoss();return;}
 
   if(z.hp<=0){z.dead=true;this.resolve(z);this.kills++;this.combo++;this.comboLeft=7;const previous=this.multiplier;this.multiplier=this.combo>=30?10:this.combo>=20?4:this.combo>=10?2:1;const points=z.points*this.multiplier;this.addPoints(points,z.x,z.y);if(this.multiplier>previous)this.emit('boost',{multiplier:this.multiplier});this.burst(z.x,z.y,z.type==='fuse'?'#9cff65':'#bfd595',8,60);this.emit('kill',{type:z.type});if(z.type==='fuse')this.explode(z.x,z.y,85,6,false);if(this.kills%12===0||this.rand()<.045)this.drop(z.x,z.y);}
@@ -90,23 +92,68 @@ class Game{
  aimedShot(x,y,kind,speed=120,r=9,offset=0){const a=Math.atan2(this.player.y-y,this.player.x-x)+offset;this.shots.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,kind,r,life:5,age:0});}
  queueBoss(id,stage=1){const def=BOSSES.find(b=>b.id===id);if(!def)return;this.boss=null;this.enemies=[];this.shots=[];this.bullets=[];this.grenades=[];this.pickups=[];this.scene={kind:'arrival',bossId:id,phase:0,time:0,duration:.7,startStage:stage};this.resetInput();this.emit('entrance',{id});this.emit('music',{track:id==='discoman'?'disco':'boss'});}
  advanceScene(){const s=this.scene;if(!s)return;if(s.kind==='arrival'&&s.phase<2){s.phase++;s.time=0;s.duration=s.phase===1?2.1:2.8;this.emit('panel',{phase:s.phase});return;}this.scene=null;if(s.kind==='arrival')this.spawnBoss(s.bossId,s.startStage||1);if(s.kind==='down'){this.nextIn=1.2;this.banner='BOSS DOWN · KEEP MOVING';this.bannerLeft=1.2;this.drop(W/2,H-75,'heart');this.drop(W/2+60,H-130,'dmr');}if(s.kind==='mutation'){this.player.inv=1.5;if(this.boss)this.boss.phaseGrace=1.4;this.emit('music',{track:this.boss?.bossId==='discoman'?'disco':'boss'});}if(s.kind==='loss'){this.over=true;this.active=false;this.emit('over',{reason:s.reason});}}
- spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:31,maxHp:b.hp,hp:b.hp*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
+ spawnBoss(id,stage=1){const b=BOSSES.find(x=>x.id===id);if(!b)return;this.boss={id:this.nextId++,boss:true,bossId:id,name:b.name,x:W/2,y:105,r:36,vx:0,vy:0,mode:'idle',shake:0,maxHp:b.hp,hp:b.hp*(1-(stage-1)/b.stages),stages:b.stages,stage,phaseGrace:1.4,age:0,attack:1.2,flash:0,dead:false,wind:0,cycle:0};this.player.inv=1.5;this.banner='';this.emit('fight',{id});}
  setTenHearts(on){this.practice=true;this.maxLives=on?10:5;this.player.lives=on?10:Math.min(this.player.lives,5);}
  skipBoss(id,stage=1){this.practice=true;this.active=true;this.over=false;this.nextIn=0;this.player.lives=this.maxLives||5;this.player.grenades=9;this.player.inv=2;this.spawned=this.target;this.resolved=this.target;const def=BOSSES.find(b=>b.id===id);this.wave=def.wave;this.queueBoss(id,clamp(stage,1,def.stages));}
- updateBoss(dt){const b=this.boss;if(!b||b.dead)return;b.phaseGrace=Math.max(0,(b.phaseGrace||0)-dt);b.age+=dt;b.flash=Math.max(0,b.flash-dt);b.attack-=dt;if(!this.shots.some(s=>s.kind==='chain'&&s.life>0)){const targetX=W/2+Math.sin(b.age*(.6+b.stage*.13))*Math.min(95,62+b.stage*11);b.x+=clamp(targetX-b.x,-90*dt,90*dt);b.y=105+Math.sin(b.age*.8)*7;}if(b.attack>.6&&b.attack<1.1)b.wind=1;else b.wind=0;if(b.attack>0)return;b.cycle++;b.attack=Math.max(1.7,3.1-b.stage*.25);
-  // 7.6.3: gentler, in-character attacks. Fewer projectiles, slower shots, longer gaps.
+ bossMove(b,dt){
+  const p=this.player;
+  if(b.mode==='prep'||b.mode==='shake')return;
+  if(b.mode==='charge'){const dx=b.tx-b.x,dy=b.ty-b.y,l=Math.hypot(dx,dy)||1,step=270*dt;b.chargeT+=dt;if(l<=step||b.chargeT>1.2)b.mode='retreat';else{b.x+=dx/l*step;b.y+=dy/l*step;}return;}
+  if(b.mode==='retreat'){const dx=b.hx-b.x,dy=b.hy-b.y,l=Math.hypot(dx,dy)||1,step=150*dt;if(l<=step){b.x=b.hx;b.y=b.hy;b.mode='idle';b.attack=2.4;}else{b.x+=dx/l*step;b.y+=dy/l*step;}return;}
+  // Wander about a third of the way down, in every direction, never closer than half the zombie walk.
+  b.wpIn=(b.wpIn||0)-dt;
+  if(!b.wp||b.wpIn<=0||Math.hypot(b.wp[0]-b.x,b.wp[1]-b.y)<6){b.wp=[52+this.rand()*(W-104),80+this.rand()*72];b.wpIn=1.5+this.rand()*1.5;}
+  const dx=b.wp[0]-b.x,dy=b.wp[1]-b.y,l=Math.hypot(dx,dy)||1,v=46+b.stage*8;
+  b.vx+=(dx/l*v-b.vx)*Math.min(1,dt*3);b.vy+=(dy/l*v-b.vy)*Math.min(1,dt*3);
+  b.x=clamp(b.x+b.vx*dt,40,W-40);b.y+=b.vy*dt;
+  const minD=(p.y+28)/2,ddx=b.x-p.x;if(Math.hypot(ddx,b.y-p.y)<minD)b.y=p.y-Math.sqrt(Math.max(0,minD*minD-ddx*ddx));
+  b.y=clamp(b.y,72,165);
+ }
+ updateBoss(dt){
+  const b=this.boss;if(!b||b.dead)return;const p=this.player,loss=BOSSES.find(d=>d.id===b.bossId).playerLoss;
+  b.phaseGrace=Math.max(0,(b.phaseGrace||0)-dt);b.age+=dt;b.flash=Math.max(0,b.flash-dt);b.attack-=dt;
+  if(!this.shots.some(s=>s.kind==='chain'&&s.life>0))this.bossMove(b,dt);
+  b.wind=b.attack>.6&&b.attack<1.1?1:0;
+  // Debo: the chain lunges through the thrown barrel as it reaches Joey's line.
+  if(b.chainIn!=null){b.chainIn-=dt;if(b.chainIn<=0){b.chainIn=null;if(this.barrels.some(x=>x.thrown&&!x.dead)){const dx=b.tx-b.x,dy=b.ty-b.y,l=Math.hypot(dx,dy)||1;this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.6});}}}
+  // Dr Mantis form 3: mini Mantises walk down from the top and sides, one shot each.
+  if(b.bossId==='drmantis'&&b.stage===3&&b.phaseGrace<=0){b.miniIn=(b.miniIn??1.4)-dt;if(b.miniIn<=0){b.miniIn=2.3+this.rand()*.8;if(this.enemies.filter(z=>z.type==='mantismini'&&!z.dead).length<5){const r=this.rand(),side=r<.34?-1:r<.67?1:0,z=side?this.spawn('mantismini',side<0?-12:W+12,22+this.rand()*90,true):this.spawn('mantismini',30+this.rand()*(W-60),-24,true);if(side)z.vx=-side*34;}}}
+  // Fat Amy form 3: stop and shake, charge at where Joey stands, then retreat.
+  if(b.bossId==='fatamy'&&b.stage===3){
+   if(b.mode==='prep'){b.modeT-=dt;b.wind=1;if(b.modeT<=0){b.mode='shake';b.modeT=1;b.shake=1;}return;}
+   if(b.mode==='shake'){b.modeT-=dt;b.wind=1;if(b.modeT<=0){b.mode='charge';b.shake=0;b.hx=b.x;b.hy=b.y;b.tx=p.x;b.ty=p.y-14;b.chargeT=0;this.emit('bossAttack',{id:b.bossId});}return;}
+   if(b.mode==='charge'){if(Math.hypot(b.x-p.x,b.y-p.y)<b.r+14)this.hurt(loss);return;}
+   if(b.mode==='retreat')return;
+  }
+  if(b.attack>0)return;
+  b.cycle++;b.attack=3;
   const V=.72,fan=(kind,n,gap,speed,r)=>{for(let i=0;i<n;i++)this.aimedShot(b.x,b.y,kind,speed*V,r,(i-(n-1)/2)*gap);};
   switch(b.bossId){
-   case 'jordan':fan('ember',b.stage>1?3:2,.3,118+b.stage*10,8);break;
-   case 'glowinghumanity':if(b.stage===1)fan('venom',3,.3,110,10);else{for(let i=0;i<6;i++){const a=Math.PI*(.2+.6*i/5);this.shots.push({x:b.x,y:b.y,vx:Math.cos(a)*85,vy:Math.sin(a)*85,kind:'venom',r:10,life:5,age:0});}fan('venom',1,0,115,13);}break;
-   case 'debo':{const dx=this.player.x-b.x,dy=this.player.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});if(b.stage===2)fan('handcuffs',2,.5,130,11);b.attack=3.5;break;}
-   case 'caffeinatedsloth':fan('coffee',b.stage>1?3:2,b.stage>1?.28:.3,130+b.stage*10,11);b.attack=b.stage>1?1.7:2.1;break;
-   case 'discoman':fan('disco',3,.34,100+b.stage*12,12);b.attack=2.7;break;
-   case 'fatamy':if(b.cycle%2)fan('burger',b.stage>2?2:1,.3,105,18);else fan('donut',2,.4,115,14);b.attack=2.8;break;
-   case 'drmantis':if(b.stage===1)fan('venom',2,.3,125,10);else{fan('bodypart',1,0,120,13);fan('venom',b.stage===3?3:2,.3,125,10);}if(b.stage>=2&&b.cycle%4===0&&this.enemies.length<2){this.spawn('runner',b.x-35,b.y+40,true);this.spawn('runner',b.x+35,b.y+40,true);}break;
-  }this.emit('bossAttack',{id:b.bossId});
+   case 'jordan':fan('ember',b.stage>1?3:1,.3,120,8);b.attack=b.stage>1?3.2:2.6;break;
+   case 'glowinghumanity':
+    if(b.stage===1){fan('glowstick',2,.4,115,10);b.attack=3;}
+    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*75,vy:80,kind:'handcuffs',r:11,life:7,age:0});b.attack=3.6;}
+    break;
+   case 'debo':
+    if(b.stage===1){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy);this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.8});b.attack=3.6;}
+    else{const T=2.3,tx=clamp(p.x,30,W-30),ty=p.y-6,sy=b.y+20;this.barrels.push({id:this.nextId++,x:b.x,y:sy,hp:1.5,dead:false,thrown:true,small:true,vx:(tx-b.x)/T,vy:(ty-sy)/T,rot:0,age:0,T});b.tx=tx;b.ty=ty;b.chainIn=T-1.05;b.attack=5.6;}
+    break;
+   case 'discoman':if(b.stage===1)fan('disco',2,.4,105,12);else fan('tea',3,.34,110,11);b.attack=3.2;break;
+   case 'caffeinatedsloth':if(b.stage===1){fan('coffee',1,0,125,11);b.attack=2.4;}else{fan('coffee',3,.3,130,11);b.attack=3;}break;
+   case 'fatamy':
+    if(b.stage===1){fan('missile',1,0,115,11);b.attack=3;}
+    else if(b.stage===2){fan(this.rand()<.5?'burger':'donut',1,0,115,11);b.attack=2.4;}
+    else{for(const side of [-1,1])this.shots.push({x:b.x,y:b.y,vx:side*85,vy:70,kind:'donut',r:11,life:7,age:0});b.mode='prep';b.modeT=1.3;b.attack=99;}
+    break;
+   case 'drmantis':
+    if(b.stage===1){fan('bodypart',1,0,120,12);b.attack=3;}
+    else if(b.stage===2){fan('venom',2,.32,125,10);b.attack=2.8;}
+    else{fan('bodypart',1,0,120,12);fan('venom',2,.4,125,10);b.attack=3.4;}
+    break;
+  }
+  this.emit('bossAttack',{id:b.bossId});
  }
- updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r*.75+8){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
+ updateShots(dt){const p=this.player;for(const s of this.shots){s.age+=dt;s.life-=dt;if(s.kind==='chain'){const q=s.age<s.wind?0:s.age<s.wind+.45?(s.age-s.wind)/.45:s.age<s.wind+.75?1:Math.max(0,1-(s.age-s.wind-.75)/.65);s.x=s.ox+s.dx*s.reach*q;s.y=s.oy+s.dy*s.reach*q;if(s.age>s.wind+1.4)s.life=0;}else{s.x+=s.vx*dt;s.y+=s.vy*dt;if(['donut','disco','handcuffs'].includes(s.kind)&&(s.x<s.r||s.x>W-s.r)){s.vx*=-1;s.x=clamp(s.x,s.r,W-s.r);}}if(s.kind==='chain'&&s.age<s.wind)continue;if(Math.hypot(s.x-p.x,s.y-p.y)<s.r*.75+8){this.hurt(this.boss?BOSSES.find(b=>b.id===this.boss.bossId).playerLoss:'Toxic spit caught Joey.');if(s.kind!=='chain')s.life=0;}}
   this.shots=this.shots.filter(s=>s.life>0&&s.y<H+35&&s.x>-60&&s.x<W+60);}
  killBoss(){const b=this.boss,def=BOSSES.find(d=>d.id===b.bossId);if(b.dead)return;b.dead=true;this.kills++;this.addPoints(def.points*this.multiplier,b.x,b.y);this.bossesDown.push(b.bossId);this.shots=[];this.enemies=[];this.bullets=[];this.burst(b.x,b.y,def.accent,35,120);this.scene={kind:'down',bossId:b.bossId,stage:b.stage,phase:0,time:0,duration:3.4};this.resetInput();this.emit('bossDown');this.boss=null;}
  end(reason){if(this.over||this.scene?.kind==='loss')return;const id=this.boss?.bossId;this.dangerSource=id;this.scene={kind:'loss',bossId:id,phase:0,time:0,duration:id?3.2:1.1,reason};this.resetInput();this.emit('death');}
