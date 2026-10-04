@@ -1,1 +1,1 @@
-7.8.5-fewer-drops
+7.8.6-visual-fixes

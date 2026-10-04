@@ -14,7 +14,7 @@ const ENEMIES={
  titan:{hp:15,speed:17,r:24,points:1050,art:'zombie-titan.webp',height:75},
  fuse:{hp:3,speed:33,r:14,points:380,art:'zombie-fuse.webp',height:52},
  bulwark:{hp:9,speed:20,r:19,points:650,art:'zombie-bulwark.webp',height:61},
- mantismini:{hp:1,speed:36,r:11,points:150,art:'boss-drmantis-stage3.webp',height:30}
+ mantismini:{hp:1,speed:36,r:11,points:150,art:'zombie-mantismini.webp',height:36}
 };
 // 7.6.2: zombies are 45% larger (hitbox +30%) and 20% slower so the extra size doesn't make them feel faster.
 for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.45);s.r=Math.round(s.r*1.3);s.speed=+(s.speed*.8).toFixed(1)}
@@ -118,7 +118,7 @@ class Game{
   // Debo: the chain lunges through the thrown barrel as it reaches Joey's line.
   if(b.chainIn!=null){b.chainIn-=dt;if(b.chainIn<=0){b.chainIn=null;if(this.barrels.some(x=>x.thrown&&!x.dead)){const dx=b.tx-b.x,dy=b.ty-b.y,l=Math.hypot(dx,dy)||1;this.shots.push({kind:'chain',ox:b.x,oy:b.y,x:b.x,y:b.y,dx:dx/l,dy:dy/l,reach:l+22,r:17,age:0,life:2.2,wind:.45,ext:.26,hold:.2,ret:.4});}}}
   // Dr Mantis form 3: mini Mantises walk down from the top and sides, one shot each.
-  if(b.bossId==='drmantis'&&b.stage===3&&b.phaseGrace<=0){b.miniIn=(b.miniIn??1.4)-dt;if(b.miniIn<=0){b.miniIn=2.3+this.rand()*.8;if(this.enemies.filter(z=>z.type==='mantismini'&&!z.dead).length<5){const r=this.rand(),side=r<.34?-1:r<.67?1:0,z=side?this.spawn('mantismini',side<0?-12:W+12,22+this.rand()*90,true):this.spawn('mantismini',30+this.rand()*(W-60),-24,true);if(side)z.vx=-side*34;}}}
+  if(b.bossId==='drmantis'&&b.stage===3&&b.phaseGrace<=0){b.miniIn=(b.miniIn??1)-dt;if(b.miniIn<=0){b.miniIn=1.2+this.rand()*.7;if(this.enemies.filter(z=>z.type==='mantismini'&&!z.dead).length<8){const r=this.rand(),side=r<.34?-1:r<.67?1:0,z=side?this.spawn('mantismini',side<0?-12:W+12,22+this.rand()*90,true):this.spawn('mantismini',30+this.rand()*(W-60),-24,true);if(side)z.vx=-side*34;}}}
   // Fat Amy form 3: stop and shake, charge at where Joey stands, then retreat.
   if(b.bossId==='fatamy'&&b.stage===3){
    if(b.mode==='prep'){b.modeT-=dt;b.wind=1;if(b.modeT<=0){b.mode='shake';b.modeT=1;b.shake=1;}return;}

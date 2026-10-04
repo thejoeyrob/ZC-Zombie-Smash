@@ -81,3 +81,6 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
 .console-header{top:calc(3px + var(--hs,0px));height:max(26px,calc(var(--hh,34px) + 1px - var(--hs,0px)))}
 .top-button{height:calc(100% - 4px)}
 .sb-overlap .wordmark{font-size:12px}.sb-overlap .wordmark small{font-size:5.5px}
+/* 7.8.6: no iOS text magnifier / callout when holding the controls; hearts never overlap the weapon label. */
+.control-deck,.control-deck *,.screen,.screen *,.console-header,.console-header *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hud-bottom #healthValue:not(.tenhearts){display:flex;gap:1px;font-size:9px;letter-spacing:0;min-width:0;flex:0 0 auto}
