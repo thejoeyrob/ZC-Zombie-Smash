@@ -15,8 +15,8 @@ const ENEMIES={
  fuse:{hp:3,speed:33,r:14,points:380,art:'zombie-fuse.webp',height:52},
  bulwark:{hp:9,speed:20,r:19,points:650,art:'zombie-bulwark.webp',height:61}
 };
-// 7.6: zombies are 20% larger and 16% slower so the extra size doesn't make them feel faster.
-for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.2);s.r=Math.round(s.r*1.2);s.speed=+(s.speed*.84).toFixed(1)}
+// 7.6.2: zombies are 45% larger (hitbox +30%) and 20% slower so the extra size doesn't make them feel faster.
+for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.45);s.r=Math.round(s.r*1.3);s.speed=+(s.speed*.8).toFixed(1)}
 const GUNS={
  pistol:{name:'PISTOL',delay:.22,damage:1.5,speed:600,ammo:Infinity,art:'bullet-pistol.webp'},
  smg:{name:'SMG',delay:.09,damage:1.15,speed:660,ammo:100,art:'bullet-smg.webp'},
@@ -42,7 +42,7 @@ class Game{
  step(dt){if(!this.active||this.over)return;dt=Math.min(dt,.05);this.t+=dt;this.shake=Math.max(0,this.shake-dt*16);this.bannerLeft=Math.max(0,this.bannerLeft-dt);this.effects=this.effects.filter(f=>(f.life-=dt)>0);this.pops=this.pops.filter(p=>(p.life-=dt)>0);for(const f of this.effects){f.x+=(f.vx||0)*dt;f.y+=(f.vy||0)*dt;}
   if(this.scene){this.scene.time+=dt;if(this.scene.time>=this.scene.duration)this.advanceScene();return;}
   const p=this.player;p.inv=Math.max(0,p.inv-dt);p.cool=Math.max(0,p.cool-dt);p.shield=Math.max(0,p.shield-dt);p.rapid=Math.max(0,p.rapid-dt);p.fireFx=Math.max(0,p.fireFx-dt);
-  p.speedUp=Math.max(0,(p.speedUp||0)-dt);{const target=this.input.axis*212*(p.speedUp>0?1.55:1);p.vx=(p.vx||0)+(target-(p.vx||0))*Math.min(1,dt*16);if(!target&&Math.abs(p.vx)<1)p.vx=0;p.x=clamp(p.x+p.vx*dt,21,W-21);}p.y=H-52;
+  p.speedUp=Math.max(0,(p.speedUp||0)-dt);{const target=this.input.axis*212*(p.speedUp>0?1.55:1);p.vx=(p.vx||0)+(target-(p.vx||0))*Math.min(1,dt*16);if(!target&&Math.abs(p.vx)<1)p.vx=0;p.x=clamp(p.x+p.vx*dt,28,W-28);}p.y=H-52;
   if(this.hitStop>0){this.hitStop-=dt;return;}
   if(this.nextIn>0){this.nextIn-=dt;if(this.nextIn<=0)this.prepareWave(this.wave+1);this.updatePickups(dt);return;}
   if(this.comboLeft>0){this.comboLeft-=dt;if(this.comboLeft<=0)this.resetCombo();}
@@ -56,7 +56,7 @@ class Game{
    z.y+=speed*dt;
    if(z.type==='toxic'&&z.attack<=0&&z.y>25&&z.y<p.y-70){this.aimedShot(z.x,z.y,'venom',100,8);z.attack=4.2;}
    if(z.type==='fuse'&&z.y>p.y-16){z.dead=true;this.resolve(z);this.explode(z.x,z.y,60,3,false);if(Math.hypot(z.x-p.x,z.y-p.y)<72)this.hurt('The Fuse detonated too close.');}
-   if(Math.hypot(z.x-p.x,z.y-p.y)<z.r+12){this.hurt('The horde reached Joey Rob.');z.y+=18;}
+   if(Math.hypot(z.x-p.x,z.y-p.y)<z.r+15){this.hurt('The horde reached Joey Rob.');z.y+=18;}
    if(z.y>H+20){z.dead=true;this.resolve(z);if(!z.minion){this.breaches++;this.resetCombo();this.emit('breach');this.banner='BASE BREACH';this.bannerLeft=.9;if(this.breaches>=10)this.end('The camp was overrun.');}}
   }
   this.updateBullets(dt);this.updateShots(dt);this.updatePickups(dt);this.updateGrenades(dt);this.enemies=this.enemies.filter(z=>!z.dead);this.barrels=this.barrels.filter(b=>!b.dead);
