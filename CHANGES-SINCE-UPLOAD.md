@@ -1,8 +1,8 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.7.0** (`VERSION.txt`, cache `zombie-smash-v7.7.0-boss-rework`).
-Everything below was made by Claude Code in five commits on `main`. To see the exact diff:
+Current: version **7.8.0** (`VERSION.txt`, cache `zombie-smash-v7.8.0-stick-fill`).
+Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
     git diff a826f4e HEAD -- engine.js    # one file
@@ -39,7 +39,7 @@ Release routine used each time (no build step exists): edit files, bump `?v=` in
 ### 7.6.3 - `a66e873` Gentler boss attacks (superseded by 7.7.0)
 - First pass at reducing attack volume: longer gaps, fewer projectiles, ~28% slower boss shots, smaller projectile hitbox (`s.r*.75+8`, still in force), toxic zombie spit 100 -> 85 speed and every 5s.
 
-### 7.7.0 - `9f7b6e1` Boss rework (current)
+### 7.7.0 - `9f7b6e1` Boss rework
 All in `engine.js` (`bossMove`, `updateBoss`, `explodeBarrel`, `spawnBoss`, `ENEMIES`) plus small `renderer.js` changes.
 
 **Movement (all bosses).** Bosses roam to random waypoints in x 52-291, y 80-152 (about a third of the way down), in every direction with smoothed velocity (`46 + 8*form` px/s). A guard keeps them at least `(player.y+28)/2` = 194 px from Joey (half the zombie walk, 388 px). Boss hitbox `r` 31 -> 36.
@@ -63,10 +63,16 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 **New art** (drawn procedurally, exported as WebP): `weapon-tea.webp`, `weapon-glowstick.webp`; both added to the preload list in `renderer.js` and to `ASSETS` in `sw.js`. `weapon-missile.webp` is again used (Fat Amy form 1).
 `renderer.js`: per-weapon spin speeds, thrown barrel rotates, boss shake offset, Fat Amy's dashed charge line.
 
+### 7.8.0 - Floating joystick, deck position, fuller screen (current)
+- **Joystick** (`game.js`, `moveStick` and the pointer handlers): the whole pad (plus a 14px invisible margin) is the pick-up area. Wherever the thumb first touches becomes the centre, so pressing a side does nothing until the thumb is dragged. Full speed at a drag of 16% of the pad width (~14 px); dead zone 10% of that; response curve `|v|^0.8`. Past full deflection the centre follows the thumb, so reversing is quick. A quick flick (about 6 px within 150 ms) gives a 170 ms full-speed burst even if the thumb is lifted straight away. Uses coalesced pointer events. State: `stickOrigin`, `stickHist`, `flickDir`, `flickUntil`; `inputs()` applies the burst; `clearInput()` cancels it.
+  Measured with simulated touches: press-only on either edge = 0 movement; flick right/left = about +-40..50 px; slow pull is proportional.
+- **Deck position** (`game.css`, end of file): joystick `left 22 -> 28px, top 25 -> 19px`; fire button `right 21 -> 27px, top 25 -> 19px` (6 px up and 6 px towards the centre each).
+- **Fuller screen** (`fit()` in `game.js`): the console scales uniformly (same proportions) to the largest size that fits; it previously also reserved the bottom safe-area inset (e.g. the iPhone home-indicator strip) and now only reserves the top inset, so it is larger on height-limited screens. On tall phones the console is width-limited and the leftover height is filled by the existing blurred skin backdrop, because stretching it would change the proportions.
+
 ---
 
 ## Current gameplay constants (for quick reference)
-- World 343x412; Joey line y = 360; Joey speed 212 px/s (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
+- World 343x412; Joey line y = 360; Joey speed 212 px/s; joystick full speed at 14 px drag (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
 - Zombies: height x1.45, hitbox x1.3, speed x.8, spawn speed x`min(1,.85+(wave-1)*.0375)` then the old `1+min(.6,(wave-1)*.035)` ramp.
 - Boss projectile hit test: distance < `r*.75 + 8` from Joey.
 - Skin window fit: see `SKINS[].win` and `fitSkin()`.

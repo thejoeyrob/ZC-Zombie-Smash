@@ -74,3 +74,6 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
 .story-copy{min-height:78px}
 #joystick:before{content:'';position:absolute;inset:-14px}
 #joystick.sped{box-shadow:0 0 16px 4px var(--accent),0 6px 9px #0009,inset 0 1px 2px #c8d2d3}
+/* 7.8: joystick and fire button sit 6px higher and 6px closer to the centre. */
+#joystick{left:28px;top:19px}
+.fire-button{right:27px;top:19px}

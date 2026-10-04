@@ -1,6 +1,93 @@
 diff --git a/.nojekyll b/.nojekyll
 new file mode 100644
 index 0000000..e69de29
+diff --git a/CHANGES-SINCE-UPLOAD.md b/CHANGES-SINCE-UPLOAD.md
+new file mode 100644
+index 0000000..dcce2e7
+--- /dev/null
++++ b/CHANGES-SINCE-UPLOAD.md
+@@ -0,0 +1,81 @@
++# Changes made since your last upload
++
++Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
++Current: version **7.8.0** (`VERSION.txt`, cache `zombie-smash-v7.8.0-stick-fill`).
++Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
++
++    git diff a826f4e HEAD                 # everything
++    git diff a826f4e HEAD -- engine.js    # one file
++
++`changes-since-upload.patch` in this repo is the same diff for all text files (images and `SHA256SUMS.txt` excluded).
++
++Files **not touched**: `audio.js`, `scores.js`, `legacy-board.json`, fonts, icons, console skins, boss and zombie art, music, sfx, `vercel.json`, `404.html`.
++Release routine used each time (no build step exists): edit files, bump `?v=` in `index.html` and `manifest.webmanifest`, change the `CACHE` name in `sw.js`, add new files to `ASSETS` in `sw.js`, update `VERSION.txt`, regenerate `SHA256SUMS.txt`.
++
++---
++
++## Commits, oldest first
++
++### 7.6 - `c0d295a` Fit the game to each skin, cheat, welcome picture
++- **Per-skin screen fit.** The nine console skins have different screen windows, so each window was measured from the artwork and stored as `"win":[left,top,right,bottom]` (pixels in the 900x1600 art) on every entry of `SKINS` in `game-data.js`.
++  `fitSkin(skin)` in `game.js` (called from `applySkin`) turns that into CSS variables on `<body>`: `--wx --wy --ww --wh` (window in the 375x667 cabinet), `--ss` (uniform scale of the 343x486 game screen), `--sx --sy` (its position), `--dy --sd` (control-deck top and scale), `--hh` (header height).
++  A new `/* v7.6 */` block at the end of `game.css` uses them for `.screen`, `.overlay` (menus/welcome now sit exactly in the window), `#toast`, `.control-deck` (scale capped at .94), `.console-header` (inset 36px, clears the corner screws) and `.top-button`.
++- **Cheat: 10 hearts (5 red + 5 gold).** `engine.js`: new `maxLives` (default 5), `setTenHearts(on)`, heart pickups and `skipBoss` respect `maxLives`. `game.js`: new checkbox in the admin "Bosses & Cheats" panel (`data-cheat="tenHearts"`); the HUD hearts are now `<span class="heart [gold] [empty]">` elements (two rows of five when 10). Practice-only like the other cheats.
++- **Welcome/install picture.** New `game-banner.webp` (760x400 crop of `game-preview.webp`, rows 80-480, shows the sloth boss and horde) replaces `game-preview.webp` in `showStart()` and `install()`; `.start-art` is now a 1.9:1 `object-fit: cover` image. The comic-intro art/copy heights shrink with the window.
++- Zombies 20% bigger and 16% slower (replaced in 7.6.2), spawn margin 30 -> 36.
++- Added `.nojekyll` (README_FIRST said it was included; it was not), README_FIRST note, `game-banner.webp` added to `ASSETS`.
++
++### 7.6.1 - `b2ba385` Joystick, Joey speed, speed pickup
++- **Joystick** (`game.js`): measured from where the thumb lands (`stickOrigin`), full deflection at 28% of the pad width, dead zone .06, response curve `|v|^0.85`, touch area enlarged by a `#joystick:before` pseudo-element.
++- **Joey's speed** (`engine.js`): `250` -> `212` px/s with smoothed acceleration (`p.vx`, factor `dt*16`); edge clamp 21 -> 28.
++- **New pickup `speed`** (art already existed: `pickup-speed.webp`): +55% movement for 7s (`p.speedUp`), banner "SPEED UP", joystick glows (`#joystick.sped`). Drop table is now heart (when low) / grenade 48% / shield 14% / speed 14% / guns 24%.
++- **Zombies start slower**: spawn speed is multiplied by `min(1, .85 + (wave-1)*.0375)` (full speed by wave 5), on top of the existing per-wave ramp.
++
++### 7.6.2 - `91f1a6e` Bigger sprites
++- Zombies: `height` x1.45, hitbox `r` x1.3, `speed` x.8 (applied once to the `ENEMIES` table in `engine.js`).
++- Joey drawn 70x91 (was 54x70) in `renderer.js`, with matching shadow, shield ring, muzzle flash; zombie-contact radius `r+15` (was `+12`).
++- Boss sprites drawn 20% larger (113/139 px tall, 130 wide); zombie health bar 40px wide.
++
++### 7.6.3 - `a66e873` Gentler boss attacks (superseded by 7.7.0)
++- First pass at reducing attack volume: longer gaps, fewer projectiles, ~28% slower boss shots, smaller projectile hitbox (`s.r*.75+8`, still in force), toxic zombie spit 100 -> 85 speed and every 5s.
++
++### 7.7.0 - `9f7b6e1` Boss rework
++All in `engine.js` (`bossMove`, `updateBoss`, `explodeBarrel`, `spawnBoss`, `ENEMIES`) plus small `renderer.js` changes.
++
++**Movement (all bosses).** Bosses roam to random waypoints in x 52-291, y 80-152 (about a third of the way down), in every direction with smoothed velocity (`46 + 8*form` px/s). A guard keeps them at least `(player.y+28)/2` = 194 px from Joey (half the zombie walk, 388 px). Boss hitbox `r` 31 -> 36.
++
++**Attacks.** Gap between attacks is 2.4-5.6 s. Aimed projectiles use speed `value*.72`; thrown handcuffs and donuts use fixed velocities.
++
++| Boss | Form 1 | Form 2 | Form 3 |
++|---|---|---|---|
++| Jordan | 1 fire ember, every 2.6s | 3 embers (fan), every 3.2s | - |
++| Disco Man | 2 bouncing disco balls, every 3.2s | 3 spinning cups of English tea, every 3.2s | - |
++| Glowing Humanity | 2 neon glow sticks, every 3.0s | 2 spinning handcuffs thrown down and outward, bouncing off the side walls, every 3.6s | - |
++| Debo | Chain with the D (unchanged, wind-up .8s), every 3.6s | Throws the spinning `prop-barrel` at Joey's line; the chain launches so it reaches full extension through the barrel at the moment it lands and the barrel explodes. Blast radius = 10% of screen width (34.3 px), hurts Joey; shooting the barrel early explodes it where it is, and if that is near Debo it damages him (9). Every 5.6s | - |
++| Caffeinated Sloth | 1 coffee, every 2.4s | 3 coffees (fan), every 3.0s | - |
++| Fat Amy | 1 missile at Joey, every 3.0s | single burger or donut (random) at Joey, every 2.4s | 2 donuts thrown down and outward bouncing off the sides, then she stops (1.3s), shakes with a red dashed aim line (1s), charges at Joey's position at 270 px/s, then retreats at 150 px/s; ~7s cycle |
++| Dr Mantis | 1 severed arm (`bodypart`), every 3.0s | 2 venom (fan), every 2.8s | arm + 2 venom every 3.4s, plus mini Mantises (see below) |
++
++All Fat Amy projectiles now share the same hitbox/draw size (`r` 11).
++Mini Mantises: new enemy `mantismini` (art `boss-drmantis-stage3.webp`, 1 HP so any gun kills it in one shot, 150 points, ~44 px tall). During form 3 one spawns every 2.3-3.1 s (max 5 alive) from the top or the left/right edge and walks down like a normal zombie; they do not count toward the wave and are cleared when the boss dies.
++New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), `chainIn`, `wp`, `miniIn`; thrown barrels live in `game.barrels` with `thrown:true, small:true`.
++
++**New art** (drawn procedurally, exported as WebP): `weapon-tea.webp`, `weapon-glowstick.webp`; both added to the preload list in `renderer.js` and to `ASSETS` in `sw.js`. `weapon-missile.webp` is again used (Fat Amy form 1).
++`renderer.js`: per-weapon spin speeds, thrown barrel rotates, boss shake offset, Fat Amy's dashed charge line.
++
++### 7.8.0 - Floating joystick, deck position, fuller screen (current)
++- **Joystick** (`game.js`, `moveStick` and the pointer handlers): the whole pad (plus a 14px invisible margin) is the pick-up area. Wherever the thumb first touches becomes the centre, so pressing a side does nothing until the thumb is dragged. Full speed at a drag of 16% of the pad width (~14 px); dead zone 10% of that; response curve `|v|^0.8`. Past full deflection the centre follows the thumb, so reversing is quick. A quick flick (about 6 px within 150 ms) gives a 170 ms full-speed burst even if the thumb is lifted straight away. Uses coalesced pointer events. State: `stickOrigin`, `stickHist`, `flickDir`, `flickUntil`; `inputs()` applies the burst; `clearInput()` cancels it.
++  Measured with simulated touches: press-only on either edge = 0 movement; flick right/left = about +-40..50 px; slow pull is proportional.
++- **Deck position** (`game.css`, end of file): joystick `left 22 -> 28px, top 25 -> 19px`; fire button `right 21 -> 27px, top 25 -> 19px` (6 px up and 6 px towards the centre each).
++- **Fuller screen** (`fit()` in `game.js`): the console scales uniformly (same proportions) to the largest size that fits; it previously also reserved the bottom safe-area inset (e.g. the iPhone home-indicator strip) and now only reserves the top inset, so it is larger on height-limited screens. On tall phones the console is width-limited and the leftover height is filled by the existing blurred skin backdrop, because stretching it would change the proportions.
++
++---
++
++## Current gameplay constants (for quick reference)
++- World 343x412; Joey line y = 360; Joey speed 212 px/s; joystick full speed at 14 px drag (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
++- Zombies: height x1.45, hitbox x1.3, speed x.8, spawn speed x`min(1,.85+(wave-1)*.0375)` then the old `1+min(.6,(wave-1)*.035)` ramp.
++- Boss projectile hit test: distance < `r*.75 + 8` from Joey.
++- Skin window fit: see `SKINS[].win` and `fitSkin()`.
++
++## Not verified
++Real-phone play (joystick feel, boss difficulty), GitHub Pages settings page (not readable from the tool used), and the admin cheat with the real admin code (tested with a mocked admin response).
 diff --git a/README_FIRST.txt b/README_FIRST.txt
 index 984cb01..4eb0d8f 100644
 --- a/README_FIRST.txt
@@ -16,12 +103,12 @@ index 984cb01..4eb0d8f 100644
  - Fixed 375 x 667 console; 343 x 412 arena. Every element scales together.
  - Longer playfield extends down; top/left/right gameplay positions stay fixed.
 diff --git a/VERSION.txt b/VERSION.txt
-index 108bd20..7f59db5 100644
+index 108bd20..509ab07 100644
 --- a/VERSION.txt
 +++ b/VERSION.txt
 @@ -1 +1 @@
 -7.5.0-consolidated-classic
-+7.7.0-boss-rework
++7.8.0-stick-fill
 diff --git a/engine.js b/engine.js
 index 18ba022..8914ca7 100644
 --- a/engine.js
@@ -220,10 +307,10 @@ index 060477c..e2cd58b 100644
    "MAPS": [
      {
 diff --git a/game.css b/game.css
-index 2316c04..1166387 100644
+index 2316c04..890d684 100644
 --- a/game.css
 +++ b/game.css
-@@ -57,3 +57,20 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
+@@ -57,3 +57,23 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
  @keyframes reveal{from{transform:scale(.88)}to{transform:scale(1)}}
  .scene-figures.dual .scene-art{width:0;min-width:0;flex:1 1 0}
  #cinematic{grid-template-columns:minmax(0,1fr);justify-content:stretch;align-items:stretch}
@@ -244,8 +331,11 @@ index 2316c04..1166387 100644
 +.story-copy{min-height:78px}
 +#joystick:before{content:'';position:absolute;inset:-14px}
 +#joystick.sped{box-shadow:0 0 16px 4px var(--accent),0 6px 9px #0009,inset 0 1px 2px #c8d2d3}
++/* 7.8: joystick and fire button sit 6px higher and 6px closer to the centre. */
++#joystick{left:28px;top:19px}
++.fire-button{right:27px;top:19px}
 diff --git a/game.js b/game.js
-index 85bd43f..1f723bd 100644
+index 85bd43f..60f0d57 100644
 --- a/game.js
 +++ b/game.js
 @@ -5,16 +5,16 @@ const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{retur
@@ -257,7 +347,7 @@ index 85bd43f..1f723bd 100644
  const game=new ZSEngine.Game({onEvent:event});
  function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3100)}
 -function clearInput(){touchAxis=0;touchFire=false;stickId=null;fireId=null;keys.clear();game.resetInput();$('stickKnob').style.transform='translateX(0)';$('fireButton').classList.remove('pressed');$('joystick').setAttribute('aria-valuenow','0')}
-+function clearInput(){stickOrigin=null;touchAxis=0;touchFire=false;stickId=null;fireId=null;keys.clear();game.resetInput();$('stickKnob').style.transform='translateX(0)';$('fireButton').classList.remove('pressed');$('joystick').setAttribute('aria-valuenow','0')}
++function clearInput(){flickUntil=0;stickOrigin=null;touchAxis=0;touchFire=false;stickId=null;fireId=null;keys.clear();game.resetInput();$('stickKnob').style.transform='translateX(0)';$('fireButton').classList.remove('pressed');$('joystick').setAttribute('aria-valuenow','0')}
  function save(){if(run&&game.active&&!game.over)write('zs7-run',{engine:game.snapshot(),run:{id:run.id,name:run.name,ticket:run.ticket}});else if(game.over)try{localStorage.removeItem('zs7-run')}catch{}}
  function pause(){paused=true;clearInput();audio.pause();save()}
  function resume(){if(!game.active||game.over||landscape)return;paused=false;accumulator=0;lastTime=performance.now();audio.resume();audio.playMusic(game.scene?.kind==='arrival'?'entrance':game.boss?.bossId==='discoman'?'disco':game.boss?'boss':'main')}
@@ -286,19 +376,24 @@ index 85bd43f..1f723bd 100644
  function practice(){if(!admin)return false;if(!run||!game.active){run={id:crypto.randomUUID(),name:read('zs7-name','Player'),ticket:null};game.reset();game.start()}game.practice=true;return true}
  function results(reason){showPanel('results',game.practice?'PRACTICE COMPLETE':'RUN COMPLETE',`<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice?'Practice run · not added to the board.':'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,{closable:false});save();submitScore()}
  async function submitScore(){if(!run||run.submitted)return;run.submitted=true;const completed=run,record={name:run.name,score:game.score,kills:game.kills,seconds:game.t,wave:game.wave,practice:game.practice};if(run.ticketPromise)await run.ticketPromise;const result=await scores.finish({...record,ticket:completed.ticket});if(run!==completed)return;const status=$('scoreStatus');if(status)status.textContent={practice:'Practice run · not added to the board.',online:'Score saved to the online leaderboard.',pending:'Saved on this device. Online upload queued for reconnection.',local:'Saved on this device. This offline run has no online ticket.',rejected:'Saved on this device. The online board could not accept this run.'}[result.status]}
-@@ -44,18 +45,18 @@ function cinematic(){const s=game.scene,box=$('cinematic');if(!s){box.hidden=tru
+@@ -44,18 +45,21 @@ function cinematic(){const s=game.scene,box=$('cinematic');if(!s){box.hidden=tru
   else content='<div class="scene-alert">LINE BROKEN<small>THE HORDE GOT THROUGH</small></div>';
   box.innerHTML='<div class="scene-backdrop"></div><div class="scene-lines"></div>'+content+'<button class="scene-next" id="advanceScene">CONTINUE →</button>';box.onclick=()=>{if(!paused)game.advanceScene()};}
  
 -function hud(){const p=game.player;$('waveValue').textContent=game.wave;$('leftValue').textContent=game.boss?'BOSS':Math.max(0,game.target-game.resolved);$('scoreValue').textContent=game.score.toLocaleString();$('bestValue').textContent=scores.getBest(run?.name||read('zs7-name','')).toLocaleString();$('healthValue').textContent='♥ '.repeat(Math.max(0,p.lives)).trim()+' ♡'.repeat(Math.max(0,5-p.lives));$('healthValue').setAttribute('aria-label',p.lives+' hearts');$('gunValue').textContent=ZSEngine.GUNS[p.gun].name;$('ammoValue').textContent=!Number.isFinite(p.ammo)||game.infiniteAmmo?'∞':p.ammo;$('baseValue').textContent=game.breaches+'/10';$('grenadeValue').textContent=p.grenades;$('grenadeButton').classList.toggle('empty',p.grenades===0);$('grenadeButton').setAttribute('aria-label','Throw grenade, '+p.grenades+' remaining');$('boostText').textContent='BOOST ×'+game.multiplier;$('boostFill').style.width=Math.max(0,game.comboLeft/7*100)+'%';$('comboText').textContent=game.combo>=30?'×10 · KEEP IT GOING':((game.combo<10?10:game.combo<20?20:30)-game.combo)+' KILLS TO ×'+(game.combo<10?2:game.combo<20?4:10);for(const gun of ['smg','shotgun','dmr','burst']){const el=$('inv-'+gun);const active=p.gun===gun,ammo=active?p.ammo:(p.inventory?.[gun]||0);if(el)el.textContent=ammo||'—';const btn=document.querySelector(`[data-weapon="${gun}"]`);if(btn){btn.disabled=active||!(ammo>0);btn.classList.toggle('ready',ammo>0);btn.classList.toggle('equipped',active);btn.setAttribute('aria-label',`${active?'Equipped':'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`)}}$('mapLabel').textContent=MAPS[Math.min(6,Math.floor((game.wave-1)/2))].name;$('headerName').textContent=run?.name||'JOEY ROB VS DR MANTIS'}
+-function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}padGrenade=grenade;game.setInput(axis,fire)}
+-function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,usableH=h-top-bottom;const scale=Math.min(w/375,usableH/667),key=w+'x'+h+'@'+scale.toFixed(4);if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(top+usableH/2)+'px';renderer.resize()}
 +function hud(){const p=game.player;$('joystick').classList.toggle('sped',(p.speedUp||0)>0);$('waveValue').textContent=game.wave;$('leftValue').textContent=game.boss?'BOSS':Math.max(0,game.target-game.resolved);$('scoreValue').textContent=game.score.toLocaleString();$('bestValue').textContent=scores.getBest(run?.name||read('zs7-name','')).toLocaleString();{const max=game.maxLives||5,l=Math.max(0,p.lives),el=$('healthValue');el.classList.toggle('tenhearts',max>5);el.innerHTML=Array.from({length:max},(_,i)=>`<span class="heart${i>=5?' gold':''}${i<l?'':' empty'}">${i<l?'♥':'♡'}</span>`).join(' ')}$('healthValue').setAttribute('aria-label',p.lives+' hearts');$('gunValue').textContent=ZSEngine.GUNS[p.gun].name;$('ammoValue').textContent=!Number.isFinite(p.ammo)||game.infiniteAmmo?'∞':p.ammo;$('baseValue').textContent=game.breaches+'/10';$('grenadeValue').textContent=p.grenades;$('grenadeButton').classList.toggle('empty',p.grenades===0);$('grenadeButton').setAttribute('aria-label','Throw grenade, '+p.grenades+' remaining');$('boostText').textContent='BOOST ×'+game.multiplier;$('boostFill').style.width=Math.max(0,game.comboLeft/7*100)+'%';$('comboText').textContent=game.combo>=30?'×10 · KEEP IT GOING':((game.combo<10?10:game.combo<20?20:30)-game.combo)+' KILLS TO ×'+(game.combo<10?2:game.combo<20?4:10);for(const gun of ['smg','shotgun','dmr','burst']){const el=$('inv-'+gun);const active=p.gun===gun,ammo=active?p.ammo:(p.inventory?.[gun]||0);if(el)el.textContent=ammo||'—';const btn=document.querySelector(`[data-weapon="${gun}"]`);if(btn){btn.disabled=active||!(ammo>0);btn.classList.toggle('ready',ammo>0);btn.classList.toggle('equipped',active);btn.setAttribute('aria-label',`${active?'Equipped':'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`)}}$('mapLabel').textContent=MAPS[Math.min(6,Math.floor((game.wave-1)/2))].name;$('headerName').textContent=run?.name||'JOEY ROB VS DR MANTIS'}
- function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}padGrenade=grenade;game.setInput(axis,fire)}
- function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,usableH=h-top-bottom;const scale=Math.min(w/375,usableH/667),key=w+'x'+h+'@'+scale.toFixed(4);if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(top+usableH/2)+'px';renderer.resize()}
++function inputs(){let axis=touchAxis+(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0),fire=touchFire||keys.has('Space'),grenade=false;try{const pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(pad){if(Math.abs(pad.axes[0]||0)>.14)axis=pad.axes[0];if(pad.buttons[14]?.pressed)axis=-1;if(pad.buttons[15]?.pressed)axis=1;fire||=!!(pad.buttons[0]?.pressed||pad.buttons[7]?.pressed);grenade=!!pad.buttons[1]?.pressed;if(grenade&&!padGrenade)game.grenade()}}catch{}if(performance.now()<flickUntil&&Math.sign(axis)!==-flickDir)axis=flickDir;padGrenade=grenade;game.setInput(axis,fire)}
++function fit(){const root=document.documentElement,focused=/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''),vv=visualViewport,w=Math.max(1,root.clientWidth||innerWidth),h=Math.max(1,root.clientHeight||innerHeight),keyboard=focused&&vv&&vv.height<innerHeight*.78,newLandscape=w>h*1.04;landscape=newLandscape;$('rotateGate').hidden=!landscape;if(landscape){if(game.active&&!paused){pause();menu()}return}if(keyboard)return;const safe=getComputedStyle(document.documentElement),top=parseFloat(safe.getPropertyValue('--safe-top'))||0,bottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0,usableH=h-top;const scale=Math.min(w/375,usableH/667),key=w+'x'+h+'@'+scale.toFixed(4);if(key===lastFit)return;lastFit=key;document.documentElement.style.setProperty('--console-scale',scale);$('cabinet').style.left=(w/2)+'px';$('cabinet').style.top=(top+usableH/2)+'px';renderer.resize()}
  function frame(now){fit();const dt=Math.min(.1,(now-lastTime)/1000||0);lastTime=now;if(!paused&&!landscape&&!document.hidden&&ready){inputs();accumulator+=dt;let steps=0;while(accumulator>=1/60&&steps++<6){game.step(1/60);accumulator-=1/60}saveClock+=dt;if(saveClock>5){saveClock=0;save()}}else accumulator=0;renderer.draw(game);cinematic();hud();requestAnimationFrame(frame)}
 -const stick=$('joystick');function moveStick(e){if(e.pointerId!==stickId)return;const r=stick.getBoundingClientRect(),raw=(e.clientX-(r.left+r.width/2))/(r.width*.34),value=Math.max(-1,Math.min(1,raw));touchAxis=Math.abs(value)<.1?0:Math.sign(value)*(Math.abs(value)-.1)/.9;$('stickKnob').style.transform=`translateX(${value*25}px)`;stick.setAttribute('aria-valuenow',Math.round(touchAxis*100))}
 -stick.addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();stickId=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);audio.unlock()});stick.addEventListener('pointermove',moveStick);for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,e=>{if(e.pointerId===stickId){stickId=null;touchAxis=0;$('stickKnob').style.transform='translateX(0)';stick.setAttribute('aria-valuenow','0')}});
-+const stick=$('joystick');function moveStick(e){if(e.pointerId!==stickId)return;const r=stick.getBoundingClientRect(),raw=(e.clientX-(stickOrigin??(r.left+r.width/2)))/(r.width*.28),value=Math.max(-1,Math.min(1,raw));touchAxis=Math.abs(value)<.06?0:Math.sign(value)*Math.pow((Math.abs(value)-.06)/.94,.85);$('stickKnob').style.transform=`translateX(${value*25}px)`;stick.setAttribute('aria-valuenow',Math.round(touchAxis*100))}
-+stick.addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();stickId=e.pointerId;stickOrigin=e.clientX;stick.setPointerCapture(e.pointerId);moveStick(e);audio.unlock()});stick.addEventListener('pointermove',moveStick);for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,e=>{if(e.pointerId===stickId){stickId=null;stickOrigin=null;touchAxis=0;$('stickKnob').style.transform='translateX(0)';stick.setAttribute('aria-valuenow','0')}});
++let flickDir=0,flickUntil=0,stickHist=[],stickVal=0;const stick=$('joystick');
++// Floating stick: wherever the thumb lands on the pad becomes the centre; only dragging sideways steers.
++// Past full deflection the centre follows the thumb so reversing is instant, and a quick flick gives a short full-speed burst.
++function moveStick(e){if(e.pointerId!==stickId||stickOrigin===null)return;const range=stick.getBoundingClientRect().width*.16,list=e.getCoalescedEvents?.().length?e.getCoalescedEvents():[e];for(const ev of list){let dx=ev.clientX-stickOrigin;if(dx>range){stickOrigin+=dx-range;dx=range}else if(dx<-range){stickOrigin+=dx+range;dx=-range}const now=performance.now();stickHist.push([now,ev.clientX]);while(stickHist.length>1&&now-stickHist[0][0]>150)stickHist.shift();stickVal=dx/range;const a=Math.abs(stickVal);touchAxis=a<.1?0:Math.sign(stickVal)*Math.pow((a-.1)/.9,.8);const moved=ev.clientX-stickHist[0][1];if(Math.abs(moved)>range*.4){flickDir=Math.sign(moved);flickUntil=now+170}}$('stickKnob').style.transform=`translateX(${stickVal*25}px)`;stick.setAttribute('aria-valuenow',Math.round(touchAxis*100))}
++stick.addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();stickId=e.pointerId;stickOrigin=e.clientX;stickHist=[[performance.now(),e.clientX]];stickVal=0;touchAxis=0;stick.setPointerCapture(e.pointerId);audio.unlock()});stick.addEventListener('pointermove',moveStick);for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,e=>{if(e.pointerId===stickId){stickId=null;stickOrigin=null;touchAxis=0;stickVal=0;$('stickKnob').style.transform='translateX(0)';stick.setAttribute('aria-valuenow','0')}});
  $('fireButton').addEventListener('pointerdown',e=>{if(paused||!game.active||game.scene)return;e.preventDefault();fireId=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);touchFire=true;e.currentTarget.classList.add('pressed');audio.unlock();game.fire()});for(const type of ['pointerup','pointercancel','lostpointercapture'])$('fireButton').addEventListener(type,e=>{if(e.pointerId===fireId){touchFire=false;fireId=null;e.currentTarget.classList.remove('pressed')}});
  $('grenadeButton').addEventListener('pointerdown',e=>{if(paused)return;e.preventDefault();audio.unlock();game.grenade()});$('weaponRack').addEventListener('click',e=>{const b=e.target.closest('[data-weapon]');if(!b||paused)return;if(game.useStored(b.dataset.weapon)){audio.sfx('pickup');toast(ZSEngine.GUNS[b.dataset.weapon].name+' equipped')}});$('menuButton').onclick=menu;$('pauseButton').onclick=()=>{if(!game.active){showStart();return}if(paused&&panel==='menu')closePanel();else menu()};
  addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;if(['ArrowLeft','ArrowRight','Space','KeyA','KeyD','KeyG','KeyP','Escape'].includes(e.code))e.preventDefault();if(e.code==='Escape'||e.code==='KeyP'){if(!e.repeat){if(panel&&game.active)closePanel();else menu()}return}if(paused)return;keys.add(e.code);if(e.code==='Space'&&!e.repeat){audio.unlock();game.fire()}if(e.code==='KeyG'&&!e.repeat)game.grenade()});addEventListener('keyup',e=>keys.delete(e.code));
@@ -310,7 +405,7 @@ index 85bd43f..1f723bd 100644
  addEventListener('resize',()=>{lastFit=''});visualViewport?.addEventListener('resize',()=>{lastFit=''});screen.orientation?.addEventListener('change',()=>{lastFit=''});addEventListener('blur',()=>{clearInput();if(game.active&&!panel){pause();menu()}});document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();if(game.active&&!panel)menu()}});addEventListener('pagehide',save);addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
  applySkin(read('zs7-skin','toxic'));showStart();requestAnimationFrame(frame);renderer.load(fraction=>{const line=$('loadingLine');if(line)line.textContent='Loading game artwork · '+Math.round(fraction*100)+'%'}).then(()=>{ready=true;if(panel==='start'){const b=$('startButton');b.disabled=false;b.textContent='PLAY ZOMBIE SMASH';$('loadingLine').textContent='NO LOGIN · ALL SKINS UNLOCKED'}renderer.draw(game)}).catch(error=>{const line=$('loadingLine');if(line)line.textContent='Artwork download interrupted. Reload to retry.';toast(error.message)});scores.flush();
 diff --git a/index.html b/index.html
-index 7f2abfc..833a2da 100644
+index 7f2abfc..718eadb 100644
 --- a/index.html
 +++ b/index.html
 @@ -3,7 +3,7 @@
@@ -318,7 +413,7 @@ index 7f2abfc..833a2da 100644
  <meta name="theme-color" content="#111416"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zombie Smash">
  <meta name="description" content="Joey Rob versus Dr Mantis and the fallen heroes. A portrait arcade game. Pick a name. Hold the line.">
 -<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.5"><link rel="icon" href="./icon-192.png?v=7.5"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.5"><link rel="stylesheet" href="./game.css?v=7.5">
-+<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.7.0"><link rel="icon" href="./icon-192.png?v=7.7.0"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.7.0"><link rel="stylesheet" href="./game.css?v=7.7.0">
++<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.8.0"><link rel="icon" href="./icon-192.png?v=7.8.0"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.8.0"><link rel="stylesheet" href="./game.css?v=7.8.0">
  </head><body>
  <div id="bleed" aria-hidden="true"></div>
  <main id="cabinet" aria-label="Zombie Smash portrait console">
@@ -327,10 +422,10 @@ index 7f2abfc..833a2da 100644
  <div id="rotateGate" hidden><img src="./icon-192.png" alt=""><h1>TURN TO PORTRAIT</h1><p>Your game is paused.<br>The whole console stays in proportion.</p><svg viewBox="0 0 60 72" aria-hidden="true"><rect x="16" y="7" width="28" height="54" rx="4"/><path d="M27 54h6"/></svg></div>
  <noscript>Enable JavaScript to play Zombie Smash.</noscript>
 -<script src="./game-data.js?v=7.5"></script><script src="./engine.js?v=7.5"></script><script src="./renderer.js?v=7.5"></script><script src="./audio.js?v=7.5"></script><script src="./scores.js?v=7.5"></script><script src="./game.js?v=7.5"></script>
-+<script src="./game-data.js?v=7.7.0"></script><script src="./engine.js?v=7.7.0"></script><script src="./renderer.js?v=7.7.0"></script><script src="./audio.js?v=7.7.0"></script><script src="./scores.js?v=7.7.0"></script><script src="./game.js?v=7.7.0"></script>
++<script src="./game-data.js?v=7.8.0"></script><script src="./engine.js?v=7.8.0"></script><script src="./renderer.js?v=7.8.0"></script><script src="./audio.js?v=7.8.0"></script><script src="./scores.js?v=7.8.0"></script><script src="./game.js?v=7.8.0"></script>
  </body></html>
 diff --git a/manifest.webmanifest b/manifest.webmanifest
-index 96df531..5763c6d 100644
+index 96df531..ee99304 100644
 --- a/manifest.webmanifest
 +++ b/manifest.webmanifest
 @@ -11,9 +11,9 @@
@@ -340,12 +435,12 @@ index 96df531..5763c6d 100644
 -    {"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png","purpose":"any"},
 -    {"src":"./icon-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"any"},
 -    {"src":"./icon-maskable-512.png?v=7.5","sizes":"512x512","type":"image/png","purpose":"maskable"}
-+    {"src":"./icon-192.png?v=7.7.0","sizes":"192x192","type":"image/png","purpose":"any"},
-+    {"src":"./icon-512.png?v=7.7.0","sizes":"512x512","type":"image/png","purpose":"any"},
-+    {"src":"./icon-maskable-512.png?v=7.7.0","sizes":"512x512","type":"image/png","purpose":"maskable"}
++    {"src":"./icon-192.png?v=7.8.0","sizes":"192x192","type":"image/png","purpose":"any"},
++    {"src":"./icon-512.png?v=7.8.0","sizes":"512x512","type":"image/png","purpose":"any"},
++    {"src":"./icon-maskable-512.png?v=7.8.0","sizes":"512x512","type":"image/png","purpose":"maskable"}
    ],
 -  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.5","sizes":"192x192","type":"image/png"}]}]
-+  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.7.0","sizes":"192x192","type":"image/png"}]}]
++  "shortcuts":[{"name":"Play Zombie Smash","url":"./","icons":[{"src":"./icon-192.png?v=7.8.0","sizes":"192x192","type":"image/png"}]}]
  }
 diff --git a/renderer.js b/renderer.js
 index df73dcf..492aa12 100644
@@ -383,13 +478,13 @@ index df73dcf..492aa12 100644
  window.ZSRenderer=Renderer;window.ZSRenderer.assets=[...new Set(files)];
  })();
 diff --git a/sw.js b/sw.js
-index 8d20283..8999e7d 100644
+index 8d20283..f1c2e1f 100644
 --- a/sw.js
 +++ b/sw.js
 @@ -1,5 +1,5 @@
 -const CACHE='zombie-smash-v7.5.0-f284267950';
 -const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
-+const CACHE='zombie-smash-v7.7.0-boss-rework';
++const CACHE='zombie-smash-v7.8.0-stick-fill';
 +const ASSETS=["./404.html","./apple-touch-icon.png","./art-bounds.json","./audio.js","./boss-caffeinatedsloth-stage1.webp","./boss-caffeinatedsloth-stage2.webp","./boss-debo-stage1.webp","./boss-debo-stage2.webp","./boss-discoman-stage1.webp","./boss-discoman-stage2.webp","./boss-drmantis-stage1.webp","./boss-drmantis-stage2.webp","./boss-drmantis-stage3.webp","./boss-fatamy-stage1.webp","./boss-fatamy-stage2.webp","./boss-fatamy-stage3.webp","./boss-glowinghumanity-stage1.webp","./boss-glowinghumanity-stage2.webp","./boss-jordan-stage1.webp","./boss-jordan-stage2.webp","./bullet-dmr.webp","./bullet-pistol.webp","./bullet-smg.webp","./console-arctic.webp","./console-carbon.webp","./console-circuit.webp","./console-electro.webp","./console-ember.webp","./console-hazard.webp","./console-neon.webp","./console-splatter.webp","./console-toxic.webp","./engine.js","./font-barlow-condensed-700.woff2","./font-barlow-condensed-900.woff2","./font-inter.woff2","./game-data.js","./game-banner.webp","./game-preview.webp","./game.css","./game.js","./icon-192.png","./icon-512.png","./icon-maskable-512.png","./index.html","./joey-reaction-close.webp","./legacy-board.json","./manifest.webmanifest","./map-concrete.jpg","./map-desert.jpg","./map-hangar.jpg","./map-north.jpg","./map-wasteland.jpg","./music-boss.mp3","./music-disco.mp3","./music-entrance.mp3","./music-main.mp3","./pickup-bomb.webp","./pickup-clock.webp","./pickup-dmr.webp","./pickup-heart.webp","./pickup-shield.webp","./pickup-smg.webp","./pickup-speed.webp","./player-fire.webp","./player-hit.webp","./player-portrait.webp","./player-transparent.webp","./player-victory.webp","./player-wounded.webp","./prop-barrel.webp","./renderer.js","./scores.js","./sfx-alarm.mp3","./sfx-boost.mp3","./sfx-boss-attack.mp3","./sfx-burst.mp3","./sfx-dmr.mp3","./sfx-grenade.mp3","./sfx-hit.mp3","./sfx-hurt.mp3","./sfx-loss.mp3","./sfx-pickup.mp3","./sfx-pistol.mp3","./sfx-ricochet.mp3","./sfx-shotgun.mp3","./sfx-smg.mp3","./sfx-throw.mp3","./sfx-victory.mp3","./sfx-whoosh.mp3","./story-army.webp","./story-joey.webp","./story-mantis.webp","./weapon-bodypart.webp","./weapon-burger.webp","./weapon-chain.webp","./weapon-coffee.webp","./weapon-disco.webp","./weapon-donut.webp","./weapon-ember.webp","./weapon-handcuffs.webp","./weapon-missile.webp","./weapon-glowstick.webp","./weapon-tea.webp","./weapon-venom.webp","./zombie-armored.webp","./zombie-berserker.webp","./zombie-brute.webp","./zombie-bulwark.webp","./zombie-fuse.webp","./zombie-helmet.webp","./zombie-normal.webp","./zombie-runner.webp","./zombie-titan.webp","./zombie-toxic.webp"];
  // Install the complete release atomically, including music and every boss form.
  self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
