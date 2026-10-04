@@ -1,0 +1,38 @@
+# Zombie Smash 7.5
+
+Consolidates ZC2-Zombie-Smash main a038214 (7.3), the later 7.4 flat build,
+and the refined 61-sprite transparent character pack. Adds a barrel sprite,
+three original comic panels, five redesigned console skins and gameplay fixes.
+
+## Verified
+
+- 24 deterministic engine checks: horizontal controls, fire cooldown, swept
+  collision, boosts, grenades without aim assist, rare pickups, stored ammo,
+  barrel radius/chains/occlusion, save restoration, all ten enemies and all
+  sixteen boss forms. Excess damage cannot skip phases.
+- Five score-client checks: accepted/rejected/offline/practice runs and retry
+  queue behavior. Permanent rejections cannot block later valid scores.
+- Chromium browser: 320x568, 375x667, 390x844, 768x1024, 820x1180.
+  Arena and console proportions stay identical. Landscape pauses with a gate.
+- Real multitouch joystick + held fire, release behavior, grenade input,
+  skin choices, admin-code flow, all sixteen boss selections, remembered
+  username and save continuation. No browser exceptions or missing requests.
+- All eight original live leaderboard name/score pairs remain present unchanged.
+  This check was read-only; QA submits no scores to the live board.
+- Audio decodes locally: stereo main (49.66s), boss (40.56s), disco (47.21s),
+  entrance stinger (3.2s), gunfire and explosions.
+
+Physical iPhone/iPad Safari and speakers have not been available for hands-on
+validation. Automated phone/tablet checks use Chromium emulation. Portrait
+orientation is requested by the manifest and enforced with an on-screen gate.
+
+## Assets and offline release
+
+The service worker is generated from the assets actually used by the renderer,
+UI, nine skins and local audio. A content hash names each atomic cache release.
+The final ZIP is flat, contains no development server/tests, and needs no build.
+Source tests and reproducible packaging scripts remain in the repository.
+
+Refined alpha sprites preserve full source figures. Display uses contain sizing;
+transparent padding may be ignored for sizing, but visible pixels are retained.
+Maps are backgrounds and cover the arena; character art is never cover-cropped.

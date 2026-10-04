@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#111416"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zombie Smash">
+<meta name="description" content="Joey Rob versus Dr Mantis and the fallen heroes. A portrait arcade game. Pick a name. Hold the line.">
+<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.5"><link rel="icon" href="./icon-192.png?v=7.5"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.5"><link rel="stylesheet" href="./game.css?v=7.5">
+</head><body>
+<div id="bleed" aria-hidden="true"></div>
+<main id="cabinet" aria-label="Zombie Smash portrait console">
+ <div class="shell-art" aria-hidden="true"></div>
+ <header class="console-header"><button id="menuButton" aria-label="Game menu" class="hardware top-button"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><div class="wordmark">ZOMBIE <b>SMASH</b><small id="headerName">JOEY ROB VS DR MANTIS</small></div><button id="pauseButton" aria-label="Pause game" class="hardware top-button"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button></header>
+ <section class="screen" aria-label="Game screen">
+  <div class="hud-top"><div><small>WAVE</small><b id="waveValue">1</b></div><div><small>LEFT</small><b id="leftValue">10</b></div><div class="score-cell"><small>SCORE</small><b id="scoreValue">0</b></div><div><small>BEST</small><b id="bestValue">0</b></div></div>
+  <div class="playfield"><canvas id="gameCanvas" width="686" height="824" aria-label="Move left and right; fire upward"></canvas><div id="cinematic" hidden></div></div>
+  <div class="boost-meter"><span id="boostText">BOOST ×1</span><i><b id="boostFill"></b></i><small id="comboText">10 KILLS TO ×2</small></div>
+  <div class="hud-bottom"><div id="healthValue" aria-label="5 hearts">♥ ♥ ♥ ♥ ♥</div><div class="weapon-status"><b id="gunValue">PISTOL</b><span id="ammoValue">∞</span></div><div id="weaponRack" class="weapon-rack" aria-label="Stored weapons"><button type="button" data-weapon="smg" aria-label="Use stored SMG">SMG<small id="inv-smg">0</small></button><button type="button" data-weapon="shotgun" aria-label="Use stored scatter gun">SCAT<small id="inv-shotgun">0</small></button><button type="button" data-weapon="dmr" aria-label="Use stored DMR">DMR<small id="inv-dmr">0</small></button><button type="button" data-weapon="burst" aria-label="Use stored pulse weapon">PULSE<small id="inv-burst">0</small></button></div><div class="base-status"><small>BASE</small><b id="baseValue">0/10</b></div></div>
+ </section>
+ <div class="control-deck">
+  <div id="joystick" role="slider" tabindex="0" aria-label="Move left and right" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0"><span class="stick-track"></span><span class="stick-knob" id="stickKnob"></span></div>
+  <button id="grenadeButton" class="grenade-button" aria-label="Throw grenade"><svg viewBox="0 0 32 32"><path d="m17 4 5 1-2 5m-8-3 9 3-2 4m-8-4c-4 3-6 9-3 13 3 4 8 5 12 1s3-9-1-12l-8-2Z"/></svg><b id="grenadeValue">3</b></button>
+  <button id="fireButton" class="fire-button" aria-label="Fire weapon"><span class="fire-inner"><span class="crosshair" aria-hidden="true"></span><b>FIRE</b></span></button>
+  <div class="deck-label" id="mapLabel">THE GROUND</div><span class="engraving">JW · ZOMBIE SMASH</span>
+ </div>
+ <div id="overlay" class="overlay" hidden></div><div id="toast" role="status" hidden></div>
+</main>
+<div id="rotateGate" hidden><img src="./icon-192.png" alt=""><h1>TURN TO PORTRAIT</h1><p>Your game is paused.<br>The whole console stays in proportion.</p><svg viewBox="0 0 60 72" aria-hidden="true"><rect x="16" y="7" width="28" height="54" rx="4"/><path d="M27 54h6"/></svg></div>
+<noscript>Enable JavaScript to play Zombie Smash.</noscript>
+<script src="./game-data.js?v=7.5"></script><script src="./engine.js?v=7.5"></script><script src="./renderer.js?v=7.5"></script><script src="./audio.js?v=7.5"></script><script src="./scores.js?v=7.5"></script><script src="./game.js?v=7.5"></script>
+</body></html>
