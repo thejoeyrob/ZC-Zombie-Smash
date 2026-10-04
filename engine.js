@@ -14,7 +14,7 @@ const ENEMIES={
  titan:{hp:15,speed:17,r:24,points:1050,art:'zombie-titan.webp',height:75},
  fuse:{hp:3,speed:33,r:14,points:380,art:'zombie-fuse.webp',height:52},
  bulwark:{hp:9,speed:20,r:19,points:650,art:'zombie-bulwark.webp',height:61},
- mantismini:{hp:1,speed:36,r:11,points:150,art:'zombie-mantismini.webp',height:36}
+ mantismini:{hp:1,speed:36,r:11,points:150,art:'boss-drmantis-stage3.webp',height:44}
 };
 // 7.6.2: zombies are 45% larger (hitbox +30%) and 20% slower so the extra size doesn't make them feel faster.
 for(const s of Object.values(ENEMIES)){s.height=Math.round(s.height*1.45);s.r=Math.round(s.r*1.3);s.speed=+(s.speed*.8).toFixed(1)}

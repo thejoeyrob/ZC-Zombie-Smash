@@ -1,7 +1,7 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.8.6** (`VERSION.txt`, cache `zombie-smash-v7.8.6-visual-fixes`).
+Current: version **7.8.7** (`VERSION.txt`, cache `zombie-smash-v7.8.7-rendered-minis`).
 Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
@@ -89,11 +89,15 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 ### 7.8.5 - Fewer special drops
 - `engine.js` kill drops: a drop now happens on every 20th kill or a 2.2% chance (was every 12th or 4.5%), i.e. about 1 drop per 15 kills instead of 1 per 8.5. Drop mix when health is above 2 hearts: grenade 20% (was 48%), shield 18% (was 14%), speed-up 16% (was 14%), guns 46% (was 24%); the "heart when low on health" rule is unchanged. Measured over 1000 kills: grenade drops 55 -> 12 (about one per 83 kills instead of one per 18). Boss-down rewards (heart + DMR) unchanged.
 
-### 7.8.6 - Muzzle flash, praying-mantis minis, control fixes (current)
+### 7.8.6 - Muzzle flash, praying-mantis minis, control fixes
 - **Muzzle flash** (`renderer.js`): the flash when Joey fires was the `prop-barrel.webp` picture (the `fx-muzzle.webp` listed in `art-bounds.json` was never in the repo). It is now drawn procedurally at the gun tip (radial glow plus three flame spikes, additive blend).
-- **Mini Mantises** (`engine.js`): now look like ordinary green praying mantises (new sprite `zombie-mantismini.webp`, drawn procedurally, head down) instead of the red final form; 36 px tall; spawn every 1.2-1.9 s (was 2.3-3.1 s), up to 8 alive (was 5). Test bot still beats Dr Mantis (71-79 s, 0-1 hits). `sw.js` `ASSETS` updated.
+- **Mini Mantises** (`engine.js`): spawn every 1.2-1.9 s (was 2.3-3.1 s), up to 8 alive (was 5). (The drawn mantis sprite introduced here was removed in 7.8.7.)
 - **Ghost "FIRE" text** on the fire button when holding it: iOS text magnifier/callout. Controls, screen and header now have `user-select:none; -webkit-touch-callout:none` and the context menu is blocked outside inputs (`game.css` end, `game.js`).
 - **Hearts overlapping the weapon label**: hearts are now a compact flex row with no spaces (`game.js` `hud()`, `game.css`).
+
+### 7.8.7 - Rendered mantis art for the minis (current)
+- The mini Mantises use the original rendered `boss-drmantis-stage3.webp` again (the flat drawn `zombie-mantismini.webp` from 7.8.6 was deleted, along with its `sw.js` entry), drawn larger (`height` 44, about 64 px on screen) so the detail reads. Spawn rate/cap from 7.8.6 kept (every 1.2-1.9 s, up to 8). Test bot still beats Dr Mantis.
+- Note: `weapon-tea.webp` and `weapon-glowstick-*.webp` are still procedurally drawn (no image generator was available); replace them with rendered art of the same file names if wanted.
 
 ---
 

@@ -1,1 +1,1 @@
-7.8.6-visual-fixes
+7.8.7-rendered-minis
