@@ -72,3 +72,5 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
 .hud-bottom #healthValue .heart{color:#ff4455}.hud-bottom #healthValue .heart.gold{color:#ffc93c;text-shadow:0 0 4px #ffb30088}.hud-bottom #healthValue .heart.empty{color:#74806f}
 .story-art{height:min(220px,calc(var(--wh,450px)*.42))}
 .story-copy{min-height:78px}
+#joystick:before{content:'';position:absolute;inset:-14px}
+#joystick.sped{box-shadow:0 0 16px 4px var(--accent),0 6px 9px #0009,inset 0 1px 2px #c8d2d3}
