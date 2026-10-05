@@ -3,10 +3,10 @@ new file mode 100644
 index 0000000..e69de29
 diff --git a/CHANGES-SINCE-UPLOAD.md b/CHANGES-SINCE-UPLOAD.md
 new file mode 100644
-index 0000000..ecfc647
+index 0000000..43987d0
 --- /dev/null
 +++ b/CHANGES-SINCE-UPLOAD.md
-@@ -0,0 +1,122 @@
+@@ -0,0 +1,142 @@
 +# Changes made since your last upload
 +
 +Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
@@ -53,7 +53,7 @@ index 0000000..ecfc647
 +
 +**Movement (all bosses).** Bosses roam to random waypoints in x 52-291, y 80-152 (about a third of the way down), in every direction with smoothed velocity (`46 + 8*form` px/s). A guard keeps them at least `(player.y+28)/2` = 194 px from Joey (half the zombie walk, 388 px). Boss hitbox `r` 31 -> 36.
 +
-+**Attacks.** Gap between attacks is 2.4-5.6 s. Aimed projectiles use speed `value*.72`; thrown handcuffs and donuts use fixed velocities.
++**Attacks (as first built in 7.7.0 - timings and speeds here were changed later; see "Current boss attacks" near the end of this file).** Gap between attacks was 2.4-5.6 s. Aimed projectiles used speed `value*.72`; thrown handcuffs and donuts use fixed velocities.
 +
 +| Boss | Form 1 | Form 2 | Form 3 |
 +|---|---|---|---|
@@ -66,7 +66,7 @@ index 0000000..ecfc647
 +| Dr Mantis | 1 severed arm (`bodypart`), every 3.0s | 2 venom (fan), every 2.8s | arm + 2 venom every 3.4s, plus mini Mantises (see below) |
 +
 +All Fat Amy projectiles now share the same hitbox/draw size (`r` 11).
-+Mini Mantises: new enemy `mantismini` (art `boss-drmantis-stage3.webp`, 1 HP so any gun kills it in one shot, 150 points, ~44 px tall). During form 3 one spawns every 2.3-3.1 s (max 5 alive) from the top or the left/right edge and walks down like a normal zombie; they do not count toward the wave and are cleared when the boss dies.
++Mini Mantises: new enemy `mantismini` (art `boss-drmantis-stage3.webp`, 1 HP so any gun kills it in one shot, 150 points, ~44 px tall). During form 3 one spawned every 2.3-3.1 s (max 5 alive; now 1.2-1.9 s and 8, see 7.8.6) from the top or the left/right edge and walks down like a normal zombie; they do not count toward the wave and are cleared when the boss dies.
 +New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), `chainIn`, `wp`, `miniIn`; thrown barrels live in `game.barrels` with `thrown:true, small:true`.
 +
 +**New art** (drawn procedurally, exported as WebP): `weapon-tea.webp`, `weapon-glowstick.webp`; both added to the preload list in `renderer.js` and to `ASSETS` in `sw.js`. `weapon-missile.webp` is again used (Fat Amy form 1).
@@ -127,8 +127,28 @@ index 0000000..ecfc647
 +- Boss projectile hit test: distance < `r*.75 + 8` from Joey.
 +- Skin window fit: see `SKINS[].win` and `fitSkin()`.
 +
++## Current boss attacks (as of 7.9.0)
++Gaps are the time between attacks after the x0.88 factor from 7.8.2; speeds are pixels/second after the 0.95 factor. Boss health is x1.4 the values in `game-data.js`.
++
++| Boss | Form 1 | Form 2 | Form 3 |
++|---|---|---|---|
++| Jordan | 1 fire ember (142 px/s), every 1.5 s | 3 embers in a fan, every 2.0 s | - |
++| Glowing Humanity | 1 glow stick in a random colour, never the same twice in a row (119 px/s), every 1.8 s | 2 handcuffs thrown down and outward, spinning and bouncing off the side walls (~117 px/s), every 2.8 s | - |
++| Debo | the D chain: 0.55 s wind-up, 0.26 s lunge, 0.2 s hold, 0.4 s pull back, every 2.9 s | spinning barrel thrown to Joey's line (1.6 s flight); the chain reaches full length through it as it lands and it explodes (blast = 10% of screen width, hurts Joey; shot early it explodes where it is and hurts Debo if near him), every 4.6 s | - |
++| Disco Man | 2 bouncing disco balls (104 px/s), every 2.6 s | 3 spinning cups of English tea in a fan (109 px/s), every 2.6 s | - |
++| Caffeinated Sloth | 1 coffee (124 px/s), every 1.8 s | 3 coffees in a fan (128 px/s), every 2.4 s | - |
++| Fat Amy | 1 missile at Joey (114 px/s), every 2.4 s | 1 burger or donut (random) at Joey (114 px/s), every 1.8 s | 2 donuts thrown down and outward, bouncing off the sides; she then stops 1.3 s, shakes 1 s with a red aim line, charges at Joey's position at 270 px/s and retreats at 150 px/s (about a 7 s cycle) |
++| Dr Mantis | 1 severed arm (119 px/s), every 2.4 s | 2 venom in a fan (124 px/s), every 2.2 s | arm + 2 venom every 2.7 s, plus mini Mantises (rendered stage-3 art, one-shot kills, 150 points) arriving from the top and sides every 1.2-1.9 s, up to 8 at once |
++
++All bosses roam in x 52-291, y 80-152 and never come closer than 194 px to Joey (except Fat Amy's charge). All Fat Amy projectiles are the same size.
++
++## Where the game is hosted
++- This repo, `thejoeyrob/ZC-Zombie-Smash`, is published by GitHub Pages from `main` (every version 7.6 to 7.9.0 built and deployed successfully; each push redeploys in about 30 seconds). It has no custom domain (no `CNAME` file) and serves at `https://joeyrob.github.io/ZC-Zombie-Smash/`.
++- `zc2.quest` is **not** this repo. Its `CNAME` file lived in a separate repo, `thejoeyrob/zc2` (the ZC2 Community Arena app: Supabase login, accounts, leaderboards, `arcade.js`, `soundtrack.js`), last changed by an upload on 2026-10-01. None of the changes in this file were ever applied to that repo. On 2026-10-05 the `zc2`, `ZC2-Zombie-Smash` and `ZC2-SS` repositories were no longer visible to the tool used for this work, so their current state could not be checked.
++- This repo's `vercel.json` marks every file `Cache-Control: public, max-age=0, must-revalidate`. The older `zc2` copy of `vercel.json` (as of 2026-09-29) marked everything except `sw.js` and the manifest `public, max-age=31536000, immutable` (one year), which can make browsers keep serving an old `index.html`.
++
 +## Not verified
-+Real-phone play (joystick feel, boss difficulty), GitHub Pages settings page (not readable from the tool used), and the admin cheat with the real admin code (tested with a mocked admin response).
++Real-phone play (joystick feel, boss difficulty), the live sites `zc2.quest` and `joeyrob.github.io` (the sandbox could not fetch them; deployment success was checked through GitHub's workflow runs), and the admin cheat with the real admin code (tested with a mocked admin response).
 diff --git a/README_FIRST.txt b/README_FIRST.txt
 index 984cb01..4eb0d8f 100644
 --- a/README_FIRST.txt
