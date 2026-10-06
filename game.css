@@ -58,8 +58,77 @@ body{--fire:#ef3042;--grenade:#159de8;--stick:#d8a34e}
 .scene-figures.dual .scene-art{width:0;min-width:0;flex:1 1 0}
 #cinematic{grid-template-columns:minmax(0,1fr);justify-content:stretch;align-items:stretch}
 
-/* 7.6: full character artwork replaces the miniature screenshot in the welcome panel. */
-.start-heroes{height:150px;width:100%;display:grid;grid-template-columns:minmax(0,1fr) 27px minmax(0,1fr);align-items:center;gap:4px;padding:7px;border:1px solid color-mix(in srgb,var(--accent) 40%,#24352d);background:radial-gradient(ellipse at center,#26472d88,#070f0cef),url('./map-concrete.jpg') center/cover;overflow:hidden}
-.start-heroes img{width:100%;height:136px;min-width:0;object-fit:contain;filter:drop-shadow(0 4px 4px #0008)}
-.start-heroes>b{font:900 25px Barlow;color:var(--accent);text-shadow:2px 2px #000;transform:rotate(-8deg)}
-.name-field input:-webkit-autofill{-webkit-text-fill-color:#fff;-webkit-box-shadow:0 0 0 100px #121b20 inset}
+/* Shared geometry variables are now set ONCE by console-layout.js.
+   Individual skin windows are decorative nine-slice source coordinates only. */
+.console-header{top:3px;left:36px;right:36px;height:var(--hh,34px)}
+.top-button{width:62px;height:calc(var(--hh,34px) - 6px);padding:5px}
+.wordmark{font-size:14px}
+.screen{left:var(--sx,16px);top:var(--sy,58px);width:343px;height:486px;transform:scale(var(--ss,1));transform-origin:0 0;border-radius:0;box-shadow:inset 0 0 8px #000}
+.overlay{inset:auto;left:var(--wx,16px);top:var(--wy,55px);width:var(--ww,343px);height:var(--wh,450px)}
+#toast{top:calc(var(--wy,55px) + var(--wh,450px) - 40px)}
+.control-deck{top:var(--dy,520px);height:123px;transform:scale(var(--sd,1));transform-origin:50% 0}
+.start-art{height:auto;aspect-ratio:1.9;width:100%;object-fit:cover;object-position:center;background:#090e0e}
+#healthValue.tenhearts{display:grid;grid-template-columns:repeat(5,1fr);gap:0 1px;line-height:11px;font-size:10px;letter-spacing:0;min-width:64px}
+.hud-bottom #healthValue .heart{color:#ff4455}.hud-bottom #healthValue .heart.gold{color:#ffc93c;text-shadow:0 0 4px #ffb30088}.hud-bottom #healthValue .heart.empty{color:#74806f}
+.story-art{height:min(220px,calc(var(--wh,450px)*.42))}
+.story-copy{min-height:78px}
+#joystick:before{content:'';position:absolute;inset:-14px}
+#joystick.sped{box-shadow:0 0 16px 4px var(--accent),0 6px 9px #0009,inset 0 1px 2px #c8d2d3}
+/* 7.8: joystick and fire button sit 6px higher and 6px closer to the centre. */
+#joystick{left:28px;top:19px}
+.fire-button{right:27px;top:19px}
+/* 7.8.1: the console fills the whole screen, under the translucent status bar; the header drops just below it. */
+.console-header{top:calc(3px + var(--hs,0px));height:max(26px,calc(var(--hh,34px) + 1px - var(--hs,0px)))}
+.top-button{height:calc(100% - 4px)}
+.sb-overlap .wordmark{font-size:12px}.sb-overlap .wordmark small{font-size:5.5px}
+/* 7.8.6: no iOS text magnifier / callout when holding the controls; hearts never overlap the weapon label. */
+.control-deck,.control-deck *,.screen,.screen *,.console-header,.console-header *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hud-bottom #healthValue:not(.tenhearts){display:flex;gap:1px;font-size:9px;letter-spacing:0;min-width:0;flex:0 0 auto}
+
+/* 7.9.0 - retro title screen */
+.start-panel{overflow:hidden}
+.title-screen{position:relative;margin:-18px -20px;width:calc(100% + 40px);height:var(--wh,445px);overflow:hidden;background:#10061e;text-align:center;animation:crt 5s infinite}
+.title-screen:before{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;background:repeating-linear-gradient(#0000 0 2px,#0000002e 2px 3px),radial-gradient(ellipse at center,#0000 55%,#000000a6 100%)}
+@keyframes crt{0%,100%{filter:brightness(1)}47%{filter:brightness(1.02)}50%{filter:brightness(.93)}53%{filter:brightness(1.03)}}
+#titleCanvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated}
+.title-ui{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:8px 14px 10px}
+.title-hi{display:flex;justify-content:space-between;font:700 10px 'Courier New',monospace;letter-spacing:.12em;color:#ff5a4a;text-shadow:1px 1px #000}
+.title-hi b{color:#fff6c0}
+.title-logo{margin:10px 0 2px;line-height:.84;font-weight:900}
+.title-logo span{display:block;font-family:Barlow,sans-serif;text-transform:uppercase;transform:skew(-5deg);animation:slam .8s cubic-bezier(.2,1.5,.4,1) both}
+.tl-1{font-size:calc(var(--ww,322px)*.22);letter-spacing:.04em;color:#8cff55;text-shadow:0 1px #2a8a10,0 2px #2a8a10,0 3px #1c6a0a,0 4px #1c6a0a,0 5px #0d3a05,0 6px #061a02,0 0 22px #3dff1a99}
+.tl-2{font-size:calc(var(--ww,322px)*.27);letter-spacing:.05em;color:#ff4a36;animation-delay:.25s!important;text-shadow:0 1px #a0170f,0 2px #a0170f,0 3px #7a0f0a,0 4px #7a0f0a,0 5px #470906,0 6px #230302,0 0 24px #ff3a1a99}
+@keyframes slam{0%{transform:translateY(-220%) skew(-5deg) scale(1.3);opacity:0}60%{transform:translateY(6%) skew(-5deg) scale(1);opacity:1}80%{transform:translateY(-3%) skew(-5deg)}100%{transform:translateY(0) skew(-5deg)}}
+.title-tag{font:900 calc(var(--ww,322px)*.052) Barlow;letter-spacing:.38em;color:#ffe094;text-shadow:2px 2px #000;animation:tagIn 1s steps(8) .9s both}
+@keyframes tagIn{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.title-bottom{background:linear-gradient(#0000,#0a0412d9 24%,#0a0412f2);margin:0 -14px -10px;padding:22px 14px 10px}
+.title-bottom form{margin:0}
+.title-bottom .name-field{font:700 9px 'Courier New',monospace;letter-spacing:.2em;color:#8cff55;text-align:center}
+.title-bottom .name-field input{margin:4px auto 8px;width:78%;padding:7px 8px;background:#000;border:2px solid #8cff55;border-radius:0;color:#fff6c0;font:700 15px 'Courier New',monospace;letter-spacing:.18em;text-align:center;box-shadow:0 0 0 2px #000,0 0 12px #8cff5555}
+.title-bottom .name-field input::placeholder{color:#4d7a3a}
+.press-start{display:block;width:100%;background:none!important;border:0!important;box-shadow:none!important;color:#fff3b0!important;font:900 calc(var(--ww,322px)*.075) Barlow!important;letter-spacing:.16em;text-shadow:0 0 12px #ffb000,2px 2px #000;padding:6px 0;animation:blink 1s steps(2,jump-none) infinite}
+.press-start:disabled{animation:none;color:#8a8a70!important;text-shadow:2px 2px #000}
+@keyframes blink{0%{opacity:1}50%{opacity:.12}}
+.title-continue{display:block;width:100%;margin:2px 0 4px;background:#000!important;border:2px solid #ffb000!important;border-radius:0!important;color:#ffcf5a!important;font:900 12px Barlow!important;letter-spacing:.14em}
+.title-ticker{overflow:hidden;white-space:nowrap;margin:6px -14px 0;border-top:1px solid #8cff5555;border-bottom:1px solid #8cff5555;background:#00000099;font:700 9px 'Courier New',monospace;letter-spacing:.14em;color:#ff8a4a}
+.title-ticker span{display:inline-block;padding:2px 0;animation:ticker 26s linear infinite}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.title-bottom .loading-line{margin-top:5px;font:700 8px 'Courier New',monospace;letter-spacing:.14em;color:#7a8a72}
+
+/* 7.10: all skins wrap the same immutable cabinet, screen and control deck. */
+.shell-art{background:#050807}
+.shell-slice{display:block;position:absolute;background-repeat:no-repeat;pointer-events:none}
+.screen{box-shadow:0 0 0 1px #050807,0 0 0 2px color-mix(in srgb,var(--accent) 48%,#34433b)}
+.skin-thumbnail{display:block;position:relative;width:67.5px;height:120.06px;margin:2px auto;overflow:hidden;border-radius:4px;background:#050807}
+.skin-miniature{display:block;position:absolute;left:0;top:0;width:375px;height:667px;transform:scale(.18);transform-origin:0 0;background:#050807}
+.skin-miniature .preview-screen{position:absolute;left:var(--sx);top:var(--sy);width:var(--ww);height:var(--wh);background:linear-gradient(#06100b22,#07100be8),url('./map-concrete.jpg') center/cover;border:2px solid var(--accent)}
+.preview-stick,.preview-fire,.preview-grenade{position:absolute;border-radius:50%;box-shadow:0 0 0 6px #141c20,0 0 0 8px #747e7d}
+.preview-stick{left:37.57px;top:526.55px;width:90.24px;height:90.24px;background:radial-gradient(circle,var(--stick) 0 33%,#1a2221 36% 100%)}
+.preview-fire{left:248.13px;top:526.55px;width:90.24px;height:90.24px;background:radial-gradient(circle at 35% 25%,#ffe5d7,var(--fire) 40%,#341213)}
+.preview-grenade{left:165.41px;top:520.91px;width:44.18px;height:44.18px;background:var(--grenade)}
+.skin-choice{position:relative;padding:5px 1px}.skin-choice small{position:absolute;right:3px;top:3px;font:900 7px Inter;color:#0a130f;background:#d9eac7;padding:2px 3px;border-radius:2px}
+.skin-choice b{font-size:12px;margin:7px 0 4px}
+.title-hi>span{max-width:49%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title-bottom .name-field input{font-size:16px;letter-spacing:.10em}
+.title-bottom .name-field input:-webkit-autofill{-webkit-text-fill-color:#fff6c0;box-shadow:0 0 0 40px #080e0a inset}
+@media(prefers-reduced-motion:reduce){.title-screen,.title-logo span,.title-tag,.press-start,.title-ticker span{animation:none!important}}

@@ -1,15 +1,16 @@
 # Changes made since your last upload
 
 Baseline: commit `a826f4e` ("Add files via upload", 2026-10-04, JW E.D.S.) = Zombie Smash 7.5.0.
-Current: version **7.9.0** (`VERSION.txt`, cache `zombie-smash-v7.9.0-retro-title`).
-Everything below was made by Claude Code in `main` commits (list below). To see the exact diff:
+Current: version **7.10.0** (`VERSION.txt`; content-hashed offline cache).
+7.10 starts from commit `954f31a` of the current `thejoeyrob/ZC-Zombie-Smash` repository.
+The 7.6–7.9 history below was made by Claude Code in `main`; the 7.10 enhancement is documented separately below. To see the exact diff:
 
     git diff a826f4e HEAD                 # everything
     git diff a826f4e HEAD -- engine.js    # one file
 
 `changes-since-upload.patch` in this repo is the same diff for all text files (images and `SHA256SUMS.txt` excluded).
 
-Files **not touched**: `audio.js`, `scores.js`, `legacy-board.json`, fonts, icons, console skins, boss and zombie art, music, sfx, `vercel.json`, `404.html`.
+Files **not touched by the 7.6–7.9 work**: `audio.js`, `scores.js`, `legacy-board.json`, fonts, icons, console skins, boss and zombie art, music, sfx, `vercel.json`, `404.html`.
 Release routine used each time (no build step exists): edit files, bump `?v=` in `index.html` and `manifest.webmanifest`, change the `CACHE` name in `sw.js`, add new files to `ASSETS` in `sw.js`, update `VERSION.txt`, regenerate `SHA256SUMS.txt`.
 
 ---
@@ -105,20 +106,37 @@ New helper state on the boss object: `mode` (`idle/prep/shake/charge/retreat`), 
 - The start screen now ends with `NO LOGIN - ALL SKINS UNLOCKED - V<version>` (read from the `?v=` on `game.js`), so the running version is visible.
 - `fit()`: on iOS home-screen apps that report a 0 top safe-area inset, assume 20 px so the header never sits under the status bar.
 
-### 7.9.0 - Retro arcade title screen (current)
+### 7.9.0 - Retro arcade title screen (preserved)
 - `showStart()` in `game.js` now builds an arcade title screen instead of the banner picture: a pixel-art attract scene on a small canvas (150 px wide, scaled up with `image-rendering:pixelated`) of a red moon, city skyline and a perspective street where Joey auto-shoots zombies (the real `player-transparent` and zombie sprites drawn at low resolution, bullets, muzzle flash, pixel bursts, floating score pops; `titleScene()`); a slamming two-line logo (ZOMBIE green over SMASH red, extruded text-shadow, `slam` animation), typewriter "HOLD THE LINE", an arcade score row (`1UP <name>` / `HI <best score> <name>` from `scores.best`), a monospace framed name field, blinking "PRESS START", a CONTINUE button when a saved run exists, a scrolling ticker of the seven boss names, and the version line. CRT scanlines, vignette and a slight flicker are overlaid.
 - Same ids and handlers as before (`#startForm`, `#username`, `#startButton`, `data-action="continue"`), so name validation, saved-run continue and the loading state work unchanged; the post-load text is now `PRESS START`. The scene stops itself when the title is dismissed, pauses while the tab is hidden and is static for reduced-motion users. CSS is a `/* 7.9.0 */` block at the end of `game.css`. No new image files.
 
+
+### 7.10.0 — One fixed console, more pressure, larger barrels
+
+**Intentional changes retained:** classic portrait 343×412 world; current enlarged Joey/enemy/boss artwork; 212 px/s immediate-response floating joystick with no slide; joystick/fire moved up and inward; centred grenade; manual one-magazine-per-gun storage; rare drops and speed pickup; roaming character-specific bosses and all 16 forms; Debo barrel/chain combo; Amy charge; rendered one-HP mini Mantises; 10-heart practice cheat; retro title; story/dialogue; remembered name; automatic app updates. Existing score client, legacy scores, audio code and music files are byte-identical to `954f31a`.
+
+**Fixed console:** `console-layout.js` is the sole immutable reference for screen/deck geometry. It preserves the actual 7.9 default Toxic display: 375×667 cabinet; 343×486 HUD+screen at scale 0.9083757716; screen top 42.52125; control deck top 508.6859375, scale .94. These are constant local proportions, all under one viewport scale. Every skin uses this exact layout. Individual `SKINS[].win` values are now SOURCE ART sampling coordinates only, never gameplay layout inputs. CSS nine-slicing adapts decorative top/sides/deck around the fixed aperture, without moving, stretching or cropping the game or its controls. `fitSkin()` has been removed. The existing full-screen/status-bar fitting behaviour is retained.
+
+**Skins:** all twelve source skins are now exactly 900×1600. Added generated Rustyard (copper/verdigris), Void Reactor (graphite/amethyst), Warzone (olive/amber); all free. Gallery previews use the same nine-slice template and coordinated buttons. Selection updates the existing tile, preserves scroll and keyboard focus, and cannot resize the screen. Menu now displays the actual release version. Name field has 16px type to avoid iOS focus zoom and disables nickname autofill. Heart DOM is only rebuilt when health changes.
+
+**Zombies:** unchanged artwork heights/radii. Wave-one movement ~6% faster than 7.9, retaining the gentle opening. Movement ramp: `(1+min(.78,(wave-1)*.045))*min(1,.90+(wave-1)*.04)`, plus gradual post-wave-14 survival scaling capped at +50%. Spawn interval `max(.31,.82-wave*.029)` with ±.07 jitter; paired attacks after wave 5 add a second enemy at every seventh spawn, respecting the original wave total and alive cap. Special HP grows 2.2% per wave after 4, capped at +32%; normal, runner and mini HP unchanged. Toxic spits travel 108–132 px/s with 2.9–4.1s gaps. Large enemies stay within artwork-width margins; side-entry minis retain their entrance.
+
+**Bosses:** HP multiplier 1.55 (was 1.4: +10.7%); speed factor for aimed shots `1.10 + .045*(form-1)` (was .95); attack gap factor `.78 - .035*(form-1)` (was .88). Roaming speed 53+10*form; full sprite margins keep boss crowns and edges clear. The half-walk-distance guard remains. Every third aimed attack anticipates Joey's current sideways movement by up to 32px; there is no player aim assist. Later forms add brief same-weapon follow-ups: Jordan alternate cycles, Sloth every cycle, Glowing cuffs every third cycle, Amy form-two alternate food every third cycle, Mantis form-three alternate cycles. These queues clear on mutation. Jordan form one adds a two-ember attack every third cycle. Disco's ball/tea identities, Amy's stop/shake/charge/retreat, Mantis arm/venom/minis and all stage health gates remain.
+
+**Barrels / Debo:** ground barrels 40×54 (was 30×40), thrown 38×50 (was 28×36), proportionate hit radii. Ground count 1–5, blast still 20% of world width; thrown blast still 10%. Ground spacing increased for the larger art. Debo's throw takes 1.08s (was 1.6s); stage-two attack gap about 3.05s (was 4.58s). Fixed landing mark never follows Joey. Chain launch derives from flight time minus wind-up (.34) minus extension (.22), so full extension reaches the barrel centre as it lands. Early shooting still explodes the barrel at its current location and can hurt Debo. Stage-one chain wind-up/lunge .48/.24s. Swept hostile-shot collision prevents fast chain/projectile tunnelling. Defeat/jumps remove thrown barrels and mutation removes follow-ups, preventing stale attacks.
+
+**Release/verification:** `scripts/release.cjs` updates versions/cache/checksums; `scripts/package-flat.py` builds a verified root-only ZIP. See current `BUILD-REPORT.md` for reproducible tests and their limits. No live score writes, database changes, domain changes or main-branch deployment are part of this enhancement.
+
 ---
 
-## Current gameplay constants (for quick reference)
+## 7.9 baseline gameplay constants (comparison; 7.10 changes above)
 - World 343x412; Joey line y = 360; Joey speed 212 px/s; joystick full speed at 14 px drag (x1.55 with speed pickup for 7s); heart cap 5 (10 with cheat).
 - Zombies: height x1.45, hitbox x1.3, speed x.8, spawn speed x`min(1,.85+(wave-1)*.0375)` then the old `1+min(.6,(wave-1)*.035)` ramp.
 - Boss health x1.4; boss shots speed factor .95; boss gaps x0.88.
 - Boss projectile hit test: distance < `r*.75 + 8` from Joey.
 - Skin window fit: see `SKINS[].win` and `fitSkin()`.
 
-## Current boss attacks (as of 7.9.0)
+## 7.9 baseline boss attacks (comparison; 7.10 changes above)
 Gaps are the time between attacks after the x0.88 factor from 7.8.2; speeds are pixels/second after the 0.95 factor. Boss health is x1.4 the values in `game-data.js`.
 
 | Boss | Form 1 | Form 2 | Form 3 |

@@ -1,58 +1,72 @@
-# Zombie Smash 7.6
+# Zombie Smash 7.10.0
 
-Consolidates ZC2-Zombie-Smash main a038214 (7.3), the later 7.4 flat build,
-and the refined 61-sprite transparent character pack. Adds a barrel sprite,
-three original comic panels, five redesigned console skins and gameplay fixes.
+Based on current `thejoeyrob/ZC-Zombie-Smash` main commit `954f31a` (7.9.0),
+including the complete Claude improvement log. Older deleted repositories and
+older flat packs were not used as the implementation baseline.
 
-## Verified
+## What changed
 
-- 27 deterministic engine checks: horizontal controls, fire cooldown, swept
-  collision, boosts, grenades without aim assist, rare pickups, stored ammo,
-  barrel radius/chains/occlusion, save restoration, all ten enemies and all
-  sixteen boss forms. Excess damage cannot skip phases.
-- Five score-client checks: accepted/rejected/offline/practice runs and retry
-  queue behavior. Permanent rejections cannot block later valid scores.
-- Chromium browser: 320x568, 375x667, 390x844, 768x1024, 820x1180.
-  Arena and console proportions stay identical. Landscape pauses with a gate.
-- Real multitouch joystick + held fire, release behavior, grenade input,
-  skin choices, admin-code flow, all sixteen boss selections, remembered
-  username and save continuation. No browser exceptions or missing requests.
-- All eight original live leaderboard name/score pairs remain present unchanged.
-  This check was read-only; QA submits no scores to the live board.
-- Audio decodes locally: stereo main (49.66s), boss (40.56s), disco (47.21s),
-  entrance stinger (3.2s), gunfire and explosions.
+Twelve skins share one immutable cabinet and the existing default Toxic screen
+and control sizes. Artwork is adapted with CSS nine-slicing; the game never
+changes geometry when a skin is selected. Three new rendered finishes:
+Rustyard, Void Reactor, Warzone. Every source skin is 900×1600.
 
-Physical iPhone/iPad Safari and speakers have not been available for hands-on
-validation. Automated phone/tablet checks use Chromium emulation. Portrait
-orientation is requested by the manifest and enforced with an on-screen gate.
+Zombies build pressure faster, with later paired attacks and tougher specials.
+Bosses attack faster, selected later forms add follow-up volleys, and projectile
+collision is swept. Barrels are larger; Debo's throw is 1.08 seconds with a
+synchronised chain strike and a fixed landing warning. Stale thrown barrels and
+follow-ups are cleared at transitions. Full details: CHANGES-SINCE-UPLOAD.md.
 
-## Assets and offline release
+## Verified in this build
 
-The service worker is generated from the assets actually used by the renderer,
-UI, nine skins and local audio. A content hash names each atomic cache release.
-The final ZIP is flat, contains no development server/tests, and needs no build.
-Source tests and reproducible packaging scripts remain in the repository.
+- 25 engine regression checks: existing sprite dimensions, immediate movement
+  stop, introductory/progressive balance, spawn totals, barrel sizing/spacing/
+  blast/counterplay, straight grenades, stored magazines, rare drops and speed,
+  all seven bosses and 16 forms, phase gates, faster attacks, exact Debo timing,
+  transition cleanup, roaming boundaries, Amy charge, rendered one-HP minis,
+  saved health/progress, ten-heart practice, score boosts, follow-up cleanup,
+  fast hostile collision, and unchanged legacy score/audio files.
+- Six geometry/integration checks: all 12 skin slice maps occupy identical
+  bounds, reference sizes preserved, all buttons/touch margins remain on deck,
+  eight portrait viewport sizes preserve every relative length, skin selection
+  cannot alter geometry, load order/portrait/update intent retained.
+- Ten logical DOM flow checks using actual game.js/engine.js with network and
+  canvas mocks: retro start, username/story/play, simultaneous joystick/fire,
+  release, grenade, stored gun, all skin choices without scroll reset, admin
+  gate and 16 choices, ten-heart boss jump, pause save and landscape gate.
+- Production canvas renderer executed directly: 66 runtime images decode;
+  arena, larger barrels, Debo combo, Mantis final form and all skin compositions
+  rendered and visually inspected. No character artwork edits or cover crops.
+- Five fixed-seed pistol-only simulations per boss compare 7.9 and 7.10 with
+  250ms bot decisions. All 35 new-build runs can finish; this establishes basic
+  solvability, not human difficulty or real-device control quality.
+- Service-worker handlers tested with in-memory CacheStorage: atomic precache,
+  activation/claim, old-game cache cleanup, unrelated-cache preservation,
+  offline navigation/versioned modules, new skins, audio and legacy board.
+- Every flat ZIP entry is verified against SHA-256; ZIP CRC validated. All
+  referenced runtime assets are included. No development dependencies shipped.
 
-Refined alpha sprites preserve full source figures. Display uses contain sizing;
-transparent padding may be ignored for sizing, but visible pixels are retained.
-Maps are backgrounds and cover the arena; character art is never cover-cropped.
+## Verification limits
 
-## 7.6 size and pacing adjustment
+This environment did not provide the supported browser-preview capability.
+No browser installation/server workaround was used. Logical DOM tests and
+native canvas renders do not replace real Safari/Chromium layout, touch,
+installed-PWA update or audio playback testing. Physical iPhone/iPad playtesting
+remains necessary to judge the final difficulty and feel. No live leaderboard
+writes or production database changes were made; admin responses were mocked.
 
-Regular zombie height increases from 42 to 60 logical units (Joey remains 70).
-Other classes scale to 58–98 units. Core hitboxes grow moderately rather than
-using the entire silhouette; horizontal sprite margins prevent edge clipping.
-Wave-one speed is 84% of its former base, with a 0.955s average spawn gap
-instead of 0.816s and fewer runners. Speed rises by 0.035 per wave to a 1.6 cap;
-spawn intervals shorten progressively to 0.44s. Health and points are unchanged.
-Existing enemies in restored saves adopt the new scale and speed.
+## Reproduce
 
-The full console/arena geometry is unchanged. Safari chrome naturally leaves
-less available height than installed mode. Welcome artwork now uses complete
-Joey/Mantis character images instead of fitting a tall gameplay screenshot into
-a wide box. Autofill styling also preserves username field contrast.
+From the source repository root:
+- `node tests/game.test.cjs`
+- `node tests/layout.test.cjs`
+- `node tests/ui.cjs` (requires linkedom; set ZS_LINKEDOM to its module path)
+- `node tests/render.cjs` (requires @napi-rs/canvas in the primary runtime)
+- `node tests/balance.cjs` (requires baseline git commit 954f31a)
+- `node scripts/release.cjs`
+- `node tests/offline.cjs`
+- `python3 scripts/package-flat.py`
 
-Focused 7.6 browser checks cover welcome art, enlarged enemy rendering and
-unchanged proportions at 320x568, 375x667, 390x844 and 768x1024. Broader boss,
-multitouch and scoreboard checks above were completed for the inherited 7.5
-release. Physical iOS validation remains a hands-on follow-up.
+The app itself needs no build or dependencies. Source tests are excluded from
+the flat PWA. Scores, player-name storage keys, saved-run keys, current admin
+flow, existing music, domain configuration and portrait game mode are retained.

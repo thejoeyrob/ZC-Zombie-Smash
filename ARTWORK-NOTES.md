@@ -24,3 +24,29 @@ same fixed screen geometry for every skin.
 Comic prompt constraints: match the supplied character reference style, bold
 ink and rich shading, 4:3 panel, safe framing, no baked words or visible organs.
 Story text is accessible HTML, including the user's King of Proctology premise.
+
+
+# Artwork added in 7.10
+
+Built-in image generation, three separate edits using console-toxic.webp as the
+structural reference. Originals are retained outside the runtime; final WebPs:
+console-rustyard.webp, console-void.webp, console-warzone.webp (900×1600).
+Existing nine skin files were resized by at most one source pixel to the same
+900×1600 dimensions. No character, boss or weapon artwork was replaced.
+
+Shared prompt: preserve the reference's straight-on portrait outer outline,
+black screen opening, top rail, slim side rails, blank lower control deck and
+metallic bevel. Change decorative material only. No baked controls, joystick,
+buttons, text, logos or perspective. All four corners visible, edge-to-edge.
+Crisp comic-realistic premium hardware with restrained edge lighting.
+
+- Rustyard: oxidized copper, turquoise verdigris seams, gunmetal rails, warm
+  copper hardware, teal illuminated aperture trace and worn copper lower deck.
+- Void Reactor: graphite/violet anodized steel, amethyst edges, narrow luminous
+  reactor channels, brushed black lower deck, silver hardware; restrained detail.
+- Warzone: olive-drab ceramic-coated plates, forest camo stippling, muted brass
+  hardware, amber strips, battlefield scratches and olive-carbon rails.
+
+Runtime uses the eight decorative CSS slices from console-layout.js. This is
+intentional: raster frame variation can never dictate gameplay dimensions again.
+Gallery tiles use the same composition, rather than raw differently-sized holes.
