@@ -1,4 +1,4 @@
-ZOMBIE SMASH 7.5 — HOLD THE LINE
+ZOMBIE SMASH 7.6 — HOLD THE LINE
 
 INSTALL / DEPLOY
 Extract this ZIP and upload ALL files together to your HTTPS website root.
@@ -13,10 +13,15 @@ Let the first download finish. Menu > Install Game shows offline readiness.
 For an existing installation, reopen the app after the new worker downloads.
 The new release is cached atomically; it does not erase your player name or scores.
 
-WHAT CHANGED
-- 7.6: each console skin's real screen window is measured; the game screen, menus, header and
-  controls are placed and scaled to fit it. Zombies 20% larger and 16% slower. Admin cheat: 10 hearts
-  (5 red + 5 gold). Welcome picture re-cropped to fit its frame. .nojekyll added for GitHub Pages.
+WHAT CHANGED IN 7.6
+- Larger zombie sprites: regular 42 -> 60 units; other classes scaled to match.
+- Body hitboxes enlarged fairly, and large enemies stay inside the arena sides.
+- Wave 1 walking speed reduced 16%, spawns about 17% farther apart, fewer runners.
+- Speed and spawn pressure increase gradually; enemy health is unchanged.
+- Saved runs receive the new zombie scale and pace without resetting progress.
+- Welcome/install panels feature large complete character art, not a tiny screenshot.
+
+FEATURES RETAINED
 - Standalone classic portrait game. No login or community screens.
 - Fixed 375 x 667 console; 343 x 412 arena. Every element scales together.
 - Longer playfield extends down; top/left/right gameplay positions stay fixed.

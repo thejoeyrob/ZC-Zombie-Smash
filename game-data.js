@@ -179,15 +179,15 @@ window.ZSData={
     }
   ],
   "SKINS": [
-    {"id":"toxic","win":[63,98,836,1165],"name":"Toxic","file":"console-toxic.webp","accent":"#58ff49","bleed":"#0c1d10","fire":"#ef3042","grenade":"#159de8","stick":"#d8a34e"},
-    {"id":"splatter","win":[63,98,835,1138],"name":"Splatter","file":"console-splatter.webp","accent":"#ff4a55","bleed":"#1d090b","fire":"#ff3848","grenade":"#4077ff","stick":"#d7b376"},
-    {"id":"hazard","win":[63,98,835,1241],"name":"Hazard","file":"console-hazard.webp","accent":"#ffd23e","bleed":"#24200e","fire":"#e73f36","grenade":"#257ac7","stick":"#e1aa3b"},
-    {"id":"electro","win":[63,100,835,1195],"name":"Electro","file":"console-electro.webp","accent":"#55cfff","bleed":"#071622","fire":"#e74859","grenade":"#20bfff","stick":"#7cd4ff"},
-    {"id":"circuit","win":[63,98,835,1216],"name":"Circuit","file":"console-circuit.webp","accent":"#55ffd2","bleed":"#061a17","fire":"#eb3b4c","grenade":"#13bddd","stick":"#70e4c6"},
-    {"id":"carbon","win":[63,98,836,1137],"name":"Carbon Ops","file":"console-carbon.webp","accent":"#e9bb65","bleed":"#191b1d","fire":"#ed3342","grenade":"#168dd5","stick":"#dfa952"},
-    {"id":"arctic","win":[49,130,850,1171],"name":"Arctic Rescue","file":"console-arctic.webp","accent":"#8acaff","bleed":"#b9b6ab","fire":"#d94452","grenade":"#278fd5","stick":"#dad5b3"},
-    {"id":"neon","win":[45,132,853,1096],"name":"Midnight Disco","file":"console-neon.webp","accent":"#eb85e8","bleed":"#15102c","fire":"#f33668","grenade":"#33b9f5","stick":"#d994e7"},
-    {"id":"ember","win":[62,98,836,1137],"name":"Ember Ops","file":"console-ember.webp","accent":"#ff7b2d","bleed":"#1f1009","fire":"#ff3d2e","grenade":"#2387cc","stick":"#e39a3d"}
+    {"id":"toxic","name":"Toxic","file":"console-toxic.webp","accent":"#58ff49","bleed":"#0c1d10","fire":"#ef3042","grenade":"#159de8","stick":"#d8a34e"},
+    {"id":"splatter","name":"Splatter","file":"console-splatter.webp","accent":"#ff4a55","bleed":"#1d090b","fire":"#ff3848","grenade":"#4077ff","stick":"#d7b376"},
+    {"id":"hazard","name":"Hazard","file":"console-hazard.webp","accent":"#ffd23e","bleed":"#24200e","fire":"#e73f36","grenade":"#257ac7","stick":"#e1aa3b"},
+    {"id":"electro","name":"Electro","file":"console-electro.webp","accent":"#55cfff","bleed":"#071622","fire":"#e74859","grenade":"#20bfff","stick":"#7cd4ff"},
+    {"id":"circuit","name":"Circuit","file":"console-circuit.webp","accent":"#55ffd2","bleed":"#061a17","fire":"#eb3b4c","grenade":"#13bddd","stick":"#70e4c6"},
+    {"id":"carbon","name":"Carbon Ops","file":"console-carbon.webp","accent":"#e9bb65","bleed":"#191b1d","fire":"#ed3342","grenade":"#168dd5","stick":"#dfa952"},
+    {"id":"arctic","name":"Arctic Rescue","file":"console-arctic.webp","accent":"#8acaff","bleed":"#b9b6ab","fire":"#d94452","grenade":"#278fd5","stick":"#dad5b3"},
+    {"id":"neon","name":"Midnight Disco","file":"console-neon.webp","accent":"#eb85e8","bleed":"#15102c","fire":"#f33668","grenade":"#33b9f5","stick":"#d994e7"},
+    {"id":"ember","name":"Ember Ops","file":"console-ember.webp","accent":"#ff7b2d","bleed":"#1f1009","fire":"#ff3d2e","grenade":"#2387cc","stick":"#e39a3d"}
   ],
   "MAPS": [
     {

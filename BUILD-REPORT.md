@@ -1,4 +1,4 @@
-# Zombie Smash 7.5
+# Zombie Smash 7.6
 
 Consolidates ZC2-Zombie-Smash main a038214 (7.3), the later 7.4 flat build,
 and the refined 61-sprite transparent character pack. Adds a barrel sprite,
@@ -6,7 +6,7 @@ three original comic panels, five redesigned console skins and gameplay fixes.
 
 ## Verified
 
-- 24 deterministic engine checks: horizontal controls, fire cooldown, swept
+- 27 deterministic engine checks: horizontal controls, fire cooldown, swept
   collision, boosts, grenades without aim assist, rare pickups, stored ammo,
   barrel radius/chains/occlusion, save restoration, all ten enemies and all
   sixteen boss forms. Excess damage cannot skip phases.
@@ -36,3 +36,23 @@ Source tests and reproducible packaging scripts remain in the repository.
 Refined alpha sprites preserve full source figures. Display uses contain sizing;
 transparent padding may be ignored for sizing, but visible pixels are retained.
 Maps are backgrounds and cover the arena; character art is never cover-cropped.
+
+## 7.6 size and pacing adjustment
+
+Regular zombie height increases from 42 to 60 logical units (Joey remains 70).
+Other classes scale to 58–98 units. Core hitboxes grow moderately rather than
+using the entire silhouette; horizontal sprite margins prevent edge clipping.
+Wave-one speed is 84% of its former base, with a 0.955s average spawn gap
+instead of 0.816s and fewer runners. Speed rises by 0.035 per wave to a 1.6 cap;
+spawn intervals shorten progressively to 0.44s. Health and points are unchanged.
+Existing enemies in restored saves adopt the new scale and speed.
+
+The full console/arena geometry is unchanged. Safari chrome naturally leaves
+less available height than installed mode. Welcome artwork now uses complete
+Joey/Mantis character images instead of fitting a tall gameplay screenshot into
+a wide box. Autofill styling also preserves username field contrast.
+
+Focused 7.6 browser checks cover welcome art, enlarged enemy rendering and
+unchanged proportions at 320x568, 375x667, 390x844 and 768x1024. Broader boss,
+multitouch and scoreboard checks above were completed for the inherited 7.5
+release. Physical iOS validation remains a hands-on follow-up.
