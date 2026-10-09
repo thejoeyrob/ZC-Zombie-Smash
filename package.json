@@ -1,0 +1,19 @@
+{
+  "name": "zombie-smash-ios",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Capacitor wrapper that packages the Zombie Smash web game for the iOS App Store.",
+  "scripts": {
+    "build:www": "node scripts/build-www.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "appId": "com.thejoeyrob.zombiesmash",
+  "appName": "Zombie Smash",
+  "webDir": "www",
+  "backgroundColor": "#0b120d",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#0b120d"
+  }
+}

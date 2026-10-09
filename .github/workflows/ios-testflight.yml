@@ -1,0 +1,158 @@
+# Builds the web game into an iOS app with Capacitor and uploads it to App Store Connect (TestFlight).
+# Run manually: Actions -> "iOS TestFlight" -> Run workflow.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   APPLE_TEAM_ID   10-character Team ID (developer.apple.com -> Membership details)
+#   ASC_KEY_ID      App Store Connect API key ID
+#   ASC_ISSUER_ID   App Store Connect issuer ID
+#   ASC_KEY_P8      full contents of the AuthKey_XXXX.p8 file (or the same file base64-encoded)
+# Optional repository variable:
+#   IOS_BUNDLE_ID   bundle ID registered in App Store Connect (default com.thejoeyrob.zombiesmash)
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash' }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - name: Check secrets are set
+        shell: bash
+        run: |
+          missing=""
+          for v in TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets (names may differ, see workflow header):$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Use the newest stable Xcode
+        shell: bash
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app | grep -v -i -E 'beta|rc' | sort -V | tail -1)
+          sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install dependencies and package the game
+        shell: bash
+        run: |
+          npm ci
+          node scripts/build-www.mjs
+          jq --arg id "$BUNDLE_ID" '.appId = $id' capacitor.config.json > "$RUNNER_TEMP/cap.json"
+          mv "$RUNNER_TEMP/cap.json" capacitor.config.json
+
+      - name: Create the iOS project
+        shell: bash
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Apply icon, splash and Info.plist settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSETS=ios/App/App/Assets.xcassets
+          cp ios-assets/icon-1024.png "$ASSETS/AppIcon.appiconset/AppIcon-512@2x.png"
+          for f in splash-2732x2732.png splash-2732x2732-1.png splash-2732x2732-2.png; do
+            cp ios-assets/splash-2732.png "$ASSETS/Splash.imageset/$f"
+          done
+          PB=/usr/libexec/PlistBuddy
+          P=ios/App/App/Info.plist
+          $PB -c "Delete :UISupportedInterfaceOrientations" "$P" || true
+          $PB -c "Add :UISupportedInterfaceOrientations array" "$P"
+          $PB -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$P"
+          $PB -c "Delete :UISupportedInterfaceOrientations~ipad" "$P" || true
+          $PB -c "Delete :ITSAppUsesNonExemptEncryption" "$P" || true
+          $PB -c "Add :ITSAppUsesNonExemptEncryption bool false" "$P"
+          $PB -c "Delete :UIStatusBarHidden" "$P" || true
+          $PB -c "Add :UIStatusBarHidden bool true" "$P"
+          $PB -c "Delete :UIViewControllerBasedStatusBarAppearance" "$P" || true
+          $PB -c "Add :UIViewControllerBasedStatusBarAppearance bool false" "$P"
+          plutil -lint "$P"
+
+      - name: Write App Store Connect API key
+        shell: bash
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          if printf '%s' "$ASC_KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then
+            printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          else
+            printf '%s' "$ASC_KEY_P8" | base64 --decode > "$KEY"
+          fi
+          chmod 600 "$KEY"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY" || { echo "::error::ASC_KEY_P8 is not a valid .p8 key"; exit 1; }
+          echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
+
+      - name: Archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/' VERSION.txt | head -1)
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            TARGETED_DEVICE_FAMILY=1
+
+      - name: Export and upload to App Store Connect
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove API key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
