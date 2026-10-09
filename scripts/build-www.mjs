@@ -3,10 +3,10 @@ import { dirname, join } from 'node:path';
 
 const root = new URL('..', import.meta.url).pathname;
 const out = join(root, 'www');
-const match = readFileSync(join(root, 'sw.js'), 'utf8').match(/const ASSETS=\[(.*?)\];/s);
+const match = readFileSync(join(root, 'sw.js'), 'utf8').match(/const ASSETS\s*=\s*\[(.*?)\];/s);
 if (!match) throw new Error('Could not find the ASSETS list in sw.js');
 
-const files = new Set([...match[1].matchAll(/"([^"]+)"/g)].map(m => m[1].replace(/^\.\//, '')));
+const files = new Set([...match[1].matchAll(/['"]([^'"]+)['"]/g)].map(m => m[1].replace(/^\.\//, '')));
 for (const extra of ['index.html', 'manifest.webmanifest', 'privacy.html']) files.add(extra);
 files.delete('sw.js');
 

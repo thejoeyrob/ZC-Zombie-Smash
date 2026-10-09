@@ -6,6 +6,7 @@
   "ios": {
     "contentInset": "never",
     "scrollEnabled": false,
-    "backgroundColor": "#0b120d"
+    "backgroundColor": "#0b120d",
+    "allowsLinkPreview": false
   }
 }
