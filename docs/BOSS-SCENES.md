@@ -1,6 +1,6 @@
-# Zombie Smash: boss scene scripts and scene descriptions
+# Zombie Smash: boss scenes artwork brief
 
-A brief for whoever makes the new boss scenes. Every boss has the same set of scenes, so this page gives each boss a full script with a description of the picture, the performance and the sound.
+Scripts, scene descriptions and technical specs for whoever makes the new boss scenes. Every boss has the same set of scenes, so this page gives each boss a full script with a description of the picture, the performance and the sound.
 
 Lines marked **IN GAME** are the words the game shows today. Lines marked **PROPOSED** are new suggestions you can take or leave. The picture descriptions are suggestions too, built from the bosses' names, weapons and lines in the game, so check them against your character art.
 
@@ -55,9 +55,53 @@ Use these for every boss so the scenes feel like one series.
 2. **Joey reacts (2.1 s).** The camera jams in on Joey's face. His reaction is specific to each boss and comes before his line.
 3. **Boss reveal (2.8 s).** A slow push-in on the boss in their first form. Their name and title stamp on at the bottom. The boss says their tease line and the heavy impact lands on the last beat.
 
+## Art direction
+
+- **Look:** gritty, painted, high-contrast and slightly comic-book. Think a tense survival film shot as a graphic novel.
+- **Light:** each boss owns one saturated colour (listed in their section), with deep near-black shadows. The backdrop of the scene glows in the boss's colour.
+- **Faces first:** the picture must work when seen small on a phone. Eyes, mouth and silhouette carry the scene.
+- **Consistency:** Joey Rob looks the same in every scene (same face, same kit, same colours as the existing in-game close-up). The bosses must be recognisably the same character as their in-game sprite in each form.
+- **Comic caption:** the words appear in a cream caption box at the bottom of the panel, over the art. Leave the bottom 25% of the panel quiet, with nothing important in it.
+
+## How the scenes look today
+
+Today every scene is built from layers, so new artwork can be dropped in layer by layer:
+
+1. A backdrop: a glow in the boss's colour fading to near-black, with faint radiating speed lines.
+2. A Joey figure on the left and/or a boss figure on the right (transparent pictures).
+3. A cream caption box with the speaker's name and the line.
+4. A "CONTINUE" button.
+
+New work can replace any of these layers, or replace the whole panel with one finished picture.
+
+## Technical specs and file names
+
+| Item | Size | Format | Notes |
+| --- | --- | --- | --- |
+| Figure (boss or Joey), the current method | 768 × 768 | PNG or WebP with a transparent background | Same size as the existing figures. Leave a small margin so nothing is cropped |
+| Full-panel scene plate (replaces the layers) | 686 × 900 | PNG or WebP | Bottom 25% kept quiet for the caption box |
+| Comic panel (the style of the intro story) | 1024 × 768 | PNG or WebP | Optional, for a longer "comic" moment |
+| Short motion loop (optional) | 686 × 900 | MP4 or animated WebP, 2 to 3 s, loopable | Smoke, glow or sparks only |
+
+**File names** (so the pictures can be wired in without renaming):
+
+- Boss figures per form: `boss-<id>-stage<number>.webp`. These are the existing names, for example `boss-jordan-stage1.webp`.
+- Joey reaction to a boss: `joey-react-<id>.webp`
+- Warning silhouette: `scene-<id>-warning.webp`
+- Boss reveal (if a finished plate): `scene-<id>-reveal.webp`
+- Mutation: `scene-<id>-form<number>.webp`
+- Boss down: `scene-<id>-down.webp`
+- Joey down: `scene-<id>-loss.webp`
+
+The boss ids are: `jordan`, `glowinghumanity`, `debo`, `caffeinatedsloth`, `discoman`, `fatamy`, `drmantis`.
+
+**Existing pictures to match:** `joey-reaction-close.webp` (Joey's shocked face), the boss sprites `boss-<id>-stage<number>.webp`, and the story pictures `story-mantis.webp`, `story-army.webp` and `story-joey.webp`.
+
 ---
 
 ## 1. Jordan: Fallen Firefighter (wave 2, 2 forms)
+
+**Scene colour:** #ff9a36 (the glow, the backdrop and the name stamp use this colour)
 
 **Who he is:** a firefighter who held the line against a blaze and lost. Now he is on fire again, and in a worse way.
 
@@ -91,6 +135,8 @@ Use these for every boss so the scenes feel like one series.
 
 ## 2. Glowing Humanity: Radiant Test Subject (wave 4, 2 forms)
 
+**Scene colour:** #9fff57 (the glow, the backdrop and the name stamp use this colour)
+
 **Who he is:** a test subject who glows. He is cheerful, which is the unsettling part.
 
 ### Arrival
@@ -121,6 +167,8 @@ Use these for every boss so the scenes feel like one series.
 ---
 
 ## 3. Debo: Iron Enforcer (wave 6, 2 forms)
+
+**Scene colour:** #f1c25d (the glow, the backdrop and the name stamp use this colour)
 
 **Who he is:** a huge, armoured bruiser with a chain and a pile of barrels. He is calm and slow, and the threat is in how calm he is.
 
@@ -153,6 +201,8 @@ Use these for every boss so the scenes feel like one series.
 
 ## 4. Caffeinated Sloth: Overcaffeinated Test Subject (wave 8, 2 forms)
 
+**Scene colour:** #cb9b6c (the glow, the backdrop and the name stamp use this colour)
+
 **Who he is:** a zombie sloth who should be slow, but isn't. The comedy is the contrast between his slow voice and his speed.
 
 ### Arrival
@@ -184,6 +234,8 @@ Use these for every boss so the scenes feel like one series.
 
 ## 5. Disco Man: The Last Dance (wave 10, 2 forms)
 
+**Scene colour:** #e98aff (the glow, the backdrop and the name stamp use this colour)
+
 **Who he is:** one of Joey's mates, still dancing, with a mirror ball and a pot of tea. This is the one boss whose theme is a different music track.
 
 ### Arrival
@@ -214,6 +266,8 @@ Use these for every boss so the scenes feel like one series.
 ---
 
 ## 6. Fat Amy: Brainwashed Bruiser (wave 12, 3 forms)
+
+**Scene colour:** #ff83bd (the glow, the backdrop and the name stamp use this colour)
 
 **Who she is:** a loving friend turned into a tank. Her scenes are the saddest of the set, because she still sounds like herself.
 
@@ -248,6 +302,8 @@ Use these for every boss so the scenes feel like one series.
 ---
 
 ## 7. Dr Mantis: Harvest Master (wave 14, 3 forms)
+
+**Scene colour:** #92e158 (the glow, the backdrop and the name stamp use this colour)
 
 **Who he is:** the villain. He wants to be King of Proctology. His scenes should feel like the climax: grander and darker, but still with the game's sense of humour.
 
