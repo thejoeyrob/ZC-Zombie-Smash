@@ -87,7 +87,7 @@ In App Store Connect open your app, then the iOS version (1.0.0). Here is sugges
   > • Seven boss fights, from Jordan to Dr Mantis
   > • Pistols, SMGs, a DMR and wild pick-up weapons
   > • Grenades, boosts and combo multipliers
-  > • Unlock-everything console skins, no purchases
+  > • 12 console finishes to collect, no purchases
   > • Global leaderboard with no sign-up
   > • Plays in portrait, one thumb for movement and one for fire
   >

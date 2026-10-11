@@ -82,7 +82,7 @@
       );
       if (failed.length) throw Error('Missing artwork: ' + failed.slice(0, 3).join(', '));
     }
-    fit(file, x, y, w, h, { alpha = 1, flip = false, bright = false } = {}) {
+    fit(file, x, y, w, h, { alpha = 1, flip = false, bright = false, rot = 0 } = {}) {
       const im = this.images[file];
       if (!im?.complete || !im.naturalWidth) return;
       const c = this.c,
@@ -94,6 +94,7 @@
       c.globalAlpha = alpha;
       if (bright) c.filter = 'brightness(1.7)';
       c.translate(x + w / 2, y + h / 2);
+      if (rot) c.rotate(rot);
       if (flip) c.scale(-1, 1);
       c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
       c.restore();
@@ -143,16 +144,21 @@
       c.stroke();
       c.setLineDash([]);
       for (const item of g.pickups) {
-        if (item.life < 2 && Math.floor(item.age * 9) % 2) continue;
+        if (item.life < 3 && Math.floor(item.age * (item.life < 1.2 ? 14 : 8)) % 2) continue;
         const x = item.x,
           y = item.y + Math.sin(item.age * 5) * 2;
         c.fillStyle = '#6bbfe52a';
         c.beginPath();
         c.arc(x, y, 16, 0, Math.PI * 2);
         c.fill();
-        c.strokeStyle = item.type === 'heart' ? '#ff6d7a' : '#84d7f4';
-        c.lineWidth = 1;
+        c.strokeStyle =
+          item.type === 'goldheart' ? '#ffd24a' : item.type === 'heart' ? '#ff6d7a' : '#84d7f4';
+        c.lineWidth = item.type === 'goldheart' ? 2 : 1;
         c.stroke();
+        if (item.type === 'goldheart') {
+          this.goldHeart(x, y, 1 + Math.sin(item.age * 6) * 0.06);
+          continue;
+        }
         const art =
           { shotgun: 'pickup-smg.webp', burst: 'pickup-dmr.webp', grenade: 'pickup-bomb.webp' }[
             item.type
@@ -278,6 +284,35 @@
       c.restore();
     }
 
+    // Vector gold heart: the artwork only has a red one, and canvas filters are not reliable on iPhone.
+    goldHeart(x, y, k = 1) {
+      const c = this.c;
+      c.save();
+      c.translate(x, y + 1);
+      c.scale(k, k);
+      c.beginPath();
+      c.moveTo(0, 9);
+      c.bezierCurveTo(-15, -1, -10, -12, 0, -5);
+      c.bezierCurveTo(10, -12, 15, -1, 0, 9);
+      c.closePath();
+      const g = c.createLinearGradient(-9, -10, 9, 10);
+      g.addColorStop(0, '#fff3a6');
+      g.addColorStop(0.45, '#ffc93c');
+      g.addColorStop(1, '#c47a10');
+      c.fillStyle = g;
+      c.shadowColor = '#ffb300';
+      c.shadowBlur = 8;
+      c.fill();
+      c.shadowBlur = 0;
+      c.lineWidth = 1.2;
+      c.strokeStyle = '#7a4a08';
+      c.stroke();
+      c.fillStyle = '#fffbe0cc';
+      c.beginPath();
+      c.ellipse(-4.6, -4.2, 2.6, 1.6, -0.6, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    }
     barrel(b) {
       if (!b || b.dead) return;
       const c = this.c,
@@ -291,7 +326,7 @@
           c.lineWidth = 1.4;
           c.setLineDash([4, 4]);
           c.beginPath();
-          c.ellipse(b.tx, b.ty, ZSData.W * 0.1, 9, 0, 0, Math.PI * 2);
+          c.ellipse(b.tx, b.ty, BARREL.throwBlast, 12, 0, 0, Math.PI * 2);
           c.stroke();
           c.setLineDash([]);
           c.beginPath();
@@ -351,7 +386,15 @@
         c.stroke();
         c.restore();
       }
-      this.fit(art, z.x - w / 2 + jx, z.y - h * 0.55 + wobble, w, h, { bright: z.flash > 0 });
+      const lean = z.boss && !this.reduced ? clamp((z.vx || 0) / 1100, -0.13, 0.13) : 0,
+        hover =
+          z.boss && !this.reduced && !(z.mode || '').startsWith('c')
+            ? Math.sin(z.age * 2.4) * 2.4
+            : 0;
+      this.fit(art, z.x - w / 2 + jx, z.y - h * 0.55 + wobble + hover, w, h, {
+        bright: z.flash > 0,
+        rot: lean,
+      });
       if (z.type === 'bulwark' && z.age % 3.5 < 2) {
         c.strokeStyle = '#82dffeaa';
         c.lineWidth = 2;

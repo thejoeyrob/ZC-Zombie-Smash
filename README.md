@@ -10,7 +10,8 @@ A portrait arcade shooter: Joey Rob against Dr Mantis and six more bosses, built
 | `game.js` | Menus, input, story, saving, and the glue between everything |
 | `engine.js` | Game rules: waves, enemies, bosses, weapons, scoring |
 | `renderer.js` | Drawing the playfield on the canvas |
-| `audio.js` | Music and sound effects |
+| `audio.js` | Music and sound effects (new synthesized set plus the original recorded set) |
+| `haptics.js` | Phone vibration for gunfire, hits, damage and boss scenes |
 | `scores.js` | Leaderboard client (guest only, no sign-in) and the name filter |
 | `game-data.js`, `console-layout.js` | Boss, weapon, skin and layout data |
 | `sw.js`, `manifest.webmanifest` | Offline support for the web version |
@@ -36,3 +37,7 @@ Then open http://localhost:8000.
 ## Releasing a new iPhone version
 
 Follow `docs/APP-STORE-GUIDE.md`.
+
+## Cheat mode (BOT_)
+
+Type `BOT_` before a player name (for example `BOT_Joey`) to switch on cheat mode. `BOT_` is never shown in the name. It unlocks the secret console skins (marked `secret: true` in `game-data.js`) and adds a **Cheats** entry to the menu that lists every cheat code. Codes are entered during play using only the console controls: joystick pushed fully left or right, FIRE taps and grenade taps. Using any cheat makes the run practice-only, so it never reaches the leaderboard.

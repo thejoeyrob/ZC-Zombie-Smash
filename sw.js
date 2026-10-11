@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.10.2-app-store';
+const CACHE = 'zombie-smash-v7.11.0';
 const ASSETS = [
   './404.html',
   './apple-touch-icon.png',
@@ -45,6 +45,7 @@ const ASSETS = [
   './game-preview.webp',
   './game.css',
   './game.js',
+  './haptics.js',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',

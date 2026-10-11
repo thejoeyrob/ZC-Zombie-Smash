@@ -36,6 +36,7 @@
     throwWidth: 38,
     throwHeight: 50,
     throwHitRadius: 16,
+    throwBlast: Math.round(W * 0.17),
     flight: 1.08,
     chainWind: 0.34,
     chainExtend: 0.22,
@@ -83,6 +84,76 @@
       q = clamp(((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy || 1), 0, 1);
     return Math.hypot(px - x1 - q * dx, py - y1 - q * dy);
   }
+  // Joey's body is a capsule that covers the whole drawn character (head to boots), not just his centre.
+  const JOEY = Object.freeze({ top: -40, bottom: 20, r: 15 });
+  // How long a drop stays on the ground, counted only while play is running.
+  const PICKUP_LIFE = 15;
+  // Boss movement styles: where each boss roams, how fast, how it sways, and how often it lunges down the screen.
+  const BOSS_MOVE = {
+    jordan: {
+      kind: 'wander',
+      v: 92,
+      x: [48, W - 48],
+      y: [98, 142],
+      dwell: [0.7, 1.3],
+      sway: [0, 5, 0, 6],
+      lunge: 0.2,
+    },
+    glowinghumanity: {
+      kind: 'orbit',
+      ax: 98,
+      ay: 22,
+      fx: 0.85,
+      fy: 1.7,
+      cy: 125,
+      sway: [0, 3, 0, 4],
+    },
+    debo: {
+      kind: 'wander',
+      v: 46,
+      x: [60, W - 60],
+      y: [100, 135],
+      dwell: [1.3, 2.2],
+      sway: [0, 3.5, 0, 3.2],
+      lunge: 0.5,
+      follow: 0.45,
+    },
+    caffeinatedsloth: {
+      kind: 'stopgo',
+      crawl: 18,
+      burst: 210,
+      x: [50, W - 50],
+      y: [98, 150],
+      sway: [2.4, 1.2, 34, 28],
+    },
+    discoman: {
+      kind: 'wander',
+      v: 62,
+      x: [56, W - 56],
+      y: [100, 140],
+      dwell: [0.8, 1.2],
+      sway: [15, 9, 3.4, 6.8],
+      lunge: 0.15,
+    },
+    fatamy: {
+      kind: 'wander',
+      v: 48,
+      x: [66, W - 66],
+      y: [104, 150],
+      dwell: [1.4, 2.3],
+      sway: [4, 5, 2.2, 4.4],
+      lunge: 0.3,
+    },
+    drmantis: {
+      kind: 'zigzag',
+      v: 168,
+      x: [50, W - 50],
+      y: [98, 150],
+      dwell: [0.55, 1.0],
+      sway: [0, 4, 0, 7],
+      lunge: 0.25,
+    },
+  };
   class Game {
     constructor({ onEvent = () => {}, seed = Date.now() } = {}) {
       this.onEvent = onEvent;
@@ -95,6 +166,22 @@
     }
     emit(type, data = {}) {
       this.onEvent(type, data);
+    }
+    // Shortest distance from a point to Joey's body capsule.
+    joeyDistance(x, y) {
+      const p = this.player;
+      return Math.hypot(x - p.x, y - clamp(y, p.y + JOEY.top, p.y + JOEY.bottom));
+    }
+    // True when a moving circle (path from x1,y1 to x2,y2, radius r) touches any part of Joey.
+    joeyHit(x1, y1, x2, y2, r) {
+      const steps = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 5));
+      for (let i = 0; i <= steps; i++)
+        if (
+          this.joeyDistance(x1 + ((x2 - x1) * i) / steps, y1 + ((y2 - y1) * i) / steps) <
+          JOEY.r + r
+        )
+          return true;
+      return false;
     }
     reset() {
       Object.assign(this, {
@@ -197,7 +284,7 @@
     explodeBarrel(barrel) {
       if (!barrel || barrel.dead) return;
       barrel.dead = true;
-      const r = barrel.small ? W * 0.1 : W * 0.2;
+      const r = barrel.small ? BARREL.throwBlast : W * 0.2;
       this.effects.push({
         kind: 'barrelBlast',
         x: barrel.x,
@@ -212,11 +299,7 @@
       for (const z of [...this.enemies, ...(this.boss ? [this.boss] : [])])
         if (!z.dead && Math.hypot(z.x - barrel.x, z.y - barrel.y) < r + z.r)
           this.damage(z, z.boss ? 9 : 12, 'barrel');
-      if (
-        barrel.thrown &&
-        this.boss &&
-        Math.hypot(this.player.x - barrel.x, this.player.y - barrel.y) < r + 14
-      )
+      if (barrel.thrown && this.boss && this.joeyDistance(barrel.x, barrel.y) < r + 8)
         this.hurt(BOSSES.find((d) => d.id === this.boss.bossId).playerLoss);
       for (const other of this.barrels)
         if (
@@ -408,7 +491,7 @@
           this.explode(z.x, z.y, 60, 3, false);
           if (Math.hypot(z.x - p.x, z.y - p.y) < 72) this.hurt('The Fuse detonated too close.');
         }
-        if (Math.hypot(z.x - p.x, z.y - p.y) < z.r + 15) {
+        if (this.joeyDistance(z.x, z.y) < z.r + 12) {
           this.hurt('The horde reached Joey Rob.');
           z.y += 18;
         }
@@ -508,6 +591,9 @@
                 (z.r ?? (z.thrown ? BARREL.throwHitRadius : BARREL.hitRadius)) + 3,
           )
           .sort((a, z) => ((a.x - z.x) * dx + (a.y - z.y) * dy) / length);
+        for (const item of this.pickups)
+          if (item.life > 0 && segmentDistance(item.x, item.y, b.prevX, b.prevY, b.x, b.y) < 16 + 2)
+            this.collect(item);
         for (const z of hits) {
           if (b.pierce <= 0 || z.dead || this.scene) break;
           b.hit.push(z.id);
@@ -538,6 +624,7 @@
       }
       z.hp -= amount;
       z.flash = 0.07;
+      this.emit('hit', { boss: !!z.boss, source });
       this.burst(z.x, z.y, shield ? '#8de8ff' : '#fbd078', 3, 35);
       if (z.boss) {
         // Each form owns a health segment. Excess damage never skips a reveal or a form.
@@ -643,54 +730,69 @@
       if (!type) {
         const r = this.rand();
         type =
-          this.player.lives <= 2 && r < 0.35
-            ? 'heart'
-            : r < 0.2
-              ? 'grenade'
-              : r < 0.38
-                ? 'shield'
-                : r < 0.54
-                  ? 'speed'
-                  : types[3 + Math.floor(this.rand() * 4)];
+          (this.maxLives || 5) < 10 && this.rand() < 0.08
+            ? 'goldheart'
+            : this.player.lives <= 2 && r < 0.35
+              ? 'heart'
+              : r < 0.2
+                ? 'grenade'
+                : r < 0.38
+                  ? 'shield'
+                  : r < 0.54
+                    ? 'speed'
+                    : types[3 + Math.floor(this.rand() * 4)];
       }
       this.pickups.push({
         x: clamp(x, 20, W - 20),
         y: clamp(y, 20, H - 45),
         type,
-        life: 13,
+        life: type === 'goldheart' ? PICKUP_LIFE + 5 : PICKUP_LIFE,
         age: 0,
       });
     }
     updatePickups(dt) {
-      const p = this.player;
       for (const item of this.pickups) {
         item.age += dt;
         item.life -= dt;
         item.y = Math.min(H - 52, item.y + 37 * dt);
-        if (Math.hypot(item.x - p.x, item.y - p.y) < 28) {
-          if (GUNS[item.type]) {
-            const p = this.player;
-            if ((p.inventory[item.type] || 0) > 0 || (p.gun === item.type && p.ammo > 0)) {
-              this.addPoints(200, item.x, item.y);
-              this.banner = GUNS[item.type].name + ' ALREADY STORED';
-              this.bannerLeft = 0.9;
-            } else {
-              p.inventory[item.type] = GUNS[item.type].ammo;
-              this.banner = GUNS[item.type].name + ' STORED';
-              this.bannerLeft = 1.2;
-            }
-          } else if (item.type === 'heart') p.lives = Math.min(this.maxLives || 5, p.lives + 1);
-          else if (item.type === 'grenade') p.grenades = Math.min(9, p.grenades + 2);
-          else if (item.type === 'speed') {
-            p.speedUp = 7;
-            this.banner = 'SPEED UP';
-            this.bannerLeft = 1;
-          } else if (item.type === 'shield') p.shield = 7;
-          item.life = 0;
-          this.emit('pickup', { type: item.type });
-        }
+        if (item.life > 0 && this.joeyDistance(item.x, item.y) < 22) this.collect(item);
       }
       this.pickups = this.pickups.filter((i) => i.life > 0);
+    }
+    // Drops are collected by touching them or by shooting them.
+    collect(item) {
+      if (item.life <= 0) return;
+      const p = this.player;
+      if (GUNS[item.type]) {
+        if ((p.inventory[item.type] || 0) > 0 || (p.gun === item.type && p.ammo > 0)) {
+          this.addPoints(200, item.x, item.y);
+          this.banner = GUNS[item.type].name + ' ALREADY STORED';
+          this.bannerLeft = 0.9;
+        } else {
+          p.inventory[item.type] = GUNS[item.type].ammo;
+          this.banner = GUNS[item.type].name + ' STORED';
+          this.bannerLeft = 1.2;
+        }
+      } else if (item.type === 'heart') p.lives = Math.min(this.maxLives || 5, p.lives + 1);
+      else if (item.type === 'goldheart') {
+        if ((this.maxLives || 5) < 10) {
+          this.maxLives = (this.maxLives || 5) + 1;
+          p.lives = Math.min(this.maxLives, p.lives + 1);
+          this.banner = 'GOLD HEART · +1 MAX LIFE';
+        } else {
+          p.lives = this.maxLives;
+          this.addPoints(500, item.x, item.y);
+          this.banner = 'GOLD HEART · FULL HEALTH';
+        }
+        this.bannerLeft = 1.4;
+      } else if (item.type === 'grenade') p.grenades = Math.min(9, p.grenades + 2);
+      else if (item.type === 'speed') {
+        p.speedUp = 7;
+        this.banner = 'SPEED UP';
+        this.bannerLeft = 1;
+      } else if (item.type === 'shield') p.shield = 7;
+      item.life = 0;
+      this.emit('pickup', { type: item.type });
     }
     grenade() {
       const p = this.player;
@@ -788,7 +890,6 @@
       this.shots = [];
       this.bullets = [];
       this.grenades = [];
-      this.pickups = [];
       this.barrels = this.barrels.filter((b) => !b.thrown);
       this.scene = {
         kind: 'arrival',
@@ -820,6 +921,7 @@
         this.bannerLeft = 1.2;
         this.drop(W / 2, H - 75, 'heart');
         this.drop(W / 2 + 60, H - 130, 'dmr');
+        if ((this.maxLives || 5) < 10) this.drop(W / 2 - 60, H - 150, 'goldheart');
       }
       if (s.kind === 'mutation') {
         this.player.inv = 1.5;
@@ -914,25 +1016,86 @@
         }
         return;
       }
-      // Wander about a third of the way down, in every direction, never closer than half the zombie walk.
-      b.wpIn = (b.wpIn || 0) - dt;
-      if (!b.wp || b.wpIn <= 0 || Math.hypot(b.wp[0] - b.x, b.wp[1] - b.y) < 6) {
-        b.wp = [67 + this.rand() * (W - 134), 100 + this.rand() * 55];
-        b.wpIn = 1.1 + this.rand() * 1.1;
+      // Every boss has its own way of moving: roaming, orbiting, stop-and-go bursts or zig-zag darts,
+      // with a sway on top and now and then a lunge down the screen. Never closer than half the zombie walk.
+      const st = BOSS_MOVE[b.bossId] || BOSS_MOVE.jordan,
+        stage = 1 + (b.stage - 1) * 0.16;
+      let vmul = 1;
+      b.mt = (b.mt || 0) + dt;
+      if (st.kind === 'orbit') {
+        const t = b.mt * (1 + (b.stage - 1) * 0.2),
+          tx = W / 2 + st.ax * Math.sin(t * st.fx),
+          ty = st.cy + st.ay * Math.sin(t * st.fy),
+          follow = Math.min(1, dt * 5);
+        b.vx = (tx - b.x) * 5;
+        b.vy = (ty - b.y) * 5;
+        b.x += (tx - b.x) * follow;
+        b.y += (ty - b.y) * follow;
+      } else {
+        b.wpIn = (b.wpIn || 0) - dt;
+        let moving = true;
+        if (st.kind === 'stopgo') {
+          // Crawl, twitch, then burst to a new spot.
+          b.sgIn = (b.sgIn ?? 1.2) - dt;
+          if (b.sgIn <= 0) {
+            b.bursting = !b.bursting;
+            b.sgIn = b.bursting ? 0.38 : 1.15 - b.stage * 0.15 + this.rand() * 0.7;
+            if (b.bursting) b.wpIn = 0;
+          }
+          vmul = (b.bursting ? st.burst : st.crawl) / 60;
+        }
+        if (!b.wp || b.wpIn <= 0 || Math.hypot(b.wp[0] - b.x, b.wp[1] - b.y) < 6) {
+          const dive =
+            st.lunge && this.rand() < st.lunge * (0.7 + b.stage * 0.3) && b.phaseGrace <= 0;
+          if (dive) {
+            // Lunge down the screen to one side of Joey, then come back up.
+            const side = this.rand() < 0.5 ? -1 : 1;
+            b.wp = [
+              clamp(p.x + side * (70 + this.rand() * 40), st.x[0], st.x[1]),
+              168 + this.rand() * 14,
+            ];
+            b.wpIn = 0.85;
+            b.lunging = true;
+          } else {
+            b.lunging = false;
+            let wx = st.x[0] + this.rand() * (st.x[1] - st.x[0]);
+            if (st.follow) wx = clamp(wx + (p.x - wx) * st.follow, st.x[0], st.x[1]);
+            b.wp = [wx, st.y[0] + this.rand() * (st.y[1] - st.y[0])];
+            const d = st.dwell || [1, 1.6];
+            b.wpIn = d[0] + this.rand() * (d[1] - d[0]);
+            if (st.kind === 'zigzag')
+              b.wp[0] = clamp(
+                b.x + (b.x < W / 2 ? 1 : -1) * (90 + this.rand() * 80),
+                st.x[0],
+                st.x[1],
+              );
+          }
+        }
+        const dx = b.wp[0] - b.x,
+          dy = b.wp[1] - b.y,
+          l = Math.hypot(dx, dy) || 1,
+          v = (st.v || 60) * stage * vmul * (b.lunging ? 1.5 : 1);
+        b.vx +=
+          ((dx / l) * v - b.vx) * Math.min(1, dt * (st.kind === 'zigzag' || b.bursting ? 8 : 3));
+        b.vy +=
+          ((dy / l) * v - b.vy) * Math.min(1, dt * (st.kind === 'zigzag' || b.bursting ? 8 : 3));
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
       }
-      const dx = b.wp[0] - b.x,
-        dy = b.wp[1] - b.y,
-        l = Math.hypot(dx, dy) || 1,
-        v = 53 + b.stage * 10;
-      b.vx += ((dx / l) * v - b.vx) * Math.min(1, dt * 3);
-      b.vy += ((dy / l) * v - b.vy) * Math.min(1, dt * 3);
-      b.x = clamp(b.x + b.vx * dt, 67, W - 67);
-      b.y += b.vy * dt;
+      // Sway rides on top of the path: [x amplitude, y amplitude, x speed, y speed].
+      const [ax, ay, fx, fy] = st.sway,
+        ox = ax * Math.sin(b.mt * fx),
+        oy = ay * Math.sin(b.mt * fy);
+      b.x += ox - (b.ox || 0);
+      b.y += oy - (b.oy || 0);
+      b.ox = ox;
+      b.oy = oy;
+      b.x = clamp(b.x, 67, W - 67);
       const minD = (p.y + 28) / 2,
         ddx = b.x - p.x;
       if (Math.hypot(ddx, b.y - p.y) < minD)
         b.y = p.y - Math.sqrt(Math.max(0, minD * minD - ddx * ddx));
-      b.y = clamp(b.y, b.bossId === 'drmantis' && b.stage === 3 ? 111 : 98, 165);
+      b.y = clamp(b.y, b.bossId === 'drmantis' && b.stage === 3 ? 111 : 98, 190);
     }
     updateBoss(dt) {
       const b = this.boss;
@@ -1027,7 +1190,7 @@
           return;
         }
         if (b.mode === 'charge') {
-          if (Math.hypot(b.x - p.x, b.y - p.y) < b.r + 14) this.hurt(loss);
+          if (this.joeyDistance(b.x, b.y) < b.r + 8) this.hurt(loss);
           return;
         }
         if (b.mode === 'retreat') return;
@@ -1218,7 +1381,7 @@
           }
         }
         if (s.kind === 'chain' && s.age < s.wind) continue;
-        if (segmentDistance(p.x, p.y, px, py, s.x, s.y) < s.r * 0.75 + 8) {
+        if (this.joeyHit(px, py, s.x, s.y, s.r * 0.6)) {
           this.hurt(
             this.boss
               ? BOSSES.find((b) => b.id === this.boss.bossId).playerLoss

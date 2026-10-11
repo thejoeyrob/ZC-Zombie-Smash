@@ -27,6 +27,7 @@
     };
   const { BOSSES, SKINS, MAPS } = ZSData,
     audio = new ZSAudio(),
+    haptics = new ZSHaptics(),
     scores = new ZSScores(),
     renderer = new ZSRenderer($('gameCanvas'));
   const APP_VER =
@@ -37,6 +38,32 @@
     pendingReload = false;
     location.reload();
   }
+  // BOT_ before a player name switches on cheat mode: it is never shown, it dispenses the secret skins
+  // and it opens the CHEATS menu, where every cheat has a code made of joystick flicks and button taps.
+  const BOT_PREFIX = /^bot_/i;
+  const parseName = (raw) => {
+    raw = String(raw ?? '').trim();
+    const isBot = BOT_PREFIX.test(raw);
+    return { bot: isBot, name: isBot ? raw.replace(BOT_PREFIX, '').trim() : raw };
+  };
+  const unlockedSkins = () => new Set(read('zs7-unlocked', []));
+  const skinLocked = (skin) => !!skin.secret && !unlockedSkins().has(skin.id);
+  function unlockSecretSkins() {
+    const have = unlockedSkins();
+    let added = 0;
+    for (const s of SKINS)
+      if (s.secret && !have.has(s.id)) {
+        have.add(s.id);
+        added++;
+      }
+    write('zs7-unlocked', [...have]);
+    return added;
+  }
+  let bot = false,
+    pendingBot = false,
+    cheatBuf = '',
+    cheatLast = 0,
+    stickDir = 0;
   let ready = false,
     paused = true,
     landscape = false,
@@ -76,6 +103,7 @@
     stickId = null;
     fireId = null;
     keys.clear();
+    stickDir = 0;
     game.resetInput();
     $('stickKnob').style.transform = 'translateX(0)';
     $('fireButton').classList.remove('pressed');
@@ -85,7 +113,7 @@
     if (run && game.active && !game.over)
       write('zs7-run', {
         engine: game.snapshot(),
-        run: { id: run.id, name: run.name, ticket: run.ticket },
+        run: { id: run.id, name: run.name, ticket: run.ticket, bot },
       });
     else if (game.over)
       try {
@@ -142,7 +170,7 @@
     showPanel(
       'start',
       '',
-      `<div class="title-screen"><canvas id="titleCanvas" aria-hidden="true"></canvas><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1">ZOMBIE</span><span class="tl-2">SMASH</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-ticker" aria-hidden="true"><span>${`7 BOSSES  ·  ${esc(bossNames)}  ·  NO BACKING DOWN  ·  `.repeat(2)}</span></div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · ALL SKINS UNLOCKED · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+      `<div class="title-screen"><canvas id="titleCanvas" aria-hidden="true"></canvas><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1">ZOMBIE</span><span class="tl-2">SMASH</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-ticker" aria-hidden="true"><span>${`7 BOSSES  ·  ${esc(bossNames)}  ·  NO BACKING DOWN  ·  `.repeat(2)}</span></div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
     titleScene();
@@ -460,18 +488,20 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>All unlocked →</small></button><button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button><button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
-  function start(name, skipIntro = false) {
+  function start(raw, skipIntro = false) {
     storyReplay = false;
-    name = name.trim();
+    raw = String(raw ?? '').trim();
+    const { bot: isBot, name } = parseName(raw);
     if (!scores.validName(name)) {
       toast('Use 2–24 letters, numbers, spaces, dots, dashes or underscores. Keep it friendly.');
       return;
     }
-    write('zs7-name', name);
+    write('zs7-name', raw);
     pendingName = name;
+    pendingBot = isBot;
     if (!skipIntro && !read('zs7-story-seen', false)) {
       showStory(name, 0);
       return;
@@ -514,7 +544,20 @@
   function beginRun(name) {
     clearTimeout(storyTimer);
     write('zs7-story-seen', true);
-    run = { id: newId(), name, ticket: null, submitted: false };
+    bot = pendingBot;
+    run = { id: newId(), name, ticket: null, submitted: false, bot };
+    if (bot) {
+      const added = unlockSecretSkins();
+      setTimeout(
+        () =>
+          toast(
+            added
+              ? 'BOT MODE · ' + added + ' SECRET SKINS DISPENSED · CHEATS MENU UNLOCKED'
+              : 'BOT MODE · CHEATS MENU UNLOCKED',
+          ),
+        600,
+      );
+    }
     const thisRun = run;
     thisRun.ticketPromise = scores.begin(name).then((ticket) => {
       thisRun.ticket = ticket;
@@ -530,7 +573,7 @@
     save();
   }
   function applySkin(id) {
-    const skin = SKINS.find((s) => s.id === id) || SKINS[0];
+    const skin = SKINS.find((s) => s.id === id && !skinLocked(s)) || SKINS[0];
     for (const [k, v] of Object.entries({
       '--skin-art': `url('./${skin.file}')`,
       '--accent': skin.accent,
@@ -544,32 +587,51 @@
     write('zs7-skin', skin.id);
   }
   function skins() {
+    const current = read('zs7-skin', 'toxic'),
+      open = SKINS.filter((x) => !skinLocked(x)).length;
     showPanel(
       'skins',
       'CHOOSE YOUR CONSOLE',
-      `<p class="menu-note">12 finishes. One fixed console. Every skin is unlocked.</p><div class="skin-options">${SKINS.map((s) => `<button class="skin-choice ${read('zs7-skin', 'toxic') === s.id ? 'selected' : ''}" data-skin="${s.id}" aria-pressed="${read('zs7-skin', 'toxic') === s.id}"><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${s.name}</b>${s.fresh ? '<small>NEW</small>' : ''}</button>`).join('')}</div><p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">${SKINS.length} finishes. One fixed console. ${open} of ${SKINS.length} unlocked${open < SKINS.length ? ' — the rest are secret.' : '.'}</p><div class="skin-options">${SKINS.map(
+        (s) => {
+          const locked = skinLocked(s);
+          return `<button class="skin-choice ${current === s.id && !locked ? 'selected' : ''} ${locked ? 'locked' : ''}" ${locked ? 'data-locked="1" aria-disabled="true"' : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${locked ? 'SECRET' : s.name}</b>${locked ? '<small>LOCKED</small>' : ''}</button>`;
+        },
+      ).join(
+        '',
+      )}</div><p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   async function board() {
     showPanel('board', 'HIGH SCORES', '<p class="menu-note">Loading the board…</p>');
     const result = await scores.board();
     if (panel !== 'board') return;
-    const rows = Array.isArray(result.rows) ? result.rows : [];
+    const rows = Array.isArray(result.rows) ? result.rows : [],
+      nameOf = (r) => String(r.username || r.name || r.gamertag || ''),
+      scoreOf = (r) => Number(r.score || r.high_score || 0),
+      me = (run?.name || parseName(read('zs7-name', '')).name).trim(),
+      mine = me ? scores.getBest(me) : 0,
+      listed = rows.some((r) => nameOf(r).toLowerCase() === me.toLowerCase() && scoreOf(r) >= mine),
+      youRow =
+        mine > 0 && !listed
+          ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
+          : '';
     $('overlay').querySelector('.panel-content').innerHTML =
-      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row"><b class="rank">${i + 1}</b><span>${esc(r.username || r.name || r.gamertag)}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${Number(r.score || r.high_score || 0).toLocaleString()}</b></div>`).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row"><b class="rank">${i + 1}</b><span>${esc(nameOf(r))}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   function sound() {
+    const set = audio.settings.set === 'original' ? 'original' : 'new';
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">A driving arcade score, heavier boss battles, and Disco Man’s own dance floor.</p><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">NEW</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
     showPanel(
       'help',
       'HOLD THE LINE',
-      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels have a smaller marked blast: dodge the landing spot, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Special guns are stored in the four HUD slots; press the stored weapon you want when you need it. You can hold one ammo run of each gun type.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
@@ -614,6 +676,111 @@
     game.practice = true;
     return true;
   }
+  // Cheat codes. Tokens: L / R = joystick pushed fully left / right (release between), F = FIRE tap, G = GRENADE tap.
+  // Codes only work in BOT mode, while playing, with about two seconds at most between taps.
+  const CHEATS = [
+    {
+      id: 'invincible',
+      name: 'INVINCIBLE',
+      info: 'Nothing can hurt Joey.',
+      seq: 'LLRRFF',
+      state: () => game.invincible,
+      run: () => (game.invincible = !game.invincible),
+    },
+    {
+      id: 'ammo',
+      name: 'UNLIMITED AMMO',
+      info: 'Every gun, no reloading.',
+      seq: 'FFGGLR',
+      state: () => game.infiniteAmmo,
+      run: () => (game.infiniteAmmo = !game.infiniteAmmo),
+    },
+    {
+      id: 'hearts',
+      name: '10 HEARTS',
+      info: '5 red + 5 gold hearts.',
+      seq: 'RRLLGF',
+      state: () => (game.maxLives || 5) > 5,
+      run: () => game.setTenHearts((game.maxLives || 5) <= 5),
+    },
+    {
+      id: 'grenades',
+      name: 'REFILL GRENADES',
+      info: 'Back to 9 grenades.',
+      seq: 'GGGLL',
+      run: () => (game.player.grenades = 9),
+    },
+    {
+      id: 'guns',
+      name: 'ALL SPECIAL GUNS',
+      info: 'SMG, scatter, DMR and pulse stored with full ammo.',
+      seq: 'FGFGLR',
+      run: () => {
+        for (const g of ['smg', 'shotgun', 'dmr', 'burst'])
+          if (game.player.gun !== g) game.player.inventory[g] = ZSEngine.GUNS[g].ammo;
+      },
+    },
+    {
+      id: 'wave',
+      name: 'SKIP WAVE',
+      info: 'Clears the current wave.',
+      seq: 'RLRLFF',
+      run: () => {
+        if (game.boss || game.scene) return;
+        game.enemies = [];
+        game.spawned = game.resolved = game.target;
+      },
+    },
+    {
+      id: 'boss',
+      name: 'JUMP TO NEXT BOSS',
+      info: 'Starts the next boss you have not beaten.',
+      seq: 'LRLRGG',
+      run: () => {
+        const next = BOSSES.find((b) => !game.bossesDown.includes(b.id));
+        if (next) {
+          game.skipBoss(next.id, 1);
+          sceneKey = '';
+        }
+      },
+    },
+  ];
+  const glyph = { L: '◀', R: '▶', F: 'FIRE', G: 'NADE' };
+  function feedToken(token) {
+    if (!bot || paused || !game.active || game.over) return;
+    const now = performance.now();
+    if (now - cheatLast > 2200) cheatBuf = '';
+    cheatLast = now;
+    cheatBuf = (cheatBuf + token).slice(-8);
+    const hit = CHEATS.find((c) => cheatBuf.endsWith(c.seq));
+    if (!hit) return;
+    cheatBuf = '';
+    game.practice = true;
+    hit.run();
+    save();
+    audio.sfx('boost');
+    haptics.notify('SUCCESS', 'cheat', 0);
+    toast(
+      'CHEAT · ' + hit.name + (hit.state ? (hit.state() ? ' ON' : ' OFF') : '') + ' · scores off',
+    );
+  }
+  function trackStick(axis) {
+    const dir = axis < -0.6 ? -1 : axis > 0.6 ? 1 : Math.abs(axis) < 0.25 ? 0 : stickDir;
+    if (dir !== stickDir) {
+      stickDir = dir;
+      if (dir) feedToken(dir < 0 ? 'L' : 'R');
+    }
+  }
+  function cheatsPanel() {
+    showPanel(
+      'cheats',
+      'CHEATS',
+      `<p class="menu-note">BOT mode is on. While you play, enter a code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button. Keep each tap within about 2 seconds. Any cheat makes the run practice-only: scores stay off the board.</p>${CHEATS.map(
+        (c) =>
+          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? 'on' : ''}">${c.state() ? 'ON' : 'OFF'}</span>` : ''}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
+      ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+    );
+  }
   function results(reason) {
     showPanel(
       'results',
@@ -644,10 +811,72 @@
       status.textContent = {
         practice: 'Practice run · not added to the board.',
         online: 'Score saved to the online leaderboard.',
-        pending: 'Saved on this device. Online upload queued for reconnection.',
-        local: 'Saved on this device. This offline run has no online ticket.',
-        rejected: 'Saved on this device. The online board could not accept this run.',
+        pending:
+          'Saved on this device. Online upload queued for reconnection' +
+          (scores.lastError ? ' (' + scores.lastError + ').' : '.'),
+        local:
+          'Saved on this device. This run has no online ticket' +
+          (scores.lastError ? ' (' + scores.lastError + ').' : '.'),
+        rejected:
+          'Saved on this device. The online board could not accept this run' +
+          (scores.lastError ? ' (' + scores.lastError + ').' : '.'),
       }[result.status];
+  }
+  // Phone vibration for gunfire, hits, damage and the big boss moments.
+  function buzz(type, data) {
+    switch (type) {
+      case 'shot':
+        haptics.impact(
+          data.gun === 'shotgun' || data.gun === 'dmr' ? 'MEDIUM' : 'LIGHT',
+          'shot',
+          data.gun === 'smg' ? 85 : 55,
+        );
+        break;
+      case 'hit':
+        haptics.impact('LIGHT', 'hit', data.boss ? 70 : 90);
+        break;
+      case 'kill':
+        haptics.impact('MEDIUM', 'kill', 60);
+        break;
+      case 'hurt':
+        haptics.notify('ERROR', 'hurt', 0);
+        break;
+      case 'breach':
+        haptics.notify('WARNING', 'breach', 0);
+        break;
+      case 'explosion':
+        haptics.impact('HEAVY', 'boom', 60, true);
+        break;
+      case 'throw':
+        haptics.impact('LIGHT', 'throw', 100);
+        break;
+      case 'pickup':
+        haptics.notify('SUCCESS', 'pickup', 80);
+        break;
+      case 'boost':
+        haptics.impact('MEDIUM', 'boost', 150, true);
+        break;
+      case 'bossAttack':
+        haptics.impact('MEDIUM', 'bossAttack', 220, true);
+        break;
+      case 'entrance':
+        haptics.notify('WARNING', 'entrance', 0);
+        break;
+      case 'panel':
+        // Phase 1 of a boss arrival is Joey's shocked face.
+        if (data.phase === 1) haptics.shock();
+        break;
+      case 'mutation':
+        if (data.stage === 3) haptics.shock();
+        else haptics.impact('HEAVY', 'mutation', 0, true);
+        break;
+      case 'bossDown':
+        haptics.notify('SUCCESS', 'bossDown', 0);
+        break;
+      case 'death':
+        haptics.notify('ERROR', 'death', 0);
+        break;
+    }
   }
   function event(type, data) {
     if (type === 'music') {
@@ -674,6 +903,7 @@
       death: 'loss',
     };
     if (sounds[type]) audio.sfx(sounds[type], type === 'kill' ? 0.55 : 1);
+    buzz(type, data);
     if (type === 'fight') audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
     if (type === 'over') results(data.reason);
     if (type === 'wave') save();
@@ -792,6 +1022,7 @@
     if (stickId !== null && performance.now() < flickUntil && Math.sign(axis) !== -flickDir)
       axis = flickDir;
     padGrenade = grenade;
+    trackStick(axis);
     game.setInput(axis, fire);
   }
   function fit() {
@@ -915,6 +1146,7 @@
       }
     });
   $('fireButton').addEventListener('pointerdown', (e) => {
+    feedToken('F');
     if (paused || !game.active || game.scene) return;
     e.preventDefault();
     fireId = e.pointerId;
@@ -933,28 +1165,46 @@
       }
     });
   $('grenadeButton').addEventListener('pointerdown', (e) => {
+    feedToken('G');
     if (paused) return;
     e.preventDefault();
     audio.unlock();
     game.grenade();
   });
+  // Stored-weapon buttons react to the first touch. A 'click' is not sent on iPhone while another finger
+  // is held on the joystick, which made guns selectable only after letting go.
+  function equipStored(weapon) {
+    if (paused || !game.useStored(weapon)) return;
+    audio.sfx('pickup');
+    haptics.impact('MEDIUM', 'weapon', 0, true);
+    toast(ZSEngine.GUNS[weapon].name + ' equipped');
+  }
+  $('weaponRack').addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('[data-weapon]');
+    if (!b || b.disabled) return;
+    e.preventDefault();
+    audio.unlock();
+    equipStored(b.dataset.weapon);
+  });
   $('weaponRack').addEventListener('click', (e) => {
     const b = e.target.closest('[data-weapon]');
-    if (!b || paused) return;
-    if (game.useStored(b.dataset.weapon)) {
-      audio.sfx('pickup');
-      toast(ZSEngine.GUNS[b.dataset.weapon].name + ' equipped');
-    }
+    if (b && e.detail === 0) equipStored(b.dataset.weapon); // keyboard / assistive technology
   });
-  $('menuButton').onclick = menu;
-  $('pauseButton').onclick = () => {
-    if (!game.active) {
-      showStart();
-      return;
-    }
-    if (paused && panel === 'menu') closePanel();
-    else menu();
-  };
+  // One MENU button: it pauses the game and opens the menu (press again to resume).
+  // pointerdown, not click, so it also works while a thumb is already on the joystick.
+  const menuButton = $('menuButton');
+  menuButton.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    menuButton.classList.add('pressed');
+    audio.unlock();
+    haptics.impact('LIGHT', 'ui', 0, true);
+    menu();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
+    menuButton.addEventListener(type, () => menuButton.classList.remove('pressed'));
+  menuButton.addEventListener('click', (e) => {
+    if (e.detail === 0) menu(); // keyboard / assistive technology
+  });
   addEventListener('keydown', (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
     if (
@@ -973,10 +1223,14 @@
     if (paused) return;
     keys.add(e.code);
     if (e.code === 'Space' && !e.repeat) {
+      feedToken('F');
       audio.unlock();
       game.fire();
     }
-    if (e.code === 'KeyG' && !e.repeat) game.grenade();
+    if (e.code === 'KeyG' && !e.repeat) {
+      feedToken('G');
+      game.grenade();
+    }
   });
   addEventListener('keyup', (e) => keys.delete(e.code));
   $('overlay').addEventListener('keydown', (e) => {
@@ -1019,6 +1273,10 @@
     if (kind) audio.set(kind, e.target.value / 100);
   });
   $('overlay').addEventListener('change', (e) => {
+    if (e.target.hasAttribute('data-haptics')) {
+      haptics.set(e.target.checked);
+      return;
+    }
     const cheat = e.target.dataset.cheat;
     if (cheat && admin && practice()) {
       if (cheat === 'tenHearts') game.setTenHearts(e.target.checked);
@@ -1030,6 +1288,24 @@
   $('overlay').addEventListener('click', async (e) => {
     const button = e.target.closest('button');
     if (!button) return;
+    if (button.dataset.locked) {
+      toast('A secret finish. Find a way to unlock it.');
+      return;
+    }
+    if (button.dataset.soundSet) {
+      audio.setSoundSet(button.dataset.soundSet);
+      document.querySelectorAll('[data-sound-set]').forEach((b) => {
+        const on = b.dataset.soundSet === button.dataset.soundSet;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on);
+      });
+      audio.resume();
+      audio.sfx('pickup');
+      setTimeout(() => {
+        if (paused) audio.pause();
+      }, 1200);
+      return;
+    }
     if (button.dataset.skin) {
       applySkin(button.dataset.skin);
       document.querySelectorAll('[data-skin]').forEach((b) => {
@@ -1075,6 +1351,9 @@
       case 'help':
         help();
         break;
+      case 'cheats':
+        if (bot) cheatsPanel();
+        break;
       case 'install':
         if (!nativeApp) install();
         break;
@@ -1089,7 +1368,7 @@
         );
         break;
       case 'retry':
-        start(run.name, true);
+        start((run.bot ? 'BOT_' : '') + run.name, true);
         break;
       case 'story':
         storyReplay = game.active;
@@ -1102,7 +1381,7 @@
         if (storyReplay) {
           storyReplay = false;
           closePanel();
-        } else beginRun(pendingName || read('zs7-name', 'Player'));
+        } else beginRun(pendingName || parseName(read('zs7-name', 'Player')).name || 'Player');
         break;
       case 'grenades':
         if (practice()) {
@@ -1115,6 +1394,7 @@
           const saved = read('zs7-run', null);
           if (ready && saved && game.restore(saved.engine)) {
             run = saved.run;
+            bot = !!run.bot;
             sceneKey = '';
             closePanel();
           }
@@ -1122,11 +1402,14 @@
         break;
       case 'preview-sound':
         audio.resume();
-        audio.playMusic('disco');
-        audio.sfx('pickup');
+        audio.playMusic('main');
+        ['pistol', 'hit', 'shotgun', 'grenade', 'pickup'].forEach((n, i) =>
+          setTimeout(() => audio.sfx(n), 500 + i * 650),
+        );
+        haptics.impact('MEDIUM', 'preview', 0, true);
         setTimeout(() => {
           if (paused) audio.pause();
-        }, 3500);
+        }, 5000);
         break;
       case 'install-now':
         if (installPrompt) {
@@ -1182,7 +1465,7 @@
         const b = $('startButton');
         b.disabled = false;
         b.textContent = '▶ PRESS START ◀';
-        $('loadingLine').textContent = 'NO LOGIN · ALL SKINS UNLOCKED · V' + APP_VER;
+        $('loadingLine').textContent = 'NO LOGIN · NO ADS · V' + APP_VER;
       }
       renderer.draw(game);
     })

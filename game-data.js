@@ -254,7 +254,7 @@ window.ZSData = {
       fire: '#e15e40',
       grenade: '#168da9',
       stick: '#d4a375',
-      fresh: true,
+      secret: true,
     },
     {
       id: 'void',
@@ -266,7 +266,7 @@ window.ZSData = {
       fire: '#dc408e',
       grenade: '#677cff',
       stick: '#ac8fe6',
-      fresh: true,
+      secret: true,
     },
     {
       id: 'warzone',
@@ -278,7 +278,7 @@ window.ZSData = {
       fire: '#d94835',
       grenade: '#307aa2',
       stick: '#bdb275',
-      fresh: true,
+      secret: true,
     },
   ],
   MAPS: [

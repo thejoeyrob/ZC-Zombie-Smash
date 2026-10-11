@@ -110,7 +110,7 @@ body {
   height: 42px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 .hardware {
   border: 1px solid #b6bec280;
@@ -120,25 +120,6 @@ body {
     inset 0 1px #fff4,
     0 3px 1px #000b;
   color: var(--accent);
-}
-.top-button {
-  width: 70px;
-  height: 35px;
-  display: grid;
-  place-items: center;
-  padding: 7px;
-}
-.top-button svg {
-  width: 23px;
-  height: 23px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-}
-.top-button:active {
-  box-shadow: inset 0 2px 5px #0009;
-  transform: translateY(1px);
 }
 .wordmark {
   font:
@@ -1393,11 +1374,6 @@ body {
   right: 36px;
   height: var(--hh, 34px);
 }
-.top-button {
-  width: 62px;
-  height: calc(var(--hh, 34px) - 6px);
-  padding: 5px;
-}
 .wordmark {
   font-size: 14px;
 }
@@ -1484,9 +1460,6 @@ body {
 .console-header {
   top: calc(3px + var(--hs, 0px));
   height: max(26px, calc(var(--hh, 34px) + 1px - var(--hs, 0px)));
-}
-.top-button {
-  height: calc(100% - 4px);
 }
 .sb-overlap .wordmark {
   font-size: 12px;
@@ -1881,4 +1854,166 @@ body {
   .title-ticker span {
     animation: none !important;
   }
+}
+
+/* 7.11: one MENU button in the control deck, under the grenade button. It pauses the game and opens the menu. */
+.deck-menu {
+  position: absolute;
+  left: 50%;
+  top: 66px;
+  width: 84px;
+  height: 25px;
+  margin-left: -42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  font:
+    800 11px/1 Barlow,
+    sans-serif;
+  letter-spacing: 0.16em;
+  text-shadow: 0 1px 2px #000;
+  border-color: color-mix(in srgb, var(--accent) 45%, #b6bec2);
+  box-shadow:
+    inset 0 1px #fff5,
+    inset 0 -6px 8px #0006,
+    0 3px 1px #000b,
+    0 0 0 1px #0009,
+    0 0 9px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.deck-menu svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.deck-menu:active,
+.deck-menu.pressed {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 5px #000b,
+    0 1px 1px #000b;
+  filter: brightness(1.25);
+}
+.deck-menu:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.deck-label {
+  top: 98px;
+}
+/* The stored-weapon buttons must react while a thumb is already on the joystick. */
+.weapon-rack,
+.weapon-rack button {
+  touch-action: none;
+}
+
+/* 7.11: sound-set switch, secret skins, cheats list, and the player's own row on the board. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid #526157;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.segmented button {
+  min-width: 78px;
+  min-height: 30px;
+  background: #16201c;
+  color: #b8c7bb;
+  font: 800 11px Barlow;
+  letter-spacing: 0.08em;
+  border: 0;
+}
+.segmented button + button {
+  border-left: 1px solid #526157;
+}
+.segmented button.on {
+  background: linear-gradient(#f8d37b, #bd9746);
+  color: #171b13;
+}
+.skin-choice.locked {
+  opacity: 0.55;
+}
+.skin-choice.locked .skin-thumbnail {
+  filter: grayscale(1) brightness(0.45);
+}
+.skin-choice.locked small {
+  background: #f0b45c;
+}
+.board-row.you {
+  background: #243124;
+  border: 1px solid #5c7a4d;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-top: 6px;
+}
+.board-row.you .rank {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.cheat-entry small {
+  color: #ffb36b;
+}
+.cheat-row {
+  border-bottom: 1px solid #334239;
+  padding: 9px 0 10px;
+}
+.cheat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 800 14px Barlow;
+  color: #f2ddb2;
+  letter-spacing: 0.04em;
+}
+.cheat-row small {
+  display: block;
+  font: 500 10px Inter;
+  color: #9eb0a3;
+  margin: 2px 0 6px;
+}
+.cheat-state {
+  font: 900 10px Inter;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: #2c3731;
+  color: #93a597;
+}
+.cheat-state.on {
+  background: #6fe06a;
+  color: #07210a;
+}
+.cheat-code {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.code-chip {
+  font: 900 11px/1 Barlow;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  min-width: 26px;
+  padding: 5px 6px;
+  text-align: center;
+  border-radius: 3px;
+  border: 1px solid #526157;
+  background: #16201c;
+  color: #e4e8dd;
+}
+.code-chip.F {
+  background: color-mix(in srgb, var(--fire) 70%, #1b0a0c);
+  border-color: color-mix(in srgb, var(--fire) 60%, #fff);
+  color: #fff;
+}
+.code-chip.G {
+  background: color-mix(in srgb, var(--grenade) 70%, #04182a);
+  border-color: color-mix(in srgb, var(--grenade) 60%, #fff);
+  color: #fff;
+}
+.code-chip.L,
+.code-chip.R {
+  color: var(--stick);
 }

@@ -16,16 +16,7 @@
       } catch {}
     };
   // Leaderboard names are public, so block clearly offensive ones before they are ever sent.
-  const STRONG_WORDS = [
-    'fuck',
-    'shit',
-    'bitch',
-    'whore',
-    'nigg',
-    'fagg',
-    'nazi',
-    'hitler',
-  ];
+  const STRONG_WORDS = ['fuck', 'shit', 'bitch', 'whore', 'nigg', 'fagg', 'nazi', 'hitler'];
   const WHOLE_WORDS = [
     'dick',
     'cock',
@@ -72,6 +63,7 @@
       this.pending = read('zs7-pending', []);
       this.flushing = false;
       this.rejected = new Set();
+      this.lastError = '';
       addEventListener('online', () => this.flush());
     }
     validName(name) {
@@ -81,31 +73,50 @@
         !isObjectionable(name)
       );
     }
+    // A short reason for the player when the online board cannot be reached.
+    describe(error) {
+      const status = error?.status ? 'HTTP ' + error.status + ' ' : '';
+      return (status + String(error?.message || 'network error')).slice(0, 80);
+    }
     async rpc(name, body = {}) {
-      const controller = new AbortController(),
-        timer = setTimeout(() => controller.abort(), 7000);
+      const controller = new AbortController();
+      let timer;
+      // The timeout is a race as well as an abort: the iPhone app's native HTTP layer ignores abort signals.
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(Error('timed out'));
+        }, 8000);
+      });
       try {
-        const r = await fetch(endpoint + name, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: key },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-        const value = await r.json();
-        if (!r.ok) {
-          const error = Error(value.message || 'Board unavailable');
-          error.status = r.status;
-          throw error;
-        }
-        return value;
+        return await Promise.race([
+          (async () => {
+            const r = await fetch(endpoint + name, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', apikey: key },
+              body: JSON.stringify(body),
+              signal: controller.signal,
+            });
+            const value = await r.json();
+            if (!r.ok) {
+              const error = Error(value.message || 'Board unavailable');
+              error.status = r.status;
+              throw error;
+            }
+            return value;
+          })(),
+          timeout,
+        ]);
       } finally {
         clearTimeout(timer);
       }
     }
     async begin(name) {
       try {
+        this.lastError = '';
         return await this.rpc('zs7_begin_run', { p_device: this.device, p_name: name.trim() });
-      } catch {
+      } catch (error) {
+        this.lastError = this.describe(error);
         return null;
       }
     }
@@ -145,8 +156,12 @@
         for (const run of [...this.pending]) {
           try {
             const accepted = await this.rpc('zs7_finish_run', run);
-            if (accepted !== true) this.rejected.add(run.p_ticket);
+            if (accepted !== true) {
+              this.rejected.add(run.p_ticket);
+              this.lastError = 'run not accepted';
+            }
           } catch (error) {
+            this.lastError = this.describe(error);
             if (![400, 404, 409, 422].includes(error.status)) break;
             this.rejected.add(run.p_ticket);
           }
@@ -162,8 +177,11 @@
       try {
         const rows = await this.rpc('zs7_leaderboard');
         write('zs7-board', rows);
+        this.lastError = '';
         return { rows, online: true };
-      } catch {
+      } catch (error) {
+        const reason = this.describe(error);
+        this.lastError = reason;
         let rows = read('zs7-board', null);
         if (!rows)
           try {
@@ -171,7 +189,7 @@
           } catch {
             rows = [];
           }
-        return { rows, online: false };
+        return { rows, online: false, error: reason };
       }
     }
     async admin(code) {

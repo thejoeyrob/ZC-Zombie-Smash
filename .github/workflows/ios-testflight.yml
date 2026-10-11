@@ -94,6 +94,33 @@ jobs:
           $PB -c "Add :UIViewControllerBasedStatusBarAppearance bool false" "$P"
           plutil -lint "$P"
 
+      - name: Keep sound on when the iPhone is on silent
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          p = 'ios/App/App/AppDelegate.swift'
+          s = open(p).read()
+          marker = '// Override point for customization after application launch.'
+          if 'AVAudioSession' in s:
+              print('AppDelegate already sets an audio session')
+          elif marker not in s or 'import UIKit' not in s:
+              print('::warning::AppDelegate layout changed; relying on the web audio session only')
+          else:
+              s = s.replace('import UIKit', 'import UIKit\nimport AVFoundation', 1)
+              s = s.replace(
+                  marker,
+                  marker
+                  + '\n        do {\n'
+                  + '            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])\n'
+                  + '            try AVAudioSession.sharedInstance().setActive(true)\n'
+                  + '        } catch {}',
+                  1,
+              )
+              open(p, 'w').write(s)
+              print('Added a playback audio session to AppDelegate')
+          PY
+          sed -n 1,20p ios/App/App/AppDelegate.swift
+
       - name: Write App Store Connect API key
         shell: bash
         run: |
