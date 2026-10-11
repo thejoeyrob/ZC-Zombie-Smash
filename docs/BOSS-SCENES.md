@@ -276,7 +276,7 @@ Use these for every boss so the scenes feel like one series.
 
 ### Joey down
 - Picture: Mantis standing over Joey, his claw raised to his own face as he adjusts a surgical mask.
-- IN GAME, Dr Mantis: "The surgery... is complete."
+- IN GAME, Dr Mantis: "You gotta bow to the Mantis."
 
 ---
 

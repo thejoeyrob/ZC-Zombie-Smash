@@ -139,7 +139,7 @@ window.ZSData = {
       ],
       finalLine: 'Dr Mantis: "The harvest... cannot end here..."',
       victory: 'Joey Rob: "Mantis is down. Infinite survival starts now."',
-      playerLoss: 'Dr Mantis: "The surgery... is complete."',
+      playerLoss: 'Dr Mantis: "You gotta bow to the Mantis."',
       wave: 14,
       accent: '#92e158',
     },
