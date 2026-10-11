@@ -757,6 +757,7 @@
         bpm: 132,
         bars: 4,
         tail: 2.6,
+        level: 0.5,
         oneShot: true,
         step(d, t, s, k, bar, sd, off = 0) {
           const m = (n) => n + off,
