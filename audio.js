@@ -284,6 +284,14 @@
       s.tone(d, t + 1.1, { type: 'sine', f: 60, f2: 24, dur: 1.1, gain: 0.5 });
       return 2.3;
     },
+    // The boss lands: a deep, heavy impact with a rising scrape that drops away.
+    doom(s, d, t) {
+      s.tone(d, t, { type: 'sine', f: 90, f2: 24, dur: 1.1, gain: 0.95 });
+      s.tone(d, t, { type: 'sawtooth', f: 160, f2: 40, dur: 0.9, gain: 0.3, filter: { type: 'lowpass', f: 900, f2: 120 } });
+      s.noise(d, t, { dur: 1.1, gain: 0.7, filter: { type: 'lowpass', f: 3000, f2: 120 } });
+      s.noise(d, t, { dur: 0.2, gain: 0.45, filter: { type: 'highpass', f: 2500 } });
+      return 1.3;
+    },
     'boss-attack'(s, d, t) {
       s.tone(d, t, {
         type: 'sawtooth',
@@ -388,7 +396,7 @@
         f: midi(n),
         dur: len,
         gain: o.gain ?? 0.34,
-        attack: 0.004,
+        attack: o.attack ?? 0.004,
         filter: { type: 'lowpass', f: o.cut || 700, f2: (o.cut || 700) * 0.45, q: 2 },
       });
     const pluck = (d, t, n, len, g = 0.1, type = 'square') =>
@@ -437,99 +445,198 @@
           detune: rnd(-6, 6),
         }),
       );
+    // Dark, slow voices for the horror score.
+    const drone = (d, t, n, len, g = 0.1, cut = 380) =>
+      [-9, 7].forEach((det) =>
+        S.tone(d, t, {
+          type: 'sawtooth',
+          f: midi(n),
+          dur: len,
+          gain: g * 0.6,
+          attack: Math.min(1.2, len * 0.35),
+          hold: len * 0.45,
+          detune: det,
+          filter: { type: 'lowpass', f: cut, f2: cut * 0.6, q: 1 },
+          vib: { rate: 0.4, depth: 1.2 },
+        }),
+      );
+    const heartbeat = (d, t, g = 0.45) => {
+      S.tone(d, t, { type: 'sine', f: 100, f2: 46, dur: 0.24, gain: g, attack: 0.004 });
+      S.tone(d, t + 0.19, { type: 'sine', f: 84, f2: 42, dur: 0.22, gain: g * 0.7, attack: 0.004 });
+      // A little click so phone speakers can reproduce it.
+      S.noise(d, t, { dur: 0.03, gain: g * 0.25, filter: { type: 'lowpass', f: 900 } });
+    };
+    const bell = (d, t, n, len = 3.2, g = 0.07) =>
+      [
+        [1, 1],
+        [2.76, 0.45],
+        [5.4, 0.2],
+        [8.9, 0.1],
+      ].forEach(([ratio, amp]) =>
+        S.tone(d, t, {
+          type: 'sine',
+          f: midi(n) * ratio,
+          dur: len / (1 + (ratio - 1) * 0.25),
+          gain: g * amp,
+          attack: 0.002,
+        }),
+      );
+    const timp = (d, t, n = 38, g = 0.7) => {
+      S.tone(d, t, { type: 'sine', f: midi(n) * 1.7, f2: midi(n), dur: 0.55, gain: g, attack: 0.002 });
+      S.tone(d, t, { type: 'triangle', f: midi(n + 12), f2: midi(n), dur: 0.12, gain: g * 0.4 });
+      S.noise(d, t, { dur: 0.14, gain: g * 0.35, filter: { type: 'lowpass', f: 800 } });
+    };
+    const brass = (d, t, n, len, g = 0.1, o = {}) =>
+      S.tone(d, t, {
+        type: 'sawtooth',
+        f: midi(n),
+        dur: len,
+        gain: g,
+        attack: o.attack ?? Math.min(0.2, len * 0.3),
+        hold: len * 0.45,
+        detune: rnd(-8, 8),
+        filter: { type: 'lowpass', f: o.from || 500, f2: o.to || 1700, q: 1.2 },
+      });
+    const swell = (d, t, len, g = 0.05, from = 300, to = 1500) =>
+      S.noise(d, t, {
+        dur: len,
+        gain: g,
+        attack: len * 0.85,
+        filter: { type: 'bandpass', f: from, f2: to, q: 0.8 },
+      });
+
+    // Keys: everything is built on D minor so the transitions between tracks stay in key.
+    const DM = [50, 53, 57],
+      GM = [43, 46, 50],
+      BB = [46, 50, 53],
+      AM = [45, 49, 52];
 
     return {
-      // Driving A-minor arcade theme. Bars 1-4 build the groove, bars 5-8 add the lead.
+      // Wave music: slow, dark and sparse. A low drone, a heartbeat, distant bells and a creeping pulse.
       main: {
-        bpm: 138,
+        bpm: 84,
         bars: 8,
         step(d, t, s, k, bar, sd) {
-          const prog = [CH.Am, CH.F, CH.C, CH.G, CH.Am, CH.F, CH.G, CH.E],
-            roots = [45, 41, 48, 43, 45, 41, 43, 40],
-            ch = prog[bar],
-            root = roots[bar];
-          if (k % 4 === 0) dr.kick(d, t);
-          if (k === 4 || k === 12) dr.snare(d, t);
-          if (k % 2 === 0) dr.hat(d, t, 0.13);
-          else if (bar > 0) dr.hat(d, t, 0.05);
-          if (k === 14) dr.hat(d, t, 0.14, true);
-          if (k === 0 && bar % 4 === 0) dr.crash(d, t, 0.22);
-          if (k % 2 === 0) bass(d, t, root + (k === 6 || k === 14 ? 12 : 0), sd * 1.8);
-          if (k === 11) bass(d, t, root + 12, sd * 0.9, { gain: 0.2 });
-          const arp = [0, 2, 1, 3, 2, 1, 3, 1, 0, 2, 1, 3, 2, 3, 1, 2][k],
-            chord = [ch[0], ch[1], ch[2], ch[0] + 12][arp];
-          pluck(d, t, chord + 12, sd * 0.95, bar < 4 ? 0.085 : 0.06);
-          if (k === 0) pad(d, t, ch, sd * 16, 0.05);
-          if (bar >= 4) {
-            const mel = {
-              4: [
-                [0, 76, 3],
-                [4, 81, 2],
-                [6, 79, 2],
-                [8, 76, 4],
-                [12, 74, 2],
-                [14, 76, 2],
-              ],
-              5: [
-                [0, 72, 3],
-                [4, 77, 2],
-                [6, 76, 2],
-                [8, 72, 4],
-                [12, 69, 2],
-                [14, 72, 2],
-              ],
-              6: [
-                [0, 74, 3],
-                [4, 79, 2],
-                [6, 77, 2],
-                [8, 74, 4],
-                [12, 71, 2],
-                [14, 74, 2],
-              ],
-              7: [
-                [0, 76, 3],
-                [4, 80, 2],
-                [6, 83, 2],
-                [8, 81, 6],
-              ],
-            }[bar];
-            for (const [at, n, len] of mel) if (at === k) lead(d, t, n, len * sd, 0.12);
+          const roots = [38, 38, 46, 45, 38, 43, 46, 45],
+            chords = [DM, DM, BB, AM, DM, GM, BB, AM],
+            root = roots[bar],
+            ch = chords[bar];
+          if (k === 0) {
+            drone(d, t, root, sd * 16, 0.13);
+            pad(d, t, ch.map((n) => n + 12), sd * 16, 0.028);
+            heartbeat(d, t, 0.4);
           }
+          if (k === 8 && bar >= 2) heartbeat(d, t, 0.22);
+          if (k === 0) bass(d, t, root, sd * 9, { gain: 0.1, cut: 240, attack: 0.05 });
+          if (k === 0 && bar % 4 === 0) swell(d, t, sd * 64, 0.03, 260, 1100);
+          if (k === 8 && bar % 4 === 3) timp(d, t, 38, 0.3);
+          // Muted pulse that creeps in for the second half of the loop.
+          if (bar >= 4 && k % 2 === 0)
+            S.tone(d, t, {
+              type: 'square',
+              f: midi(root + 12),
+              dur: sd * 0.7,
+              gain: 0.035,
+              attack: 0.002,
+              filter: { type: 'lowpass', f: 480 },
+            });
+          if (bar >= 4 && k % 4 === 2) dr.hat(d, t, 0.025);
+          // A few lonely bell notes.
+          const bells = {
+            0: [[2, 69]],
+            1: [[10, 65]],
+            2: [[6, 64], [14, 62]],
+            3: [[8, 73]],
+            4: [[4, 69], [12, 72]],
+            5: [[2, 70]],
+            6: [[8, 65], [13, 67]],
+            7: [[6, 73]],
+          }[bar];
+          for (const [at, n] of bells) if (at === k) bell(d, t, n, 3.4, 0.055);
         },
       },
-      // Heavier, faster boss battle in E minor: double kicks, saw bass, power stabs and a siren on the last bar.
-      boss: {
-        bpm: 152,
-        bars: 8,
+      // Boss warning: the same key and tempo, but the heartbeat speeds up and the dread stacks until the boss lands.
+      entrance: {
+        bpm: 84,
+        bars: 4,
         step(d, t, s, k, bar, sd) {
-          const prog = [CH.Em, CH.Em, CH.C, CH.D, CH.Em, CH.Em, CH.C, CH.B],
-            roots = [40, 40, 36, 38, 40, 40, 36, 35],
-            ch = prog[bar],
-            root = roots[bar];
-          if ([0, 3, 6, 8, 11, 14].includes(k)) dr.kick(d, t, 0.95);
-          if (k === 4 || k === 12) dr.snare(d, t, 0.55);
-          dr.hat(d, t, k % 2 ? 0.06 : 0.14);
-          if (k === 0 && bar % 4 === 0) dr.crash(d, t, 0.3);
-          if (bar === 7 && k >= 8 && k % 2 === 0) dr.snare(d, t, 0.3 + k * 0.02);
-          bass(d, t, root + (k % 4 === 3 ? 12 : 0), sd * 0.9, {
-            gain: 0.36,
-            cut: 520 + (k % 8) * 70,
-          });
-          if ([0, 6, 10].includes(k)) stab(d, t, ch, sd * 1.4, 0.075, 2600);
-          if (k % 4 === 2) pluck(d, t, ch[(k >> 2) % 3] + 24, sd * 0.8, 0.05, 'sawtooth');
-          if (k === 0) pad(d, t, ch, sd * 16, 0.045);
-          if (bar >= 4 && k % 2 === 0) {
-            const run = [76, 77, 79, 77, 76, 74, 76, 79][((k >> 1) + bar) % 8];
-            lead(d, t, run, sd * 1.6, 0.1, 'sawtooth');
-          }
-          if (bar === 7)
+          if (k === 0) {
+            drone(d, t, 38, sd * 16, 0.15, 420);
+            drone(d, t, 26 + 12 + bar, sd * 16, 0.07, 420);
+            if (bar >= 1) pad(d, t, [51, 57], sd * 16, 0.05);
+            if (bar >= 2) pad(d, t, [56, 62], sd * 16, 0.05);
+            swell(d, t, sd * 16, 0.03 + bar * 0.012, 260 + bar * 160, 900 + bar * 700);
             S.tone(d, t, {
               type: 'sawtooth',
-              f: 400 + k * 90,
-              dur: sd * 1.2,
-              gain: 0.04,
+              f: midi(57 + bar * 3),
+              f2: midi(64 + bar * 3),
+              dur: sd * 16,
+              gain: 0.022,
+              attack: sd * 8,
+              filter: { type: 'bandpass', f: 900, q: 2 },
+              glide: 'lin',
+            });
+          }
+          // Heartbeat accelerating: once a bar, twice, four times, then every other step.
+          const every = [16, 8, 4, 2][bar];
+          if (k % every === 0) heartbeat(d, t, 0.4 + bar * 0.1);
+          if (bar >= 1 && k === 0)
+            S.tone(d, t, {
+              type: 'sawtooth',
+              f: midi(81),
+              dur: sd * 16,
+              gain: 0.014,
+              attack: sd * 6,
+              vib: { rate: 6.5, depth: 9 },
               filter: { type: 'lowpass', f: 3000 },
             });
+          if (bar >= 2 && k === 0) {
+            [38, 45, 53].forEach((n) => brass(d, t, n, sd * 8, 0.1));
+            timp(d, t, 38, 0.6);
+          }
+          if (bar === 3 && k >= 8) timp(d, t, 38 + (k % 2) * 7, 0.2 + (k - 8) * 0.06);
+          if (bar === 3 && k === 8) swell(d, t, sd * 8, 0.12, 2500, 9000);
+        },
+      },
+      // Boss fight: fast, heavy and driving, in the same key. Bars 5-8 add a heroic, desperate horn line.
+      boss: {
+        bpm: 160,
+        bars: 8,
+        step(d, t, s, k, bar, sd) {
+          const roots = [38, 38, 46, 45, 38, 43, 46, 45],
+            chords = [DM, DM, BB, AM, DM, GM, BB, AM],
+            root = roots[bar],
+            ch = chords[bar],
+            fill = bar % 4 === 3 && k >= 12;
+          if ([0, 3, 6, 8, 11, 14].includes(k)) dr.kick(d, t, 0.95);
+          if ((k === 4 || k === 12) && !fill) dr.snare(d, t, 0.58);
+          if (fill) dr.snare(d, t, 0.3 + (k - 12) * 0.12);
+          dr.hat(d, t, k % 2 ? 0.07 : 0.15);
+          if (k === 0 && bar % 4 === 0) dr.crash(d, t, 0.3);
+          if (bar === 7 && k >= 8 && k % 2 === 0) dr.tom(d, t, 150 - (k - 8) * 6, 0.45);
+          // Phrygian-flavoured bass riff: root, octave, flat seventh and the flat second for menace.
+          const riff = [0, null, 0, 12, 0, null, 10, 0, 0, null, 0, 12, 5, null, 3, 1][k];
+          if (riff !== null)
+            bass(d, t, root + (riff > 12 ? 0 : riff), sd * 0.85, {
+              gain: 0.34,
+              cut: 520 + (k % 4) * 140,
+            });
+          if ([0, 6, 10].includes(k)) {
+            brass(d, t, root + 12, sd * 2.4, 0.075, { from: 700, to: 2600, attack: 0.01 });
+            brass(d, t, root + 19, sd * 2.4, 0.06, { from: 700, to: 2600, attack: 0.01 });
+          }
+          if (k % 2 === 1) pluck(d, t, ch[(k >> 1) % 3] + 24, sd * 0.8, 0.032, 'sawtooth');
+          if (k === 0) pad(d, t, ch.map((n) => n + 12), sd * 16, 0.04);
+          if (bar >= 4) {
+            const horn = {
+              4: [[0, 74, 4], [4, 69, 2], [6, 72, 2], [8, 74, 4], [12, 77, 4]],
+              5: [[0, 74, 3], [4, 70, 2], [6, 72, 2], [8, 75, 4], [12, 74, 4]],
+              6: [[0, 77, 4], [4, 74, 2], [6, 70, 2], [8, 74, 4], [12, 72, 4]],
+              7: [[0, 73, 6], [8, 76, 4], [12, 81, 4]],
+            }[bar];
+            for (const [at, n, len] of horn)
+              if (at === k) brass(d, t, n, len * sd, 0.1, { from: 900, to: 3200, attack: 0.02 });
+          }
         },
       },
       // Disco Man's dance floor: four-on-the-floor, octave bass, off-beat hats and chord stabs.
@@ -554,67 +661,93 @@
           if (k === 0) pad(d, t, ch, sd * 16, 0.05);
           if (bar >= 4) {
             const mel = {
-              4: [
-                [2, 81, 2],
-                [6, 84, 2],
-                [8, 83, 2],
-                [10, 81, 2],
-                [12, 79, 4],
-              ],
-              5: [
-                [2, 77, 2],
-                [6, 81, 2],
-                [8, 79, 2],
-                [10, 77, 2],
-                [12, 74, 4],
-              ],
-              6: [
-                [2, 76, 2],
-                [6, 80, 2],
-                [8, 83, 2],
-                [10, 80, 2],
-                [12, 76, 4],
-              ],
-              7: [
-                [0, 81, 6],
-                [8, 76, 2],
-                [10, 79, 2],
-                [12, 81, 4],
-              ],
+              4: [[2, 81, 2], [6, 84, 2], [8, 83, 2], [10, 81, 2], [12, 79, 4]],
+              5: [[2, 77, 2], [6, 81, 2], [8, 79, 2], [10, 77, 2], [12, 74, 4]],
+              6: [[2, 76, 2], [6, 80, 2], [8, 83, 2], [10, 80, 2], [12, 76, 4]],
+              7: [[0, 81, 6], [8, 76, 2], [10, 79, 2], [12, 81, 4]],
             }[bar];
             for (const [at, n, len] of mel) if (at === k) lead(d, t, n, len * sd, 0.1, 'triangle');
           }
         },
       },
-      // Boss entrance: slow, low and threatening. Replaced by the fight track when the boss arrives.
-      entrance: {
-        bpm: 86,
+      // Victory fanfare after a boss falls: the game's own brass and timpani, turned to the major key.
+      // One-shot. `off` shifts it into the key of the music it replaces.
+      victory: {
+        bpm: 132,
         bars: 4,
-        step(d, t, s, k, bar, sd) {
-          const roots = [38, 38, 39, 37],
-            ch = [CH.Dm, CH.Dm, [51, 55, 58], [49, 53, 56]][bar];
-          if (k === 0 || k === 3) dr.tom(d, t, k ? 90 : 105, 0.7);
-          if (k === 8 && bar % 2) dr.crash(d, t, 0.12);
-          if (k === 0) {
-            bass(d, t, roots[bar] - 12, sd * 16, { gain: 0.4, cut: 260 });
-            pad(
-              d,
-              t,
-              ch.map((n) => n - 12),
-              sd * 16,
-              0.07,
-            );
-            pad(d, t, ch, sd * 16, 0.045);
+        tail: 2.6,
+        oneShot: true,
+        step(d, t, s, k, bar, sd, off = 0) {
+          const m = (n) => n + off,
+            roots = [38, 43, 45, 38],
+            chords = [
+              [50, 54, 57, 62],
+              [47, 50, 55, 59],
+              [49, 52, 57, 61],
+              [50, 54, 57, 62],
+            ],
+            root = roots[bar];
+          if (s === 0) {
+            dr.crash(d, t, 0.34);
+            timp(d, t, m(38), 0.8);
           }
-          if (k % 4 === 0 && bar >= 2)
-            S.tone(d, t, {
-              type: 'sawtooth',
-              f: midi(ch[k % 3] + 24),
-              dur: sd * 3,
-              gain: 0.03,
-              filter: { type: 'lowpass', f: 1800 },
-              vib: { rate: 7, depth: 18 },
-            });
+          if (k % 4 === 0) dr.kick(d, t, 0.7);
+          if (bar >= 1 && (k === 4 || k === 12)) dr.clap(d, t, 0.25);
+          if (bar >= 1) dr.hat(d, t, k % 2 ? 0.05 : 0.11);
+          if (k === 0) {
+            chords[bar].forEach((n) => brass(d, t, m(n), sd * (bar === 3 ? 14 : 7), 0.08, { from: 700, to: 2600 }));
+            pad(d, t, chords[bar].map((n) => m(n) + 12), sd * (bar === 3 ? 15 : 8), 0.04);
+          }
+          if (bar < 3 && k % 2 === 0) bass(d, t, m(root) + (k % 4 === 2 ? 12 : 0), sd * 1.5, { gain: 0.3, cut: 800 });
+          if (bar === 0 && k < 8) pluck(d, t, m([62, 66, 69, 74, 78, 81, 86, 81][k]), sd * 1.4, 0.07);
+          if (bar === 0 && k >= 8) pluck(d, t, m([74, 69, 66, 69, 74, 78, 81, 86][k - 8]), sd * 1.2, 0.05);
+          const tune = {
+            1: [[0, 81, 4], [4, 78, 2], [6, 79, 2], [8, 81, 4], [12, 83, 4]],
+            2: [[0, 85, 4], [4, 83, 2], [6, 81, 2], [8, 78, 4], [12, 76, 2], [14, 78, 2]],
+            3: [[0, 86, 14]],
+          }[bar];
+          if (tune)
+            for (const [at, n, len] of tune)
+              if (at === k) brass(d, t, m(n - 12), len * sd, 0.1, { from: 900, to: 3200, attack: 0.02 });
+          if (bar === 3 && k === 0) {
+            dr.crash(d, t, 0.34);
+            timp(d, t, m(38), 0.9);
+            bass(d, t, m(38), sd * 14, { gain: 0.34, cut: 700 });
+            bell(d, t, m(74), 2.6, 0.06);
+          }
+          if (bar === 3 && k >= 10 && k % 2 === 0) timp(d, t, m(38) + (k % 4 ? 7 : 0), 0.35);
+        },
+      },
+      // Defeat: the music closes on a slow, fateful cadence (iv, V, i) with tolling bells and timpani.
+      defeat: {
+        bpm: 54,
+        bars: 2,
+        tail: 3.2,
+        oneShot: true,
+        step(d, t, s, k, bar, sd, off = 0) {
+          const m = (n) => n + off;
+          if (bar === 0 && k === 0) {
+            drone(d, t, m(43), sd * 8, 0.16, 520);
+            [55, 58, 62].forEach((n) => brass(d, t, m(n), sd * 8, 0.09, { from: 400, to: 1100, attack: 0.15 }));
+            timp(d, t, m(43), 0.85);
+            bell(d, t, m(67), 3.4, 0.07);
+          }
+          if (bar === 0 && k === 8) {
+            drone(d, t, m(45), sd * 8, 0.18, 560);
+            [57, 61, 64].forEach((n) => brass(d, t, m(n), sd * 8, 0.1, { from: 400, to: 1300, attack: 0.15 }));
+            timp(d, t, m(45), 1);
+            bell(d, t, m(69), 3.4, 0.07);
+          }
+          if (bar === 0 && k === 12) swell(d, t, sd * 5, 0.2, 2200, 9000);
+          if (bar === 1 && k === 0) {
+            drone(d, t, m(38), sd * 16, 0.22, 600);
+            [50, 53, 57, 62].forEach((n) => brass(d, t, m(n), sd * 15, 0.1, { from: 350, to: 900, attack: 0.25 }));
+            timp(d, t, m(38), 1.1);
+            bell(d, t, m(62), 4.2, 0.08);
+            bell(d, t, m(50), 5, 0.07);
+            dr.crash(d, t, 0.18);
+          }
+          if (bar === 1 && k === 8) bell(d, t, m(50), 5, 0.05);
         },
       },
     };
@@ -632,6 +765,7 @@
     hit: 1,
     hurt: 1,
     alarm: 0.9,
+    doom: 0.7,
   };
   const FILES = [
     'pistol',
@@ -666,6 +800,9 @@
       this.voices = 0;
       this.seq = null;
       this.keepAlive = null;
+      this.keyOffset = 0; // semitones from D, so stingers land in the key of the music they replace
+      this.holdTrack = null; // a one-shot stinger (victory or defeat) that must finish before music resumes
+      this.holdUntil = 0;
       const defaults = { music: 0.45, effects: 0.75, set: 'new' };
       try {
         this.settings = { ...defaults, ...(JSON.parse(localStorage.getItem('zs7-audio')) || {}) };
@@ -792,7 +929,7 @@
       const gain = this.ctx.createGain(),
         now = this.ctx.currentTime;
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.6, now + 0.25);
+      gain.gain.linearRampToValueAtTime(def.level ?? 0.6, now + 0.25);
       gain.connect(this.musicBus);
       const seq = { def, gain, step: 0, next: now + 0.06, sd: 60 / def.bpm / 4, timer: null };
       this.seq = seq;
@@ -820,8 +957,11 @@
     async playMusic(track) {
       this.wantTrack = track;
       if (!this.ctx || this.paused || this.track === track) return;
+      // A victory or defeat stinger finishes first; the hold timer then plays whatever is wanted.
+      if (this.holdTrack && this.holdUntil > performance.now()) return;
       this.track = track;
       if (this.synthMode) {
+        this.keyOffset = track === 'disco' ? -5 : 0;
         this.stopMusic();
         this.startSequencer(track);
         return;
@@ -853,6 +993,59 @@
       this.music = { source, gain };
     }
 
+    // ---- stingers: victory after a boss, defeat when Joey falls ---------------------------------
+    // The running music fades out and the stinger plays, in the same key, all the way through.
+    stinger(name) {
+      if (!this.ctx || this.paused || !this.synthMode) return;
+      const def = this.tracks[name];
+      if (!def) return;
+      this.cancelStinger(0.05);
+      this.stopMusic(name === 'defeat' ? 0.3 : 0.45);
+      const ctx = this.ctx,
+        sd = 60 / def.bpm / 4,
+        total = def.bars * 16,
+        off = this.keyOffset || 0,
+        t0 = ctx.currentTime + (name === 'defeat' ? 0.28 : 0.1),
+        gain = ctx.createGain();
+      gain.gain.value = def.level ?? 0.6;
+      gain.connect(this.musicBus);
+      for (let s = 0; s < total; s++) {
+        try {
+          def.step(gain, t0 + s * sd, s, s % 16, Math.floor(s / 16), sd, off);
+        } catch {}
+      }
+      const length = t0 - ctx.currentTime + total * sd + (def.tail || 2);
+      this.stingerGain = gain;
+      this.track = name;
+      this.holdTrack = name;
+      this.holdUntil = performance.now() + length * 1000;
+      // After a victory the game carries on with the wave music; after a defeat nothing resumes by itself.
+      this.wantTrack = name === 'victory' ? 'main' : null;
+      clearTimeout(this.holdTimer);
+      this.holdTimer = setTimeout(() => {
+        this.holdTrack = null;
+        this.holdUntil = 0;
+        this.track = null;
+        setTimeout(() => gain.disconnect(), 500);
+        if (!this.paused && this.wantTrack) this.playMusic(this.wantTrack);
+      }, length * 1000);
+    }
+    cancelStinger(fade = 0.2) {
+      clearTimeout(this.holdTimer);
+      if (this.stingerGain && this.ctx) {
+        const g = this.stingerGain,
+          now = this.ctx.currentTime;
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(0, now + fade);
+        setTimeout(() => g.disconnect(), (fade + 0.1) * 1000);
+      }
+      this.stingerGain = null;
+      if (this.holdTrack && this.track === this.holdTrack) this.track = null;
+      this.holdTrack = null;
+      this.holdUntil = 0;
+    }
+
     // ---- sound effects ------------------------------------------------------------------------
     async sfx(name, volume = 1) {
       if (!this.ctx || this.paused || this.settings.effects === 0 || this.voices > 22) return;
@@ -861,6 +1054,7 @@
       if (time - (this.last[name] || 0) < minGap) return;
       this.last[name] = time;
       if (this.synthMode) {
+        if (name === 'victory' || name === 'loss') return;
         const fn = SFX[name];
         if (!fn) return;
         const bus = this.ctx.createGain();
@@ -925,12 +1119,21 @@
     pause() {
       this.paused = true;
       if (this.ctx) {
-        this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.035);
+        // The results screen opens while the defeat cadence is still ringing: let it finish, then go quiet.
+        const ring = this.holdTrack === 'defeat' ? this.holdUntil - performance.now() : 0;
+        clearTimeout(this.muteTimer);
+        if (ring > 0)
+          this.muteTimer = setTimeout(() => {
+            if (this.paused) this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+          }, ring);
+        else this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.035);
         if (this.seq) clearInterval(this.seq.timer);
       }
     }
     resume() {
       this.paused = false;
+      clearTimeout(this.muteTimer);
+      if (this.holdTrack) this.cancelStinger(0.15);
       if (this.ctx) {
         this.master.gain.setTargetAtTime(1, this.ctx.currentTime, 0.025);
         if (this.seq) this.runSequencer();

@@ -902,9 +902,16 @@
       bossDown: 'victory',
       death: 'loss',
     };
-    if (sounds[type]) audio.sfx(sounds[type], type === 'kill' ? 0.55 : 1);
+    // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
+    if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
+    else if (audio.synthMode && type === 'death') audio.stinger('defeat');
+    else if (sounds[type])
+      audio.sfx(sounds[type], type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : 1);
     buzz(type, data);
-    if (type === 'fight') audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
+    if (type === 'fight') {
+      audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
+      audio.sfx('doom');
+    }
     if (type === 'over') results(data.reason);
     if (type === 'wave') save();
   }
