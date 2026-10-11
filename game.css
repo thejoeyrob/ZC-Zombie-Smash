@@ -1860,17 +1860,17 @@ body {
 .deck-menu {
   position: absolute;
   left: 50%;
-  top: 66px;
-  width: 84px;
-  height: 25px;
-  margin-left: -42px;
+  top: 88px;
+  width: 74px;
+  height: 32px;
+  margin-left: -37px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   padding: 0 8px;
   font:
-    800 11px/1 Barlow,
+    800 13px/1 Barlow,
     sans-serif;
   letter-spacing: 0.16em;
   text-shadow: 0 1px 2px #000;
@@ -1903,7 +1903,11 @@ body {
   outline-offset: 2px;
 }
 .deck-label {
-  top: 98px;
+  top: 138px;
+}
+.engraving {
+  top: 153px;
+  bottom: auto;
 }
 /* The stored-weapon buttons must react while a thumb is already on the joystick. */
 .weapon-rack,
