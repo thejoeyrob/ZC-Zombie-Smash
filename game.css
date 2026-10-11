@@ -2021,3 +2021,85 @@ body {
 .code-chip.R {
   color: var(--stick);
 }
+
+/* 7.13: the story is three animated clips filling the gameplay screen; the game then waits for any button. */
+#overlay.story-mode {
+  background: #000;
+  border-color: transparent;
+  box-shadow: none;
+}
+#overlay.story-mode .panel-content {
+  padding: 0;
+  overflow: hidden;
+}
+.story-full {
+  position: absolute;
+  inset: 0;
+  background: #05080a;
+}
+.story-full video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+#fireButton.story-hint .fire-inner {
+  animation: fire-hint 0.9s ease-in-out infinite;
+}
+@keyframes fire-hint {
+  50% {
+    filter: brightness(1.55);
+    box-shadow: 0 0 18px 6px color-mix(in srgb, var(--fire) 70%, transparent);
+  }
+}
+#startPrompt {
+  position: absolute;
+  left: var(--wx, 16px);
+  top: var(--wy, 55px);
+  width: var(--ww, 343px);
+  height: var(--wh, 450px);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+#startPrompt[hidden] {
+  display: none;
+}
+#startPrompt > div {
+  background: #050a08d9;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, #ffffff33);
+  padding: 12px 20px;
+  animation: prompt-pulse 1.1s ease-in-out infinite;
+}
+#startPrompt b {
+  display: block;
+  font:
+    900 22px Barlow,
+    sans-serif;
+  letter-spacing: 0.08em;
+  color: #fff;
+}
+#startPrompt small {
+  display: block;
+  margin-top: 2px;
+  font:
+    800 12px Barlow,
+    sans-serif;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+}
+@keyframes prompt-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #startPrompt > div,
+  #fireButton.story-hint .fire-inner {
+    animation: none;
+  }
+}

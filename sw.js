@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.12.0';
+const CACHE = 'zombie-smash-v7.13.0';
 const ASSETS = [
   './404.html',
   './apple-touch-icon.png',
@@ -95,9 +95,9 @@ const ASSETS = [
   './sfx-throw.mp3',
   './sfx-victory.mp3',
   './sfx-whoosh.mp3',
-  './story-army.webp',
-  './story-joey.webp',
-  './story-mantis.webp',
+  './story-1.mp4',
+  './story-2.mp4',
+  './story-3.mp4',
   './weapon-bodypart.webp',
   './weapon-burger.webp',
   './weapon-chain.webp',
@@ -152,6 +152,23 @@ async function clean(r) {
     headers: r.headers,
   });
 }
+// Safari only plays video when the server answers byte-range requests, so the cached clip is sliced here.
+async function rangeResponse(response, header) {
+  const buffer = await response.clone().arrayBuffer(),
+    size = buffer.byteLength,
+    match = /bytes=(\d*)-(\d*)/.exec(header) || [],
+    start = match[1] ? Number(match[1]) : 0,
+    end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+  return new Response(buffer.slice(start, end + 1), {
+    status: 206,
+    headers: {
+      'Content-Type': 'video/mp4',
+      'Content-Range': `bytes ${start}-${end}/${size}`,
+      'Content-Length': String(end - start + 1),
+      'Accept-Ranges': 'bytes',
+    },
+  });
+}
 async function ready() {
   const clients = await self.clients.matchAll({ includeUncontrolled: true });
   for (const client of clients) client.postMessage({ type: 'OFFLINE_READY' });
@@ -187,7 +204,11 @@ self.addEventListener('fetch', (event) => {
       const cached = await cache.match(req.mode === 'navigate' ? './index.html' : req, {
         ignoreSearch: true,
       });
-      if (cached) return clean(cached);
+      if (cached) {
+        const range = req.headers.get('range');
+        if (range && /\.mp4$/.test(url.pathname)) return rangeResponse(cached, range);
+        return clean(cached);
+      }
       return fetch(req);
     }),
   );

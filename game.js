@@ -80,6 +80,7 @@
     lastFit = '';
   let storyStep = 0,
     storyTimer = null,
+    storyVideo = null,
     storyReplay = false;
   let stickOrigin = null,
     touchAxis = 0,
@@ -147,8 +148,9 @@
     panel = '';
     $('overlay').hidden = true;
     clearInput();
-    if (game.active && !game.over) resume();
-    else showStart();
+    if (game.active && !game.over) {
+      if (!awaitStart) resume();
+    } else showStart();
     $('menuButton').focus({ preventScroll: true });
   }
   function showPanel(kind, title, html, { closable = true, start = false } = {}) {
@@ -156,6 +158,7 @@
     pause();
     panel = kind;
     const box = $('overlay');
+    box.classList.remove('story-mode');
     box.hidden = false;
     box.innerHTML =
       (title
@@ -163,6 +166,8 @@
         : '') + `<div class="panel-content ${start ? 'start-panel' : ''}">${html}</div>`;
   }
   function showStart() {
+    awaitStart = false;
+    $('startPrompt').hidden = true;
     const name = read('zs7-name', ''),
       saved = read('zs7-run', null),
       hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
@@ -493,6 +498,7 @@
   }
   function start(raw, skipIntro = false) {
     storyReplay = false;
+    audio.unlock();
     raw = String(raw ?? '').trim();
     const { bot: isBot, name } = parseName(raw);
     if (!scores.validName(name)) {
@@ -508,37 +514,96 @@
     }
     beginRun(name);
   }
-  const storySlides = [
-    {
-      art: 'story-mantis.webp',
-      title: 'THE DOCTOR WILL SEE YOU NOW',
-      copy: 'Dr Mantis is on the hunt for human prostates. His ambition? Become the KING OF PROCTOLOGY.',
-    },
-    {
-      art: 'story-army.webp',
-      title: 'YOUR MATES. HIS ARMY.',
-      copy: 'He has brainwashed JoeyRob’s former comrades and raised an army of zombies. Every familiar face is now a boss standing in your way.',
-    },
-    {
-      art: 'story-joey.webp',
-      title: 'ONE LAST LINE OF DEFENCE',
-      copy: 'JoeyRob has one job: free his mates, stop the harvest, and hold the line. Move left and right. Fire up the street. Make it count.',
-    },
-  ];
+  // The intro is three animated clips (burned-in captions) that fill the gameplay screen.
+  // FIRE skips exactly one clip per press, and each clip moves on by itself when it ends.
+  let storyActive = false,
+    storyPreload = null;
   function showStory(name, index = 0) {
     pendingName = name;
     storyStep = index;
-    const slide = storySlides[index];
-    showPanel(
-      'story',
-      `THE HUNT · ${index + 1} / 3`,
-      `<img class="story-art" src="./${slide.art}" alt="${esc(slide.title)}"><div class="story-copy"><h3>${slide.title}</h3><p>${slide.copy}</p></div><div class="story-dots" aria-label="Scene ${index + 1} of 3">${storySlides.map((_, i) => `<i class="${i === index ? 'current' : ''}"></i>`).join('')}</div><button class="primary-action" data-action="${index === 2 ? 'begin-run' : 'story-next'}">${index === 2 ? (storyReplay ? 'RESUME GAME' : 'HOLD THE LINE') : 'NEXT PANEL →'}</button><button class="secondary-action" data-action="begin-run">${storyReplay ? 'BACK TO GAME' : 'SKIP INTRO & PLAY'}</button>`,
-      { closable: false },
-    );
-    if (index < 2 && !matchMedia('(prefers-reduced-motion:reduce)').matches)
-      storyTimer = setTimeout(() => {
-        if (panel === 'story') showStory(pendingName, index + 1);
-      }, 7500);
+    storyActive = true;
+    if (panel !== 'story' || !$('storyVideo')) {
+      showPanel(
+        'story',
+        '',
+        '<div class="story-full"><video id="storyVideo" muted playsinline webkit-playsinline preload="auto" disablepictureinpicture aria-label="The story so far"></video></div>',
+        { closable: false },
+      );
+      $('overlay').classList.add('story-mode');
+      $('fireButton').classList.add('story-hint');
+      audio.resume();
+      audio.playMusic('story');
+    }
+    const v = $('storyVideo');
+    storyVideo = v;
+    v.onended = () => {
+      if (storyActive && panel === 'story') storyNext();
+    };
+    v.src = `./story-${index + 1}.mp4`;
+    v.currentTime = 0;
+    v.play().catch(() => {});
+    audio.sfx('whoosh', 0.7);
+    if (index < 2) {
+      storyPreload = document.createElement('video');
+      storyPreload.preload = 'auto';
+      storyPreload.muted = true;
+      storyPreload.src = `./story-${index + 2}.mp4`;
+    }
+  }
+  function storyNext() {
+    if (!storyActive) return;
+    haptics.impact('LIGHT', 'ui', 0, true);
+    if (storyStep < 2) showStory(pendingName, storyStep + 1);
+    else storyEnd();
+  }
+  function storyEnd() {
+    storyActive = false;
+    $('fireButton').classList.remove('story-hint');
+    const v = $('storyVideo');
+    if (v) {
+      v.onended = null;
+      v.pause();
+      v.removeAttribute('src');
+      v.load?.();
+    }
+    storyVideo = null;
+    storyPreload = null;
+    $('overlay').classList.remove('story-mode');
+    $('overlay').innerHTML = '';
+    if (storyReplay) {
+      storyReplay = false;
+      closePanel();
+    } else beginRun(pendingName || parseName(read('zs7-name', 'Player')).name || 'Player');
+  }
+  // After the intro (and before every run) the game waits: any button starts it, and that press does nothing else.
+  let awaitStart = false,
+    padHeld = false;
+  function armStart() {
+    awaitStart = true;
+    paused = true;
+    clearInput();
+    $('startPrompt').hidden = false;
+    audio.pause();
+  }
+  function startNow() {
+    if (!awaitStart) return false;
+    awaitStart = false;
+    $('startPrompt').hidden = true;
+    haptics.impact('MEDIUM', 'ui', 0, true);
+    resume();
+    return true;
+  }
+  function padWatch() {
+    try {
+      const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean),
+        any = !!pad && pad.buttons.some((b) => b.pressed);
+      if (any && !padHeld) {
+        if (storyActive) {
+          if (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed) storyNext();
+        } else if (awaitStart) startNow();
+      }
+      padHeld = any;
+    } catch {}
   }
 
   function beginRun(name) {
@@ -569,8 +634,8 @@
     panel = '';
     sceneKey = '';
     game.start();
-    resume();
     save();
+    armStart();
   }
   function applySkin(id) {
     const skin = SKINS.find((s) => s.id === id && !skinLocked(s)) || SKINS[0];
@@ -1072,6 +1137,7 @@
   }
   function frame(now) {
     fit();
+    if (storyActive || awaitStart) padWatch();
     const dt = Math.min(0.1, (now - lastTime) / 1000 || 0);
     lastTime = now;
     if (!paused && !landscape && !document.hidden && ready) {
@@ -1129,6 +1195,11 @@
     stick.setAttribute('aria-valuenow', Math.round(touchAxis * 100));
   }
   stick.addEventListener('pointerdown', (e) => {
+    if (awaitStart || storyActive) {
+      e.preventDefault();
+      startNow();
+      return;
+    }
     if (paused || !game.active || game.scene) return;
     e.preventDefault();
     stickId = e.pointerId;
@@ -1153,6 +1224,16 @@
       }
     });
   $('fireButton').addEventListener('pointerdown', (e) => {
+    if (storyActive) {
+      e.preventDefault();
+      storyNext();
+      return;
+    }
+    if (awaitStart) {
+      e.preventDefault();
+      startNow();
+      return;
+    }
     feedToken('F');
     if (!paused) haptics.impact('MEDIUM', 'press', 0, true);
     if (paused || !game.active || game.scene) return;
@@ -1173,6 +1254,12 @@
       }
     });
   $('grenadeButton').addEventListener('pointerdown', (e) => {
+    if (storyActive) return;
+    if (awaitStart) {
+      e.preventDefault();
+      startNow();
+      return;
+    }
     feedToken('G');
     if (paused) return;
     // A firm press when a grenade is thrown, a light tick when the pouch is empty.
@@ -1190,6 +1277,11 @@
     toast(ZSEngine.GUNS[weapon].name + ' equipped');
   }
   $('weaponRack').addEventListener('pointerdown', (e) => {
+    if (awaitStart) {
+      e.preventDefault();
+      startNow();
+      return;
+    }
     const b = e.target.closest('[data-weapon]');
     if (!b || b.disabled) return;
     e.preventDefault();
@@ -1205,6 +1297,11 @@
   const menuButton = $('menuButton');
   menuButton.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (awaitStart) {
+      startNow();
+      return;
+    }
+    if (storyActive) return;
     menuButton.classList.add('pressed');
     audio.unlock();
     haptics.impact('LIGHT', 'ui', 0, true);
@@ -1213,10 +1310,22 @@
   for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
     menuButton.addEventListener(type, () => menuButton.classList.remove('pressed'));
   menuButton.addEventListener('click', (e) => {
-    if (e.detail === 0) menu(); // keyboard / assistive technology
+    if (e.detail === 0 && !awaitStart && !storyActive) menu(); // keyboard / assistive technology
   });
   addEventListener('keydown', (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (storyActive) {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) storyNext();
+      }
+      return;
+    }
+    if (awaitStart) {
+      e.preventDefault();
+      if (!e.repeat) startNow();
+      return;
+    }
     if (
       ['ArrowLeft', 'ArrowRight', 'Space', 'KeyA', 'KeyD', 'KeyG', 'KeyP', 'Escape'].includes(
         e.code,
@@ -1389,17 +1498,8 @@
         start((run.bot ? 'BOT_' : '') + run.name, true);
         break;
       case 'story':
-        storyReplay = game.active;
-        showStory(read('zs7-name', 'Player'), 0);
-        break;
-      case 'story-next':
-        showStory(pendingName, Math.min(2, storyStep + 1));
-        break;
-      case 'begin-run':
-        if (storyReplay) {
-          storyReplay = false;
-          closePanel();
-        } else beginRun(pendingName || parseName(read('zs7-name', 'Player')).name || 'Player');
+        storyReplay = true;
+        showStory(parseName(read('zs7-name', 'Player')).name || 'Player', 0);
         break;
       case 'grenades':
         if (practice()) {
@@ -1449,7 +1549,7 @@
   });
   addEventListener('blur', () => {
     clearInput();
-    if (game.active && !panel) {
+    if (game.active && !panel && !awaitStart) {
       pause();
       menu();
     }
@@ -1457,7 +1557,11 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       pause();
-      if (game.active && !panel) menu();
+      storyVideo?.pause();
+      if (game.active && !panel && !awaitStart) menu();
+    } else if (storyActive) {
+      audio.resume();
+      storyVideo?.play().catch(() => {});
     }
   });
   addEventListener('pagehide', save);

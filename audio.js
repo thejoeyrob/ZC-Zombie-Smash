@@ -627,6 +627,55 @@
           if (bar === 3 && k === 8) swell(d, t, sd * 8, 0.12, 2500, 9000);
         },
       },
+      // Story intro: eerie and slow. A low drone, beating high notes, whispering air, distant bells and a faint heartbeat.
+      story: {
+        bpm: 60,
+        bars: 4,
+        level: 0.55,
+        step(d, t, s, k, bar, sd) {
+          if (k === 0 && bar % 2 === 0) {
+            drone(d, t, 38, sd * 32, 0.17, 300);
+            drone(d, t, 45, sd * 32, 0.08, 360);
+          }
+          if (k === 0) {
+            // Two notes a semitone apart make a slow, uneasy beating.
+            [74, 75].forEach((n, i) =>
+              S.tone(d, t, {
+                type: 'sine',
+                f: midi(n),
+                dur: sd * 16,
+                gain: 0.022,
+                attack: sd * 6,
+                hold: sd * 4,
+                detune: i * 5,
+                vib: { rate: 0.5, depth: 2 },
+              }),
+            );
+            pad(
+              d,
+              t,
+              [
+                [57, 62],
+                [58, 62],
+                [57, 60],
+                [55, 61],
+              ][bar].map((n) => n + 0),
+              sd * 16,
+              0.04,
+            );
+          }
+          if (k === 0 && bar % 2 === 1) swell(d, t, sd * 16, 0.045, 700, 2400);
+          if (k === 0 && bar % 2 === 0) heartbeat(d, t, 0.22);
+          const bells = [
+            [0, 74],
+            [8, 70],
+            [4, 69],
+            [12, 73],
+          ][bar];
+          if (k === bells[0]) bell(d, t, bells[1], 5, 0.05);
+          if (bar === 3 && k === 8) timp(d, t, 38, 0.25);
+        },
+      },
       // Boss fight: fast, heavy and driving, in the same key. Bars 5-8 add a heroic, desperate horn line.
       boss: {
         bpm: 160,
@@ -1079,7 +1128,9 @@
         this.startSequencer(track);
         return;
       }
-      const buffer = await this.buffer('music-' + track + '.mp3');
+      const buffer = await this.buffer(
+        'music-' + (track === 'story' ? 'entrance' : track) + '.mp3',
+      );
       if (!buffer || this.wantTrack !== track || this.paused) {
         if (this.track === track) this.track = null;
         return;
