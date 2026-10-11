@@ -1,0 +1,89 @@
+{
+  "canvas_art_px": [
+    900,
+    1600
+  ],
+  "layout_px": [
+    375,
+    667
+  ],
+  "scale_x": 2.4,
+  "scale_y": 2.39880059970015,
+  "screen_window_layout_px": [
+    31.71,
+    42.52,
+    343.29,
+    483.99
+  ],
+  "screen_window_art_px": [
+    76,
+    102,
+    824,
+    1161
+  ],
+  "controls": {
+    "joystick": {
+      "center_layout_px": [
+        82.7,
+        571.7
+      ],
+      "diameter_layout_px": 90.2,
+      "center_art_px": [
+        198,
+        1371
+      ],
+      "diameter_art_px": 217
+    },
+    "fire": {
+      "center_layout_px": [
+        293.2,
+        571.7
+      ],
+      "diameter_layout_px": 90.2,
+      "center_art_px": [
+        704,
+        1371
+      ],
+      "diameter_art_px": 217
+    },
+    "grenade": {
+      "center_layout_px": [
+        187.5,
+        543.0
+      ],
+      "diameter_layout_px": 44.2,
+      "center_art_px": [
+        450,
+        1303
+      ],
+      "diameter_art_px": 106
+    },
+    "menu_button": {
+      "center_layout_px": [
+        187.5,
+        606.4
+      ],
+      "size_layout_px": [
+        69.6,
+        30.1
+      ],
+      "center_art_px": [
+        450,
+        1455
+      ],
+      "size_art_px": [
+        167,
+        72
+      ]
+    }
+  },
+  "map_label_center_y_art_px": 1545,
+  "engraving_center_y_art_px": 1572,
+  "wordmark_zone_art_px": [
+    300,
+    10,
+    600,
+    92
+  ],
+  "outer_corner_radius_art_px": 36
+}
