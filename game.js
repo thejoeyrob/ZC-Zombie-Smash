@@ -1154,6 +1154,7 @@
     });
   $('fireButton').addEventListener('pointerdown', (e) => {
     feedToken('F');
+    if (!paused) haptics.impact('MEDIUM', 'press', 0, true);
     if (paused || !game.active || game.scene) return;
     e.preventDefault();
     fireId = e.pointerId;
@@ -1174,6 +1175,8 @@
   $('grenadeButton').addEventListener('pointerdown', (e) => {
     feedToken('G');
     if (paused) return;
+    // A firm press when a grenade is thrown, a light tick when the pouch is empty.
+    haptics.impact(game.player.grenades > 0 ? 'MEDIUM' : 'LIGHT', 'press', 0, true);
     e.preventDefault();
     audio.unlock();
     game.grenade();
@@ -1274,6 +1277,14 @@
         button.disabled = false;
       }
     }
+  });
+  // Every menu button, skin tile and switch gives a light tap.
+  $('overlay').addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('button:not(:disabled)');
+    if (b) haptics.impact('LIGHT', 'ui', 0, true);
+  });
+  $('overlay').addEventListener('change', (e) => {
+    if (e.target.type === 'checkbox') haptics.impact('LIGHT', 'ui', 0, true);
   });
   $('overlay').addEventListener('input', (e) => {
     const kind = e.target.dataset.volume;
