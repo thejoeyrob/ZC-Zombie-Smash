@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.15.2';
+const CACHE = 'zombie-smash-v7.15.3';
 const ASSETS = [
   './404.html',
   './apple-touch-icon.png',

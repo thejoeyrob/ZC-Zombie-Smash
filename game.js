@@ -714,11 +714,10 @@
   }
   function sound() {
     const set = audio.settings.set === 'original' ? 'original' : 'new';
-    const style = audio.settings.style === 'synth' ? 'synth' : 'real';
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">NEW</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><div class="setting"><span>MUSIC STYLE</span><span class="segmented"><button data-music-style="real" aria-pressed="${style === 'real'}" class="${style === 'real' ? 'on' : ''}">ORCHESTRAL</button><button data-music-style="synth" aria-pressed="${style === 'synth'}" class="${style === 'synth' ? 'on' : ''}">8-BIT</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">NEW</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
@@ -1520,19 +1519,6 @@
       toast('A secret finish. Find a way to unlock it.');
       return;
     }
-    if (button.dataset.musicStyle) {
-      audio.setMusicStyle(button.dataset.musicStyle);
-      document.querySelectorAll('[data-music-style]').forEach((b) => {
-        const on = b.dataset.musicStyle === button.dataset.musicStyle;
-        b.classList.toggle('on', on);
-        b.setAttribute('aria-pressed', on);
-      });
-      audio.resume();
-      setTimeout(() => {
-        if (paused) audio.pause();
-      }, 4000);
-      return;
-    }
     if (button.dataset.soundSet) {
       audio.setSoundSet(button.dataset.soundSet);
       document.querySelectorAll('[data-sound-set]').forEach((b) => {
@@ -1673,11 +1659,17 @@
       pause();
       storyVideo?.pause();
       if (game.active && !panel && !awaitStart) menu();
-    } else if (storyActive) {
-      audio.resume();
-      storyVideo?.play().catch(() => {});
+    } else {
+      audio.revive();
+      if (storyActive) {
+        audio.resume();
+        storyVideo?.play().catch(() => {});
+      }
     }
   });
+  for (const ev of ['pageshow', 'focus']) addEventListener(ev, () => audio.revive());
+  for (const ev of ['pointerdown', 'touchend'])
+    document.addEventListener(ev, () => audio.revive(), { capture: true, passive: true });
   addEventListener('pagehide', save);
   document.addEventListener('contextmenu', (e) => {
     if (!e.target.closest?.('input,textarea')) e.preventDefault();

@@ -1117,7 +1117,7 @@
       this.keyOffset = 0; // semitones from D, so stingers land in the key of the music they replace
       this.holdTrack = null; // a one-shot stinger (victory or defeat) that must finish before music resumes
       this.holdUntil = 0;
-      const defaults = { music: 0.45, effects: 0.75, set: 'new', style: 'real' };
+      const defaults = { music: 0.45, effects: 0.75, set: 'new' };
       try {
         this.settings = { ...defaults, ...(JSON.parse(localStorage.getItem('zs7-audio')) || {}) };
       } catch {
@@ -1127,8 +1127,12 @@
       // iPhone: Web Audio is silenced by the ring/silent switch unless the page asks for "playback" audio.
       this.playbackSession();
     }
+    // Both sound sets are synthesized now: ORIGINAL keeps the 7.15.1 chip-style music, NEW is orchestral.
     get synthMode() {
-      return this.settings.set !== 'original';
+      return true;
+    }
+    get style() {
+      return this.settings.set === 'original' ? 'synth' : 'real';
     }
     playbackSession() {
       try {
@@ -1166,11 +1170,11 @@
       } catch {}
     }
     get tracks() {
-      return this.settings.style === 'synth' ? this.tracksSynth : this.tracksReal;
+      return this.style === 'synth' ? this.tracksSynth : this.tracksReal;
     }
     // The layered orchestral voices are denser than the single chip waves, so they sit a little lower.
     get levelScale() {
-      return this.settings.style === 'synth' ? 1 : 0.6;
+      return this.style === 'synth' ? 1 : 0.6;
     }
     // A hall reverb that only the "real" music style feeds.
     buildReverb() {
@@ -1184,25 +1188,10 @@
       this.reverb = c.createConvolver();
       this.reverb.buffer = ir;
       this.wet = c.createGain();
-      this.wet.gain.value = this.settings.style === 'synth' ? 0 : 0.32;
+      this.wet.gain.value = this.style === 'synth' ? 0 : 0.32;
       this.musicBus.connect(this.reverb);
       this.reverb.connect(this.wet);
       this.wet.connect(this.master);
-    }
-    setMusicStyle(name) {
-      this.settings.style = name === 'synth' ? 'synth' : 'real';
-      this.save();
-      if (!this.ctx) return;
-      this.wet.gain.setTargetAtTime(
-        this.settings.style === 'synth' ? 0 : 0.32,
-        this.ctx.currentTime,
-        0.05,
-      );
-      if (this.track && !this.holdTrack) {
-        this.stopMusic(0.15);
-        this.track = null;
-      }
-      if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
     }
     async unlock() {
       try {
@@ -1466,12 +1455,41 @@
       this.settings.set = name === 'original' ? 'original' : 'new';
       this.save();
       if (!this.ctx) return;
-      if (this.ctx && this.track) {
+      this.wet.gain.setTargetAtTime(this.style === 'synth' ? 0 : 0.32, this.ctx.currentTime, 0.05);
+      if (this.track && !this.holdTrack) {
         this.stopMusic(0.15);
         this.track = null;
       }
-      if (!this.synthMode) for (const n of FILES) this.buffer('sfx-' + n + '.mp3');
       if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
+    }
+    // Wake the audio up after the app was in the background: iOS suspends or even closes the context.
+    async revive() {
+      if (!this.ctx) return;
+      this.playbackSession();
+      if (this.keepAlive?.paused) this.keepAlive.play().catch(() => {});
+      if (this.ctx.state === 'closed') {
+        this.ctx = null;
+        this.seq = this.music = null;
+        this.track = null;
+        await this.unlock();
+        return;
+      }
+      if (this.ctx.state !== 'running') {
+        try {
+          await this.ctx.resume();
+        } catch {}
+      }
+      if (
+        this.ctx.state === 'running' &&
+        this.wantTrack &&
+        !this.paused &&
+        !this.seq &&
+        !this.music &&
+        !this.holdTrack
+      ) {
+        this.track = null;
+        this.playMusic(this.wantTrack);
+      }
     }
     pause() {
       this.paused = true;
@@ -1495,6 +1513,7 @@
         this.master.gain.setTargetAtTime(1, this.ctx.currentTime, 0.025);
         if (this.seq) this.runSequencer();
       }
+      this.revive();
       this.unlock();
     }
   }
