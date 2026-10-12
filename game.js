@@ -208,7 +208,7 @@
     showPanel(
       'start',
       '',
-      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><i class="title-glow" aria-hidden="true"></i><i class="title-fire" aria-hidden="true"></i><canvas id="titleFx" aria-hidden="true"></canvas><i class="title-shine" aria-hidden="true"></i><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo-hidden">Zombie Smash</h1></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><i class="title-glow" aria-hidden="true"></i><i class="title-fire" aria-hidden="true"></i><canvas id="titleFx" aria-hidden="true"></canvas><i class="title-shine" aria-hidden="true"></i><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
     titleEmbers();
@@ -570,7 +570,25 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button><button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${SHOW_COFFEE ? '<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>' : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+    );
+  }
+  // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
+  const SHOW_COFFEE = true,
+    COFFEE_URL = 'https://buymeacoffee.com/JoeyRob';
+  let coffeeNext = null;
+  function showCoffee(next, fromMenu = false) {
+    coffeeNext = next;
+    const beans = Array.from(
+      { length: 14 },
+      (_, i) =>
+        `<i class="bean" style="--x:${Math.round(Math.random() * 100)}%;--d:${(Math.random() * 6).toFixed(2)}s;--t:${(5 + Math.random() * 5).toFixed(2)}s;--s:${(0.7 + Math.random() * 0.7).toFixed(2)}"></i>`,
+    ).join('');
+    showPanel(
+      'coffee',
+      '',
+      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p><a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a><button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
+      { start: true, closable: false },
     );
   }
   function start(raw, skipIntro = false) {
@@ -586,7 +604,8 @@
     pendingName = name;
     pendingBot = isBot;
     if (!skipIntro) {
-      showStory(name, 0);
+      if (SHOW_COFFEE) showCoffee(() => showStory(name, 0));
+      else showStory(name, 0);
       return;
     }
     beginRun(name);
@@ -1656,6 +1675,15 @@
       case 'skins':
         skins();
         break;
+      case 'coffee':
+        showCoffee(menu, true);
+        break;
+      case 'coffee-skip': {
+        const go = coffeeNext;
+        coffeeNext = null;
+        go?.();
+        break;
+      }
       case 'board':
         board();
         break;

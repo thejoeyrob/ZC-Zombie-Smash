@@ -2372,3 +2372,359 @@ body {
 .title-bosses .tb.down img {
   filter: none;
 }
+
+/* 7.18: clear animated logo, art underneath, and the coffee screen. */
+.title-art {
+  inset: auto;
+  top: calc(var(--ww, 312px) * 0.3);
+  left: 0;
+  right: 0;
+  height: auto;
+  aspect-ratio: 768 / 842;
+  background: url('./title-bg.webp') center top / 100% 100% no-repeat;
+  -webkit-mask: linear-gradient(#0000, #000 22%, #000 78%, #0000);
+  mask: linear-gradient(#0000, #000 22%, #000 78%, #0000);
+}
+.title-screen {
+  background:
+    radial-gradient(ellipse at 50% 0%, #ff6a1f55, #0000 55%), linear-gradient(#1b0b06, #0a0504 65%);
+}
+.title-fire {
+  inset: 0 0 60% 0;
+}
+.title-glow {
+  top: 32%;
+}
+.title-shine {
+  display: none;
+}
+.title-logo {
+  margin: 4px 0 0;
+  position: relative;
+  filter: drop-shadow(0 4px 0 #000) drop-shadow(0 0 14px #000);
+}
+.title-logo span {
+  animation: none !important;
+  display: block;
+  white-space: nowrap;
+}
+.title-logo .tl-1 {
+  font-size: calc(var(--ww, 312px) * 0.2);
+}
+.title-logo .tl-2 {
+  font-size: calc(var(--ww, 312px) * 0.255);
+  margin-top: calc(var(--ww, 312px) * -0.02);
+}
+.title-logo .l {
+  display: inline-block;
+  font-style: normal;
+  animation:
+    letterDrop 0.75s cubic-bezier(0.2, 1.6, 0.4, 1) both,
+    letterBob 2.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 80ms), calc(1.2s + var(--i) * 140ms);
+  -webkit-text-stroke: 2px #000;
+  paint-order: stroke fill;
+}
+@keyframes letterDrop {
+  0% {
+    transform: translateY(-260%) rotate(-14deg) scale(1.5);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes letterBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.title-logo:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, #fff0 35%, #ffffffb3 50%, #fff0 65%) -150% 0 / 60% 100%
+    no-repeat;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: logoShine 4.5s ease-in-out 2s infinite;
+}
+@keyframes logoShine {
+  0% {
+    background-position: -150% 0;
+  }
+  45%,
+  100% {
+    background-position: 250% 0;
+  }
+}
+.title-tag {
+  font-size: calc(var(--ww, 312px) * 0.045);
+  margin-top: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-logo .l,
+  .title-logo:after {
+    animation: none !important;
+  }
+}
+.coffee-screen {
+  position: relative;
+  margin: -18px -20px;
+  width: calc(100% + 40px);
+  height: var(--wh, 445px);
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 38%, #8a4b1f 0%, #3a1c0b 45%, #120804 100%);
+  text-align: center;
+}
+.coffee-beans {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bean {
+  position: absolute;
+  top: -8%;
+  left: var(--x);
+  width: 11px;
+  height: 17px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 35% 30%, #a0642c, #4a250c 70%);
+  box-shadow: inset -2px 0 #2a1306;
+  transform: scale(var(--s));
+  animation: beanFall var(--t) linear var(--d) infinite;
+}
+.bean:after {
+  content: '';
+  position: absolute;
+  left: 49%;
+  top: 8%;
+  bottom: 8%;
+  width: 2px;
+  background: #1c0d04;
+  border-radius: 2px;
+}
+@keyframes beanFall {
+  from {
+    transform: translateY(0) rotate(0) scale(var(--s));
+  }
+  to {
+    transform: translateY(520px) rotate(540deg) scale(var(--s));
+  }
+}
+.coffee-ui {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+}
+.coffee-kicker {
+  font: 800 10px Inter;
+  letter-spacing: 0.24em;
+  color: #ffd98a;
+  text-shadow: 0 1px 2px #000;
+}
+.coffee-title {
+  margin: 0;
+  line-height: 0.9;
+  font:
+    900 calc(var(--ww, 312px) * 0.2) Barlow,
+    sans-serif;
+  text-transform: uppercase;
+  color: #ffe9a8;
+  text-shadow:
+    0 2px #b9701b,
+    0 4px #7a430f,
+    0 6px #2a1306,
+    0 0 20px #ffb347aa;
+  -webkit-text-stroke: 2px #2a1306;
+  paint-order: stroke fill;
+  transform: skew(-5deg);
+  animation: coffeePop 0.8s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.coffee-title span {
+  display: block;
+}
+.coffee-title span:last-child {
+  font-size: 0.8em;
+  color: #8cff55;
+  text-shadow:
+    0 2px #2a8a10,
+    0 4px #1c6a0a,
+    0 6px #061a02,
+    0 0 18px #3dff1a99;
+}
+@keyframes coffeePop {
+  from {
+    transform: translateY(-120%) skew(-5deg) scale(1.3);
+    opacity: 0;
+  }
+  to {
+    transform: skew(-5deg);
+    opacity: 1;
+  }
+}
+.coffee-art {
+  position: relative;
+  width: 100%;
+  height: calc(var(--ww, 312px) * 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+.coffee-sloth {
+  position: absolute;
+  left: 4%;
+  bottom: 0;
+  height: 100%;
+  animation: slothSway 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 6px #000);
+}
+.coffee-cup {
+  position: absolute;
+  right: 10%;
+  bottom: -2px;
+  height: 92%;
+  filter: drop-shadow(0 6px 6px #000);
+  animation: cupBob 2.8s ease-in-out infinite;
+}
+.coffee-cup .steam path {
+  animation: steamRise 2.4s ease-in-out infinite;
+}
+@keyframes steamRise {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-5px);
+    opacity: 0.35;
+  }
+}
+@keyframes slothSway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg) translateY(-3px);
+  }
+}
+@keyframes cupBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.coffee-copy {
+  margin: 0;
+  font: 600 12px/1.45 Inter;
+  color: #f1e3c8;
+  text-shadow: 0 1px 2px #000;
+  max-width: 270px;
+}
+.coffee-copy b {
+  color: #8cff55;
+}
+.bmc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 10px;
+  border-radius: 12px;
+  background: #ffdd00;
+  color: #1a1100;
+  font:
+    900 16px Barlow,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  border: 3px solid #1a1100;
+  box-shadow:
+    0 4px 0 #b89800,
+    0 0 18px #ffdd0088;
+  animation: bmcPulse 1.8s ease-in-out infinite;
+}
+.bmc-cup {
+  font-size: 20px;
+}
+.bmc:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #b89800;
+}
+@keyframes bmcPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 0 #b89800,
+      0 0 10px #ffdd0066;
+  }
+  50% {
+    box-shadow:
+      0 4px 0 #b89800,
+      0 0 26px #ffdd00cc;
+  }
+}
+.coffee-skip {
+  background: none;
+  border: 0;
+  color: #cdb994;
+  font: 800 11px Inter;
+  letter-spacing: 0.12em;
+  padding: 8px 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bean,
+  .coffee-title,
+  .coffee-sloth,
+  .coffee-cup,
+  .coffee-cup .steam path,
+  .bmc {
+    animation: none !important;
+  }
+}
+
+.title-art {
+  top: calc(var(--ww, 312px) * -0.02);
+  -webkit-mask: linear-gradient(#000 70%, #0000);
+  mask: linear-gradient(#000 70%, #0000);
+}
+.title-screen:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 46%;
+  background: linear-gradient(#0a0302d9, #0a030299 62%, #0000);
+  z-index: 1;
+  pointer-events: none;
+}
+.title-logo .tl-1 {
+  font-size: calc(var(--ww, 312px) * 0.165);
+}
+.title-logo .tl-2 {
+  font-size: calc(var(--ww, 312px) * 0.215);
+}
+.title-top {
+  position: relative;
+  z-index: 2;
+}
