@@ -3,8 +3,8 @@
 
 The artist paints white placeholder shapes where the game draws the screen and the controls.
 This script (1) resizes the picture to 900 x 1600, (2) moves the window and control row to the game's positions without scaling the art (blank window rows are
-added or removed and a quiet strip of the deck is cut), (3) nudges the area around each control so its socket sits exactly under the
-game's joystick, FIRE, grenade and MENU button, and (4) paints the placeholders dark so no white shows.
+added or removed and a quiet strip of the deck is cut), (3) lifts any socket that sits far from the game's control out as a rigid patch and sets it under that
+control (nothing is warped), and (4) paints the placeholders dark so no white shows.
 
   python3 scripts/fit-skin.py input.png console-<id>.webp
 """
@@ -84,26 +84,31 @@ def fit_vertical(img, win, row_y):
 
 
 def nudge_control(img, ctrl, found):
-    """Moves and resizes the area around a placeholder so it matches the game's control."""
+    """Moves a socket that sits more than a few pixels away from the game's control. The socket and its ring
+    are lifted out as one rigid patch (nothing is stretched), the gap it leaves is filled from the
+    surroundings and the patch is set down under the game's control."""
     _, cx, cy, tw, th, shape = ctrl
     (x, y, w, h), (ax, ay) = found
-    kx, ky = w / tw, h / th
-    pad = int(1.9 * max(tw, th) / 2) + 6
-    x0, x1 = max(0, cx - pad), min(W, cx + pad)
-    y0, y1 = max(0, cy - pad), min(H, cy + pad)
-    gx, gy = np.meshgrid(np.arange(x0, x1, dtype=np.float32), np.arange(y0, y1, dtype=np.float32))
-    dx, dy = gx - cx, gy - cy
-    if shape == 'circle':
-        rn = np.hypot(dx / (tw / 2), dy / (th / 2))
-    else:
-        rn = np.maximum(np.abs(dx) / (tw / 2), np.abs(dy) / (th / 2))
-    t = np.clip((rn - 1.15) / (1.9 - 1.15), 0, 1)
-    t = t * t * (3 - 2 * t)
-    qx = (1 - t) * (ax + dx * kx) + t * gx
-    qy = (1 - t) * (ay + dy * ky) + t * gy
-    patch = cv2.remap(img, qx.astype(np.float32), qy.astype(np.float32), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    img[y0:y1, x0:x1] = patch
-    return img
+    ax, ay = int(round(ax)), int(round(ay))
+    if np.hypot(ax - cx, ay - cy) <= 10:
+        return img
+    R = int(max(tw, th) / 2 * 1.2) + 6
+    yy, xx = np.mgrid[0:H, 0:W]
+    src = (np.hypot(xx - ax, yy - ay) <= R).astype(np.uint8)
+    # Copy the patch (with a soft edge) before the gap is filled.
+    patch = img[ay - R : ay + R + 1, ax - R : ax + R + 1].copy() if ay - R >= 0 and ay + R < H and ax - R >= 0 and ax + R < W else None
+    if patch is None:
+        return img
+    soft = cv2.GaussianBlur(src[ay - R : ay + R + 1, ax - R : ax + R + 1].astype(np.float32), (0, 0), 5)
+    soft = np.clip(soft * 1.6 - 0.3, 0, 1)[..., None]
+    filled = cv2.inpaint(img, cv2.dilate(src, np.ones((5, 5), np.uint8)), 7, cv2.INPAINT_TELEA)
+    y0, x0 = cy - R, cx - R
+    y1, x1 = y0 + 2 * R + 1, x0 + 2 * R + 1
+    if y0 < 0 or x0 < 0 or y1 > H or x1 > W:
+        return img
+    region = filled[y0:y1, x0:x1].astype(np.float32)
+    filled[y0:y1, x0:x1] = (region * (1 - soft) + patch.astype(np.float32) * soft).astype(np.uint8)
+    return filled
 
 
 def paint_dark(img, mask, kind):
