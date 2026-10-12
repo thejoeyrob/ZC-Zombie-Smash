@@ -376,6 +376,53 @@
     }
   }
 
+  // Orchestral percussion for the "real" music style: bass drum, orchestral snare, shaker, cymbal, timpani toms.
+  class RealDrums extends Drums {
+    kick(d, t, g = 0.85) {
+      this.s.tone(d, t, { type: 'sine', f: 120, f2: 48, dur: 0.38, gain: g, attack: 0.003 });
+      this.s.tone(d, t, { type: 'sine', f: 300, f2: 90, dur: 0.07, gain: g * 0.4, attack: 0.001 });
+      this.s.noise(d, t, { dur: 0.05, gain: 0.16, filter: { type: 'lowpass', f: 1400 } });
+    }
+    snare(d, t, g = 0.5) {
+      this.s.noise(d, t, {
+        dur: 0.22,
+        gain: g * 0.8,
+        filter: { type: 'bandpass', f: 1700, q: 0.5 },
+      });
+      this.s.noise(d, t, { dur: 0.08, gain: g * 0.4, filter: { type: 'highpass', f: 4000 } });
+      this.s.tone(d, t, { type: 'sine', f: 190, f2: 140, dur: 0.12, gain: g * 0.6 });
+    }
+    clap(d, t, g = 0.4) {
+      this.tom(d, t, 95, g * 1.4);
+    }
+    hat(d, t, g = 0.16, open = false) {
+      this.s.noise(d, t, {
+        dur: open ? 0.3 : 0.07,
+        gain: g * 0.55,
+        attack: 0.012,
+        filter: { type: 'bandpass', f: 6200, q: 0.9 },
+      });
+    }
+    crash(d, t, g = 0.3) {
+      this.s.noise(d, t, {
+        dur: 2.6,
+        gain: g * 0.9,
+        attack: 0.05,
+        filter: { type: 'highpass', f: 3200 },
+      });
+      this.s.noise(d, t, {
+        dur: 1.6,
+        gain: g * 0.4,
+        attack: 0.03,
+        filter: { type: 'bandpass', f: 5600, q: 0.6 },
+      });
+    }
+    tom(d, t, f = 120, g = 0.6) {
+      this.s.tone(d, t, { type: 'sine', f: f * 1.3, f2: f * 0.75, dur: 0.5, gain: g });
+      this.s.noise(d, t, { dur: 0.05, gain: g * 0.2, filter: { type: 'lowpass', f: 1000 } });
+    }
+  }
+
   // Chords are given as MIDI triads. Roots are the bass notes for each bar.
   const CH = {
     Am: [57, 60, 64],
@@ -394,10 +441,10 @@
     E7: [52, 56, 59, 62],
   };
 
-  function makeTracks(synth) {
-    const dr = new Drums(synth),
+  function makeTracks(synth, real = false) {
+    const dr = real ? new RealDrums(synth) : new Drums(synth),
       S = synth;
-    const bass = (d, t, n, len, o = {}) =>
+    let bass = (d, t, n, len, o = {}) =>
       S.tone(d, t, {
         type: o.type || 'sawtooth',
         f: midi(n),
@@ -406,7 +453,7 @@
         attack: o.attack ?? 0.004,
         filter: { type: 'lowpass', f: o.cut || 700, f2: (o.cut || 700) * 0.45, q: 2 },
       });
-    const pluck = (d, t, n, len, g = 0.1, type = 'square') =>
+    let pluck = (d, t, n, len, g = 0.1, type = 'square') =>
       S.tone(d, t, {
         type,
         f: midi(n),
@@ -416,7 +463,7 @@
         filter: { type: 'lowpass', f: 3800, f2: 1200 },
         detune: rnd(-4, 4),
       });
-    const lead = (d, t, n, len, g = 0.14, type = 'square') =>
+    let lead = (d, t, n, len, g = 0.14, type = 'square') =>
       S.tone(d, t, {
         type,
         f: midi(n),
@@ -427,7 +474,7 @@
         filter: { type: 'lowpass', f: 4200 },
         vib: { rate: 5.5, depth: 5 },
       });
-    const pad = (d, t, chord, len, g = 0.05) =>
+    let pad = (d, t, chord, len, g = 0.05) =>
       chord.forEach((n, i) =>
         S.tone(d, t, {
           type: 'triangle',
@@ -440,7 +487,7 @@
           filter: { type: 'lowpass', f: 1800 },
         }),
       );
-    const stab = (d, t, chord, len, g = 0.1, cut = 2400) =>
+    let stab = (d, t, chord, len, g = 0.1, cut = 2400) =>
       chord.forEach((n) =>
         S.tone(d, t, {
           type: 'sawtooth',
@@ -453,7 +500,7 @@
         }),
       );
     // Dark, slow voices for the horror score.
-    const drone = (d, t, n, len, g = 0.1, cut = 380) =>
+    let drone = (d, t, n, len, g = 0.1, cut = 380) =>
       [-9, 7].forEach((det) =>
         S.tone(d, t, {
           type: 'sawtooth',
@@ -467,13 +514,13 @@
           vib: { rate: 0.4, depth: 1.2 },
         }),
       );
-    const heartbeat = (d, t, g = 0.45) => {
+    let heartbeat = (d, t, g = 0.45) => {
       S.tone(d, t, { type: 'sine', f: 100, f2: 46, dur: 0.24, gain: g, attack: 0.004 });
       S.tone(d, t + 0.19, { type: 'sine', f: 84, f2: 42, dur: 0.22, gain: g * 0.7, attack: 0.004 });
       // A little click so phone speakers can reproduce it.
       S.noise(d, t, { dur: 0.03, gain: g * 0.25, filter: { type: 'lowpass', f: 900 } });
     };
-    const bell = (d, t, n, len = 3.2, g = 0.07) =>
+    let bell = (d, t, n, len = 3.2, g = 0.07) =>
       [
         [1, 1],
         [2.76, 0.45],
@@ -488,7 +535,7 @@
           attack: 0.002,
         }),
       );
-    const timp = (d, t, n = 38, g = 0.7) => {
+    let timp = (d, t, n = 38, g = 0.7) => {
       S.tone(d, t, {
         type: 'sine',
         f: midi(n) * 1.7,
@@ -500,7 +547,7 @@
       S.tone(d, t, { type: 'triangle', f: midi(n + 12), f2: midi(n), dur: 0.12, gain: g * 0.4 });
       S.noise(d, t, { dur: 0.14, gain: g * 0.35, filter: { type: 'lowpass', f: 800 } });
     };
-    const brass = (d, t, n, len, g = 0.1, o = {}) =>
+    let brass = (d, t, n, len, g = 0.1, o = {}) =>
       S.tone(d, t, {
         type: 'sawtooth',
         f: midi(n),
@@ -511,13 +558,118 @@
         detune: rnd(-8, 8),
         filter: { type: 'lowpass', f: o.from || 500, f2: o.to || 1700, q: 1.2 },
       });
-    const swell = (d, t, len, g = 0.05, from = 300, to = 1500) =>
+    let swell = (d, t, len, g = 0.05, from = 300, to = 1500) =>
       S.noise(d, t, {
         dur: len,
         gain: g,
         attack: len * 0.85,
         filter: { type: 'bandpass', f: from, f2: to, q: 0.8 },
       });
+
+    // "Real" style: strings, cello, harp and brass built from layered detuned voices instead of single chip-like waves.
+    if (real) {
+      const strings = (d, t, n, len, g, cut, att, o = {}) =>
+        [-9, 0, 9].forEach((det) =>
+          S.tone(d, t, {
+            type: 'sawtooth',
+            f: midi(n),
+            dur: len,
+            gain: g / 2.4,
+            attack: att,
+            hold: len * (o.hold ?? 0.45),
+            detune: det + rnd(-2, 2),
+            filter: { type: 'lowpass', f: cut, f2: cut * (o.fall ?? 0.7), q: 0.5 },
+            vib: { rate: rnd(4.6, 5.4), depth: o.vib ?? 4 },
+          }),
+        );
+      bass = (d, t, n, len, o = {}) => {
+        S.tone(d, t, {
+          type: 'sawtooth',
+          f: midi(n),
+          dur: len * 1.05,
+          gain: (o.gain ?? 0.34) * 0.85,
+          attack: Math.max(0.03, o.attack ?? 0.03),
+          filter: { type: 'lowpass', f: (o.cut || 700) * 0.7, f2: (o.cut || 700) * 0.3, q: 0.8 },
+          vib: { rate: 4.8, depth: 2 },
+        });
+        S.tone(d, t, {
+          type: 'sine',
+          f: midi(n),
+          dur: len,
+          gain: (o.gain ?? 0.34) * 0.6,
+          attack: 0.02,
+        });
+      };
+      pluck = (d, t, n, len, g = 0.1) =>
+        [
+          [1, 1],
+          [2, 0.42],
+          [3, 0.2],
+          [4.01, 0.1],
+        ].forEach(([r, a]) =>
+          S.tone(d, t, {
+            type: 'sine',
+            f: midi(n) * r,
+            dur: Math.max(0.5, len * 2.2) / r ** 0.5,
+            gain: g * 1.3 * a,
+            attack: 0.003,
+          }),
+        );
+      lead = (d, t, n, len, g = 0.14) =>
+        strings(d, t, n, len * 1.1, g * 1.5, 3000, 0.07, { hold: 0.7, vib: 7 });
+      pad = (d, t, chord, len, g = 0.05) =>
+        chord.forEach((n) =>
+          strings(d, t, n, len, g * 2.2, 1500, Math.min(0.9, len * 0.35), { hold: 0.5, vib: 3 }),
+        );
+      stab = (d, t, chord, len, g = 0.1, cut = 2400) =>
+        chord.forEach((n) =>
+          strings(d, t, n + 12, Math.max(0.2, len), g * 1.2, cut * 0.75, 0.025, {
+            hold: 0.1,
+            fall: 0.35,
+            vib: 2,
+          }),
+        );
+      drone = (d, t, n, len, g = 0.1, cut = 380) => {
+        strings(d, t, n, len, g * 1.4, cut * 1.5, Math.min(1.4, len * 0.4), {
+          hold: 0.5,
+          fall: 0.6,
+          vib: 2,
+        });
+        S.tone(d, t, {
+          type: 'sine',
+          f: midi(n),
+          dur: len,
+          gain: g * 0.9,
+          attack: Math.min(1.2, len * 0.3),
+          hold: len * 0.5,
+        });
+      };
+      brass = (d, t, n, len, g = 0.1, o = {}) =>
+        [-7, 7].forEach((det) =>
+          S.tone(d, t, {
+            type: 'sawtooth',
+            f: midi(n),
+            dur: len,
+            gain: g * 0.65,
+            attack: Math.max(0.07, o.attack ?? Math.min(0.2, len * 0.3)),
+            hold: len * 0.45,
+            detune: det,
+            filter: { type: 'lowpass', f: o.from || 500, f2: o.to || 1700, q: 0.9 },
+          }),
+        );
+      timp = (d, t, n = 38, g = 0.7) => {
+        S.tone(d, t, {
+          type: 'sine',
+          f: midi(n) * 1.5,
+          f2: midi(n),
+          dur: 0.9,
+          gain: g,
+          attack: 0.003,
+        });
+        S.tone(d, t, { type: 'sine', f: midi(n) * 2, f2: midi(n) * 1.5, dur: 0.35, gain: g * 0.3 });
+        S.noise(d, t, { dur: 0.1, gain: g * 0.3, filter: { type: 'lowpass', f: 700 } });
+      };
+    }
 
     // Keys: everything is built on D minor so the transitions between tracks stay in key.
     const DM = [50, 53, 57],
@@ -965,7 +1117,7 @@
       this.keyOffset = 0; // semitones from D, so stingers land in the key of the music they replace
       this.holdTrack = null; // a one-shot stinger (victory or defeat) that must finish before music resumes
       this.holdUntil = 0;
-      const defaults = { music: 0.45, effects: 0.75, set: 'new' };
+      const defaults = { music: 0.45, effects: 0.75, set: 'new', style: 'real' };
       try {
         this.settings = { ...defaults, ...(JSON.parse(localStorage.getItem('zs7-audio')) || {}) };
       } catch {
@@ -1013,6 +1165,45 @@
         });
       } catch {}
     }
+    get tracks() {
+      return this.settings.style === 'synth' ? this.tracksSynth : this.tracksReal;
+    }
+    // The layered orchestral voices are denser than the single chip waves, so they sit a little lower.
+    get levelScale() {
+      return this.settings.style === 'synth' ? 1 : 0.6;
+    }
+    // A hall reverb that only the "real" music style feeds.
+    buildReverb() {
+      const c = this.ctx,
+        len = Math.floor(c.sampleRate * 2.6),
+        ir = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+      }
+      this.reverb = c.createConvolver();
+      this.reverb.buffer = ir;
+      this.wet = c.createGain();
+      this.wet.gain.value = this.settings.style === 'synth' ? 0 : 0.32;
+      this.musicBus.connect(this.reverb);
+      this.reverb.connect(this.wet);
+      this.wet.connect(this.master);
+    }
+    setMusicStyle(name) {
+      this.settings.style = name === 'synth' ? 'synth' : 'real';
+      this.save();
+      if (!this.ctx) return;
+      this.wet.gain.setTargetAtTime(
+        this.settings.style === 'synth' ? 0 : 0.32,
+        this.ctx.currentTime,
+        0.05,
+      );
+      if (this.track && !this.holdTrack) {
+        this.stopMusic(0.15);
+        this.track = null;
+      }
+      if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
+    }
     async unlock() {
       try {
         this.playbackSession();
@@ -1036,7 +1227,9 @@
           this.musicBus.connect(this.master);
           this.master.gain.value = this.paused ? 0 : 1;
           this.synth = new Synth(this.ctx);
-          this.tracks = makeTracks(this.synth);
+          this.tracksSynth = makeTracks(this.synth);
+          this.tracksReal = makeTracks(this.synth, true);
+          this.buildReverb();
           if (!this.synthMode) for (const name of FILES) this.buffer('sfx-' + name + '.mp3');
         }
         if (this.ctx.state !== 'running') await this.ctx.resume();
@@ -1091,7 +1284,7 @@
       const gain = this.ctx.createGain(),
         now = this.ctx.currentTime;
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(def.level ?? 0.6, now + 0.25);
+      gain.gain.linearRampToValueAtTime((def.level ?? 0.6) * this.levelScale, now + 0.25);
       gain.connect(this.musicBus);
       const seq = { def, gain, step: 0, next: now + 0.06, sd: 60 / def.bpm / 4, timer: null };
       this.seq = seq;
@@ -1171,7 +1364,7 @@
         off = this.keyOffset || 0,
         t0 = ctx.currentTime + (name === 'defeat' ? 0.28 : 0.1),
         gain = ctx.createGain();
-      gain.gain.value = def.level ?? 0.6;
+      gain.gain.value = (def.level ?? 0.6) * this.levelScale;
       gain.connect(this.musicBus);
       for (let s = 0; s < total; s++) {
         try {

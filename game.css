@@ -2124,3 +2124,8 @@ body {
 #cinematic.clip-mode .scene-next {
   z-index: 4;
 }
+
+/* 7.15.2: a boss clip may spill over the score and weapon bars. */
+.screen.clip-full .playfield {
+  overflow: visible;
+}
