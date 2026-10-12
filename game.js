@@ -204,14 +204,58 @@
     const name = read('zs7-name', ''),
       saved = read('zs7-run', null),
       hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
-      bossNames = BOSSES.map((b) => b.name).join('  ·  ');
+      beaten = beatenBosses();
     showPanel(
       'start',
       '',
-      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo-hidden">Zombie Smash</h1></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-ticker" aria-hidden="true"><span>${`7 BOSSES  ·  ${esc(bossNames)}  ·  NO BACKING DOWN  ·  `.repeat(2)}</span></div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><i class="title-glow" aria-hidden="true"></i><i class="title-fire" aria-hidden="true"></i><canvas id="titleFx" aria-hidden="true"></canvas><i class="title-shine" aria-hidden="true"></i><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo-hidden">Zombie Smash</h1></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
-    titleScene();
+    titleEmbers();
+  }
+  // Embers drifting up the title art. Runs only while the title screen is on show.
+  function titleEmbers() {
+    const cv = $('titleFx');
+    if (!cv || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    const rect = cv.getBoundingClientRect(),
+      dpr = Math.min(2, devicePixelRatio || 1),
+      w = (cv.width = Math.max(1, Math.round(rect.width * dpr))),
+      h = (cv.height = Math.max(1, Math.round(rect.height * dpr))),
+      c = cv.getContext('2d'),
+      mk = (fresh) => ({
+        x: Math.random() * w,
+        y: fresh ? h + Math.random() * 40 : Math.random() * h,
+        r: (0.8 + Math.random() * 1.8) * dpr,
+        v: (14 + Math.random() * 38) * dpr,
+        a: Math.random() * 6.28,
+        s: 0.6 + Math.random() * 1.6,
+        hue: 18 + Math.random() * 28,
+      }),
+      sparks = Array.from({ length: 46 }, () => mk(false));
+    let last = performance.now();
+    const loop = (now) => {
+      if (!cv.isConnected) return;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      c.clearRect(0, 0, w, h);
+      c.globalCompositeOperation = 'lighter';
+      for (const p of sparks) {
+        p.y -= p.v * dt;
+        p.a += p.s * dt;
+        p.x += Math.sin(p.a) * 12 * dpr * dt;
+        if (p.y < -10) Object.assign(p, mk(true));
+        const fade = Math.min(1, p.y / (h * 0.5)),
+          g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+        g.addColorStop(0, `hsla(${p.hue},100%,70%,${0.85 * fade})`);
+        g.addColorStop(1, `hsla(${p.hue},100%,50%,0)`);
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(p.x, p.y, p.r * 4, 0, 6.28);
+        c.fill();
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
   }
   // Retro attract mode: a low-resolution canvas scaled up with hard pixels. Joey shoots zombies down a street under a red moon.
   let titleBounds = null;

@@ -2201,3 +2201,174 @@ body {
 .title-hi {
   color: #ffd9a0;
 }
+
+/* 7.17.2: livelier title screen: opening thud, fire flicker, slime pulse, embers, shine, boss roll call. */
+.title-art {
+  animation:
+    titleIn 1.4s cubic-bezier(0.15, 0.8, 0.2, 1) both,
+    titleDrift 18s ease-in-out 1.4s infinite alternate;
+}
+@keyframes titleIn {
+  from {
+    transform: scale(1.22);
+    filter: brightness(2.2) saturate(0.4);
+  }
+  to {
+    transform: scale(1);
+    filter: none;
+  }
+}
+.title-fire,
+.title-glow,
+.title-shine {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+.title-fire {
+  inset: 0 0 45% 0;
+  background: radial-gradient(ellipse at 50% 20%, #ff8a2a99, #ff4a0000 70%);
+  mix-blend-mode: screen;
+  animation: fireFlicker 2.3s steps(1) infinite;
+}
+@keyframes fireFlicker {
+  0% {
+    opacity: 0.5;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  25% {
+    opacity: 0.6;
+  }
+  41% {
+    opacity: 1;
+  }
+  58% {
+    opacity: 0.55;
+  }
+  76% {
+    opacity: 0.85;
+  }
+  90% {
+    opacity: 0.6;
+  }
+}
+.title-glow {
+  left: 22%;
+  right: 22%;
+  top: 14%;
+  height: 40%;
+  background: radial-gradient(ellipse at 50% 50%, #7dff2a88, #7dff2a00 68%);
+  mix-blend-mode: screen;
+  animation: slimePulse 2.8s ease-in-out infinite;
+}
+@keyframes slimePulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+#titleFx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.title-shine {
+  left: 8%;
+  right: 8%;
+  top: 46%;
+  height: 12%;
+  overflow: hidden;
+  -webkit-mask: linear-gradient(90deg, #0000, #000 20%, #000 80%, #0000);
+  mask: linear-gradient(90deg, #0000, #000 20%, #000 80%, #0000);
+}
+.title-shine:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 26%;
+  left: -40%;
+  background: linear-gradient(105deg, #fff0, #ffffffa6, #fff0);
+  mix-blend-mode: overlay;
+  animation: shineSweep 5s ease-in-out 2s infinite;
+}
+@keyframes shineSweep {
+  0% {
+    left: -40%;
+  }
+  35%,
+  100% {
+    left: 130%;
+  }
+}
+.title-bosses {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 4px 2px 0;
+}
+.title-bosses .tb {
+  flex: 1;
+  height: 36px;
+  border-radius: 6px;
+  background: #00000088;
+  border: 1px solid #ffffff22;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.title-bosses .tb img {
+  height: 32px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  filter: brightness(0) opacity(0.55);
+}
+.title-bosses .tb.down {
+  border-color: var(--c);
+  box-shadow: 0 0 8px var(--c);
+  background: #000000aa;
+}
+.title-bosses .tb.down img {
+  filter: none;
+}
+.title-count {
+  margin-top: 4px;
+  font: 800 8px Inter;
+  letter-spacing: 0.16em;
+  color: #ffd9a0;
+  text-align: center;
+  text-shadow: 0 0 4px #000;
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-art,
+  .title-fire,
+  .title-glow,
+  .title-shine:after {
+    animation: none !important;
+  }
+}
+
+.title-art {
+  inset: 0 0 30px 0;
+}
+.title-bosses .tb {
+  height: 32px;
+}
+.title-bosses .tb img {
+  height: 28px;
+  filter: brightness(0) invert(0.32);
+}
+.title-bosses .tb.down img {
+  filter: none;
+}
