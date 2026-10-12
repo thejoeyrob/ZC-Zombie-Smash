@@ -570,7 +570,7 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${SHOW_COFFEE ? '<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>' : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${iconPlugin() ? '<button class="menu-action" data-action="icons">APP ICON <small>Change your home screen icon →</small></button>' : ''}${SHOW_COFFEE ? '<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>' : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
@@ -776,6 +776,32 @@
     const saved = SKINS.find((x) => x.id === read('zs7-skin', 'toxic') && !skinLocked(x));
     paintSkin(saved || SKINS[0]);
     if (skin) toast(lockText(skin));
+  }
+  const ICON_CHOICES = [
+    ['', 'classic', 'Classic Hand'],
+    ['ZSIconSlime', 'slime', 'Slime Hand'],
+    ['ZSIconMoon', 'moon', 'Blood Moon'],
+    ['ZSIconZombie', 'zombie', 'Shattered'],
+    ['ZSIconSoldier', 'soldier', 'Joey Rob'],
+  ];
+  function iconPlugin() {
+    try {
+      return nativeApp ? window.Capacitor?.registerPlugin?.('AppIcon') : null;
+    } catch {
+      return null;
+    }
+  }
+  async function iconPanel() {
+    const plugin = iconPlugin();
+    let now = '';
+    try {
+      now = (await plugin.get()).name || '';
+    } catch {}
+    showPanel(
+      'icons',
+      'APP ICON',
+      `<p class="menu-note">Pick the icon for your home screen. iPhone shows a short confirmation when it changes.</p><div class="skin-options">${ICON_CHOICES.map(([id, file, label]) => `<button class="skin-choice ${now === id ? 'selected' : ''}" data-icon="${id}" data-icon-key="${file}"><img src="./icon-opt-${file}.webp" alt="" style="height:96px;width:96px;margin:6px auto;border-radius:22px;object-fit:cover"><b>${label}</b></button>`).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+    );
   }
   function skins() {
     const current = read('zs7-skin', 'toxic'),
@@ -1619,6 +1645,17 @@
   $('overlay').addEventListener('click', async (e) => {
     const button = e.target.closest('button');
     if (!button) return;
+    if (button.dataset.iconKey !== undefined) {
+      try {
+        await iconPlugin().set({ name: button.dataset.icon });
+        document.querySelectorAll('[data-icon-key]').forEach((b) => {
+          b.classList.toggle('selected', b === button);
+        });
+      } catch (err) {
+        toast('Could not change the icon: ' + (err?.message || 'unsupported'));
+      }
+      return;
+    }
     if (button.dataset.preview) {
       previewSkin(button.dataset.preview);
       document.querySelectorAll('.skin-choice').forEach((b) => {
@@ -1675,6 +1712,9 @@
         break;
       case 'skins':
         skins();
+        break;
+      case 'icons':
+        iconPanel();
         break;
       case 'coffee':
         showCoffee(menu, true);

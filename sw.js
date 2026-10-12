@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.18.2';
+const CACHE = 'zombie-smash-v7.19.0';
 const ASSETS = [
   './404.html',
   './apple-touch-icon.png',
@@ -54,6 +54,12 @@ const ASSETS = [
   './legacy-board.json',
   './manifest.webmanifest',
   './title-bg.webp',
+  './icon-opt-classic.webp',
+  './icon-opt-slime.webp',
+  './icon-opt-moon.webp',
+  './icon-opt-zombie.webp',
+  './icon-opt-soldier.webp',
+
   './map-concrete.jpg',
   './map-desert.jpg',
   './map-hangar.jpg',
