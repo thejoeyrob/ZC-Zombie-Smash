@@ -1380,8 +1380,13 @@
   // One MENU button: it pauses the game and opens the menu (press again to resume).
   // pointerdown, not click, so it also works while a thumb is already on the joystick.
   const menuButton = $('menuButton');
+  let menuDownAt = 0;
   menuButton.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    menuDownAt = performance.now();
+    // A name box still holding the keyboard would swallow the first tap on a phone.
+    if (document.activeElement?.blur && /INPUT|TEXTAREA/.test(document.activeElement.tagName))
+      document.activeElement.blur();
     if (awaitStart) {
       startNow();
       return;
@@ -1395,7 +1400,9 @@
   for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
     menuButton.addEventListener(type, () => menuButton.classList.remove('pressed'));
   menuButton.addEventListener('click', (e) => {
-    if (e.detail === 0 && !awaitStart && !storyActive) menu(); // keyboard / assistive technology
+    // Keyboard / assistive technology only: a tap already opened the menu on pointerdown.
+    if (e.detail === 0 && !awaitStart && !storyActive && performance.now() - menuDownAt > 800)
+      menu();
   });
   addEventListener('keydown', (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
