@@ -2124,3 +2124,33 @@ body {
 #cinematic.clip-mode .scene-next {
   z-index: 4;
 }
+
+/* 7.17: skins menu sections, locked previews */
+.skin-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 14px 0 8px;
+  font: 800 12px Inter;
+  letter-spacing: 0.08em;
+  color: #f5d18b;
+}
+.skin-group span {
+  font: 700 10px Inter;
+  color: #9eb0a3;
+  letter-spacing: 0.04em;
+}
+.skin-choice.locked .skin-thumbnail {
+  filter: grayscale(0.55) brightness(0.75);
+}
+.skin-choice.locked small {
+  position: static;
+  display: block;
+  margin: 0 auto 2px;
+  width: fit-content;
+  background: #3a2a1a;
+  color: #f5d18b;
+}
+.skin-choice.previewing {
+  border-color: #8fd0ff;
+}

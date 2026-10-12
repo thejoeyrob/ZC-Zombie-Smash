@@ -67,12 +67,23 @@
     };
   };
   const unlockedSkins = () => new Set(read('zs7-unlocked', []));
-  const skinLocked = (skin) => !!skin.secret && !unlockedSkins().has(skin.id);
+  const beatenBosses = () => new Set(read('zs7-beaten', []));
+  // Character skins unlock when their boss is beaten; secret custom skins unlock through BOT mode.
+  const skinLocked = (skin) =>
+    skin.boss
+      ? !beatenBosses().has(skin.boss) && !unlockedSkins().has(skin.id)
+      : !!skin.secret && !unlockedSkins().has(skin.id);
+  const lockText = (skin) => {
+    const boss = BOSSES.find((b) => b.id === skin.boss);
+    return boss
+      ? `${skin.name} skin needs to be unlocked. Beat ${boss.name} first.`
+      : `${skin.name} skin needs to be unlocked. It is a secret finish.`;
+  };
   function unlockSecretSkins() {
     const have = unlockedSkins();
     let added = 0;
     for (const s of SKINS)
-      if (s.secret && !have.has(s.id)) {
+      if ((s.secret || s.boss) && !have.has(s.id)) {
         have.add(s.id);
         added++;
       }
@@ -165,6 +176,7 @@
     );
   }
   function closePanel() {
+    endPreview();
     panel = '';
     $('overlay').hidden = true;
     clearInput();
@@ -174,6 +186,7 @@
     $('menuButton').focus({ preventScroll: true });
   }
   function showPanel(kind, title, html, { closable = true, start = false } = {}) {
+    if (kind !== 'skins') endPreview();
     clearTimeout(storyTimer);
     pause();
     panel = kind;
@@ -663,10 +676,8 @@
     save();
     armStart();
   }
-  function applySkin(id) {
-    // An extra skin is still loading at start-up, so the saved choice is only overwritten by a real match.
-    const wanted = SKINS.find((s) => s.id === id && !skinLocked(s)),
-      skin = wanted || SKINS[0];
+  let previewing = '';
+  function paintSkin(skin) {
     for (const [k, v] of Object.entries({
       '--skin-art': `url('./${skin.file}')`,
       '--accent': skin.accent,
@@ -677,22 +688,48 @@
     }))
       document.body.style.setProperty(k, v);
     document.querySelector('.shell-art').innerHTML = ZSConsole.markup(skin);
+  }
+  function applySkin(id) {
+    // An extra skin is still loading at start-up, so the saved choice is only overwritten by a real match.
+    const wanted = SKINS.find((s) => s.id === id && !skinLocked(s)),
+      skin = wanted || SKINS.find((s) => !skinLocked(s)) || SKINS[0];
+    previewing = '';
+    paintSkin(skin);
     if (wanted) write('zs7-skin', skin.id);
+  }
+  // A locked skin can be tried on the console while the skins menu is open. Leaving the menu puts the
+  // chosen skin back and says what unlocks it.
+  function previewSkin(id) {
+    const skin = SKINS.find((x) => x.id === id);
+    if (!skin) return;
+    previewing = skin.id;
+    paintSkin(skin);
+  }
+  function endPreview() {
+    if (!previewing) return;
+    const skin = SKINS.find((x) => x.id === previewing);
+    previewing = '';
+    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'toxic') && !skinLocked(x));
+    paintSkin(saved || SKINS[0]);
+    if (skin) toast(lockText(skin));
   }
   function skins() {
     const current = read('zs7-skin', 'toxic'),
-      open = SKINS.filter((x) => !skinLocked(x)).length;
+      open = SKINS.filter((x) => !skinLocked(x)).length,
+      tile = (s) => {
+        const locked = skinLocked(s),
+          boss = BOSSES.find((b) => b.id === s.boss),
+          badge = locked ? (boss ? 'BEAT ' + boss.name.split(' ')[0] : 'SECRET') : '';
+        return `<button class="skin-choice ${current === s.id && !locked ? 'selected' : ''} ${locked ? 'locked' : ''} ${previewing === s.id ? 'previewing' : ''}" ${locked ? `data-preview="${s.id}"` : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${s.name}</b>${locked ? `<small>🔒 ${badge}</small>` : ''}</button>`;
+      },
+      section = (title, list) =>
+        `<h3 class="skin-group">${title}<span>${list.filter((x) => !skinLocked(x)).length} of ${list.length}</span></h3><div class="skin-options">${list.map(tile).join('')}</div>`,
+      characters = SKINS.filter((x) => x.group === 'character'),
+      customs = SKINS.filter((x) => x.group !== 'character');
     showPanel(
       'skins',
       'CHOOSE YOUR CONSOLE',
-      `<p class="menu-note">${SKINS.length} finishes. One fixed console. ${open} of ${SKINS.length} unlocked${open < SKINS.length ? ' — the rest are secret.' : '.'}</p><div class="skin-options">${SKINS.map(
-        (s) => {
-          const locked = skinLocked(s);
-          return `<button class="skin-choice ${current === s.id && !locked ? 'selected' : ''} ${locked ? 'locked' : ''}" ${locked ? 'data-locked="1" aria-disabled="true"' : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${locked ? 'SECRET' : s.name}</b>${locked ? '<small>LOCKED</small>' : ''}</button>`;
-        },
-      ).join(
-        '',
-      )}</div><p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p>${section('SPECIAL CHARACTER SKINS', characters)}${section('CUSTOM SKINS', customs)}<p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   async function board() {
@@ -972,6 +1009,16 @@
     }
   }
   function event(type, data) {
+    if (type === 'bossDown' && game.scene?.bossId && !game.practice) {
+      const id = game.scene.bossId,
+        had = beatenBosses();
+      if (!had.has(id)) {
+        had.add(id);
+        write('zs7-beaten', [...had]);
+        const skin = SKINS.find((x) => x.boss === id);
+        if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
+      }
+    }
     if (type === 'music') {
       if (game.scene?.kind === 'arrival') audio.playMusic('entrance');
       else audio.playMusic(data.track);
@@ -1508,8 +1555,11 @@
   $('overlay').addEventListener('click', async (e) => {
     const button = e.target.closest('button');
     if (!button) return;
-    if (button.dataset.locked) {
-      toast('A secret finish. Find a way to unlock it.');
+    if (button.dataset.preview) {
+      previewSkin(button.dataset.preview);
+      document.querySelectorAll('.skin-choice').forEach((b) => {
+        b.classList.toggle('previewing', b.dataset.preview === button.dataset.preview);
+      });
       return;
     }
     if (button.dataset.soundSet) {
@@ -1685,6 +1735,8 @@
           s.win.length === 4 &&
           !SKINS.some((x) => x.id === s.id)
         ) {
+          s.group = 'character';
+          if (s.id !== 'joeyrob') s.boss = s.id;
           SKINS.push(s);
           added++;
         }
