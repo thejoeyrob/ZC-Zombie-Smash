@@ -2154,3 +2154,50 @@ body {
 .skin-choice.previewing {
   border-color: #8fd0ff;
 }
+
+/* 7.17.1: the title screen is the Zombie Smash key art. */
+.title-art {
+  position: absolute;
+  inset: 0;
+  background: #1a0d08 url('./title-bg.webp') center 100% / cover no-repeat;
+  animation: titleDrift 18s ease-in-out infinite alternate;
+  transform-origin: 50% 40%;
+}
+@keyframes titleDrift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+.title-logo-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.title-screen {
+  animation: none;
+  background: #1a0d08;
+}
+.title-screen:before {
+  background: radial-gradient(ellipse at center, #0000 60%, #0000008c 100%);
+}
+.title-hi {
+  text-shadow:
+    0 0 4px #000,
+    1px 1px 2px #000;
+}
+.title-bottom {
+  background: linear-gradient(#0000, #0a0504b3 30%, #0a0504e6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-art {
+    animation: none;
+  }
+}
+.title-hi {
+  color: #ffd9a0;
+}
