@@ -574,7 +574,8 @@
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
-  const SHOW_COFFEE = true,
+  // Hidden inside the iPhone app so App Review has nothing to object to; the web version still shows it.
+  const SHOW_COFFEE = !nativeApp,
     COFFEE_URL = 'https://buymeacoffee.com/JoeyRob';
   let coffeeNext = null;
   function showCoffee(next, fromMenu = false) {
