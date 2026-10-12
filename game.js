@@ -1,17 +1,29 @@
 (() => {
-  'use strict';
+  "use strict";
   // The packaged iPhone app loads from capacitor://; on the web we keep the install and admin tools.
-  const nativeApp = location.protocol === 'capacitor:' || !!window.Capacitor?.isNativePlatform?.();
+  const nativeApp =
+    location.protocol === "capacitor:" ||
+    !!window.Capacitor?.isNativePlatform?.();
   const newId = () =>
     crypto.randomUUID?.() ??
-    '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
-      (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16),
+    "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+      (
+        c ^
+        (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+      ).toString(16),
     );
   const $ = (id) => document.getElementById(id),
     esc = (s) =>
-      String(s ?? '').replace(
+      String(s ?? "").replace(
         /[&<>"']/g,
-        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        (c) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[c],
       );
   const read = (k, f) => {
       try {
@@ -29,14 +41,16 @@
     audio = new ZSAudio(),
     haptics = new ZSHaptics(),
     scores = new ZSScores(),
-    renderer = new ZSRenderer($('gameCanvas'));
+    renderer = new ZSRenderer($("gameCanvas"));
   const APP_VER =
-    (document.querySelector('script[src*="game.js"]')?.src.match(/[?&]v=([\d.]+)/) || [])[1] || '';
+    (document
+      .querySelector('script[src*="game.js"]')
+      ?.src.match(/[?&]v=([\d.]+)/) || [])[1] || "";
   // Finished scene clips and extra console skins are listed by scripts/sync-art.mjs.
   // A scene with no listed clip, or a clip that fails to load, uses the built-in scene.
   let sceneClips = {};
   const failedClips = new Set();
-  fetch('./scene-clips.json')
+  fetch("./scene-clips.json")
     .then((r) => r.json())
     .then((j) => {
       sceneClips = j.clips || {};
@@ -44,7 +58,11 @@
     .catch(() => {});
   let pendingReload = false;
   function reloadWhenSafe() {
-    if (!pendingReload || (typeof game !== 'undefined' && game.active && !paused)) return;
+    if (
+      !pendingReload ||
+      (typeof game !== "undefined" && game.active && !paused)
+    )
+      return;
     pendingReload = false;
     location.reload();
   }
@@ -52,11 +70,14 @@
   // and it opens the CHEATS menu, where every cheat has a code made of joystick flicks and button taps.
   const BOT_PREFIX = /^bot_/i;
   const parseName = (raw) => {
-    raw = String(raw ?? '').trim();
+    raw = String(raw ?? "").trim();
     const isBot = BOT_PREFIX.test(raw);
-    return { bot: isBot, name: isBot ? raw.replace(BOT_PREFIX, '').trim() : raw };
+    return {
+      bot: isBot,
+      name: isBot ? raw.replace(BOT_PREFIX, "").trim() : raw,
+    };
   };
-  const unlockedSkins = () => new Set(read('zs7-unlocked', []));
+  const unlockedSkins = () => new Set(read("zs7-unlocked", []));
   const skinLocked = (skin) => !!skin.secret && !unlockedSkins().has(skin.id);
   function unlockSecretSkins() {
     const have = unlockedSkins();
@@ -66,12 +87,12 @@
         have.add(s.id);
         added++;
       }
-    write('zs7-unlocked', [...have]);
+    write("zs7-unlocked", [...have]);
     return added;
   }
   let bot = false,
     pendingBot = false,
-    cheatBuf = '',
+    cheatBuf = "",
     cheatLast = 0,
     stickDir = 0;
   let ready = false,
@@ -79,15 +100,15 @@
     landscape = false,
     admin = false,
     run = null,
-    pendingName = '',
-    sceneKey = '',
-    panel = '',
+    pendingName = "",
+    sceneKey = "",
+    panel = "",
     lastTime = 0,
     accumulator = 0,
     saveClock = 0,
     toastTimer,
     installPrompt,
-    lastFit = '';
+    lastFit = "";
   let storyStep = 0,
     storyTimer = null,
     storyVideo = null,
@@ -101,10 +122,10 @@
     padGrenade = false;
   const game = new ZSEngine.Game({ onEvent: event });
   function toast(message) {
-    $('toast').textContent = message;
-    $('toast').hidden = false;
+    $("toast").textContent = message;
+    $("toast").hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => ($('toast').hidden = true), 3100);
+    toastTimer = setTimeout(() => ($("toast").hidden = true), 3100);
   }
   function clearInput() {
     flickUntil = 0;
@@ -116,19 +137,19 @@
     keys.clear();
     stickDir = 0;
     game.resetInput();
-    $('stickKnob').style.transform = 'translateX(0)';
-    $('fireButton').classList.remove('pressed');
-    $('joystick').setAttribute('aria-valuenow', '0');
+    $("stickKnob").style.transform = "translateX(0)";
+    $("fireButton").classList.remove("pressed");
+    $("joystick").setAttribute("aria-valuenow", "0");
   }
   function save() {
     if (run && game.active && !game.over)
-      write('zs7-run', {
+      write("zs7-run", {
         engine: game.snapshot(),
         run: { id: run.id, name: run.name, ticket: run.ticket, bot },
       });
     else if (game.over)
       try {
-        localStorage.removeItem('zs7-run');
+        localStorage.removeItem("zs7-run");
       } catch {}
   }
   function pause() {
@@ -145,47 +166,56 @@
     lastTime = performance.now();
     audio.resume();
     audio.playMusic(
-      game.scene?.kind === 'arrival'
-        ? 'entrance'
-        : game.boss?.bossId === 'discoman'
-          ? 'disco'
+      game.scene?.kind === "arrival"
+        ? "entrance"
+        : game.boss?.bossId === "discoman"
+          ? "disco"
           : game.boss
-            ? 'boss'
-            : 'main',
+            ? "boss"
+            : "main",
     );
   }
   function closePanel() {
-    panel = '';
-    $('overlay').hidden = true;
+    panel = "";
+    $("overlay").hidden = true;
     clearInput();
     if (game.active && !game.over) {
       if (!awaitStart) resume();
     } else showStart();
-    $('menuButton').focus({ preventScroll: true });
+    $("menuButton").focus({ preventScroll: true });
   }
-  function showPanel(kind, title, html, { closable = true, start = false } = {}) {
+  function showPanel(
+    kind,
+    title,
+    html,
+    { closable = true, start = false } = {},
+  ) {
     clearTimeout(storyTimer);
     pause();
     panel = kind;
-    const box = $('overlay');
-    box.classList.remove('story-mode');
+    const box = $("overlay");
+    box.classList.remove("story-mode");
     box.hidden = false;
     box.innerHTML =
       (title
-        ? `<div class="panel-head"><h2>${esc(title)}</h2>${closable ? '<button data-action="close" aria-label="Close panel">×</button>' : ''}</div>`
-        : '') + `<div class="panel-content ${start ? 'start-panel' : ''}">${html}</div>`;
+        ? `<div class="panel-head"><h2>${esc(title)}</h2>${closable ? '<button data-action="close" aria-label="Close panel">×</button>' : ""}</div>`
+        : "") +
+      `<div class="panel-content ${start ? "start-panel" : ""}">${html}</div>`;
   }
   function showStart() {
     awaitStart = false;
-    $('startPrompt').hidden = true;
-    const name = read('zs7-name', ''),
-      saved = read('zs7-run', null),
-      hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
-      bossNames = BOSSES.map((b) => b.name).join('  ·  ');
+    $("startPrompt").hidden = true;
+    const name = read("zs7-name", ""),
+      saved = read("zs7-run", null),
+      hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || [
+        "",
+        0,
+      ],
+      bossNames = BOSSES.map((b) => b.name).join("  ·  ");
     showPanel(
-      'start',
-      '',
-      `<div class="title-screen"><canvas id="titleCanvas" aria-hidden="true"></canvas><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1">ZOMBIE</span><span class="tl-2">SMASH</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-ticker" aria-hidden="true"><span>${`7 BOSSES  ·  ${esc(bossNames)}  ·  NO BACKING DOWN  ·  `.repeat(2)}</span></div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+      "start",
+      "",
+      `<div class="title-screen"><canvas id="titleCanvas" aria-hidden="true"></canvas><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || "---")}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1">ZOMBIE</span><span class="tl-2">SMASH</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? "" : "disabled"}>${ready ? "▶ PRESS START ◀" : "LOADING THE HORDE…"}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ""}<div class="title-ticker" aria-hidden="true"><span>${`7 BOSSES  ·  ${esc(bossNames)}  ·  NO BACKING DOWN  ·  `.repeat(2)}</span></div><div class="loading-line" id="loadingLine">${ready ? "NO LOGIN · NO ADS · V" + APP_VER : "Loading game artwork…"}</div></div></div></div>`,
       { start: true, closable: false },
     );
     titleScene();
@@ -193,33 +223,36 @@
   // Retro attract mode: a low-resolution canvas scaled up with hard pixels. Joey shoots zombies down a street under a red moon.
   let titleBounds = null;
   function titleScene() {
-    const cv = $('titleCanvas');
+    const cv = $("titleCanvas");
     if (!cv) return;
     const rect = cv.getBoundingClientRect(),
       W = 150,
-      H = Math.max(180, Math.round((W * rect.height) / Math.max(1, rect.width)));
+      H = Math.max(
+        180,
+        Math.round((W * rect.height) / Math.max(1, rect.width)),
+      );
     cv.width = W;
     cv.height = H;
-    const c = cv.getContext('2d');
+    const c = cv.getContext("2d");
     c.imageSmoothingEnabled = false;
-    const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches,
+    const reduced = matchMedia("(prefers-reduced-motion:reduce)").matches,
       imgs = {},
       names = [
-        'player-transparent',
-        'zombie-normal',
-        'zombie-runner',
-        'zombie-helmet',
-        'zombie-toxic',
-        'zombie-brute',
-        'bullet-pistol',
+        "player-transparent",
+        "zombie-normal",
+        "zombie-runner",
+        "zombie-helmet",
+        "zombie-toxic",
+        "zombie-brute",
+        "bullet-pistol",
       ];
     for (const n of names) {
       const im = new Image();
-      im.src = './' + n + '.webp';
+      im.src = "./" + n + ".webp";
       imgs[n] = im;
     }
     if (!titleBounds)
-      fetch('./art-bounds.json')
+      fetch("./art-bounds.json")
         .then((r) => r.json())
         .then((b) => {
           titleBounds = b;
@@ -248,7 +281,7 @@
     const sprite = (n, cx, base, h, flash) => {
       const im = imgs[n];
       if (!im || !im.complete || !im.naturalWidth) return;
-      const b = (titleBounds && titleBounds[n + '.webp']) || [
+      const b = (titleBounds && titleBounds[n + ".webp"]) || [
           0,
           0,
           im.naturalWidth,
@@ -268,7 +301,7 @@
         Math.round(h),
       );
       if (flash) {
-        c.globalCompositeOperation = 'lighter';
+        c.globalCompositeOperation = "lighter";
         c.globalAlpha = 0.7;
         c.drawImage(
           im,
@@ -282,16 +315,16 @@
           Math.round(h),
         );
         c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
+        c.globalCompositeOperation = "source-over";
       }
     };
     const kinds = [
-        'zombie-normal',
-        'zombie-normal',
-        'zombie-runner',
-        'zombie-helmet',
-        'zombie-toxic',
-        'zombie-brute',
+        "zombie-normal",
+        "zombie-normal",
+        "zombie-runner",
+        "zombie-helmet",
+        "zombie-toxic",
+        "zombie-brute",
       ],
       joeyBase = Math.round(H * 0.645),
       joey = { x: W / 2, cool: 0, fire: 0 },
@@ -316,21 +349,29 @@
           x: 22 + Math.random() * (W - 44),
           y: hz + 2,
           k,
-          hp: k === 'zombie-brute' ? 4 : k === 'zombie-helmet' ? 3 : 2,
+          hp: k === "zombie-brute" ? 4 : k === "zombie-helmet" ? 3 : 2,
           flash: 0,
-          v: k === 'zombie-runner' ? 13 : 7 + Math.random() * 3,
+          v: k === "zombie-runner" ? 13 : 7 + Math.random() * 3,
         });
       }
       for (const z of zs) {
         z.y += z.v * dt;
         z.flash = Math.max(0, z.flash - dt);
       }
-      const target = zs.filter((z) => z.y < joeyBase - 10).sort((a, b) => b.y - a.y)[0];
-      if (target) joey.x += Math.max(-40 * dt, Math.min(40 * dt, target.x - joey.x));
+      const target = zs
+        .filter((z) => z.y < joeyBase - 10)
+        .sort((a, b) => b.y - a.y)[0];
+      if (target)
+        joey.x += Math.max(-40 * dt, Math.min(40 * dt, target.x - joey.x));
       else joey.x += (W / 2 - joey.x) * Math.min(1, dt * 2);
       joey.cool -= dt;
       joey.fire = Math.max(0, joey.fire - dt);
-      if (target && target.y > H * 0.44 && Math.abs(target.x - joey.x) < 5 && joey.cool <= 0) {
+      if (
+        target &&
+        target.y > H * 0.44 &&
+        Math.abs(target.x - joey.x) < 5 &&
+        joey.cool <= 0
+      ) {
         joey.cool = 0.26;
         joey.fire = 0.07;
         bullets.push({ x: joey.x, y: joeyBase - 34 });
@@ -340,7 +381,13 @@
         for (const z of zs) {
           const s = 0.42 + 0.58 * Math.min(1, (z.y - hz) / (joeyBase - hz)),
             hh = 42 * s;
-          if (!z.dead && !b.dead && Math.abs(b.x - z.x) < 7 * s && b.y < z.y && b.y > z.y - hh) {
+          if (
+            !z.dead &&
+            !b.dead &&
+            Math.abs(b.x - z.x) < 7 * s &&
+            b.y < z.y &&
+            b.y > z.y - hh
+          ) {
             b.dead = true;
             z.hp--;
             z.flash = 0.08;
@@ -350,7 +397,13 @@
                 x: z.x,
                 y: z.y - hh,
                 life: 0.9,
-                txt: '+' + (z.k === 'zombie-brute' ? 700 : z.k === 'zombie-runner' ? 180 : 120),
+                txt:
+                  "+" +
+                  (z.k === "zombie-brute"
+                    ? 700
+                    : z.k === "zombie-runner"
+                      ? 180
+                      : 120),
               });
               for (let i = 0; i < 10; i++)
                 bits.push({
@@ -359,7 +412,7 @@
                   vx: (Math.random() - 0.5) * 70,
                   vy: -Math.random() * 50,
                   life: 0.5,
-                  col: i % 3 ? '#9cff65' : '#fff6c0',
+                  col: i % 3 ? "#9cff65" : "#fff6c0",
                 });
             }
           }
@@ -378,34 +431,38 @@
       }
       for (let i = zs.length - 1; i >= 0; i--)
         if (zs[i].dead || zs[i].y > joeyBase + 4) zs.splice(i, 1);
-      for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].dead) bullets.splice(i, 1);
-      for (let i = bits.length - 1; i >= 0; i--) if (bits[i].life <= 0) bits.splice(i, 1);
-      for (let i = pops.length - 1; i >= 0; i--) if (pops[i].life <= 0) pops.splice(i, 1);
+      for (let i = bullets.length - 1; i >= 0; i--)
+        if (bullets[i].dead) bullets.splice(i, 1);
+      for (let i = bits.length - 1; i >= 0; i--)
+        if (bits[i].life <= 0) bits.splice(i, 1);
+      for (let i = pops.length - 1; i >= 0; i--)
+        if (pops[i].life <= 0) pops.splice(i, 1);
     }
     function draw() {
       const g = c.createLinearGradient(0, 0, 0, hz);
-      g.addColorStop(0, '#10061e');
-      g.addColorStop(0.55, '#3a1250');
-      g.addColorStop(1, '#a02a3a');
+      g.addColorStop(0, "#10061e");
+      g.addColorStop(0.55, "#3a1250");
+      g.addColorStop(1, "#a02a3a");
       c.fillStyle = g;
       c.fillRect(0, 0, W, hz + 1);
-      for (const s of stars) if (Math.floor(t * 2 + s[2]) % 3) px(s[0], s[1], 1, 1, '#f4efd0');
+      for (const s of stars)
+        if (Math.floor(t * 2 + s[2]) % 3) px(s[0], s[1], 1, 1, "#f4efd0");
       const mx = W * 0.74,
         my = hz * 0.38;
-      c.fillStyle = '#ff6a4a33';
+      c.fillStyle = "#ff6a4a33";
       c.beginPath();
       c.arc(mx, my, 20, 0, 7);
       c.fill();
-      c.fillStyle = '#ff6a4a55';
+      c.fillStyle = "#ff6a4a55";
       c.beginPath();
       c.arc(mx, my, 16, 0, 7);
       c.fill();
-      c.fillStyle = '#ffd6a0';
+      c.fillStyle = "#ffd6a0";
       c.beginPath();
       c.arc(mx, my, 12, 0, 7);
       c.fill();
-      px(mx - 5, my - 4, 3, 3, '#e8b27c');
-      px(mx + 2, my + 2, 4, 3, '#e8b27c');
+      px(mx - 5, my - 4, 3, 3, "#e8b27c");
+      px(mx + 2, my + 2, 4, 3, "#e8b27c");
       const sky = (arr, col, sp, lit) => {
         const off = (t * sp) % 1000;
         for (const b of arr) {
@@ -414,17 +471,20 @@
           if (lit)
             for (let yy = hz - b[2] + 3; yy < hz - 3; yy += 5)
               for (let xx = x + 2; xx < x + b[1] - 2; xx += 4)
-                if ((xx * 7 + yy * 13 + Math.floor(t * 1.5 + b[3] * 9)) % 7 === 0)
-                  px(xx, yy, 1, 2, '#ffd25a');
+                if (
+                  (xx * 7 + yy * 13 + Math.floor(t * 1.5 + b[3] * 9)) % 7 ===
+                  0
+                )
+                  px(xx, yy, 1, 2, "#ffd25a");
         }
       };
-      sky(far, '#24103a', 1.2, false);
-      sky(near, '#140a24', 2.6, true);
-      c.fillStyle = '#1a1222';
+      sky(far, "#24103a", 1.2, false);
+      sky(near, "#140a24", 2.6, true);
+      c.fillStyle = "#1a1222";
       c.fillRect(0, hz, W, H - hz);
       const road = c.createLinearGradient(0, hz, 0, H);
-      road.addColorStop(0, '#3a1a30');
-      road.addColorStop(1, '#120c18');
+      road.addColorStop(0, "#3a1a30");
+      road.addColorStop(1, "#120c18");
       c.fillStyle = road;
       c.beginPath();
       c.moveTo(W / 2 - 4, hz);
@@ -432,7 +492,7 @@
       c.lineTo(W * 1.18, H);
       c.lineTo(-W * 0.18, H);
       c.fill();
-      c.strokeStyle = '#5a3d58';
+      c.strokeStyle = "#5a3d58";
       c.lineWidth = 1;
       c.beginPath();
       c.moveTo(W / 2 - 4, hz);
@@ -448,37 +508,48 @@
           y,
           Math.max(1, Math.round(1 + 3 * u)),
           Math.max(1, Math.round(2 + 7 * u)),
-          '#d8c15a',
+          "#d8c15a",
         );
       }
       for (const z of zs.slice().sort((a, b) => a.y - b.y)) {
         const s = 0.42 + 0.58 * Math.min(1, (z.y - hz) / (joeyBase - hz));
-        c.fillStyle = '#00000066';
-        c.fillRect(Math.round(z.x - 7 * s), Math.round(z.y - 1), Math.round(14 * s), 2);
-        sprite(z.k, z.x + Math.sin(t * 4 + z.x) * 0.7, z.y, 42 * s, z.flash > 0);
+        c.fillStyle = "#00000066";
+        c.fillRect(
+          Math.round(z.x - 7 * s),
+          Math.round(z.y - 1),
+          Math.round(14 * s),
+          2,
+        );
+        sprite(
+          z.k,
+          z.x + Math.sin(t * 4 + z.x) * 0.7,
+          z.y,
+          42 * s,
+          z.flash > 0,
+        );
       }
-      c.fillStyle = '#00000066';
+      c.fillStyle = "#00000066";
       c.fillRect(Math.round(joey.x - 9), joeyBase - 1, 18, 2);
-      sprite('player-transparent', joey.x, joeyBase, 40, false);
+      sprite("player-transparent", joey.x, joeyBase, 40, false);
       if (joey.fire > 0) {
-        px(joey.x - 2, joeyBase - 46, 4, 5, '#fff6c0');
-        px(joey.x - 1, joeyBase - 50, 2, 4, '#ffb340');
-        px(joey.x - 5, joeyBase - 44, 3, 2, '#ffb340');
-        px(joey.x + 2, joeyBase - 44, 3, 2, '#ffb340');
+        px(joey.x - 2, joeyBase - 46, 4, 5, "#fff6c0");
+        px(joey.x - 1, joeyBase - 50, 2, 4, "#ffb340");
+        px(joey.x - 5, joeyBase - 44, 3, 2, "#ffb340");
+        px(joey.x + 2, joeyBase - 44, 3, 2, "#ffb340");
       }
       for (const b of bullets) {
-        px(b.x - 1, b.y, 2, 5, '#fff6c0');
-        px(b.x, b.y - 2, 1, 2, '#ffb340');
+        px(b.x - 1, b.y, 2, 5, "#fff6c0");
+        px(b.x, b.y - 2, 1, 2, "#ffb340");
       }
       for (const q of bits) px(q.x, q.y, 2, 2, q.col);
-      c.fillStyle = '#ffe094';
-      c.font = 'bold 8px Barlow, sans-serif';
-      c.textAlign = 'center';
+      c.fillStyle = "#ffe094";
+      c.font = "bold 8px Barlow, sans-serif";
+      c.textAlign = "center";
       for (const p of pops) {
         c.globalAlpha = Math.min(1, p.life * 2);
-        c.fillStyle = '#000';
+        c.fillStyle = "#000";
         c.fillText(p.txt, Math.round(p.x) + 1, Math.round(p.y) + 1);
-        c.fillStyle = '#ffe094';
+        c.fillStyle = "#ffe094";
         c.fillText(p.txt, Math.round(p.x), Math.round(p.y));
         c.globalAlpha = 1;
       }
@@ -496,26 +567,28 @@
     requestAnimationFrame(frame);
   }
   function menu() {
-    if (panel === 'menu') {
+    if (panel === "menu") {
       closePanel();
       return;
     }
     showPanel(
-      'menu',
-      'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button><button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      "menu",
+      "GAME MENU",
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button><button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? "" : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ""}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ""}${nativeApp ? "" : `<button class="menu-action" data-action="admin">${admin ? "ADMIN CONTROLS" : "ADMIN CODE"} <small>${admin ? "Bosses & cheats →" : "Unlock tools →"}</small></button>`}<p class="menu-note">${run ? "Playing as " + esc(run.name) : "Zombie Smash"} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   function start(raw, skipIntro = false) {
     storyReplay = false;
     audio.unlock();
-    raw = String(raw ?? '').trim();
+    raw = String(raw ?? "").trim();
     const { bot: isBot, name } = parseName(raw);
     if (!scores.validName(name)) {
-      toast('Use 2–24 letters, numbers, spaces, dots, dashes or underscores. Keep it friendly.');
+      toast(
+        "Use 2–24 letters, numbers, spaces, dots, dashes or underscores. Keep it friendly.",
+      );
       return;
     }
-    write('zs7-name', raw);
+    write("zs7-name", raw);
     pendingName = name;
     pendingBot = isBot;
     if (!skipIntro) {
@@ -532,64 +605,67 @@
     pendingName = name;
     storyStep = index;
     storyActive = true;
-    if (panel !== 'story' || !$('storyVideo')) {
+    if (panel !== "story" || !$("storyVideo")) {
       showPanel(
-        'story',
-        '',
+        "story",
+        "",
         '<div class="story-full"><video id="storyVideo" muted playsinline webkit-playsinline preload="auto" disablepictureinpicture aria-label="The story so far"></video></div>',
         { closable: false },
       );
-      $('overlay').classList.add('story-mode');
-      $('fireButton').classList.add('story-hint');
+      $("overlay").classList.add("story-mode");
+      $("fireButton").classList.add("story-hint");
       audio.resume();
-      audio.playMusic('story');
+      audio.playMusic("story");
     }
-    const v = $('storyVideo');
+    const v = $("storyVideo");
     storyVideo = v;
     v.onended = () => {
-      if (storyActive && panel === 'story') storyNext();
+      if (storyActive && panel === "story") storyNext();
     };
     // If a clip cannot load, move on instead of leaving a black screen.
     v.onerror = () => {
       setTimeout(() => {
-        if (storyActive && panel === 'story' && storyVideo === v) storyNext();
+        if (storyActive && panel === "story" && storyVideo === v) storyNext();
       }, 400);
     };
     v.src = `./story-${index + 1}.mp4`;
     v.currentTime = 0;
     v.play().catch(() => {});
-    audio.sfx('whoosh', 0.7);
+    audio.sfx("whoosh", 0.7);
     if (index < 2) {
-      storyPreload = document.createElement('video');
-      storyPreload.preload = 'auto';
+      storyPreload = document.createElement("video");
+      storyPreload.preload = "auto";
       storyPreload.muted = true;
       storyPreload.src = `./story-${index + 2}.mp4`;
     }
   }
   function storyNext() {
     if (!storyActive) return;
-    haptics.impact('LIGHT', 'ui', 0, true);
+    haptics.impact("LIGHT", "ui", 0, true);
     if (storyStep < 2) showStory(pendingName, storyStep + 1);
     else storyEnd();
   }
   function storyEnd() {
     storyActive = false;
-    $('fireButton').classList.remove('story-hint');
-    const v = $('storyVideo');
+    $("fireButton").classList.remove("story-hint");
+    const v = $("storyVideo");
     if (v) {
       v.onended = null;
       v.pause();
-      v.removeAttribute('src');
+      v.removeAttribute("src");
       v.load?.();
     }
     storyVideo = null;
     storyPreload = null;
-    $('overlay').classList.remove('story-mode');
-    $('overlay').innerHTML = '';
+    $("overlay").classList.remove("story-mode");
+    $("overlay").innerHTML = "";
     if (storyReplay) {
       storyReplay = false;
       closePanel();
-    } else beginRun(pendingName || parseName(read('zs7-name', 'Player')).name || 'Player');
+    } else
+      beginRun(
+        pendingName || parseName(read("zs7-name", "Player")).name || "Player",
+      );
   }
   // After the intro (and before every run) the game waits: any button starts it, and that press does nothing else.
   let awaitStart = false,
@@ -598,14 +674,14 @@
     awaitStart = true;
     paused = true;
     clearInput();
-    $('startPrompt').hidden = false;
+    $("startPrompt").hidden = false;
     audio.pause();
   }
   function startNow() {
     if (!awaitStart) return false;
     awaitStart = false;
-    $('startPrompt').hidden = true;
-    haptics.impact('MEDIUM', 'ui', 0, true);
+    $("startPrompt").hidden = true;
+    haptics.impact("MEDIUM", "ui", 0, true);
     resume();
     return true;
   }
@@ -624,7 +700,7 @@
 
   function beginRun(name) {
     clearTimeout(storyTimer);
-    write('zs7-story-seen', true);
+    write("zs7-story-seen", true);
     bot = pendingBot;
     run = { id: newId(), name, ticket: null, submitted: false, bot };
     if (bot) {
@@ -633,8 +709,10 @@
         () =>
           toast(
             added
-              ? 'BOT MODE · ' + added + ' SECRET SKINS DISPENSED · CHEATS MENU UNLOCKED'
-              : 'BOT MODE · CHEATS MENU UNLOCKED',
+              ? "BOT MODE · " +
+                  added +
+                  " SECRET SKINS DISPENSED · CHEATS MENU UNLOCKED"
+              : "BOT MODE · CHEATS MENU UNLOCKED",
           ),
         600,
       );
@@ -646,96 +724,106 @@
       return ticket;
     });
     game.reset();
-    $('overlay').hidden = true;
-    panel = '';
-    sceneKey = '';
+    $("overlay").hidden = true;
+    panel = "";
+    sceneKey = "";
     game.start();
     save();
     armStart();
   }
   function applySkin(id) {
-    const skin = SKINS.find((s) => s.id === id && !skinLocked(s)) || SKINS[0];
+    // An extra skin is still loading at start-up, so the saved choice is only overwritten by a real match.
+    const wanted = SKINS.find((s) => s.id === id && !skinLocked(s)),
+      skin = wanted || SKINS[0];
     for (const [k, v] of Object.entries({
-      '--skin-art': `url('./${skin.file}')`,
-      '--accent': skin.accent,
-      '--bleed': skin.bleed,
-      '--fire': skin.fire || '#ef3042',
-      '--grenade': skin.grenade || '#159de8',
-      '--stick': skin.stick || '#d8a34e',
+      "--skin-art": `url('./${skin.file}')`,
+      "--accent": skin.accent,
+      "--bleed": skin.bleed,
+      "--fire": skin.fire || "#ef3042",
+      "--grenade": skin.grenade || "#159de8",
+      "--stick": skin.stick || "#d8a34e",
     }))
       document.body.style.setProperty(k, v);
-    document.querySelector('.shell-art').innerHTML = ZSConsole.markup(skin);
-    write('zs7-skin', skin.id);
+    document.querySelector(".shell-art").innerHTML = ZSConsole.markup(skin);
+    if (wanted) write("zs7-skin", skin.id);
   }
   function skins() {
-    const current = read('zs7-skin', 'toxic'),
+    const current = read("zs7-skin", "toxic"),
       open = SKINS.filter((x) => !skinLocked(x)).length;
     showPanel(
-      'skins',
-      'CHOOSE YOUR CONSOLE',
-      `<p class="menu-note">${SKINS.length} finishes. One fixed console. ${open} of ${SKINS.length} unlocked${open < SKINS.length ? ' — the rest are secret.' : '.'}</p><div class="skin-options">${SKINS.map(
+      "skins",
+      "CHOOSE YOUR CONSOLE",
+      `<p class="menu-note">${SKINS.length} finishes. One fixed console. ${open} of ${SKINS.length} unlocked${open < SKINS.length ? " — the rest are secret." : "."}</p><div class="skin-options">${SKINS.map(
         (s) => {
           const locked = skinLocked(s);
-          return `<button class="skin-choice ${current === s.id && !locked ? 'selected' : ''} ${locked ? 'locked' : ''}" ${locked ? 'data-locked="1" aria-disabled="true"' : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${locked ? 'SECRET' : s.name}</b>${locked ? '<small>LOCKED</small>' : ''}</button>`;
+          return `<button class="skin-choice ${current === s.id && !locked ? "selected" : ""} ${locked ? "locked" : ""}" ${locked ? 'data-locked="1" aria-disabled="true"' : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${locked ? "SECRET" : s.name}</b>${locked ? "<small>LOCKED</small>" : ""}</button>`;
         },
       ).join(
-        '',
+        "",
       )}</div><p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   async function board() {
-    showPanel('board', 'HIGH SCORES', '<p class="menu-note">Loading the board…</p>');
+    showPanel(
+      "board",
+      "HIGH SCORES",
+      '<p class="menu-note">Loading the board…</p>',
+    );
     const result = await scores.board();
-    if (panel !== 'board') return;
+    if (panel !== "board") return;
     const rows = Array.isArray(result.rows) ? result.rows : [],
-      nameOf = (r) => String(r.username || r.name || r.gamertag || ''),
+      nameOf = (r) => String(r.username || r.name || r.gamertag || ""),
       scoreOf = (r) => Number(r.score || r.high_score || 0),
-      me = (run?.name || parseName(read('zs7-name', '')).name).trim(),
+      me = (run?.name || parseName(read("zs7-name", "")).name).trim(),
       mine = me ? scores.getBest(me) : 0,
-      listed = rows.some((r) => nameOf(r).toLowerCase() === me.toLowerCase() && scoreOf(r) >= mine),
+      listed = rows.some(
+        (r) =>
+          nameOf(r).toLowerCase() === me.toLowerCase() && scoreOf(r) >= mine,
+      ),
       youRow =
         mine > 0 && !listed
           ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
-          : '';
-    $('overlay').querySelector('.panel-content').innerHTML =
-      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row"><b class="rank">${i + 1}</b><span>${esc(nameOf(r))}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+          : "";
+    $("overlay").querySelector(".panel-content").innerHTML =
+      `<p class="menu-note">${result.online ? "Online leaderboard" : "Saved leaderboard · offline"}${result.online ? "" : `<br>Could not reach the online board${result.error ? " (" + esc(result.error) + ")" : ""}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row"><b class="rank">${i + 1}</b><span>${esc(nameOf(r))}${r.legacy ? "<small>ORIGINAL RECORD</small>" : ""}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join("")}${youRow}${result.online ? "" : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   function sound() {
-    const set = audio.settings.set === 'original' ? 'original' : 'new';
+    const set = audio.settings.set === "original" ? "original" : "new";
     showPanel(
-      'sound',
-      'MUSIC & SOUND',
-      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">NEW</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      "sound",
+      "MUSIC & SOUND",
+      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === "new"}" class="${set === "new" ? "on" : ""}">NEW</button><button data-sound-set="original" aria-pressed="${set === "original"}" class="${set === "original" ? "on" : ""}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? "checked" : ""}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
     showPanel(
-      'help',
-      'HOLD THE LINE',
+      "help",
+      "HOLD THE LINE",
       `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
-    const installed = matchMedia('(display-mode:standalone)').matches || navigator.standalone;
+    const installed =
+      matchMedia("(display-mode:standalone)").matches || navigator.standalone;
     showPanel(
-      'install',
-      'TAKE THE HORDE WITH YOU',
-      `<img class="start-art" src="./game-banner.webp" alt="Zombie Smash game advertisement"><h3 style="font:900 26px Barlow;color:#ffdc8b;margin:12px 0">SEVEN BOSSES. ONE LAST STAND.</h3><p class="menu-note">Big boss reveals. Explosive weapons. Your next high score.<br>Launch straight from your Home Screen, and play offline once the game has finished downloading.</p>${installed ? '<p class="menu-note">✓ You’re already playing the installed game.</p>' : installPrompt ? '<button class="primary-action" data-action="install-now">INSTALL ZOMBIE SMASH</button>' : '<p class="menu-note"><strong>iPhone / iPad</strong><br>Open this game in Safari. Tap Share, then “Add to Home Screen”.<br><br><strong>Android</strong><br>Open your browser menu and choose “Install app” or “Add to Home screen”.</p>'}<p class="menu-note" id="offlineStatus">${read('zs7-offline-ready', false) ? 'Game download complete · offline play ready.' : 'Keep the game open while its artwork and music download.'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      "install",
+      "TAKE THE HORDE WITH YOU",
+      `<img class="start-art" src="./game-banner.webp" alt="Zombie Smash game advertisement"><h3 style="font:900 26px Barlow;color:#ffdc8b;margin:12px 0">SEVEN BOSSES. ONE LAST STAND.</h3><p class="menu-note">Big boss reveals. Explosive weapons. Your next high score.<br>Launch straight from your Home Screen, and play offline once the game has finished downloading.</p>${installed ? '<p class="menu-note">✓ You’re already playing the installed game.</p>' : installPrompt ? '<button class="primary-action" data-action="install-now">INSTALL ZOMBIE SMASH</button>' : '<p class="menu-note"><strong>iPhone / iPad</strong><br>Open this game in Safari. Tap Share, then “Add to Home Screen”.<br><br><strong>Android</strong><br>Open your browser menu and choose “Install app” or “Add to Home screen”.</p>'}<p class="menu-note" id="offlineStatus">${read("zs7-offline-ready", false) ? "Game download complete · offline play ready." : "Keep the game open while its artwork and music download."}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function adminPanel() {
     if (!admin) {
       showPanel(
-        'admin',
-        'ADMIN CODE',
+        "admin",
+        "ADMIN CODE",
         `<p class="menu-note">Use your existing admin code to unlock boss selection and practice cheats.</p><form id="adminForm"><label class="name-field">ADMIN CODE<input type="password" name="code" id="adminCode" autocomplete="off" required></label><button class="primary-action">UNLOCK</button></form><p class="menu-note" id="adminStatus"></p>`,
       );
       return;
     }
     showPanel(
-      'admin',
-      'BOSSES & CHEATS',
-      `<p class="menu-note">Using a cheat or boss jump makes the run practice-only. Practice scores never enter the board.</p><label class="setting">INVINCIBLE <input type="checkbox" data-cheat="invincible" ${game.invincible ? 'checked' : ''}></label><label class="setting">UNLIMITED AMMO <input type="checkbox" data-cheat="infiniteAmmo" ${game.infiniteAmmo ? 'checked' : ''}></label><label class="setting">10 HEARTS (5 RED + 5 GOLD) <input type="checkbox" data-cheat="tenHearts" ${(game.maxLives || 5) > 5 ? 'checked' : ''}></label><button class="secondary-action" data-action="grenades">REFILL GRENADES</button><div style="display:flex;gap:5px">${Object.keys(
+      "admin",
+      "BOSSES & CHEATS",
+      `<p class="menu-note">Using a cheat or boss jump makes the run practice-only. Practice scores never enter the board.</p><label class="setting">INVINCIBLE <input type="checkbox" data-cheat="invincible" ${game.invincible ? "checked" : ""}></label><label class="setting">UNLIMITED AMMO <input type="checkbox" data-cheat="infiniteAmmo" ${game.infiniteAmmo ? "checked" : ""}></label><label class="setting">10 HEARTS (5 RED + 5 GOLD) <input type="checkbox" data-cheat="tenHearts" ${(game.maxLives || 5) > 5 ? "checked" : ""}></label><button class="secondary-action" data-action="grenades">REFILL GRENADES</button><div style="display:flex;gap:5px">${Object.keys(
         ZSEngine.GUNS,
       )
         .map(
@@ -743,14 +831,14 @@
             `<button class="secondary-action" data-gun="${g}" style="font-size:11px">${g.toUpperCase()}</button>`,
         )
         .join(
-          '',
-        )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(' ')}</div></div>`).join('')}`,
+          "",
+        )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(" ")}</div></div>`).join("")}`,
     );
   }
   function practice() {
     if (!admin) return false;
     if (!run || !game.active) {
-      run = { id: newId(), name: read('zs7-name', 'Player'), ticket: null };
+      run = { id: newId(), name: read("zs7-name", "Player"), ticket: null };
       game.reset();
       game.start();
     }
@@ -761,51 +849,52 @@
   // Codes only work in BOT mode, while playing, with about two seconds at most between taps.
   const CHEATS = [
     {
-      id: 'invincible',
-      name: 'INVINCIBLE',
-      info: 'Nothing can hurt Joey.',
-      seq: 'LLRRFF',
+      id: "invincible",
+      name: "INVINCIBLE",
+      info: "Nothing can hurt Joey.",
+      seq: "LLRRFF",
       state: () => game.invincible,
       run: () => (game.invincible = !game.invincible),
     },
     {
-      id: 'ammo',
-      name: 'UNLIMITED AMMO',
-      info: 'Every gun, no reloading.',
-      seq: 'FFGGLR',
+      id: "ammo",
+      name: "UNLIMITED AMMO",
+      info: "Every gun, no reloading.",
+      seq: "FFGGLR",
       state: () => game.infiniteAmmo,
       run: () => (game.infiniteAmmo = !game.infiniteAmmo),
     },
     {
-      id: 'hearts',
-      name: '10 HEARTS',
-      info: '5 red + 5 gold hearts.',
-      seq: 'RRLLGF',
+      id: "hearts",
+      name: "10 HEARTS",
+      info: "5 red + 5 gold hearts.",
+      seq: "RRLLGF",
       state: () => (game.maxLives || 5) > 5,
       run: () => game.setTenHearts((game.maxLives || 5) <= 5),
     },
     {
-      id: 'grenades',
-      name: 'REFILL GRENADES',
-      info: 'Back to 9 grenades.',
-      seq: 'GGGLL',
+      id: "grenades",
+      name: "REFILL GRENADES",
+      info: "Back to 9 grenades.",
+      seq: "GGGLL",
       run: () => (game.player.grenades = 9),
     },
     {
-      id: 'guns',
-      name: 'ALL SPECIAL GUNS',
-      info: 'SMG, scatter, DMR and pulse stored with full ammo.',
-      seq: 'FGFGLR',
+      id: "guns",
+      name: "ALL SPECIAL GUNS",
+      info: "SMG, scatter, DMR and pulse stored with full ammo.",
+      seq: "FGFGLR",
       run: () => {
-        for (const g of ['smg', 'shotgun', 'dmr', 'burst'])
-          if (game.player.gun !== g) game.player.inventory[g] = ZSEngine.GUNS[g].ammo;
+        for (const g of ["smg", "shotgun", "dmr", "burst"])
+          if (game.player.gun !== g)
+            game.player.inventory[g] = ZSEngine.GUNS[g].ammo;
       },
     },
     {
-      id: 'wave',
-      name: 'SKIP WAVE',
-      info: 'Clears the current wave.',
-      seq: 'RLRLFF',
+      id: "wave",
+      name: "SKIP WAVE",
+      info: "Clears the current wave.",
+      seq: "RLRLFF",
       run: () => {
         if (game.boss || game.scene) return;
         game.enemies = [];
@@ -813,60 +902,66 @@
       },
     },
     {
-      id: 'boss',
-      name: 'JUMP TO NEXT BOSS',
-      info: 'Starts the next boss you have not beaten.',
-      seq: 'LRLRGG',
+      id: "boss",
+      name: "JUMP TO NEXT BOSS",
+      info: "Starts the next boss you have not beaten.",
+      seq: "LRLRGG",
       run: () => {
         const next = BOSSES.find((b) => !game.bossesDown.includes(b.id));
         if (next) {
           game.skipBoss(next.id, 1);
-          sceneKey = '';
+          sceneKey = "";
         }
       },
     },
   ];
-  const glyph = { L: '◀', R: '▶', F: 'FIRE', G: 'NADE' };
+  const glyph = { L: "◀", R: "▶", F: "FIRE", G: "NADE" };
   function feedToken(token) {
     if (!bot || paused || !game.active || game.over) return;
     const now = performance.now();
-    if (now - cheatLast > 2200) cheatBuf = '';
+    if (now - cheatLast > 2200) cheatBuf = "";
     cheatLast = now;
     cheatBuf = (cheatBuf + token).slice(-8);
     const hit = CHEATS.find((c) => cheatBuf.endsWith(c.seq));
     if (!hit) return;
-    cheatBuf = '';
+    cheatBuf = "";
     game.practice = true;
     hit.run();
     save();
-    audio.sfx('boost');
-    haptics.notify('SUCCESS', 'cheat', 0);
+    audio.sfx("boost");
+    haptics.notify("SUCCESS", "cheat", 0);
     toast(
-      'CHEAT · ' + hit.name + (hit.state ? (hit.state() ? ' ON' : ' OFF') : '') + ' · scores off',
+      "CHEAT · " +
+        hit.name +
+        (hit.state ? (hit.state() ? " ON" : " OFF") : "") +
+        " · scores off",
     );
   }
   function trackStick(axis) {
-    const dir = axis < -0.6 ? -1 : axis > 0.6 ? 1 : Math.abs(axis) < 0.25 ? 0 : stickDir;
+    const dir =
+      axis < -0.6 ? -1 : axis > 0.6 ? 1 : Math.abs(axis) < 0.25 ? 0 : stickDir;
     if (dir !== stickDir) {
       stickDir = dir;
-      if (dir) feedToken(dir < 0 ? 'L' : 'R');
+      if (dir) feedToken(dir < 0 ? "L" : "R");
     }
   }
   function cheatsPanel() {
     showPanel(
-      'cheats',
-      'CHEATS',
+      "cheats",
+      "CHEATS",
       `<p class="menu-note">BOT mode is on. While you play, enter a code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button. Keep each tap within about 2 seconds. Any cheat makes the run practice-only: scores stay off the board.</p>${CHEATS.map(
         (c) =>
-          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? 'on' : ''}">${c.state() ? 'ON' : 'OFF'}</span>` : ''}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
-      ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? "on" : ""}">${c.state() ? "ON" : "OFF"}</span>` : ""}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join("")}</div></div>`,
+      ).join(
+        "",
+      )}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function results(reason) {
     showPanel(
-      'results',
-      game.practice ? 'PRACTICE COMPLETE' : 'RUN COMPLETE',
-      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
+      "results",
+      game.practice ? "PRACTICE COMPLETE" : "RUN COMPLETE",
+      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? "Practice run · not added to the board." : "Saving your score…"}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
       { closable: false },
     );
     save();
@@ -887,200 +982,207 @@
     if (run.ticketPromise) await run.ticketPromise;
     const result = await scores.finish({ ...record, ticket: completed.ticket });
     if (run !== completed) return;
-    const status = $('scoreStatus');
+    const status = $("scoreStatus");
     if (status)
       status.textContent = {
-        practice: 'Practice run · not added to the board.',
-        online: 'Score saved to the online leaderboard.',
+        practice: "Practice run · not added to the board.",
+        online: "Score saved to the online leaderboard.",
         pending:
-          'Saved on this device. Online upload queued for reconnection' +
-          (scores.lastError ? ' (' + scores.lastError + ').' : '.'),
+          "Saved on this device. Online upload queued for reconnection" +
+          (scores.lastError ? " (" + scores.lastError + ")." : "."),
         local:
-          'Saved on this device. This run has no online ticket' +
-          (scores.lastError ? ' (' + scores.lastError + ').' : '.'),
+          "Saved on this device. This run has no online ticket" +
+          (scores.lastError ? " (" + scores.lastError + ")." : "."),
         rejected:
-          'Saved on this device. The online board could not accept this run' +
-          (scores.lastError ? ' (' + scores.lastError + ').' : '.'),
+          "Saved on this device. The online board could not accept this run" +
+          (scores.lastError ? " (" + scores.lastError + ")." : "."),
       }[result.status];
   }
   // Phone vibration for gunfire, hits, damage and the big boss moments.
   function buzz(type, data) {
     switch (type) {
-      case 'shot':
+      case "shot":
         haptics.impact(
-          data.gun === 'shotgun' || data.gun === 'dmr' ? 'MEDIUM' : 'LIGHT',
-          'shot',
-          data.gun === 'smg' ? 85 : 55,
+          data.gun === "shotgun" || data.gun === "dmr" ? "MEDIUM" : "LIGHT",
+          "shot",
+          data.gun === "smg" ? 85 : 55,
         );
         break;
-      case 'hit':
-        haptics.impact('LIGHT', 'hit', data.boss ? 70 : 90);
+      case "hit":
+        haptics.impact("LIGHT", "hit", data.boss ? 70 : 90);
         break;
-      case 'kill':
-        haptics.impact('MEDIUM', 'kill', 60);
+      case "kill":
+        haptics.impact("MEDIUM", "kill", 60);
         break;
-      case 'hurt':
-        haptics.notify('ERROR', 'hurt', 0);
+      case "hurt":
+        haptics.notify("ERROR", "hurt", 0);
         break;
-      case 'breach':
-        haptics.notify('WARNING', 'breach', 0);
+      case "breach":
+        haptics.notify("WARNING", "breach", 0);
         break;
-      case 'explosion':
-        haptics.impact('HEAVY', 'boom', 60, true);
+      case "explosion":
+        haptics.impact("HEAVY", "boom", 60, true);
         break;
-      case 'throw':
-        haptics.impact('LIGHT', 'throw', 100);
+      case "throw":
+        haptics.impact("LIGHT", "throw", 100);
         break;
-      case 'pickup':
-        haptics.notify('SUCCESS', 'pickup', 80);
+      case "pickup":
+        haptics.notify("SUCCESS", "pickup", 80);
         break;
-      case 'boost':
-        haptics.impact('MEDIUM', 'boost', 150, true);
+      case "boost":
+        haptics.impact("MEDIUM", "boost", 150, true);
         break;
-      case 'bossAttack':
-        haptics.impact('MEDIUM', 'bossAttack', 220, true);
+      case "bossAttack":
+        haptics.impact("MEDIUM", "bossAttack", 220, true);
         break;
-      case 'entrance':
-        haptics.notify('WARNING', 'entrance', 0);
+      case "entrance":
+        haptics.notify("WARNING", "entrance", 0);
         break;
-      case 'panel':
+      case "panel":
         // Phase 1 of a boss arrival is Joey's shocked face.
         if (data.phase === 1) haptics.shock();
         break;
-      case 'mutation':
+      case "mutation":
         if (data.stage === 3) haptics.shock();
-        else haptics.impact('HEAVY', 'mutation', 0, true);
+        else haptics.impact("HEAVY", "mutation", 0, true);
         break;
-      case 'bossDown':
-        haptics.notify('SUCCESS', 'bossDown', 0);
+      case "bossDown":
+        haptics.notify("SUCCESS", "bossDown", 0);
         break;
-      case 'death':
-        haptics.notify('ERROR', 'death', 0);
+      case "death":
+        haptics.notify("ERROR", "death", 0);
         break;
     }
   }
   function event(type, data) {
-    if (type === 'music') {
-      if (game.scene?.kind === 'arrival') audio.playMusic('entrance');
+    if (type === "music") {
+      if (game.scene?.kind === "arrival") audio.playMusic("entrance");
       else audio.playMusic(data.track);
       return;
     }
     const sounds = {
       shot: data.gun,
-      kill: 'hit',
-      ricochet: 'ricochet',
-      boost: 'boost',
-      breach: 'hurt',
-      clear: 'pickup',
-      hurt: 'hurt',
-      pickup: 'pickup',
-      throw: 'throw',
-      explosion: 'grenade',
-      entrance: 'alarm',
-      panel: 'whoosh',
-      mutation: 'alarm',
-      bossAttack: 'boss-attack',
-      bossDown: 'victory',
-      death: 'loss',
+      kill: "hit",
+      ricochet: "ricochet",
+      boost: "boost",
+      breach: "hurt",
+      clear: "pickup",
+      hurt: "hurt",
+      pickup: "pickup",
+      throw: "throw",
+      explosion: "grenade",
+      entrance: "alarm",
+      panel: "whoosh",
+      mutation: "alarm",
+      bossAttack: "boss-attack",
+      bossDown: "victory",
+      death: "loss",
     };
     // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
-    if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
-    else if (audio.synthMode && type === 'death') audio.stinger('defeat');
+    if (audio.synthMode && type === "bossDown") audio.stinger("victory");
+    else if (audio.synthMode && type === "death") audio.stinger("defeat");
     else if (sounds[type])
-      audio.sfx(sounds[type], type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : 1);
+      audio.sfx(
+        sounds[type],
+        type === "kill" ? 0.55 : type === "entrance" ? 0.6 : 1,
+      );
     buzz(type, data);
-    if (type === 'fight') {
-      audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
-      audio.sfx('doom');
+    if (type === "fight") {
+      audio.playMusic(data.id === "discoman" ? "disco" : "boss");
+      audio.sfx("doom");
     }
-    if (type === 'over') results(data.reason);
-    if (type === 'wave') save();
+    if (type === "over") results(data.reason);
+    if (type === "wave") save();
   }
   // Which finished clip (if any) covers the scene that is playing now.
   function sceneClipFor(s) {
-    if (!s.bossId || (s.kind === 'arrival' && s.phase === 0)) return null;
+    // Warning and Joey's shocked reaction always play first; the boss clip takes over at the reveal.
+    if (!s.bossId || (s.kind === "arrival" && s.phase < 2)) return null;
     const name =
-        s.kind === 'arrival'
-          ? 'intro'
-          : s.kind === 'mutation'
-            ? 'form' + s.stage
-            : s.kind === 'down'
-              ? 'bossdown'
-              : s.kind === 'loss'
-                ? 'joeydown'
+        s.kind === "arrival"
+          ? "intro"
+          : s.kind === "mutation"
+            ? "form" + s.stage
+            : s.kind === "down"
+              ? "bossdown"
+              : s.kind === "loss"
+                ? "joeydown"
                 : null,
-      file = name && sceneClips[s.bossId + '/' + name];
+      file = name && sceneClips[s.bossId + "/" + name];
     return file && !failedClips.has(file) ? file : null;
   }
   function mountSceneClip(box, s, file) {
-    const v = document.createElement('video');
-    v.className = 'scene-clip';
+    const v = document.createElement("video");
+    v.className = "scene-clip";
     v.muted = true;
     v.playsInline = true;
-    v.setAttribute('playsinline', '');
-    v.setAttribute('webkit-playsinline', '');
-    v.preload = 'auto';
-    v.src = './' + file;
-    box.classList.add('clip-mode');
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    v.preload = "auto";
+    v.src = "./" + file;
+    box.classList.add("clip-mode");
     // The scene lasts exactly as long as the clip.
-    v.addEventListener('loadedmetadata', () => {
+    v.addEventListener("loadedmetadata", () => {
       if (game.scene === s && Number.isFinite(v.duration)) {
         s.duration = Math.max(0.5, v.duration + 0.25);
         s.time = 0;
       }
     });
     // A clip that cannot be played falls back to the built-in scene.
-    v.addEventListener('error', () => {
+    v.addEventListener("error", () => {
       failedClips.add(file);
       v.remove();
-      box.classList.remove('clip-mode');
-      sceneKey = '';
+      box.classList.remove("clip-mode");
+      sceneKey = "";
     });
     box.prepend(v);
     v.play().catch(() => {});
   }
   function cinematic() {
     const s = game.scene,
-      box = $('cinematic');
+      box = $("cinematic");
     if (!s) {
       box.hidden = true;
-      sceneKey = '';
-      box.classList.remove('clip-mode');
-      box.querySelector('video.scene-clip')?.remove();
+      sceneKey = "";
+      box.classList.remove("clip-mode");
+      box.querySelector("video.scene-clip")?.remove();
       return;
     }
     const clip = sceneClipFor(s);
-    // One clip covers the whole "Joey reacts" and "boss reveal" pair, so skip the second panel.
-    if (clip && s.kind === 'arrival' && s.phase === 2) {
-      game.advanceScene();
-      return;
-    }
-    const playing = box.querySelector('video.scene-clip');
+    const playing = box.querySelector("video.scene-clip");
     if (playing) {
       if (paused) playing.pause();
-      else if (playing.paused && playing.readyState > 2) playing.play().catch(() => {});
+      else if (playing.paused && playing.readyState > 2)
+        playing.play().catch(() => {});
     }
-    const key = [s.kind, s.bossId, s.phase, s.stage].join(':');
+    const key = [s.kind, s.bossId, s.phase, s.stage].join(":");
     if (sceneKey === key) return;
     sceneKey = key;
     box.hidden = false;
-    box.classList.remove('clip-mode');
+    box.classList.remove("clip-mode");
     const b = BOSSES.find((b) => b.id === s.bossId);
-    box.className = s.kind === 'down' ? 'scene-down' : '';
-    box.style.setProperty('--scene-color', b?.accent || '#b45139');
-    let content = '';
-    if (s.kind === 'arrival' && s.phase === 0)
-      content = '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
-    else if (s.kind === 'mutation') {
+    box.className = s.kind === "down" ? "scene-down" : "";
+    box.style.setProperty("--scene-color", b?.accent || "#b45139");
+    let content = "";
+    if (s.kind === "arrival" && s.phase === 0)
+      content =
+        '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
+    else if (s.kind === "mutation") {
       const reaction = s.stage === 3;
-      content = `<div class="scene-name long">${esc(b.name)}<span>FORM ${s.stage} OF ${b.stages} · ${reaction ? 'FINAL MUTATION' : 'TRANSFORMATION'}</span></div><div class="scene-figures ${reaction ? 'dual' : ''}">${reaction ? '<img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts to the final mutation">' : ''}<img class="scene-art" src="./${b.sprites[s.stage - 1]}" alt="${esc(b.name)} form ${s.stage}"></div><div class="scene-copy"><small>${reaction ? 'JOEY ROB' : 'THREAT EVOLVING'}</small><p>${esc(b.stageLines[s.stage - 1] || b.react)}</p></div>`;
-    } else if (s.kind === 'arrival' && s.phase === 1)
+      content = `<div class="scene-name long">${esc(b.name)}<span>FORM ${s.stage} OF ${b.stages} · ${reaction ? "FINAL MUTATION" : "TRANSFORMATION"}</span></div><div class="scene-figures ${reaction ? "dual" : ""}">${reaction ? '<img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts to the final mutation">' : ""}<img class="scene-art" src="./${b.sprites[s.stage - 1]}" alt="${esc(b.name)} form ${s.stage}"></div><div class="scene-copy"><small>${reaction ? "JOEY ROB" : "THREAT EVOLVING"}</small><p>${esc(b.stageLines[s.stage - 1] || b.react)}</p></div>`;
+    } else if (s.kind === "arrival" && s.phase === 1)
       content = `<div class="scene-name">JOEY ROB<span>SOMETHING’S COMING…</span></div><div class="scene-figures"><img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts in shock"></div><div class="scene-copy"><small>JOEY ROB</small><p>${esc(b.announce)}</p></div>`;
     else if (b) {
-      const line = s.kind === 'down' ? b.finalLine : s.kind === 'loss' ? b.playerLoss : b.tease;
-      content = `<div class="scene-name ${b.name.length > 14 ? 'long' : ''}">${s.kind === 'down' ? 'BOSS DOWN' : esc(b.name)}<span>${esc(b.title)}</span></div><div class="scene-figures"><img class="scene-art" src="./${b.sprites[(s.stage || s.startStage || 1) - 1]}" alt="${esc(b.name)}"></div><div class="scene-copy"><small>${esc(b.name)}</small><p>${esc(line)}</p></div>`;
+      const line =
+        s.kind === "down"
+          ? b.finalLine
+          : s.kind === "loss"
+            ? b.playerLoss
+            : b.tease;
+      content = `<div class="scene-name ${b.name.length > 14 ? "long" : ""}">${s.kind === "down" ? "BOSS DOWN" : esc(b.name)}<span>${esc(b.title)}</span></div><div class="scene-figures"><img class="scene-art" src="./${b.sprites[(s.stage || s.startStage || 1) - 1]}" alt="${esc(b.name)}"></div><div class="scene-copy"><small>${esc(b.name)}</small><p>${esc(line)}</p></div>`;
     } else
-      content = '<div class="scene-alert">LINE BROKEN<small>THE HORDE GOT THROUGH</small></div>';
+      content =
+        '<div class="scene-alert">LINE BROKEN<small>THE HORDE GOT THROUGH</small></div>';
     box.innerHTML =
       '<div class="scene-backdrop"></div><div class="scene-lines"></div>' +
       content +
@@ -1093,66 +1195,75 @@
 
   function hud() {
     const p = game.player;
-    $('joystick').classList.toggle('sped', (p.speedUp || 0) > 0);
-    $('waveValue').textContent = game.wave;
-    $('leftValue').textContent = game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved);
-    $('scoreValue').textContent = game.score.toLocaleString();
-    $('bestValue').textContent = scores.getBest(run?.name || read('zs7-name', '')).toLocaleString();
+    $("joystick").classList.toggle("sped", (p.speedUp || 0) > 0);
+    $("waveValue").textContent = game.wave;
+    $("leftValue").textContent = game.boss
+      ? "BOSS"
+      : Math.max(0, game.target - game.resolved);
+    $("scoreValue").textContent = game.score.toLocaleString();
+    $("bestValue").textContent = scores
+      .getBest(run?.name || read("zs7-name", ""))
+      .toLocaleString();
     {
       const max = game.maxLives || 5,
         l = Math.max(0, p.lives),
-        el = $('healthValue');
-      el.classList.toggle('tenhearts', max > 5);
-      if (el.dataset.health !== max + ':' + l) {
-        el.dataset.health = max + ':' + l;
+        el = $("healthValue");
+      el.classList.toggle("tenhearts", max > 5);
+      if (el.dataset.health !== max + ":" + l) {
+        el.dataset.health = max + ":" + l;
         el.innerHTML = Array.from(
           { length: max },
           (_, i) =>
-            `<span class="heart${i >= 5 ? ' gold' : ''}${i < l ? '' : ' empty'}">${i < l ? '♥' : '♡'}</span>`,
-        ).join('');
+            `<span class="heart${i >= 5 ? " gold" : ""}${i < l ? "" : " empty"}">${i < l ? "♥" : "♡"}</span>`,
+        ).join("");
       }
     }
-    $('healthValue').setAttribute('aria-label', p.lives + ' hearts');
-    $('gunValue').textContent = ZSEngine.GUNS[p.gun].name;
-    $('ammoValue').textContent = !Number.isFinite(p.ammo) || game.infiniteAmmo ? '∞' : p.ammo;
-    $('baseValue').textContent = game.breaches + '/10';
-    $('grenadeValue').textContent = p.grenades;
-    $('grenadeButton').classList.toggle('empty', p.grenades === 0);
-    $('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + p.grenades + ' remaining');
-    $('boostText').textContent = 'BOOST ×' + game.multiplier;
-    $('boostFill').style.width = Math.max(0, (game.comboLeft / 7) * 100) + '%';
-    $('comboText').textContent =
+    $("healthValue").setAttribute("aria-label", p.lives + " hearts");
+    $("gunValue").textContent = ZSEngine.GUNS[p.gun].name;
+    $("ammoValue").textContent =
+      !Number.isFinite(p.ammo) || game.infiniteAmmo ? "∞" : p.ammo;
+    $("baseValue").textContent = game.breaches + "/10";
+    $("grenadeValue").textContent = p.grenades;
+    $("grenadeButton").classList.toggle("empty", p.grenades === 0);
+    $("grenadeButton").setAttribute(
+      "aria-label",
+      "Throw grenade, " + p.grenades + " remaining",
+    );
+    $("boostText").textContent = "BOOST ×" + game.multiplier;
+    $("boostFill").style.width = Math.max(0, (game.comboLeft / 7) * 100) + "%";
+    $("comboText").textContent =
       game.combo >= 30
-        ? '×10 · KEEP IT GOING'
+        ? "×10 · KEEP IT GOING"
         : (game.combo < 10 ? 10 : game.combo < 20 ? 20 : 30) -
           game.combo +
-          ' KILLS TO ×' +
+          " KILLS TO ×" +
           (game.combo < 10 ? 2 : game.combo < 20 ? 4 : 10);
-    for (const gun of ['smg', 'shotgun', 'dmr', 'burst']) {
-      const el = $('inv-' + gun);
+    for (const gun of ["smg", "shotgun", "dmr", "burst"]) {
+      const el = $("inv-" + gun);
       const active = p.gun === gun,
         ammo = active ? p.ammo : p.inventory?.[gun] || 0;
-      if (el) el.textContent = ammo || '—';
+      if (el) el.textContent = ammo || "—";
       const btn = document.querySelector(`[data-weapon="${gun}"]`);
       if (btn) {
         btn.disabled = active || !(ammo > 0);
-        btn.classList.toggle('ready', ammo > 0);
-        btn.classList.toggle('equipped', active);
+        btn.classList.toggle("ready", ammo > 0);
+        btn.classList.toggle("equipped", active);
         btn.setAttribute(
-          'aria-label',
-          `${active ? 'Equipped' : 'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`,
+          "aria-label",
+          `${active ? "Equipped" : "Use"} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`,
         );
       }
     }
-    $('mapLabel').textContent = MAPS[Math.min(6, Math.floor((game.wave - 1) / 2))].name;
-    $('headerName').textContent = run?.name || 'JOEY ROB VS DR MANTIS';
+    $("mapLabel").textContent =
+      MAPS[Math.min(6, Math.floor((game.wave - 1) / 2))].name;
+    $("headerName").textContent = run?.name || "JOEY ROB VS DR MANTIS";
   }
   function inputs() {
     let axis =
         touchAxis +
-        (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) -
-        (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0),
-      fire = touchFire || keys.has('Space'),
+        (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) -
+        (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0),
+      fire = touchFire || keys.has("Space"),
       grenade = false;
     try {
       const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean);
@@ -1165,7 +1276,11 @@
         if (grenade && !padGrenade) game.grenade();
       }
     } catch {}
-    if (stickId !== null && performance.now() < flickUntil && Math.sign(axis) !== -flickDir)
+    if (
+      stickId !== null &&
+      performance.now() < flickUntil &&
+      Math.sign(axis) !== -flickDir
+    )
       axis = flickDir;
     padGrenade = grenade;
     trackStick(axis);
@@ -1173,14 +1288,14 @@
   }
   function fit() {
     const root = document.documentElement,
-      focused = /INPUT|TEXTAREA/.test(document.activeElement?.tagName || ''),
+      focused = /INPUT|TEXTAREA/.test(document.activeElement?.tagName || ""),
       vv = visualViewport,
       w = Math.max(1, root.clientWidth || innerWidth),
       h = Math.max(1, root.clientHeight || innerHeight),
       keyboard = focused && vv && vv.height < innerHeight * 0.78,
       newLandscape = w > h * 1.04;
     landscape = newLandscape;
-    $('rotateGate').hidden = !landscape;
+    $("rotateGate").hidden = !landscape;
     if (landscape) {
       if (game.active && !paused) {
         pause();
@@ -1191,22 +1306,22 @@
     if (keyboard) return;
     const safe = getComputedStyle(document.documentElement),
       top =
-        parseFloat(safe.getPropertyValue('--safe-top')) ||
+        parseFloat(safe.getPropertyValue("--safe-top")) ||
         0 ||
         (navigator.standalone === true ? 20 : 0),
-      bottom = parseFloat(safe.getPropertyValue('--safe-bottom')) || 0,
+      bottom = parseFloat(safe.getPropertyValue("--safe-bottom")) || 0,
       scale = Math.min(w / 375, h / 667),
       edge0 = (h - 667 * scale) / 2,
       T = Math.max(edge0, top + 2 - 11 * scale),
       shift = Math.max(0, top + 2 - (T + 3 * scale)) / scale,
-      key = w + 'x' + h + '@' + scale.toFixed(4) + '/' + top;
+      key = w + "x" + h + "@" + scale.toFixed(4) + "/" + top;
     if (key === lastFit) return;
     lastFit = key;
-    document.documentElement.style.setProperty('--console-scale', scale);
-    document.documentElement.style.setProperty('--hs', shift.toFixed(1) + 'px');
-    document.body.classList.toggle('sb-overlap', shift > 6);
-    $('cabinet').style.left = w / 2 + 'px';
-    $('cabinet').style.top = T + 333.5 * scale + 'px';
+    document.documentElement.style.setProperty("--console-scale", scale);
+    document.documentElement.style.setProperty("--hs", shift.toFixed(1) + "px");
+    document.body.classList.toggle("sb-overlap", shift > 6);
+    $("cabinet").style.left = w / 2 + "px";
+    $("cabinet").style.top = T + 333.5 * scale + "px";
     renderer.resize();
   }
   function frame(now) {
@@ -1237,7 +1352,7 @@
     flickUntil = 0,
     stickHist = [],
     stickVal = 0;
-  const stick = $('joystick');
+  const stick = $("joystick");
   // Floating stick: wherever the thumb lands on the pad becomes the centre; only dragging sideways steers.
   // Past full deflection the centre follows the thumb so reversing is instant, and a quick flick gives a short full-speed burst.
   function moveStick(e) {
@@ -1255,20 +1370,22 @@
       }
       const now = performance.now();
       stickHist.push([now, ev.clientX]);
-      while (stickHist.length > 1 && now - stickHist[0][0] > 150) stickHist.shift();
+      while (stickHist.length > 1 && now - stickHist[0][0] > 150)
+        stickHist.shift();
       stickVal = dx / range;
       const a = Math.abs(stickVal);
-      touchAxis = a < 0.1 ? 0 : Math.sign(stickVal) * Math.pow((a - 0.1) / 0.9, 0.8);
+      touchAxis =
+        a < 0.1 ? 0 : Math.sign(stickVal) * Math.pow((a - 0.1) / 0.9, 0.8);
       const moved = ev.clientX - stickHist[0][1];
       if (Math.abs(moved) > range * 0.4) {
         flickDir = Math.sign(moved);
         flickUntil = now + 170;
       }
     }
-    $('stickKnob').style.transform = `translateX(${stickVal * 25}px)`;
-    stick.setAttribute('aria-valuenow', Math.round(touchAxis * 100));
+    $("stickKnob").style.transform = `translateX(${stickVal * 25}px)`;
+    stick.setAttribute("aria-valuenow", Math.round(touchAxis * 100));
   }
-  stick.addEventListener('pointerdown', (e) => {
+  stick.addEventListener("pointerdown", (e) => {
     if (awaitStart || storyActive) {
       e.preventDefault();
       startNow();
@@ -1284,8 +1401,8 @@
     stick.setPointerCapture(e.pointerId);
     audio.unlock();
   });
-  stick.addEventListener('pointermove', moveStick);
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
+  stick.addEventListener("pointermove", moveStick);
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"])
     stick.addEventListener(type, (e) => {
       if (e.pointerId === stickId) {
         stickId = null;
@@ -1293,11 +1410,11 @@
         flickUntil = 0;
         touchAxis = 0;
         stickVal = 0;
-        $('stickKnob').style.transform = 'translateX(0)';
-        stick.setAttribute('aria-valuenow', '0');
+        $("stickKnob").style.transform = "translateX(0)";
+        stick.setAttribute("aria-valuenow", "0");
       }
     });
-  $('fireButton').addEventListener('pointerdown', (e) => {
+  $("fireButton").addEventListener("pointerdown", (e) => {
     if (storyActive) {
       e.preventDefault();
       storyNext();
@@ -1308,36 +1425,41 @@
       startNow();
       return;
     }
-    feedToken('F');
-    if (!paused) haptics.impact('MEDIUM', 'press', 0, true);
+    feedToken("F");
+    if (!paused) haptics.impact("MEDIUM", "press", 0, true);
     if (paused || !game.active || game.scene) return;
     e.preventDefault();
     fireId = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
     touchFire = true;
-    e.currentTarget.classList.add('pressed');
+    e.currentTarget.classList.add("pressed");
     audio.unlock();
     game.fire();
   });
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
-    $('fireButton').addEventListener(type, (e) => {
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"])
+    $("fireButton").addEventListener(type, (e) => {
       if (e.pointerId === fireId) {
         touchFire = false;
         fireId = null;
-        e.currentTarget.classList.remove('pressed');
+        e.currentTarget.classList.remove("pressed");
       }
     });
-  $('grenadeButton').addEventListener('pointerdown', (e) => {
+  $("grenadeButton").addEventListener("pointerdown", (e) => {
     if (storyActive) return;
     if (awaitStart) {
       e.preventDefault();
       startNow();
       return;
     }
-    feedToken('G');
+    feedToken("G");
     if (paused) return;
     // A firm press when a grenade is thrown, a light tick when the pouch is empty.
-    haptics.impact(game.player.grenades > 0 ? 'MEDIUM' : 'LIGHT', 'press', 0, true);
+    haptics.impact(
+      game.player.grenades > 0 ? "MEDIUM" : "LIGHT",
+      "press",
+      0,
+      true,
+    );
     e.preventDefault();
     audio.unlock();
     game.grenade();
@@ -1346,50 +1468,52 @@
   // is held on the joystick, which made guns selectable only after letting go.
   function equipStored(weapon) {
     if (paused || !game.useStored(weapon)) return;
-    audio.sfx('pickup');
-    haptics.impact('MEDIUM', 'weapon', 0, true);
-    toast(ZSEngine.GUNS[weapon].name + ' equipped');
+    audio.sfx("pickup");
+    haptics.impact("MEDIUM", "weapon", 0, true);
+    toast(ZSEngine.GUNS[weapon].name + " equipped");
   }
-  $('weaponRack').addEventListener('pointerdown', (e) => {
+  $("weaponRack").addEventListener("pointerdown", (e) => {
     if (awaitStart) {
       e.preventDefault();
       startNow();
       return;
     }
-    const b = e.target.closest('[data-weapon]');
+    const b = e.target.closest("[data-weapon]");
     if (!b || b.disabled) return;
     e.preventDefault();
     audio.unlock();
     equipStored(b.dataset.weapon);
   });
-  $('weaponRack').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-weapon]');
+  $("weaponRack").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-weapon]");
     if (b && e.detail === 0) equipStored(b.dataset.weapon); // keyboard / assistive technology
   });
   // One MENU button: it pauses the game and opens the menu (press again to resume).
   // pointerdown, not click, so it also works while a thumb is already on the joystick.
-  const menuButton = $('menuButton');
-  menuButton.addEventListener('pointerdown', (e) => {
+  const menuButton = $("menuButton");
+  menuButton.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     if (awaitStart) {
       startNow();
       return;
     }
     if (storyActive) return;
-    menuButton.classList.add('pressed');
+    menuButton.classList.add("pressed");
     audio.unlock();
-    haptics.impact('LIGHT', 'ui', 0, true);
+    haptics.impact("LIGHT", "ui", 0, true);
     menu();
   });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
-    menuButton.addEventListener(type, () => menuButton.classList.remove('pressed'));
-  menuButton.addEventListener('click', (e) => {
+  for (const type of ["pointerup", "pointercancel", "pointerleave"])
+    menuButton.addEventListener(type, () =>
+      menuButton.classList.remove("pressed"),
+    );
+  menuButton.addEventListener("click", (e) => {
     if (e.detail === 0 && !awaitStart && !storyActive) menu(); // keyboard / assistive technology
   });
-  addEventListener('keydown', (e) => {
+  addEventListener("keydown", (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
     if (storyActive) {
-      if (e.code === 'Space' || e.code === 'Enter') {
+      if (e.code === "Space" || e.code === "Enter") {
         e.preventDefault();
         if (!e.repeat) storyNext();
       }
@@ -1401,12 +1525,19 @@
       return;
     }
     if (
-      ['ArrowLeft', 'ArrowRight', 'Space', 'KeyA', 'KeyD', 'KeyG', 'KeyP', 'Escape'].includes(
-        e.code,
-      )
+      [
+        "ArrowLeft",
+        "ArrowRight",
+        "Space",
+        "KeyA",
+        "KeyD",
+        "KeyG",
+        "KeyP",
+        "Escape",
+      ].includes(e.code)
     )
       e.preventDefault();
-    if (e.code === 'Escape' || e.code === 'KeyP') {
+    if (e.code === "Escape" || e.code === "KeyP") {
       if (!e.repeat) {
         if (panel && game.active) closePanel();
         else menu();
@@ -1415,20 +1546,22 @@
     }
     if (paused) return;
     keys.add(e.code);
-    if (e.code === 'Space' && !e.repeat) {
-      feedToken('F');
+    if (e.code === "Space" && !e.repeat) {
+      feedToken("F");
       audio.unlock();
       game.fire();
     }
-    if (e.code === 'KeyG' && !e.repeat) {
-      feedToken('G');
+    if (e.code === "KeyG" && !e.repeat) {
+      feedToken("G");
       game.grenade();
     }
   });
-  addEventListener('keyup', (e) => keys.delete(e.code));
-  $('overlay').addEventListener('keydown', (e) => {
-    if (e.key !== 'Tab') return;
-    const nodes = [...$('overlay').querySelectorAll('button:not(:disabled),input,a[href]')];
+  addEventListener("keyup", (e) => keys.delete(e.code));
+  $("overlay").addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const nodes = [
+      ...$("overlay").querySelectorAll("button:not(:disabled),input,a[href]"),
+    ];
     if (!nodes.length) return;
     const first = nodes[0],
       last = nodes.at(-1);
@@ -1440,69 +1573,70 @@
       first.focus();
     }
   });
-  $('overlay').addEventListener('submit', async (e) => {
+  $("overlay").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (e.target.id === 'startForm') {
-      if (ready) start($('username').value);
+    if (e.target.id === "startForm") {
+      if (ready) start($("username").value);
     }
-    if (e.target.id === 'adminForm') {
-      const button = e.target.querySelector('button'),
-        code = $('adminCode').value;
-      $('adminCode').value = '';
+    if (e.target.id === "adminForm") {
+      const button = e.target.querySelector("button"),
+        code = $("adminCode").value;
+      $("adminCode").value = "";
       button.disabled = true;
       try {
         admin = (await scores.admin(code)) === true;
         if (admin) adminPanel();
-        else $('adminStatus').textContent = 'Code not accepted. Try again.';
+        else $("adminStatus").textContent = "Code not accepted. Try again.";
       } catch {
-        $('adminStatus').textContent = 'Could not verify the code. Check your connection.';
+        $("adminStatus").textContent =
+          "Could not verify the code. Check your connection.";
       } finally {
         button.disabled = false;
       }
     }
   });
   // Every menu button, skin tile and switch gives a light tap.
-  $('overlay').addEventListener('pointerdown', (e) => {
-    const b = e.target.closest('button:not(:disabled)');
-    if (b) haptics.impact('LIGHT', 'ui', 0, true);
+  $("overlay").addEventListener("pointerdown", (e) => {
+    const b = e.target.closest("button:not(:disabled)");
+    if (b) haptics.impact("LIGHT", "ui", 0, true);
     if (storyActive && storyVideo?.paused) storyVideo.play().catch(() => {});
   });
-  $('overlay').addEventListener('change', (e) => {
-    if (e.target.type === 'checkbox') haptics.impact('LIGHT', 'ui', 0, true);
+  $("overlay").addEventListener("change", (e) => {
+    if (e.target.type === "checkbox") haptics.impact("LIGHT", "ui", 0, true);
   });
-  $('overlay').addEventListener('input', (e) => {
+  $("overlay").addEventListener("input", (e) => {
     const kind = e.target.dataset.volume;
     if (kind) audio.set(kind, e.target.value / 100);
   });
-  $('overlay').addEventListener('change', (e) => {
-    if (e.target.hasAttribute('data-haptics')) {
+  $("overlay").addEventListener("change", (e) => {
+    if (e.target.hasAttribute("data-haptics")) {
       haptics.set(e.target.checked);
       return;
     }
     const cheat = e.target.dataset.cheat;
     if (cheat && admin && practice()) {
-      if (cheat === 'tenHearts') game.setTenHearts(e.target.checked);
+      if (cheat === "tenHearts") game.setTenHearts(e.target.checked);
       else game[cheat] = e.target.checked;
       save();
-      toast('Practice mode · scores off');
+      toast("Practice mode · scores off");
     }
   });
-  $('overlay').addEventListener('click', async (e) => {
-    const button = e.target.closest('button');
+  $("overlay").addEventListener("click", async (e) => {
+    const button = e.target.closest("button");
     if (!button) return;
     if (button.dataset.locked) {
-      toast('A secret finish. Find a way to unlock it.');
+      toast("A secret finish. Find a way to unlock it.");
       return;
     }
     if (button.dataset.soundSet) {
       audio.setSoundSet(button.dataset.soundSet);
-      document.querySelectorAll('[data-sound-set]').forEach((b) => {
+      document.querySelectorAll("[data-sound-set]").forEach((b) => {
         const on = b.dataset.soundSet === button.dataset.soundSet;
-        b.classList.toggle('on', on);
-        b.setAttribute('aria-pressed', on);
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on);
       });
       audio.resume();
-      audio.sfx('pickup');
+      audio.sfx("pickup");
       setTimeout(() => {
         if (paused) audio.pause();
       }, 1200);
@@ -1510,17 +1644,17 @@
     }
     if (button.dataset.skin) {
       applySkin(button.dataset.skin);
-      document.querySelectorAll('[data-skin]').forEach((b) => {
+      document.querySelectorAll("[data-skin]").forEach((b) => {
         const selected = b.dataset.skin === button.dataset.skin;
-        b.classList.toggle('selected', selected);
-        b.setAttribute('aria-pressed', selected);
+        b.classList.toggle("selected", selected);
+        b.setAttribute("aria-pressed", selected);
       });
       return;
     }
     if (button.dataset.boss && admin) {
       practice();
       game.skipBoss(button.dataset.boss, Number(button.dataset.stage));
-      sceneKey = '';
+      sceneKey = "";
       closePanel();
       save();
       return;
@@ -1528,83 +1662,83 @@
     if (button.dataset.gun && admin) {
       practice();
       game.equip(button.dataset.gun);
-      toast('Weapon ready · practice mode');
+      toast("Weapon ready · practice mode");
       return;
     }
     switch (button.dataset.action) {
-      case 'close':
+      case "close":
         closePanel();
         break;
-      case 'home':
+      case "home":
         showStart();
         break;
-      case 'menu':
+      case "menu":
         menu();
         break;
-      case 'skins':
+      case "skins":
         skins();
         break;
-      case 'board':
+      case "board":
         board();
         break;
-      case 'sound':
+      case "sound":
         sound();
         break;
-      case 'help':
+      case "help":
         help();
         break;
-      case 'cheats':
+      case "cheats":
         if (bot) cheatsPanel();
         break;
-      case 'install':
+      case "install":
         if (!nativeApp) install();
         break;
-      case 'admin':
+      case "admin":
         if (!nativeApp) adminPanel();
         break;
-      case 'restart':
+      case "restart":
         showPanel(
-          'restart',
-          'START A NEW RUN?',
+          "restart",
+          "START A NEW RUN?",
           `<p class="menu-note">Your current run will end without submitting its score.</p><button class="primary-action" data-action="home">CHOOSE PLAYER & START</button><button class="secondary-action" data-action="close">KEEP PLAYING</button>`,
         );
         break;
-      case 'retry':
-        start((run.bot ? 'BOT_' : '') + run.name, true);
+      case "retry":
+        start((run.bot ? "BOT_" : "") + run.name, true);
         break;
-      case 'story':
+      case "story":
         storyReplay = true;
-        showStory(parseName(read('zs7-name', 'Player')).name || 'Player', 0);
+        showStory(parseName(read("zs7-name", "Player")).name || "Player", 0);
         break;
-      case 'grenades':
+      case "grenades":
         if (practice()) {
           game.player.grenades = 9;
-          toast('Grenades refilled · practice mode');
+          toast("Grenades refilled · practice mode");
         }
         break;
-      case 'continue':
+      case "continue":
         {
-          const saved = read('zs7-run', null);
+          const saved = read("zs7-run", null);
           if (ready && saved && game.restore(saved.engine)) {
             run = saved.run;
             bot = !!run.bot;
-            sceneKey = '';
+            sceneKey = "";
             closePanel();
           }
         }
         break;
-      case 'preview-sound':
+      case "preview-sound":
         audio.resume();
-        audio.playMusic('main');
-        ['pistol', 'hit', 'shotgun', 'grenade', 'pickup'].forEach((n, i) =>
+        audio.playMusic("main");
+        ["pistol", "hit", "shotgun", "grenade", "pickup"].forEach((n, i) =>
           setTimeout(() => audio.sfx(n), 500 + i * 650),
         );
-        haptics.impact('MEDIUM', 'preview', 0, true);
+        haptics.impact("MEDIUM", "preview", 0, true);
         setTimeout(() => {
           if (paused) audio.pause();
         }, 5000);
         break;
-      case 'install-now':
+      case "install-now":
         if (installPrompt) {
           await installPrompt.prompt();
           installPrompt = null;
@@ -1613,23 +1747,23 @@
         break;
     }
   });
-  addEventListener('resize', () => {
-    lastFit = '';
+  addEventListener("resize", () => {
+    lastFit = "";
   });
-  visualViewport?.addEventListener('resize', () => {
-    lastFit = '';
+  visualViewport?.addEventListener("resize", () => {
+    lastFit = "";
   });
-  screen.orientation?.addEventListener('change', () => {
-    lastFit = '';
+  screen.orientation?.addEventListener("change", () => {
+    lastFit = "";
   });
-  addEventListener('blur', () => {
+  addEventListener("blur", () => {
     clearInput();
     if (game.active && !panel && !awaitStart) {
       pause();
       menu();
     }
   });
-  document.addEventListener('visibilitychange', () => {
+  document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       pause();
       storyVideo?.pause();
@@ -1639,17 +1773,17 @@
       storyVideo?.play().catch(() => {});
     }
   });
-  addEventListener('pagehide', save);
-  document.addEventListener('contextmenu', (e) => {
-    if (!e.target.closest?.('input,textarea')) e.preventDefault();
+  addEventListener("pagehide", save);
+  document.addEventListener("contextmenu", (e) => {
+    if (!e.target.closest?.("input,textarea")) e.preventDefault();
   });
-  addEventListener('beforeinstallprompt', (e) => {
+  addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     installPrompt = e;
   });
   ZSConsole.apply();
-  applySkin(read('zs7-skin', 'toxic'));
-  fetch('./skins-extra.json')
+  applySkin(read("zs7-skin", "toxic"));
+  fetch("./skins-extra.json")
     .then((r) => r.json())
     .then((j) => {
       let added = 0;
@@ -1664,57 +1798,65 @@
           SKINS.push(s);
           added++;
         }
-      if (added) applySkin(read('zs7-skin', 'toxic'));
+      if (added) applySkin(read("zs7-skin", "toxic"));
     })
     .catch(() => {});
   showStart();
   requestAnimationFrame(frame);
   renderer
     .load((fraction) => {
-      const line = $('loadingLine');
-      if (line) line.textContent = 'Loading game artwork · ' + Math.round(fraction * 100) + '%';
+      const line = $("loadingLine");
+      if (line)
+        line.textContent =
+          "Loading game artwork · " + Math.round(fraction * 100) + "%";
     })
     .then(() => {
       ready = true;
-      if (panel === 'start') {
-        const b = $('startButton');
+      if (panel === "start") {
+        const b = $("startButton");
         b.disabled = false;
-        b.textContent = '▶ PRESS START ◀';
-        $('loadingLine').textContent = 'NO LOGIN · NO ADS · V' + APP_VER;
+        b.textContent = "▶ PRESS START ◀";
+        $("loadingLine").textContent = "NO LOGIN · NO ADS · V" + APP_VER;
       }
       renderer.draw(game);
     })
     .catch((error) => {
-      const line = $('loadingLine');
-      if (line) line.textContent = 'Artwork download interrupted. Reload to retry.';
+      const line = $("loadingLine");
+      if (line)
+        line.textContent = "Artwork download interrupted. Reload to retry.";
       toast(error.message);
     });
   scores.flush();
-  if ('serviceWorker' in navigator) {
+  if ("serviceWorker" in navigator) {
     const hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (!hadController) return;
       pendingReload = true;
       reloadWhenSafe();
     });
     navigator.serviceWorker
-      .register('./sw.js', { updateViaCache: 'none' })
+      .register("./sw.js", { updateViaCache: "none" })
       .then((reg) => {
         reg.update().catch(() => {});
-        document.addEventListener('visibilitychange', () => {
+        document.addEventListener("visibilitychange", () => {
           if (document.hidden) reloadWhenSafe();
           else reg.update().catch(() => {});
         });
         setInterval(() => reg.update().catch(() => {}), 600000);
         return navigator.serviceWorker.ready;
       })
-      .then(() => navigator.serviceWorker.controller?.postMessage({ type: 'CACHE_STATUS' }))
+      .then(() =>
+        navigator.serviceWorker.controller?.postMessage({
+          type: "CACHE_STATUS",
+        }),
+      )
       .catch(() => {});
-    navigator.serviceWorker.addEventListener('message', (e) => {
-      if (e.data?.type === 'OFFLINE_READY') {
-        write('zs7-offline-ready', true);
-        if ($('offlineStatus'))
-          $('offlineStatus').textContent = 'Game download complete · offline play ready.';
+    navigator.serviceWorker.addEventListener("message", (e) => {
+      if (e.data?.type === "OFFLINE_READY") {
+        write("zs7-offline-ready", true);
+        if ($("offlineStatus"))
+          $("offlineStatus").textContent =
+            "Game download complete · offline play ready.";
       }
     });
   }

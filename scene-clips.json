@@ -1,3 +1,34 @@
 {
-  "clips": {}
+  "clips": {
+    "jordan/intro": "scene-jordan-intro.mp4",
+    "jordan/form2": "scene-jordan-form2.mp4",
+    "jordan/bossdown": "scene-jordan-bossdown.mp4",
+    "jordan/joeydown": "scene-jordan-joeydown.mp4",
+    "glowinghumanity/intro": "scene-glowinghumanity-intro.mp4",
+    "glowinghumanity/form2": "scene-glowinghumanity-form2.mp4",
+    "glowinghumanity/bossdown": "scene-glowinghumanity-bossdown.mp4",
+    "glowinghumanity/joeydown": "scene-glowinghumanity-joeydown.mp4",
+    "debo/intro": "scene-debo-intro.mp4",
+    "debo/form2": "scene-debo-form2.mp4",
+    "debo/bossdown": "scene-debo-bossdown.mp4",
+    "debo/joeydown": "scene-debo-joeydown.mp4",
+    "caffeinatedsloth/intro": "scene-caffeinatedsloth-intro.mp4",
+    "caffeinatedsloth/form2": "scene-caffeinatedsloth-form2.mp4",
+    "caffeinatedsloth/bossdown": "scene-caffeinatedsloth-bossdown.mp4",
+    "caffeinatedsloth/joeydown": "scene-caffeinatedsloth-joeydown.mp4",
+    "discoman/intro": "scene-discoman-intro.mp4",
+    "discoman/form2": "scene-discoman-form2.mp4",
+    "discoman/bossdown": "scene-discoman-bossdown.mp4",
+    "discoman/joeydown": "scene-discoman-joeydown.mp4",
+    "fatamy/intro": "scene-fatamy-intro.mp4",
+    "fatamy/form2": "scene-fatamy-form2.mp4",
+    "fatamy/form3": "scene-fatamy-form3.mp4",
+    "fatamy/bossdown": "scene-fatamy-bossdown.mp4",
+    "fatamy/joeydown": "scene-fatamy-joeydown.mp4",
+    "drmantis/intro": "scene-drmantis-intro.mp4",
+    "drmantis/form2": "scene-drmantis-form2.mp4",
+    "drmantis/form3": "scene-drmantis-form3.mp4",
+    "drmantis/bossdown": "scene-drmantis-bossdown.mp4",
+    "drmantis/joeydown": "scene-drmantis-joeydown.mp4"
+  }
 }

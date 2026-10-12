@@ -1,3 +1,132 @@
 {
-  "skins": []
+  "skins": [
+    {
+      "id": "joeyrob",
+      "name": "Battle-Tested UK Soldier",
+      "file": "console-joeyrob.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#aab3ae",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "jordan",
+      "name": "Fireline Survivor",
+      "file": "console-jordan.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#ff9a36",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "glowinghumanity",
+      "name": "Neon Fallout",
+      "file": "console-glowinghumanity.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#9fff57",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "debo",
+      "name": "Iron Enforcer",
+      "file": "console-debo.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#f1c25d",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "caffeinatedsloth",
+      "name": "Overdrive Brew",
+      "file": "console-caffeinatedsloth.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#cb9b6c",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "discoman",
+      "name": "Midnight Dancefloor",
+      "file": "console-discoman.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#e98aff",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "fatamy",
+      "name": "Broken Bond",
+      "file": "console-fatamy.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#ff83bd",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    },
+    {
+      "id": "drmantis",
+      "name": "Harvest Crown",
+      "file": "console-drmantis.webp",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "accent": "#92e158",
+      "bleed": "#182023",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71"
+    }
+  ]
 }
