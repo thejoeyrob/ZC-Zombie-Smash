@@ -2,8 +2,8 @@
 """Fits a painted console skin to the game's fixed cabinet.
 
 The artist paints white placeholder shapes where the game draws the screen and the controls.
-This script (1) resizes the picture to 900 x 1600, (2) stretches it so the white window lands exactly on the
-game's screen window, (3) nudges the area around each control so its socket sits exactly under the
+This script (1) resizes the picture to 900 x 1600, (2) moves the window and control row to the game's positions without scaling the art (blank window rows are
+added or removed and a quiet strip of the deck is cut), (3) nudges the area around each control so its socket sits exactly under the
 game's joystick, FIRE, grenade and MENU button, and (4) paints the placeholders dark so no white shows.
 
   python3 scripts/fit-skin.py input.png console-<id>.webp
@@ -33,14 +33,54 @@ def components(mask, min_area=400):
     return sorted(out, key=lambda c: -c[0]), lab
 
 
-def stretch_to_window(img, win, row_y):
-    """Stretches the picture so the white window lands on the game's window and the joystick/FIRE row on the game's row."""
+def drop_rows(img, y0, n):
+    """Removes n rows starting at y0 and blends the seam so it does not show."""
+    out = np.concatenate([img[:y0], img[y0 + n :]], axis=0)
+    fade = 14
+    for k in range(fade):
+        a = (k + 1) / (fade + 1)
+        y = y0 - fade + k
+        out[y] = ((1 - a) * img[y] + a * img[y + n]).astype(np.uint8)
+    return out
+
+
+def add_rows(img, y, n):
+    """Repeats the row at y n times (used inside the blank window only)."""
+    return np.concatenate([img[:y], np.repeat(img[y : y + 1], n, axis=0), img[y:]], axis=0)
+
+
+def calm_band(img, lo, hi, n):
+    """Finds the n-row band between lo and hi with the least detail, so removing it costs the artwork nothing."""
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    energy = np.abs(np.diff(gray, axis=0)).mean(axis=1)
+    csum = np.concatenate([[0], np.cumsum(energy)])
+    best = min(range(lo, hi - n), key=lambda y: csum[y + n] - csum[y])
+    return best
+
+
+def fit_vertical(img, win, row_y):
+    """Brings the window bottom and the joystick row to the game's positions WITHOUT scaling the artwork:
+    blank window rows are added or removed, and a quiet band of the deck is cut out."""
     l, t, r, b = win
-    xs = np.interp(np.arange(W), [0, 76, 824, W], [0, l, r, W]).astype(np.float32)
-    ys = np.interp(np.arange(H), [0, 102, 1161, 1371, H], [0, t, b, row_y, H]).astype(np.float32)
-    mx = np.tile(xs[None, :], (H, 1))
-    my = np.tile(ys[:, None], (1, W))
-    return cv2.remap(img, mx, my, cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    delta = REF_WIN[3] - b
+    mid = (t + b) // 2
+    if delta > 0:
+        img = add_rows(img, mid, delta)
+    elif delta < 0:
+        img = drop_rows(img, mid, -delta)
+    row_y = row_y + delta
+    extra = int(round(row_y - 1371))
+    if extra > 2:
+        # Only the strip between the window and the tops of the sockets can be cut; any leftover offset is
+        # absorbed by the local nudge around each control.
+        lo, hi = REF_WIN[3] + 20, 1371 - 118
+        extra = min(extra, hi - lo - 4)
+        y0 = calm_band(img, lo, hi, extra)
+        img = drop_rows(img, y0, extra)
+    elif extra < -2:
+        y0 = calm_band(img, REF_WIN[3] + 20, 1371 - 118, 1)
+        img = np.concatenate([img[:y0], np.repeat(img[y0 : y0 + 1], -extra, axis=0), img[y0:]], axis=0)
+    return cv2.resize(img[:H], (W, H)) if img.shape[0] >= H else np.pad(img, ((0, H - img.shape[0]), (0, 0), (0, 0)), mode='edge')
 
 
 def nudge_control(img, ctrl, found):
@@ -95,7 +135,7 @@ def fit(src, dst):
     left = [c for c in rounds if c[2][0] < W / 2]
     right = [c for c in rounds if c[2][0] >= W / 2]
     row_y = float(np.mean([max(left, key=lambda c: c[0])[2][1], max(right, key=lambda c: c[0])[2][1]])) if left and right else 1371.0
-    img = stretch_to_window(img, win, row_y)
+    img = fit_vertical(img, win, row_y)
     # Find the control placeholders in the stretched picture, match each to the nearest game control.
     comps, lab = components(white_mask(img))
     small = [c for c in comps[1:] if c[0] < 60000]
