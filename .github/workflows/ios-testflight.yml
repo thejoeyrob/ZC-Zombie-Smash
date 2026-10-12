@@ -61,6 +61,7 @@ jobs:
         shell: bash
         run: |
           npm ci
+          node scripts/sync-art.mjs
           node scripts/build-www.mjs
           jq --arg id "$BUNDLE_ID" '.appId = $id' capacitor.config.json > "$RUNNER_TEMP/cap.json"
           mv "$RUNNER_TEMP/cap.json" capacitor.config.json

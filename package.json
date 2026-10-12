@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "description": "Capacitor wrapper that packages the Zombie Smash web game for the iOS App Store.",
   "scripts": {
-    "build:www": "node scripts/build-www.mjs"
+    "build:www": "node scripts/build-www.mjs",
+    "sync:art": "node scripts/sync-art.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.3",

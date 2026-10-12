@@ -32,6 +32,16 @@
     renderer = new ZSRenderer($('gameCanvas'));
   const APP_VER =
     (document.querySelector('script[src*="game.js"]')?.src.match(/[?&]v=([\d.]+)/) || [])[1] || '';
+  // Finished scene clips and extra console skins are listed by scripts/sync-art.mjs.
+  // A scene with no listed clip, or a clip that fails to load, uses the built-in scene.
+  let sceneClips = {};
+  const failedClips = new Set();
+  fetch('./scene-clips.json')
+    .then((r) => r.json())
+    .then((j) => {
+      sceneClips = j.clips || {};
+    })
+    .catch(() => {});
   let pendingReload = false;
   function reloadWhenSafe() {
     if (!pendingReload || (typeof game !== 'undefined' && game.active && !paused)) return;
@@ -508,7 +518,7 @@
     write('zs7-name', raw);
     pendingName = name;
     pendingBot = isBot;
-    if (!skipIntro && !read('zs7-story-seen', false)) {
+    if (!skipIntro) {
       showStory(name, 0);
       return;
     }
@@ -538,6 +548,12 @@
     storyVideo = v;
     v.onended = () => {
       if (storyActive && panel === 'story') storyNext();
+    };
+    // If a clip cannot load, move on instead of leaving a black screen.
+    v.onerror = () => {
+      setTimeout(() => {
+        if (storyActive && panel === 'story' && storyVideo === v) storyNext();
+      }, 400);
     };
     v.src = `./story-${index + 1}.mp4`;
     v.currentTime = 0;
@@ -980,18 +996,75 @@
     if (type === 'over') results(data.reason);
     if (type === 'wave') save();
   }
+  // Which finished clip (if any) covers the scene that is playing now.
+  function sceneClipFor(s) {
+    if (!s.bossId || (s.kind === 'arrival' && s.phase === 0)) return null;
+    const name =
+        s.kind === 'arrival'
+          ? 'intro'
+          : s.kind === 'mutation'
+            ? 'form' + s.stage
+            : s.kind === 'down'
+              ? 'bossdown'
+              : s.kind === 'loss'
+                ? 'joeydown'
+                : null,
+      file = name && sceneClips[s.bossId + '/' + name];
+    return file && !failedClips.has(file) ? file : null;
+  }
+  function mountSceneClip(box, s, file) {
+    const v = document.createElement('video');
+    v.className = 'scene-clip';
+    v.muted = true;
+    v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.preload = 'auto';
+    v.src = './' + file;
+    box.classList.add('clip-mode');
+    // The scene lasts exactly as long as the clip.
+    v.addEventListener('loadedmetadata', () => {
+      if (game.scene === s && Number.isFinite(v.duration)) {
+        s.duration = Math.max(0.5, v.duration + 0.25);
+        s.time = 0;
+      }
+    });
+    // A clip that cannot be played falls back to the built-in scene.
+    v.addEventListener('error', () => {
+      failedClips.add(file);
+      v.remove();
+      box.classList.remove('clip-mode');
+      sceneKey = '';
+    });
+    box.prepend(v);
+    v.play().catch(() => {});
+  }
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
     if (!s) {
       box.hidden = true;
       sceneKey = '';
+      box.classList.remove('clip-mode');
+      box.querySelector('video.scene-clip')?.remove();
       return;
+    }
+    const clip = sceneClipFor(s);
+    // One clip covers the whole "Joey reacts" and "boss reveal" pair, so skip the second panel.
+    if (clip && s.kind === 'arrival' && s.phase === 2) {
+      game.advanceScene();
+      return;
+    }
+    const playing = box.querySelector('video.scene-clip');
+    if (playing) {
+      if (paused) playing.pause();
+      else if (playing.paused && playing.readyState > 2) playing.play().catch(() => {});
     }
     const key = [s.kind, s.bossId, s.phase, s.stage].join(':');
     if (sceneKey === key) return;
     sceneKey = key;
     box.hidden = false;
+    box.classList.remove('clip-mode');
     const b = BOSSES.find((b) => b.id === s.bossId);
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
@@ -1015,6 +1088,7 @@
     box.onclick = () => {
       if (!paused) game.advanceScene();
     };
+    if (clip) mountSceneClip(box, s, clip);
   }
 
   function hud() {
@@ -1391,6 +1465,7 @@
   $('overlay').addEventListener('pointerdown', (e) => {
     const b = e.target.closest('button:not(:disabled)');
     if (b) haptics.impact('LIGHT', 'ui', 0, true);
+    if (storyActive && storyVideo?.paused) storyVideo.play().catch(() => {});
   });
   $('overlay').addEventListener('change', (e) => {
     if (e.target.type === 'checkbox') haptics.impact('LIGHT', 'ui', 0, true);
@@ -1574,6 +1649,24 @@
   });
   ZSConsole.apply();
   applySkin(read('zs7-skin', 'toxic'));
+  fetch('./skins-extra.json')
+    .then((r) => r.json())
+    .then((j) => {
+      let added = 0;
+      for (const s of j.skins || [])
+        if (
+          s?.id &&
+          s.file &&
+          Array.isArray(s.win) &&
+          s.win.length === 4 &&
+          !SKINS.some((x) => x.id === s.id)
+        ) {
+          SKINS.push(s);
+          added++;
+        }
+      if (added) applySkin(read('zs7-skin', 'toxic'));
+    })
+    .catch(() => {});
   showStart();
   requestAnimationFrame(frame);
   renderer

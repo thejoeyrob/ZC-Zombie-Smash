@@ -1,0 +1,214 @@
+{
+  "status": "SPEC ONLY - Original image files still required",
+  "skins": [
+    {
+      "id": "joeyrob",
+      "filename": "console-joeyrob.webp",
+      "displayName": "Battle-Tested UK Soldier",
+      "original_art_required": true,
+      "portrait_direction": "single determined helmeted Joey close-up, not a zombie",
+      "materials_and_motifs": "weathered union flag, blued steel, bullet scuffs, chipped olive paint, tan kit buckles",
+      "accent": "#aab3ae",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "jordan",
+      "filename": "console-jordan.webp",
+      "displayName": "Fireline Survivor",
+      "original_art_required": true,
+      "portrait_direction": "red helmet and unmistakable firefighter face",
+      "materials_and_motifs": "fire-service crimson metal, yellow reflective chevrons, soot, scorched axe steel",
+      "accent": "#ff9a36",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "glowinghumanity",
+      "filename": "console-glowinghumanity.webp",
+      "displayName": "Neon Fallout",
+      "original_art_required": true,
+      "portrait_direction": "rainbow dreadlocks, headband, peace tee, expressive face",
+      "materials_and_motifs": "tie-dye rainbow streaks, grungy peace signs, neon test-chamber tubes, neon-green ooze",
+      "accent": "#9fff57",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "debo",
+      "filename": "console-debo.webp",
+      "displayName": "Iron Enforcer",
+      "original_art_required": true,
+      "portrait_direction": "backwards cap, chain and intimidating human face, NOT a gasmask",
+      "materials_and_motifs": "industrial black steel, woven heavy gold chain, diamond D motif, crushed-barrel textures",
+      "accent": "#f1c25d",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "caffeinatedsloth",
+      "filename": "console-caffeinatedsloth.webp",
+      "displayName": "Overdrive Brew",
+      "original_art_required": true,
+      "portrait_direction": "actual animal sloth face and claws with startled eyes, NOT a humanoid",
+      "materials_and_motifs": "espresso brown copper, scratched coffee machine trim, beans, hand-painted cup rings",
+      "accent": "#cb9b6c",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "discoman",
+      "filename": "console-discoman.webp",
+      "displayName": "Midnight Dancefloor",
+      "original_art_required": true,
+      "portrait_direction": "older silver-haired sunglasses face, wide white collar; no afro",
+      "materials_and_motifs": "purple mirrored chrome, silver sequins, disco-ball refractions and music-wave etching",
+      "accent": "#e98aff",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "fatamy",
+      "filename": "console-fatamy.webp",
+      "displayName": "Broken Bond",
+      "original_art_required": true,
+      "portrait_direction": "TWO separate clear portraits: fit stage1 ponytailed soldier and large stage3 monster; no gore",
+      "materials_and_motifs": "dusty magenta metal, camo weave, claw scratches and restrained red energy",
+      "accent": "#ff83bd",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    },
+    {
+      "id": "drmantis",
+      "filename": "console-drmantis.webp",
+      "displayName": "Harvest Crown",
+      "original_art_required": true,
+      "portrait_direction": "TWO separate clear portraits: regal human stage1 and giant mantis stage3; no skull-headed sorcerer",
+      "materials_and_motifs": "aged jade velvet, tarnished gold filigree, crown engraving, insect-wing and mantis-scythe motifs",
+      "accent": "#92e158",
+      "fire": "#e44a45",
+      "grenade": "#238ec9",
+      "stick": "#d6ad71",
+      "bleed": "#182023",
+      "win": [
+        76,
+        102,
+        824,
+        1161
+      ],
+      "width": 900,
+      "height": 1600,
+      "quality_goal": "full-res original hand-illustrated face(s); premium photoreal-comic industrial material finishing; texture and portrait must not cover gameplay/control footprints"
+    }
+  ],
+  "controls": {
+    "joystick": [
+      198,
+      1371,
+      217
+    ],
+    "fire": [
+      704,
+      1371,
+      217
+    ],
+    "grenade": [
+      450,
+      1303,
+      106
+    ],
+    "menu": [
+      450,
+      1455,
+      167,
+      72
+    ]
+  },
+  "reserved": {
+    "title": [
+      300,
+      10,
+      600,
+      92
+    ],
+    "map_name_y": 1545,
+    "developer_y": 1570
+  }
+}

@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.13.0';
+const CACHE = 'zombie-smash-v7.14.0';
 const ASSETS = [
   './404.html',
   './apple-touch-icon.png',
@@ -95,6 +95,8 @@ const ASSETS = [
   './sfx-throw.mp3',
   './sfx-victory.mp3',
   './sfx-whoosh.mp3',
+  './scene-clips.json',
+  './skins-extra.json',
   './story-1.mp4',
   './story-2.mp4',
   './story-3.mp4',
