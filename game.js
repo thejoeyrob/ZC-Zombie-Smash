@@ -786,12 +786,12 @@
     if (skin) toast(lockText(skin));
   }
   const ICON_CHOICES = [
-    ['', 'classic', 'Classic Hand'],
+    ['', 'yours', 'Gritty Zombie'],
+    ['ZSIconClassic', 'classic', 'Classic Hand'],
     ['ZSIconSlime', 'slime', 'Slime Hand'],
     ['ZSIconMoon', 'moon', 'Blood Moon'],
     ['ZSIconZombie', 'zombie', 'Shattered'],
     ['ZSIconSoldier', 'soldier', 'Joey Rob'],
-    ['ZSIconYours', 'yours', 'Gritty Zombie'],
   ];
   function iconPlugin() {
     try {
