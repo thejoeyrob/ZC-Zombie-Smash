@@ -126,6 +126,27 @@ jobs:
         shell: bash
         run: python3 scripts/ios-app-icons.py
 
+      - name: Re-activate the audio session when the app comes back
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          p = 'ios/App/App/AppDelegate.swift'
+          s = open(p).read()
+          hook = 'func applicationDidBecomeActive(_ application: UIApplication) {'
+          code = (
+              '\n        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])'
+              '\n        try? AVAudioSession.sharedInstance().setActive(true)'
+          )
+          if 'applicationDidBecomeActive' in s and 'setActive(true)\n' not in s.split(hook)[1][:400]:
+              s = s.replace(hook, hook + code, 1)
+              if 'import AVFoundation' not in s:
+                  s = s.replace('import UIKit', 'import UIKit\nimport AVFoundation', 1)
+              open(p, 'w').write(s)
+              print('Audio session is re-activated on becoming active')
+          else:
+              print('::warning::applicationDidBecomeActive not found or already patched')
+          PY
+
       - name: Write App Store Connect API key
         shell: bash
         run: |

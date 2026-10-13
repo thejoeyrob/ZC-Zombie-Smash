@@ -1127,12 +1127,13 @@
       // iPhone: Web Audio is silenced by the ring/silent switch unless the page asks for "playback" audio.
       this.playbackSession();
     }
-    // Both sound sets are synthesized now: ORIGINAL keeps the 7.15.1 chip-style music, NEW is orchestral.
+    // Three sets: NEW (synthesized, orchestral music), CHIP (synthesized, chip-style music) and ORIGINAL (the
+    // first recorded sound files).
     get synthMode() {
-      return true;
+      return this.settings.set !== 'original';
     }
     get style() {
-      return this.settings.set === 'original' ? 'synth' : 'real';
+      return this.settings.set === 'new' ? 'real' : 'synth';
     }
     playbackSession() {
       try {
@@ -1452,9 +1453,10 @@
     }
     // Switch between the new synthesized sounds and the original recorded ones.
     setSoundSet(name) {
-      this.settings.set = name === 'original' ? 'original' : 'new';
+      this.settings.set = name === 'original' || name === 'chip' ? name : 'new';
       this.save();
       if (!this.ctx) return;
+      if (!this.synthMode) for (const n of FILES) this.buffer('sfx-' + n + '.mp3');
       this.wet.gain.setTargetAtTime(this.style === 'synth' ? 0 : 0.32, this.ctx.currentTime, 0.05);
       if (this.track && !this.holdTrack) {
         this.stopMusic(0.15);
@@ -1476,9 +1478,23 @@
       }
       if (this.ctx.state !== 'running') {
         try {
-          await this.ctx.resume();
+          await Promise.race([this.ctx.resume(), new Promise((r) => setTimeout(r, 700))]);
         } catch {}
       }
+      // Still not running (iOS leaves it "interrupted" after the app was away): build a fresh context.
+      if (this.ctx.state !== 'running') {
+        try {
+          this.ctx.close();
+        } catch {}
+        clearInterval(this.seq?.timer);
+        this.ctx = null;
+        this.seq = this.music = null;
+        this.track = null;
+        await this.unlock();
+        return;
+      }
+      // Clear any master mute left over from an earlier pause when the game is running again.
+      if (!this.paused) this.master.gain.setTargetAtTime(1, this.ctx.currentTime, 0.02);
       if (
         this.ctx.state === 'running' &&
         this.wantTrack &&
