@@ -9,14 +9,14 @@ import os
 import re
 import shutil
 
-ICONS = ['slime', 'moon', 'zombie', 'soldier']
+ICONS = ['slime', 'moon', 'zombie', 'soldier', 'yours']
 NAMES = {i: 'ZSIcon' + i.capitalize() for i in ICONS}
 ASSETS = 'ios/App/App/Assets.xcassets'
 
 for key, name in NAMES.items():
     d = f'{ASSETS}/{name}.appiconset'
     os.makedirs(d, exist_ok=True)
-    src = f'ios-assets/alt/icon-{ {"moon":"blood-moon"}.get(key, key) }-1024.png'
+    src = f'ios-assets/alt/icon-{ {"moon":"blood-moon","yours":"zombie-gritty"}.get(key, key) }-1024.png'
     shutil.copy(src, f'{d}/icon.png')
     json.dump(
         {

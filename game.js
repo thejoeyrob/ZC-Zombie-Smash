@@ -791,6 +791,7 @@
     ['ZSIconMoon', 'moon', 'Blood Moon'],
     ['ZSIconZombie', 'zombie', 'Shattered'],
     ['ZSIconSoldier', 'soldier', 'Joey Rob'],
+    ['ZSIconYours', 'yours', 'Gritty Zombie'],
   ];
   function iconPlugin() {
     try {
