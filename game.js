@@ -159,6 +159,8 @@
     save();
     reloadWhenSafe();
   }
+  // The music for a boss fight: Debo and Disco Man have their own themes.
+  const bossTrack = (id) => (id === 'debo' ? 'debo' : id === 'discoman' ? 'disco' : 'boss');
   function resume() {
     if (!game.active || game.over || landscape) return;
     paused = false;
@@ -166,12 +168,12 @@
     lastTime = performance.now();
     audio.resume();
     audio.playMusic(
-      game.scene?.kind === 'arrival'
+      game.scene?.kind === 'arrival' && !(game.scene.bossId === 'debo' && game.scene.phase >= 2)
         ? 'entrance'
-        : game.boss?.bossId === 'discoman'
-          ? 'disco'
-          : game.boss
-            ? 'boss'
+        : game.boss
+          ? bossTrack(game.boss.bossId)
+          : game.scene?.bossId === 'debo' && game.scene.phase >= 2
+            ? 'debo'
             : 'main',
     );
   }
@@ -1184,7 +1186,7 @@
       audio.sfx(sounds[type], type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : 1);
     buzz(type, data);
     if (type === 'fight') {
-      audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
+      audio.playMusic(bossTrack(data.id));
       audio.sfx('doom');
     }
     if (type === 'over') results(data.reason);
