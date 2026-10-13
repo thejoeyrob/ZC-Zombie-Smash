@@ -2733,3 +2733,14 @@ body {
 .screen.clip-full .playfield {
   overflow: visible;
 }
+
+/* 7.22: leaderboard rows from runs that used a cheat code */
+.board-row.cheat span {
+  color: #ffb04a;
+}
+.board-row .cheat-mark {
+  font-style: normal;
+  margin-left: 6px;
+  color: #ff7a2f;
+  text-shadow: 0 0 6px #ff7a2f88;
+}

@@ -145,7 +145,7 @@
     if (run && game.active && !game.over)
       write('zs7-run', {
         engine: game.snapshot(),
-        run: { id: run.id, name: run.name, ticket: run.ticket, bot },
+        run: { id: run.id, name: run.name, ticket: run.ticket, bot, cheated: !!run.cheated },
       });
     else if (game.over)
       try {
@@ -837,16 +837,20 @@
     if (panel !== 'board') return;
     const rows = Array.isArray(result.rows) ? result.rows : [],
       nameOf = (r) => String(r.username || r.name || r.gamertag || ''),
+      isCheat = (r) => nameOf(r).toLowerCase().endsWith(CHEAT_MARK),
+      plain = (n) => (n.toLowerCase().endsWith(CHEAT_MARK) ? n.slice(0, -CHEAT_MARK.length) : n),
       scoreOf = (r) => Number(r.score || r.high_score || 0),
       me = (run?.name || parseName(read('zs7-name', '')).name).trim(),
       mine = me ? scores.getBest(me) : 0,
-      listed = rows.some((r) => nameOf(r).toLowerCase() === me.toLowerCase() && scoreOf(r) >= mine),
+      listed = rows.some(
+        (r) => plain(nameOf(r)).toLowerCase() === me.toLowerCase() && scoreOf(r) >= mine,
+      ),
       youRow =
         mine > 0 && !listed
           ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
           : '';
     $('overlay').querySelector('.panel-content').innerHTML =
-      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row"><b class="rank">${i + 1}</b><span>${esc(nameOf(r))}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   function sound() {
     const set = ['original', 'chip', 'early'].includes(audio.settings.set)
@@ -977,8 +981,23 @@
     },
   ];
   const glyph = { L: '◀', R: '▶', F: 'FIRE', G: 'NADE' };
+  // A run that used a cheat code outside BOT mode still counts on the board, but is marked: it is entered
+  // under the player's name plus a short tag, which the board shows as a coloured name with a star.
+  const CHEAT_MARK = '.cht';
+  function markCheated() {
+    if (!run || run.cheated) return;
+    const r = run;
+    r.cheated = true;
+    const flagged = r.name.slice(0, 24 - CHEAT_MARK.length).trim() + CHEAT_MARK;
+    r.ticket = null;
+    r.ticketPromise = scores.begin(flagged).then((ticket) => {
+      r.ticket = ticket;
+      if (run === r) save();
+      return ticket;
+    });
+  }
   function feedToken(token) {
-    if (!bot || paused || !game.active || game.over) return;
+    if (paused || !game.active || game.over) return;
     const now = performance.now();
     if (now - cheatLast > 2200) cheatBuf = '';
     cheatLast = now;
@@ -986,13 +1005,19 @@
     const hit = CHEATS.find((c) => cheatBuf.endsWith(c.seq));
     if (!hit) return;
     cheatBuf = '';
-    game.practice = true;
+    const wasPractice = game.practice;
+    if (!bot) markCheated();
     hit.run();
+    // Some cheats flag the engine as practice-only; outside BOT mode the run still counts (it is marked instead).
+    game.practice = bot ? true : wasPractice;
     save();
     audio.sfx('boost');
     haptics.notify('SUCCESS', 'cheat', 0);
     toast(
-      'CHEAT · ' + hit.name + (hit.state ? (hit.state() ? ' ON' : ' OFF') : '') + ' · scores off',
+      'CHEAT · ' +
+        hit.name +
+        (hit.state ? (hit.state() ? ' ON' : ' OFF') : '') +
+        (bot ? ' · scores off' : ' · score marked ✦'),
     );
   }
   function trackStick(axis) {
@@ -1006,7 +1031,7 @@
     showPanel(
       'cheats',
       'CHEATS',
-      `<p class="menu-note">BOT mode is on. While you play, enter a code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button. Keep each tap within about 2 seconds. Any cheat makes the run practice-only: scores stay off the board.</p>${CHEATS.map(
+      `<p class="menu-note">BOT mode is on. While you play, enter a code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button. Keep each tap within about 2 seconds. Any cheat makes the run practice-only: scores stay off the board. Outside BOT mode the same codes work too, and the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
           `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? 'on' : ''}">${c.state() ? 'ON' : 'OFF'}</span>` : ''}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
       ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
@@ -1016,7 +1041,7 @@
     showPanel(
       'results',
       game.practice ? 'PRACTICE COMPLETE' : 'RUN COMPLETE',
-      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
+      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : run?.cheated ? 'Cheats used · your score will be marked ✦ on the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
       { closable: false },
     );
     save();
