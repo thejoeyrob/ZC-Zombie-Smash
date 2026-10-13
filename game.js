@@ -177,6 +177,12 @@
   }
   function closePanel() {
     endPreview();
+    // The menu was opened during the story: carry on with the clip that was playing.
+    if (storyActive && panel !== 'story') {
+      panel = '';
+      showStory(pendingName, storyStep);
+      return;
+    }
     panel = '';
     $('overlay').hidden = true;
     clearInput();
@@ -199,6 +205,8 @@
         : '') + `<div class="panel-content ${start ? 'start-panel' : ''}">${html}</div>`;
   }
   function showStart() {
+    storyActive = false;
+    $('fireButton')?.classList.remove('story-hint');
     awaitStart = false;
     $('startPrompt').hidden = true;
     const name = read('zs7-name', ''),
@@ -689,7 +697,7 @@
     audio.pause();
   }
   function startNow() {
-    if (!awaitStart) return false;
+    if (!awaitStart || panel) return false;
     awaitStart = false;
     $('startPrompt').hidden = true;
     haptics.impact('MEDIUM', 'ui', 0, true);
@@ -1554,11 +1562,11 @@
     // A name box still holding the keyboard would swallow the first tap on a phone.
     if (document.activeElement?.blur && /INPUT|TEXTAREA/.test(document.activeElement.tagName))
       document.activeElement.blur();
-    if (awaitStart) {
-      startNow();
-      return;
+    // MENU works on every screen. It does not count as "any button" for starting the game.
+    if (storyActive && panel === 'story') {
+      storyVideo?.pause();
+      clearTimeout(storyTimer);
     }
-    if (storyActive) return;
     menuButton.classList.add('pressed');
     audio.unlock();
     haptics.impact('LIGHT', 'ui', 0, true);
@@ -1568,8 +1576,7 @@
     menuButton.addEventListener(type, () => menuButton.classList.remove('pressed'));
   menuButton.addEventListener('click', (e) => {
     // Keyboard / assistive technology only: a tap already opened the menu on pointerdown.
-    if (e.detail === 0 && !awaitStart && !storyActive && performance.now() - menuDownAt > 800)
-      menu();
+    if (e.detail === 0 && performance.now() - menuDownAt > 800) menu();
   });
   addEventListener('keydown', (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
