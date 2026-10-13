@@ -1162,6 +1162,10 @@
       file = name && sceneClips[s.bossId + '/' + name];
     return file && !failedClips.has(file) ? file : null;
   }
+  function unclipBox(box) {
+    box.style.bottom = box.style.zIndex = '';
+    box.closest('.screen')?.classList.remove('clip-full');
+  }
   function mountSceneClip(box, s, file) {
     const v = document.createElement('video');
     v.className = 'scene-clip';
@@ -1172,6 +1176,23 @@
     v.preload = 'auto';
     v.src = './' + file;
     box.classList.add('clip-mode');
+    // The picture starts at the bottom edge of the score bar and runs down behind the weapon bar.
+    const screen = box.closest('.screen');
+    if (screen) {
+      const sr = screen.getBoundingClientRect(),
+        br = box.getBoundingClientRect(),
+        k = br.width / box.offsetWidth || 1;
+      box.style.bottom = `${(br.bottom - sr.bottom) / k}px`;
+      box.style.zIndex = '30';
+      screen.classList.add('clip-full');
+    }
+    // Hold the last frame instead of letting the player jump back to the start.
+    v.addEventListener('ended', () => {
+      try {
+        v.pause();
+        v.currentTime = Math.max(0, v.duration - 0.05);
+      } catch {}
+    });
     // The scene lasts exactly as long as the clip.
     v.addEventListener('loadedmetadata', () => {
       if (game.scene === s && Number.isFinite(v.duration)) {
@@ -1184,6 +1205,7 @@
       failedClips.add(file);
       v.remove();
       box.classList.remove('clip-mode');
+      unclipBox(box);
 
       sceneKey = '';
     });
@@ -1198,6 +1220,7 @@
       sceneKey = '';
       box.classList.remove('clip-mode');
 
+      unclipBox(box);
       box.querySelector('video.scene-clip')?.remove();
       return;
     }
@@ -1214,6 +1237,7 @@
     box.classList.remove('clip-mode');
     const b = BOSSES.find((b) => b.id === s.bossId);
 
+    unclipBox(box);
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
     let content = '';

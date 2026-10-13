@@ -2728,3 +2728,8 @@ body {
   position: relative;
   z-index: 2;
 }
+
+/* 7.19.1: the boss picture may run behind the weapon bar. */
+.screen.clip-full .playfield {
+  overflow: visible;
+}
