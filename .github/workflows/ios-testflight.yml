@@ -178,7 +178,7 @@ jobs:
             MARKETING_VERSION="$APP_VERSION" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             TARGETED_DEVICE_FAMILY=1 \
-            ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES="ZSIconSlime ZSIconMoon ZSIconZombie ZSIconSoldier ZSIconClassic ZSIconGritty"
+            ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES="ZSIconSlime ZSIconMoon ZSIconZombie ZSIconSoldier ZSIconClassic ZSIconGritty ZSIconVivid"
 
       - name: Export and upload to App Store Connect
         shell: bash

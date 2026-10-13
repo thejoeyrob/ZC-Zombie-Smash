@@ -787,6 +787,7 @@
   }
   const ICON_CHOICES = [
     ['', 'soldierzombie', 'Zombie Soldier'],
+    ['ZSIconVivid', 'vivid', 'Soldier Vivid'],
     ['ZSIconGritty', 'yours', 'Gritty Zombie'],
     ['ZSIconClassic', 'classic', 'Classic Hand'],
     ['ZSIconSlime', 'slime', 'Slime Hand'],
