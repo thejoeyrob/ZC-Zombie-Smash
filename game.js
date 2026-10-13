@@ -786,7 +786,8 @@
     if (skin) toast(lockText(skin));
   }
   const ICON_CHOICES = [
-    ['', 'soldierzombie', 'Zombie Soldier'],
+    ['', 'soldierzombie', 'Screaming Zombie'],
+    ['ZSIconPrev', 'prev', 'Zombie Soldier'],
     ['ZSIconVivid', 'vivid', 'Soldier Vivid'],
     ['ZSIconGritty', 'yours', 'Gritty Zombie'],
     ['ZSIconClassic', 'classic', 'Classic Hand'],
