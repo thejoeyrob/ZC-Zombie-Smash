@@ -1123,7 +1123,7 @@
       } catch {
         this.settings = defaults;
       }
-      if (this.settings.set !== 'original') this.settings.set = 'new';
+      if (!['original', 'chip', 'early'].includes(this.settings.set)) this.settings.set = 'new';
       // iPhone: Web Audio is silenced by the ring/silent switch unless the page asks for "playback" audio.
       this.playbackSession();
     }
@@ -1171,11 +1171,23 @@
       } catch {}
     }
     get tracks() {
-      return this.style === 'synth' ? this.tracksSynth : this.tracksReal;
+      const set = this.settings.set;
+      return set === 'early' && this.tracksEarly
+        ? this.tracksEarly
+        : this.style === 'synth'
+          ? this.tracksSynth
+          : this.tracksReal;
     }
-    // The layered orchestral voices are denser than the single chip waves, so they sit a little lower.
-    get levelScale() {
-      return this.style === 'synth' ? 1 : 0.6;
+    // Loudness matching: each set and track is lifted to the loudness of the recorded music, measured in
+    // LUFS (target about -19 for the wave music, -17 for boss tracks, -18 for the stingers).
+    levelFor(track) {
+      const DB = {
+        new: { main: 2.7, entrance: 0.1, boss: 0.1, disco: 1.8, victory: 1.9, defeat: -0.1 },
+        chip: { main: 7.5, entrance: 2.7, boss: 3.6, disco: 5.8, victory: 5.3, defeat: 3.2 },
+        early: { main: 2.5, entrance: 4.2, boss: 3.9, disco: 5.8, victory: 5.3, defeat: 3.2 },
+      };
+      const set = ['early', 'chip'].includes(this.settings.set) ? this.settings.set : 'new';
+      return Math.pow(10, (DB[set][track] ?? 0) / 20);
     }
     // A hall reverb that only the "real" music style feeds.
     buildReverb() {
@@ -1219,6 +1231,11 @@
           this.synth = new Synth(this.ctx);
           this.tracksSynth = makeTracks(this.synth);
           this.tracksReal = makeTracks(this.synth, true);
+          try {
+            // The first synthesized music set (7.11) keeps its own wave, boss, disco and entrance tracks.
+            const old = window.ZSAudioEarly?.internals.makeTracks(this.synth);
+            if (old) this.tracksEarly = { ...this.tracksSynth, ...old };
+          } catch {}
           this.buildReverb();
           if (!this.synthMode) for (const name of FILES) this.buffer('sfx-' + name + '.mp3');
         }
@@ -1274,7 +1291,7 @@
       const gain = this.ctx.createGain(),
         now = this.ctx.currentTime;
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime((def.level ?? 0.6) * this.levelScale, now + 0.25);
+      gain.gain.linearRampToValueAtTime((def.level ?? 0.6) * this.levelFor(track), now + 0.25);
       gain.connect(this.musicBus);
       const seq = { def, gain, step: 0, next: now + 0.06, sd: 60 / def.bpm / 4, timer: null };
       this.seq = seq;
@@ -1355,7 +1372,7 @@
         off = this.keyOffset || 0,
         t0 = ctx.currentTime + (name === 'defeat' ? 0.28 : 0.1),
         gain = ctx.createGain();
-      gain.gain.value = (def.level ?? 0.6) * this.levelScale;
+      gain.gain.value = (def.level ?? 0.6) * this.levelFor(name);
       gain.connect(this.musicBus);
       for (let s = 0; s < total; s++) {
         try {
@@ -1454,7 +1471,7 @@
     }
     // Switch between the new synthesized sounds and the original recorded ones.
     setSoundSet(name) {
-      this.settings.set = name === 'original' || name === 'chip' ? name : 'new';
+      this.settings.set = ['original', 'chip', 'early'].includes(name) ? name : 'new';
       this.save();
       if (!this.ctx) return;
       if (!this.synthMode) for (const n of FILES) this.buffer('sfx-' + n + '.mp3');
