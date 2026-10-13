@@ -1305,7 +1305,8 @@
       // A victory or defeat stinger finishes first; the hold timer then plays whatever is wanted.
       if (this.holdTrack && this.holdUntil > performance.now()) return;
       this.track = track;
-      if (this.synthMode) {
+      // Debo's own theme is a recorded file in every sound set.
+      if (this.synthMode && track !== 'debo') {
         this.keyOffset = track === 'disco' ? -5 : 0;
         this.stopMusic();
         this.startSequencer(track);

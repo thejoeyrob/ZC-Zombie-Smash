@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.19.3';
+const CACHE = 'zombie-smash-v7.20.0';
 const ASSETS = [
   './404.html',
   './apple-touch-icon.png',
@@ -66,6 +66,7 @@ const ASSETS = [
   './map-north.jpg',
   './map-wasteland.jpg',
   './music-boss.mp3',
+  './music-debo.mp3',
   './music-disco.mp3',
   './music-entrance.mp3',
   './music-main.mp3',

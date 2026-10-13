@@ -1109,9 +1109,15 @@
         if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
       }
     }
+    if (type === 'panel' && data.phase === 2 && game.scene?.bossId === 'debo') {
+      audio.playMusic('debo'); // the boss reveal: Debo's theme starts as he appears
+    }
+    if (type === 'entrance' && data.id === 'debo') audio.buffer('music-debo.mp3'); // preload
     if (type === 'music') {
-      if (game.scene?.kind === 'arrival') audio.playMusic('entrance');
-      else audio.playMusic(data.track);
+      const debo = game.scene?.bossId === 'debo' || game.boss?.bossId === 'debo';
+      if (game.scene?.kind === 'arrival')
+        audio.playMusic(debo && game.scene.phase >= 2 ? 'debo' : 'entrance');
+      else audio.playMusic(debo && data.track === 'boss' ? 'debo' : data.track);
       return;
     }
     const sounds = {
