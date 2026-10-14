@@ -1117,13 +1117,19 @@
       this.keyOffset = 0; // semitones from D, so stingers land in the key of the music they replace
       this.holdTrack = null; // a one-shot stinger (victory or defeat) that must finish before music resumes
       this.holdUntil = 0;
-      const defaults = { music: 0.45, effects: 0.75, set: 'new' };
+      const defaults = { music: 0.40, effects: 0.72, set: 'arcade' };
       try {
         this.settings = { ...defaults, ...(JSON.parse(localStorage.getItem('zs7-audio')) || {}) };
       } catch {
         this.settings = defaults;
       }
-      if (!['original', 'chip', 'early'].includes(this.settings.set)) this.settings.set = 'new';
+      if (!['arcade', 'new', 'original', 'chip', 'early'].includes(this.settings.set)) this.settings.set = 'arcade';
+      for (const key of ['music', 'effects']) {
+        const value = Number(this.settings[key]);
+        this.settings[key] = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : defaults[key];
+      }
+      this.fxEpoch = 0;
+      this.musicEpoch = 0;
       // iPhone: Web Audio is silenced by the ring/silent switch unless the page asks for "playback" audio.
       this.playbackSession();
     }
@@ -1133,7 +1139,7 @@
       return this.settings.set !== 'original';
     }
     get style() {
-      return this.settings.set === 'new' ? 'real' : 'synth';
+      return ['new', 'arcade'].includes(this.settings.set) ? 'real' : 'synth';
     }
     playbackSession() {
       try {
@@ -1201,7 +1207,7 @@
       this.reverb = c.createConvolver();
       this.reverb.buffer = ir;
       this.wet = c.createGain();
-      this.wet.gain.value = this.style === 'synth' ? 0 : 0.32;
+      this.wet.gain.value = this.style === 'synth' ? 0 : 0.18;
       this.musicBus.connect(this.reverb);
       this.reverb.connect(this.wet);
       this.wet.connect(this.master);
@@ -1237,7 +1243,7 @@
             if (old) this.tracksEarly = { ...this.tracksSynth, ...old };
           } catch {}
           this.buildReverb();
-          if (!this.synthMode) for (const name of FILES) this.buffer('sfx-' + name + '.mp3');
+          if (!this.synthMode || this.settings.set === 'arcade') for (const name of FILES) this.buffer('sfx-' + name + '.mp3');
         }
         if (this.ctx.state !== 'running') await this.ctx.resume();
         if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
@@ -1304,6 +1310,8 @@
       seq.next = Math.max(seq.next, this.ctx.currentTime + 0.04);
       const tick = () => {
         const total = seq.def.bars * 16;
+        // Do not schedule a burst of missed beats after a stalled/background tab.
+        if (seq.next < this.ctx.currentTime - 0.2) seq.next = this.ctx.currentTime + 0.04;
         while (seq.next < this.ctx.currentTime + 0.18) {
           const s = seq.step % total;
           try {
@@ -1317,6 +1325,8 @@
       seq.timer = setInterval(tick, 28);
     }
     async playMusic(track) {
+      // Story uses the entrance score in every set, including the default synth music.
+      if (track === 'story') track = 'entrance';
       this.wantTrack = track;
       if (!this.ctx || this.paused || this.track === track) return;
       // A victory or defeat stinger finishes first; the hold timer then plays whatever is wanted.
@@ -1329,9 +1339,11 @@
         this.startSequencer(track);
         return;
       }
+      const epoch = this.musicEpoch;
       const buffer = await this.buffer(
         'music-' + (track === 'story' ? 'entrance' : track) + '.mp3',
       );
+      if (epoch !== this.musicEpoch) return;
       if (!buffer || this.wantTrack !== track || this.paused) {
         if (this.track === track) this.track = null;
         return;
@@ -1412,13 +1424,22 @@
     }
 
     // ---- sound effects ------------------------------------------------------------------------
+    duckMusic(depth = 0.64, duration = 0.45) {
+      if (!this.ctx || this.paused) return;
+      const p = this.musicBus.gain, now = this.ctx.currentTime;
+      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(now);
+      else { p.cancelScheduledValues(now); p.setValueAtTime(p.value, now); }
+      p.linearRampToValueAtTime(this.settings.music * depth, now + 0.025);
+      p.linearRampToValueAtTime(this.settings.music, now + duration);
+    }
     async sfx(name, volume = 1) {
-      if (!this.ctx || this.paused || this.settings.effects === 0 || this.voices > 22) return;
+      if (!this.ctx || this.paused || this.settings.effects === 0 || this.voices >= 22) return;
       const time = performance.now(),
         minGap = { hit: 50, ricochet: 80, 'boss-attack': 140 }[name] || 25;
       if (time - (this.last[name] || 0) < minGap) return;
       this.last[name] = time;
-      if (this.synthMode) {
+      if (['grenade', 'doom', 'hurt'].includes(name)) this.duckMusic(name === 'hurt' ? 0.78 : 0.60, name === 'grenade' ? 0.65 : 0.42);
+      if (this.synthMode && this.settings.set !== 'arcade') {
         if (name === 'victory' || name === 'loss') return;
         const fn = SFX[name];
         if (!fn) return;
@@ -1436,8 +1457,9 @@
         );
         return;
       }
+      const epoch = this.fxEpoch;
       const buffer = await this.buffer('sfx-' + name + '.mp3');
-      if (!buffer || this.paused) return;
+      if (!buffer || this.paused || epoch !== this.fxEpoch || this.voices >= 22 || performance.now() - time > 220) return;
       const s = this.ctx.createBufferSource(),
         g = this.ctx.createGain();
       s.buffer = buffer;
@@ -1461,21 +1483,27 @@
       } catch {}
     }
     set(kind, value) {
+      if (!['music', 'effects'].includes(kind) || !Number.isFinite(Number(value))) return;
       this.settings[kind] = Math.max(0, Math.min(1, Number(value)));
       this.save();
       if (this.ctx) {
         if (kind === 'effects')
           this.fx.gain.setTargetAtTime(this.settings.effects, this.ctx.currentTime, 0.03);
-        else this.musicBus.gain.setTargetAtTime(this.settings.music, this.ctx.currentTime, 0.05);
+        else {
+          this.musicBus.gain.cancelScheduledValues(this.ctx.currentTime);
+          this.musicBus.gain.setTargetAtTime(this.settings.music, this.ctx.currentTime, 0.05);
+        }
       }
     }
     // Switch between the new synthesized sounds and the original recorded ones.
     setSoundSet(name) {
-      this.settings.set = ['original', 'chip', 'early'].includes(name) ? name : 'new';
+      this.settings.set = ['arcade', 'new', 'original', 'chip', 'early'].includes(name) ? name : 'arcade';
+      this.fxEpoch++;
+      this.musicEpoch++;
       this.save();
       if (!this.ctx) return;
-      if (!this.synthMode) for (const n of FILES) this.buffer('sfx-' + n + '.mp3');
-      this.wet.gain.setTargetAtTime(this.style === 'synth' ? 0 : 0.32, this.ctx.currentTime, 0.05);
+      if (!this.synthMode || this.settings.set === 'arcade') for (const n of FILES) this.buffer('sfx-' + n + '.mp3');
+      this.wet.gain.setTargetAtTime(this.style === 'synth' ? 0 : 0.18, this.ctx.currentTime, 0.05);
       if (this.track && !this.holdTrack) {
         this.stopMusic(0.15);
         this.track = null;
@@ -1525,11 +1553,13 @@
         this.playMusic(this.wantTrack);
       }
     }
-    pause() {
+    pause(immediate = false) {
       this.paused = true;
+      this.fxEpoch++;
+      if (immediate) this.keepAlive?.pause();
       if (this.ctx) {
         // The results screen opens while the defeat cadence is still ringing: let it finish, then go quiet.
-        const ring = this.holdTrack === 'defeat' ? this.holdUntil - performance.now() : 0;
+        const ring = !immediate && this.holdTrack === 'defeat' ? this.holdUntil - performance.now() : 0;
         clearTimeout(this.muteTimer);
         if (ring > 0)
           this.muteTimer = setTimeout(() => {

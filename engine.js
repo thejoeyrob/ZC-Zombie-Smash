@@ -399,7 +399,7 @@
       }
       if (this.scene) {
         this.scene.time += dt;
-        if (this.scene.time >= this.scene.duration) this.advanceScene();
+        if (!this.scene.mediaControlled && this.scene.time >= this.scene.duration) this.advanceScene();
         return;
       }
       const p = this.player;

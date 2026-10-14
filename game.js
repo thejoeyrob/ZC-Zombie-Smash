@@ -42,6 +42,7 @@
   // Finished scene clips and extra console skins are listed by scripts/sync-art.mjs.
   // A scene with no listed clip, or a clip that fails to load, uses the built-in scene.
   let sceneClips = {};
+  let soundPreview = 0;
   const failedClips = new Set();
   fetch('./scene-clips.json')
     .then((r) => r.json())
@@ -152,10 +153,11 @@
         localStorage.removeItem('zs7-run');
       } catch {}
   }
-  function pause() {
+  function pause(immediate = false) {
     paused = true;
     clearInput();
-    audio.pause();
+    audio.pause(immediate);
+    $('cinematic').querySelector('video')?.pause();
     save();
     reloadWhenSafe();
   }
@@ -168,16 +170,19 @@
     lastTime = performance.now();
     audio.resume();
     audio.playMusic(
-      game.scene?.kind === 'arrival' && !(game.scene.bossId === 'debo' && game.scene.phase >= 2)
-        ? 'entrance'
-        : game.boss
-          ? bossTrack(game.boss.bossId)
-          : game.scene?.bossId === 'debo' && game.scene.phase >= 2
-            ? 'debo'
-            : 'main',
+      game.boss?.bossId === 'debo' || (game.scene?.bossId === 'debo' && game.scene.phase >= 2)
+        ? 'debo'
+        : game.scene?.kind === 'arrival'
+          ? 'entrance'
+          : game.boss
+            ? bossTrack(game.boss.bossId)
+            : game.scene?.bossId === 'debo' && game.scene.phase >= 2
+              ? 'debo'
+              : 'main',
     );
   }
   function closePanel() {
+    soundPreview++;
     endPreview();
     // The menu was opened during the story: carry on with the clip that was playing.
     if (storyActive && panel !== 'story') {
@@ -194,6 +199,7 @@
     $('menuButton').focus({ preventScroll: true });
   }
   function showPanel(kind, title, html, { closable = true, start = false } = {}) {
+    soundPreview++;
     if (kind !== 'skins') endPreview();
     clearTimeout(storyTimer);
     pause();
@@ -752,6 +758,7 @@
   }
   let previewing = '';
   function paintSkin(skin) {
+    document.body.dataset.releaseSkin = skin.id;
     for (const [k, v] of Object.entries({
       '--skin-art': `url('./${skin.file}')`,
       '--accent': skin.accent,
@@ -814,7 +821,7 @@
     showPanel(
       'icons',
       'APP ICON',
-      `<p class="menu-note">Pick the icon for your home screen. iPhone shows a short confirmation when it changes.</p><div class="skin-options">${ICON_CHOICES.map(([id, file, label]) => `<button class="skin-choice ${now === id ? 'selected' : ''}" data-icon="${id}" data-icon-key="${file}"><img src="./icon-opt-${file}.webp" alt="" style="height:96px;width:96px;margin:6px auto;border-radius:22px;object-fit:cover"><b>${label}</b></button>`).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">Pick the icon for your home screen. iPhone shows a short confirmation when it changes.</p><div class="skin-options">${ICON_CHOICES.map(([id, file, label]) => `<button class="skin-choice ${now === id ? 'selected' : ''}" data-icon="${id}" data-icon-key="${file}"><img src="${id ? './icon-opt-' + file + '.webp' : './icon-512.png'}" alt="" style="height:96px;width:96px;margin:6px auto;border-radius:22px;object-fit:cover"><b>${label}</b></button>`).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function skins() {
@@ -858,13 +865,13 @@
       `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   function sound() {
-    const set = ['original', 'chip', 'early'].includes(audio.settings.set)
+    const set = ['arcade', 'original', 'chip', 'early'].includes(audio.settings.set)
       ? audio.settings.set
       : 'new';
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">NEW</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">ARCADE pairs the cinematic score with recorded weapon effects. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">SCORE</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
@@ -1186,7 +1193,7 @@
       audio.sfx(sounds[type], type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : 1);
     buzz(type, data);
     if (type === 'fight') {
-      audio.playMusic(bossTrack(data.id));
+      audio.playMusic(data.id === 'debo' ? 'debo' : data.id === 'discoman' ? 'disco' : 'boss');
       audio.sfx('doom');
     }
     if (type === 'over') results(data.reason);
@@ -1213,51 +1220,77 @@
     box.style.bottom = box.style.zIndex = '';
     box.closest('.screen')?.classList.remove('clip-full');
   }
+  function removeSceneClip(box) {
+    const v = box.querySelector('video.scene-clip');
+    if (!v) return;
+    v._dispose?.();
+    v.pause();
+    v.removeAttribute('src');
+    v.load();
+    v.remove();
+  }
   function mountSceneClip(box, s, file) {
     const v = document.createElement('video');
+    const originalDuration = s.duration;
+    const phase = s.phase;
+    let disposed = false,
+      lastProgress = performance.now(),
+      lastTime = -1;
+    const current = () => !disposed && game.scene === s && s.phase === phase && v.isConnected;
+    const restore = () => {
+      if (!current()) return;
+      failedClips.add(file);
+      s.mediaControlled = false;
+      s.duration = originalDuration;
+      s.time = 0;
+      removeSceneClip(box);
+      box.classList.remove('clip-mode', 'clip-ready');
+      unclipBox(box);
+      sceneKey = '';
+    };
     v.className = 'scene-clip';
     v.muted = true;
     v.playsInline = true;
     v.setAttribute('playsinline', '');
     v.setAttribute('webkit-playsinline', '');
+    v.setAttribute('aria-label', 'Boss scene');
     v.preload = 'auto';
-    v.src = './' + file;
-    box.classList.add('clip-mode');
-    // The picture starts at the bottom edge of the score bar and runs down behind the weapon bar.
-    const screen = box.closest('.screen');
-    if (screen) {
-      const sr = screen.getBoundingClientRect(),
-        br = box.getBoundingClientRect(),
-        k = br.width / box.offsetWidth || 1;
-      box.style.bottom = `${(br.bottom - sr.bottom) / k}px`;
-      box.style.zIndex = '30';
-      screen.classList.add('clip-full');
-    }
-    // Hold the last frame instead of letting the player jump back to the start.
+    s.mediaControlled = true;
+    s.time = 0;
+    v.addEventListener('playing', () => {
+      if (!current()) return;
+      lastProgress = performance.now();
+      box.classList.add('clip-ready');
+    });
     v.addEventListener('ended', () => {
-      try {
-        v.pause();
-        v.currentTime = Math.max(0, v.duration - 0.05);
-      } catch {}
+      if (!current()) return;
+      s.mediaControlled = false;
+      s.duration = 0.25;
+      s.time = 0;
     });
-    // The scene lasts exactly as long as the clip.
-    v.addEventListener('loadedmetadata', () => {
-      if (game.scene === s && Number.isFinite(v.duration)) {
-        s.duration = Math.max(0.5, v.duration + 0.25);
-        s.time = 0;
+    v.addEventListener('error', restore);
+    const watchdog = setInterval(() => {
+      if (!current()) return;
+      if (paused || document.hidden) {
+        lastProgress = performance.now();
+        return;
       }
-    });
-    // A clip that cannot be played falls back to the built-in scene.
-    v.addEventListener('error', () => {
-      failedClips.add(file);
-      v.remove();
-      box.classList.remove('clip-mode');
-      unclipBox(box);
-
-      sceneKey = '';
-    });
+      if (v.currentTime > lastTime + 0.01) {
+        lastTime = v.currentTime;
+        lastProgress = performance.now();
+      }
+      if (!v.ended && performance.now() - lastProgress > 4500) restore();
+    }, 250);
+    v._dispose = () => {
+      disposed = true;
+      clearInterval(watchdog);
+    };
     box.prepend(v);
-    v.play().catch(() => {});
+    box.classList.add('clip-mode');
+    v.src = './' + file;
+    v.play().catch(() => {
+      if (current() && !paused && !document.hidden) restore();
+    });
   }
   function cinematic() {
     const s = game.scene,
@@ -1265,23 +1298,25 @@
     if (!s) {
       box.hidden = true;
       sceneKey = '';
-      box.classList.remove('clip-mode');
+      box.classList.remove('clip-mode', 'clip-ready');
 
       unclipBox(box);
-      box.querySelector('video.scene-clip')?.remove();
+      removeSceneClip(box);
       return;
     }
     const clip = sceneClipFor(s);
     const playing = box.querySelector('video.scene-clip');
     if (playing) {
       if (paused) playing.pause();
-      else if (playing.paused && playing.readyState > 2) playing.play().catch(() => {});
+      else if (!playing.ended && playing.paused && playing.readyState > 2)
+        playing.play().catch(() => {});
     }
     const key = [s.kind, s.bossId, s.phase, s.stage].join(':');
     if (sceneKey === key) return;
+    removeSceneClip(box);
     sceneKey = key;
     box.hidden = false;
-    box.classList.remove('clip-mode');
+    box.classList.remove('clip-mode', 'clip-ready');
     const b = BOSSES.find((b) => b.id === s.bossId);
 
     unclipBox(box);
@@ -1292,7 +1327,7 @@
       content = '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
     else if (s.kind === 'mutation') {
       const reaction = s.stage === 3;
-      content = `<div class="scene-name long">${esc(b.name)}<span>FORM ${s.stage} OF ${b.stages} · ${reaction ? 'FINAL MUTATION' : 'TRANSFORMATION'}</span></div><div class="scene-figures ${reaction ? 'dual' : ''}">${reaction ? '<img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts to the final mutation">' : ''}<img class="scene-art" src="./${b.sprites[s.stage - 1]}" alt="${esc(b.name)} form ${s.stage}"></div><div class="scene-copy"><small>${reaction ? 'JOEY ROB' : 'THREAT EVOLVING'}</small><p>${esc(b.stageLines[s.stage - 1] || b.react)}</p></div>`;
+      content = `<div class="scene-name long">${esc(b.name)}<span>${reaction ? 'FINAL MUTATION' : 'TRANSFORMATION'}</span></div><div class="scene-figures ${reaction ? 'dual' : ''}">${reaction ? '<img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts to the final mutation">' : ''}<img class="scene-art" src="./${b.sprites[s.stage - 1]}" alt="${esc(b.name)} form ${s.stage}"></div><div class="scene-copy"><small>${reaction ? 'JOEY ROB' : 'THREAT EVOLVING'}</small><p>${esc(b.stageLines[s.stage - 1] || b.react)}</p></div>`;
     } else if (s.kind === 'arrival' && s.phase === 1)
       content = `<div class="scene-name">JOEY ROB<span>SOMETHING’S COMING…</span></div><div class="scene-figures"><img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts in shock"></div><div class="scene-copy"><small>JOEY ROB</small><p>${esc(b.announce)}</p></div>`;
     else if (b) {
@@ -1304,8 +1339,8 @@
       '<div class="scene-backdrop"></div><div class="scene-lines"></div>' +
       content +
       '<button class="scene-next" id="advanceScene">CONTINUE →</button>';
-    box.onclick = () => {
-      if (!paused) game.advanceScene();
+    box.onclick = (e) => {
+      if (!paused && e.target.closest('.scene-next')) game.advanceScene();
     };
     if (clip) mountSceneClip(box, s, clip);
   }
@@ -1414,11 +1449,11 @@
         0 ||
         (navigator.standalone === true ? 20 : 0),
       bottom = parseFloat(safe.getPropertyValue('--safe-bottom')) || 0,
-      scale = Math.min(w / 375, h / 667),
-      edge0 = (h - 667 * scale) / 2,
-      T = Math.max(edge0, top + 2 - 11 * scale),
-      shift = Math.max(0, top + 2 - (T + 3 * scale)) / scale,
-      key = w + 'x' + h + '@' + scale.toFixed(4) + '/' + top;
+      usableHeight = Math.max(1, h - top - bottom),
+      scale = Math.min(w / 375, usableHeight / 667),
+      T = top + (usableHeight - 667 * scale) / 2,
+      shift = 0,
+      key = w + 'x' + h + '@' + scale.toFixed(4) + '/' + top + '/' + bottom;
     if (key === lastFit) return;
     lastFit = key;
     document.documentElement.style.setProperty('--console-scale', scale);
@@ -1844,17 +1879,24 @@
           }
         }
         break;
-      case 'preview-sound':
+      case 'preview-sound': {
+        const preview = ++soundPreview;
         audio.resume();
         audio.playMusic('main');
         ['pistol', 'hit', 'shotgun', 'grenade', 'pickup'].forEach((n, i) =>
-          setTimeout(() => audio.sfx(n), 500 + i * 650),
+          setTimeout(
+            () => {
+              if (preview === soundPreview && panel === 'sound') audio.sfx(n);
+            },
+            500 + i * 650,
+          ),
         );
         haptics.impact('MEDIUM', 'preview', 0, true);
         setTimeout(() => {
-          if (paused) audio.pause();
+          if (preview === soundPreview && paused) audio.pause();
         }, 5000);
         break;
+      }
       case 'install-now':
         if (installPrompt) {
           await installPrompt.prompt();
@@ -1882,7 +1924,7 @@
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      pause();
+      pause(true);
       storyVideo?.pause();
       if (game.active && !panel && !awaitStart) menu();
     } else {

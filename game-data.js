@@ -312,3 +312,58 @@ window.ZSData = {
     },
   ],
 };
+
+// ZOMBIE SMASH LAUNCH ART v1
+(() => {
+  const extra = [
+  {
+    "id": "toxic-pop",
+    "name": "Toxic Pop",
+    "accent": "#aaff2a",
+    "bleed": "#15121d",
+    "fire": "#ff5463",
+    "grenade": "#37bdf5",
+    "stick": "#c9ff68",
+    "file": "console-toxic-pop.webp",
+    "win": [
+      72,
+      98,
+      828,
+      1165
+    ]
+  },
+  {
+    "id": "disco-fever",
+    "name": "Disco Fever",
+    "accent": "#ff9af4",
+    "bleed": "#160d26",
+    "fire": "#ff4fa2",
+    "grenade": "#20d5f7",
+    "stick": "#d2b2ff",
+    "file": "console-disco-fever.webp",
+    "win": [
+      72,
+      98,
+      828,
+      1165
+    ]
+  },
+  {
+    "id": "pocket-arcade",
+    "name": "Pocket Arcade",
+    "accent": "#76dacc",
+    "bleed": "#203b3d",
+    "fire": "#ed6453",
+    "grenade": "#2197a8",
+    "stick": "#eac389",
+    "file": "console-pocket-arcade.webp",
+    "win": [
+      72,
+      98,
+      828,
+      1165
+    ]
+  }
+];
+  for (const skin of extra) if (!window.ZSData.SKINS.some(s => s.id === skin.id)) window.ZSData.SKINS.push(skin);
+})();

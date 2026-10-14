@@ -1,0 +1,27 @@
+{
+  "name": {
+    "characters": 12,
+    "limit": 30,
+    "passes": true
+  },
+  "subtitle": {
+    "characters": 25,
+    "limit": 30,
+    "passes": true
+  },
+  "promotional_text": {
+    "characters": 150,
+    "limit": 170,
+    "passes": true
+  },
+  "keywords": {
+    "characters": 93,
+    "limit": 100,
+    "passes": true
+  },
+  "description": {
+    "characters": 1484,
+    "limit": 4000,
+    "passes": true
+  }
+}
