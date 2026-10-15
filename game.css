@@ -2794,15 +2794,6 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 #cinematic.comic-mode .scene-next {position:absolute;top:auto;bottom:12px;right:14px;width:auto;min-width:130px;min-height:44px;margin:0;padding:9px 16px;z-index:5;}
 @media (prefers-reduced-motion:reduce) {.comic-plate {animation:none;}}
 
-.title-art {background:#10211e url('./story-joey.webp') 48% 38% / cover no-repeat;animation:none;filter:none;transform:none;inset:0;}
-.title-art:before,.title-art:after,.title-fire,.title-glow,.title-shine,#titleFx,.title-logo:after {display:none;}
-.title-logo .l {animation:none;transform:none;opacity:1;filter:none;}
-.title-logo .tl-1 {color:#c7ff77;}
-.title-logo .tl-2 {color:#ffbd62;}
-.title-tag {opacity:1;animation:none;}
-
-.title-art {height:100%;aspect-ratio:auto;mask:none;-webkit-mask:none;}
-
 /* Gentle movement preserves the original illustration and avoids body warping. */
 .comic-plate {left:-2%;right:auto;width:104%;animation:comic-drift 9s ease-in-out infinite alternate;}
 .comic-atmosphere {position:absolute;inset:-10%;pointer-events:none;opacity:.35;mix-blend-mode:screen;background:radial-gradient(ellipse at 18% 70%,var(--scene-color),transparent 24%),radial-gradient(circle at 85% 30%,var(--scene-color),transparent 18%);animation:comic-atmosphere 6s ease-in-out infinite alternate;}
@@ -2810,3 +2801,177 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 @keyframes comic-drift {from{transform:translateX(-1%)}to{transform:translateX(1%)}}
 @keyframes comic-atmosphere {from{transform:translateY(2%);opacity:.12}to{transform:translateY(-2%);opacity:.3}}
 @media (prefers-reduced-motion:reduce) {.comic-plate,.comic-atmosphere {animation:none;transform:none;}.comic-atmosphere{opacity:.15;}}
+
+/* 7.24.1: the eight illustrated skins have an angled 3D deck, so their controls are drawn in matching perspective:
+   tilted caps with a visible thickness and a raised stick, tinted from each skin's own colours. */
+body[data-release-skin="joeyrob"] .control-deck,
+body[data-release-skin="jordan"] .control-deck,
+body[data-release-skin="glowinghumanity"] .control-deck,
+body[data-release-skin="debo"] .control-deck,
+body[data-release-skin="caffeinatedsloth"] .control-deck,
+body[data-release-skin="discoman"] .control-deck,
+body[data-release-skin="fatamy"] .control-deck,
+body[data-release-skin="drmantis"] .control-deck {
+  perspective: 640px;
+  perspective-origin: 50% 20%;
+}
+body[data-release-skin="joeyrob"] #joystick,
+body[data-release-skin="jordan"] #joystick,
+body[data-release-skin="glowinghumanity"] #joystick,
+body[data-release-skin="debo"] #joystick,
+body[data-release-skin="caffeinatedsloth"] #joystick,
+body[data-release-skin="discoman"] #joystick,
+body[data-release-skin="fatamy"] #joystick,
+body[data-release-skin="drmantis"] #joystick {
+  transform: rotateX(34deg);
+  transform-style: preserve-3d;
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--accent) 35%, #0d0d0d),
+    0 6px 0 color-mix(in srgb, var(--accent) 22%, #060606),
+    0 9px 0 #050505,
+    0 15px 12px #000c,
+    inset 0 2px 3px #ffffff90,
+    0 0 0 2px color-mix(in srgb, var(--accent) 55%, #000);
+}
+body[data-release-skin="joeyrob"] .stick-knob,
+body[data-release-skin="jordan"] .stick-knob,
+body[data-release-skin="glowinghumanity"] .stick-knob,
+body[data-release-skin="debo"] .stick-knob,
+body[data-release-skin="caffeinatedsloth"] .stick-knob,
+body[data-release-skin="discoman"] .stick-knob,
+body[data-release-skin="fatamy"] .stick-knob,
+body[data-release-skin="drmantis"] .stick-knob {
+  translate: 0 0 24px;
+  box-shadow:
+    0 9px 9px #000a,
+    inset 0 -4px 6px #0006,
+    inset 0 3px 5px #ffffffa0;
+}
+body[data-release-skin="joeyrob"] .fire-button,
+body[data-release-skin="jordan"] .fire-button,
+body[data-release-skin="glowinghumanity"] .fire-button,
+body[data-release-skin="debo"] .fire-button,
+body[data-release-skin="caffeinatedsloth"] .fire-button,
+body[data-release-skin="discoman"] .fire-button,
+body[data-release-skin="fatamy"] .fire-button,
+body[data-release-skin="drmantis"] .fire-button {
+  transform: rotateX(30deg);
+  transform-style: preserve-3d;
+}
+body[data-release-skin="joeyrob"] .fire-inner,
+body[data-release-skin="jordan"] .fire-inner,
+body[data-release-skin="glowinghumanity"] .fire-inner,
+body[data-release-skin="debo"] .fire-inner,
+body[data-release-skin="caffeinatedsloth"] .fire-inner,
+body[data-release-skin="discoman"] .fire-inner,
+body[data-release-skin="fatamy"] .fire-inner,
+body[data-release-skin="drmantis"] .fire-inner {
+  box-shadow:
+    inset 0 3px 5px #ffffffa0,
+    0 4px 0 color-mix(in srgb, var(--fire) 50%, #190003),
+    0 8px 0 color-mix(in srgb, var(--fire) 36%, #0d0002),
+    0 12px 0 #090001,
+    0 18px 13px #000c,
+    0 0 0 3px color-mix(in srgb, var(--accent) 45%, #000);
+}
+body[data-release-skin="joeyrob"] .fire-button.pressed .fire-inner,
+body[data-release-skin="jordan"] .fire-button.pressed .fire-inner,
+body[data-release-skin="glowinghumanity"] .fire-button.pressed .fire-inner,
+body[data-release-skin="debo"] .fire-button.pressed .fire-inner,
+body[data-release-skin="caffeinatedsloth"] .fire-button.pressed .fire-inner,
+body[data-release-skin="discoman"] .fire-button.pressed .fire-inner,
+body[data-release-skin="fatamy"] .fire-button.pressed .fire-inner,
+body[data-release-skin="drmantis"] .fire-button.pressed .fire-inner {
+  transform: translateY(8px);
+  box-shadow:
+    inset 0 3px 8px #0008,
+    0 3px 0 color-mix(in srgb, var(--fire) 36%, #0d0002),
+    0 6px 6px #000b,
+    0 0 0 3px color-mix(in srgb, var(--accent) 45%, #000);
+}
+body[data-release-skin="joeyrob"] .grenade-button,
+body[data-release-skin="jordan"] .grenade-button,
+body[data-release-skin="glowinghumanity"] .grenade-button,
+body[data-release-skin="debo"] .grenade-button,
+body[data-release-skin="caffeinatedsloth"] .grenade-button,
+body[data-release-skin="discoman"] .grenade-button,
+body[data-release-skin="fatamy"] .grenade-button,
+body[data-release-skin="drmantis"] .grenade-button {
+  transform: rotateX(30deg);
+  box-shadow:
+    inset 0 2px 3px #ffffff90,
+    0 3px 0 color-mix(in srgb, var(--grenade) 45%, #02101c),
+    0 6px 0 #020a12,
+    0 11px 9px #000c,
+    0 0 0 2px color-mix(in srgb, var(--accent) 45%, #000);
+}
+body[data-release-skin="joeyrob"] .deck-menu,
+body[data-release-skin="jordan"] .deck-menu,
+body[data-release-skin="glowinghumanity"] .deck-menu,
+body[data-release-skin="debo"] .deck-menu,
+body[data-release-skin="caffeinatedsloth"] .deck-menu,
+body[data-release-skin="discoman"] .deck-menu,
+body[data-release-skin="fatamy"] .deck-menu,
+body[data-release-skin="drmantis"] .deck-menu {
+  transform: rotateX(22deg);
+  box-shadow:
+    inset 0 1px #fff6,
+    0 3px 0 color-mix(in srgb, var(--accent) 30%, #0c0c0c),
+    0 6px 0 #050505,
+    0 11px 8px #000c;
+}
+/* Console labels: one tidy plate each, centred, so the text reads on any artwork. */
+body[data-release-skin="joeyrob"] .console-header .wordmark,
+body[data-release-skin="jordan"] .console-header .wordmark,
+body[data-release-skin="glowinghumanity"] .console-header .wordmark,
+body[data-release-skin="debo"] .console-header .wordmark,
+body[data-release-skin="caffeinatedsloth"] .console-header .wordmark,
+body[data-release-skin="discoman"] .console-header .wordmark,
+body[data-release-skin="fatamy"] .console-header .wordmark,
+body[data-release-skin="drmantis"] .console-header .wordmark {
+  padding: 2px 12px 1px;
+  border-radius: 9px;
+  background: linear-gradient(#000000b8, #000000d8);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000), 0 2px 4px #000a;
+  text-align: center;
+}
+body[data-release-skin="joeyrob"] .console-header .wordmark small,
+body[data-release-skin="jordan"] .console-header .wordmark small,
+body[data-release-skin="glowinghumanity"] .console-header .wordmark small,
+body[data-release-skin="debo"] .console-header .wordmark small,
+body[data-release-skin="caffeinatedsloth"] .console-header .wordmark small,
+body[data-release-skin="discoman"] .console-header .wordmark small,
+body[data-release-skin="fatamy"] .console-header .wordmark small,
+body[data-release-skin="drmantis"] .console-header .wordmark small {
+  letter-spacing: 0.14em;
+}
+body[data-release-skin="joeyrob"] .deck-label,
+body[data-release-skin="jordan"] .deck-label,
+body[data-release-skin="glowinghumanity"] .deck-label,
+body[data-release-skin="debo"] .deck-label,
+body[data-release-skin="caffeinatedsloth"] .deck-label,
+body[data-release-skin="discoman"] .deck-label,
+body[data-release-skin="fatamy"] .deck-label,
+body[data-release-skin="drmantis"] .deck-label {
+  top: 127px;
+  left: 50%;
+  width: auto;
+  min-width: 96px;
+  margin-left: 0;
+  transform: translateX(-50%);
+  padding: 2px 10px;
+  border-radius: 7px;
+  background: #000000c8;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000);
+  white-space: nowrap;
+}
+body[data-release-skin="joeyrob"] .engraving,
+body[data-release-skin="jordan"] .engraving,
+body[data-release-skin="glowinghumanity"] .engraving,
+body[data-release-skin="debo"] .engraving,
+body[data-release-skin="caffeinatedsloth"] .engraving,
+body[data-release-skin="discoman"] .engraving,
+body[data-release-skin="fatamy"] .engraving,
+body[data-release-skin="drmantis"] .engraving {
+  display: none;
+}
