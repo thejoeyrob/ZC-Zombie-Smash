@@ -1269,7 +1269,8 @@
     });
   }
   function comicFor(s) {
-    if(!s?.bossId || (s.kind==='arrival' && s.phase===0)) return null;
+    // The warning and Joey's shocked, shaking reaction come first; the illustrated scene starts at the reveal.
+    if(!s?.bossId || (s.kind==='arrival' && s.phase<2)) return null;
     const suffix=s.kind==='mutation'?'form'+s.stage:s.kind==='down'?'bossdown':s.kind==='loss'?'joeydown':s.startStage>1?'form'+s.startStage:'intro';
     const file=`comic-${s.bossId}-${suffix}.webp`, im=renderer.images[file];
     return im?.complete && im.naturalWidth ? file : null;
@@ -1278,6 +1279,16 @@
     const s = game.scene,
       box = $('cinematic');
     if (!s) {
+      // Fade the scene out into the game instead of cutting.
+      if (!box.hidden && box.classList.contains('comic-mode') && !box.classList.contains('leaving')) {
+        box.classList.add('leaving');
+        setTimeout(() => {
+          box.classList.remove('leaving', 'comic-mode');
+          if (!game.scene) cinematic();
+        }, 320);
+        return;
+      }
+      if (box.classList.contains('leaving')) return;
       box.hidden = true;
       sceneKey = '';
       box.classList.remove('clip-mode', 'clip-ready');
@@ -1313,8 +1324,8 @@
       const detail=s.kind==='down'?(nextIndex<MAPS.length?'NEXT: '+MAPS[nextIndex].name:'INFINITE SURVIVAL UNLOCKED'):s.kind==='mutation'?(s.stage===3?'FINAL MUTATION':'THREAT EVOLVING'):b.title;
       s.mediaControlled=false; s.duration=reaction?3:Math.max(5.2,line.length*0.035+2);
       box.classList.add('comic-mode');box.classList.toggle('motion-paused',paused);
-      box.innerHTML=`<img class="comic-plate" src="./${comic}" alt="${esc(b.name)} story scene"><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div><button class="scene-next">CONTINUE →</button>`;
-      box.onclick=e=>{if(!paused && e.target.closest('.scene-next'))game.advanceScene();};
+      box.innerHTML=`<img class="comic-plate" src="./${comic}" alt="${esc(b.name)} story scene"><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
+      box.onclick = null;
       return;
     }
     let content = '';
@@ -1333,7 +1344,7 @@
     box.innerHTML =
       '<div class="scene-backdrop"></div><div class="scene-lines"></div>' +
       content +
-      '<button class="scene-next" id="advanceScene">CONTINUE →</button>';
+      '';
     box.onclick = (e) => {
       if (!paused && e.target.closest('.scene-next')) game.advanceScene();
     };

@@ -2975,3 +2975,26 @@ body[data-release-skin="fatamy"] .engraving,
 body[data-release-skin="drmantis"] .engraving {
   display: none;
 }
+
+/* 7.24.2: scenes move on by themselves; stronger, slower camera movement on the illustrated plates. */
+@keyframes comic-drift {
+  from { transform: translate(-2.6%, 1.2%) scale(1.04); }
+  to { transform: translate(2.6%, -1.2%) scale(1.14); }
+}
+.comic-plate { animation: comic-drift 10s ease-in-out infinite alternate; transform-origin: 50% 45%; }
+.comic-atmosphere { opacity: 0.32; }
+#cinematic.comic-mode { animation: comic-in 0.45s ease-out both; }
+@keyframes comic-in { from { opacity: 0; } to { opacity: 1; } }
+/* Joey's shocked reaction trembles. */
+@keyframes joey-tremble {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  15% { transform: translate(-3px, 2px) rotate(-1.2deg); }
+  30% { transform: translate(3px, -2px) rotate(1deg); }
+  45% { transform: translate(-2px, -2px) rotate(-0.8deg); }
+  60% { transform: translate(2px, 3px) rotate(1.2deg); }
+  80% { transform: translate(-3px, 1px) rotate(-1deg); }
+}
+.scene-name + .scene-figures .scene-art.joey { animation: reveal 0.4s ease-out both, joey-tremble 0.28s linear 0.4s infinite; }
+@media (prefers-reduced-motion: reduce) { .comic-plate, .scene-name + .scene-figures .scene-art.joey { animation: none; } }
+#cinematic.leaving { animation: comic-out 0.32s ease-in both; }
+@keyframes comic-out { from { opacity: 1; } to { opacity: 0; } }
