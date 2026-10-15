@@ -2998,3 +2998,45 @@ body[data-release-skin="drmantis"] .engraving {
 @media (prefers-reduced-motion: reduce) { .comic-plate, .scene-name + .scene-figures .scene-art.joey { animation: none; } }
 #cinematic.leaving { animation: comic-out 0.32s ease-in both; }
 @keyframes comic-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* 7.24.3: line each illustrated skin's controls and label up with its own painted sockets and plates. */
+body[data-release-skin="joeyrob"] #joystick { translate: 1px 14px; }
+body[data-release-skin="joeyrob"] .fire-button { translate: -6px 14px; }
+body[data-release-skin="joeyrob"] .grenade-button { translate: 0px -11px; }
+body[data-release-skin="joeyrob"] .deck-menu { translate: 0px 14px; }
+body[data-release-skin="joeyrob"] .deck-label { transform: translate(0px, 8px) translateX(-50%); }
+body[data-release-skin="jordan"] #joystick { translate: 4px 4px; }
+body[data-release-skin="jordan"] .fire-button { translate: 0px 4px; }
+body[data-release-skin="jordan"] .grenade-button { translate: 2px 10px; }
+body[data-release-skin="jordan"] .deck-menu { translate: 0px -3px; }
+body[data-release-skin="jordan"] .deck-label { transform: translate(0px, -5px) translateX(-50%); }
+body[data-release-skin="glowinghumanity"] #joystick { translate: 0px 10px; }
+body[data-release-skin="glowinghumanity"] .fire-button { translate: 10px 10px; }
+body[data-release-skin="glowinghumanity"] .grenade-button { translate: -1px 9px; }
+body[data-release-skin="glowinghumanity"] .deck-menu { translate: 1px 3px; }
+body[data-release-skin="glowinghumanity"] .deck-label { transform: translate(0px, 0px) translateX(-50%); }
+body[data-release-skin="debo"] #joystick { translate: 1px 20px; }
+body[data-release-skin="debo"] .fire-button { translate: 1px 20px; }
+body[data-release-skin="debo"] .grenade-button { translate: 1px -12px; }
+body[data-release-skin="debo"] .deck-menu { translate: 0px -15px; }
+body[data-release-skin="debo"] .deck-label { transform: translate(0px, -12px) translateX(-50%); }
+body[data-release-skin="caffeinatedsloth"] #joystick { translate: 1px 18px; }
+body[data-release-skin="caffeinatedsloth"] .fire-button { translate: -1px 18px; }
+body[data-release-skin="caffeinatedsloth"] .grenade-button { translate: 0px -3px; }
+body[data-release-skin="caffeinatedsloth"] .deck-menu { translate: 0px 11px; }
+body[data-release-skin="caffeinatedsloth"] .deck-label { transform: translate(0px, 8px) translateX(-50%); }
+body[data-release-skin="discoman"] #joystick { translate: 1px 13px; }
+body[data-release-skin="discoman"] .fire-button { translate: -1px 13px; }
+body[data-release-skin="discoman"] .grenade-button { translate: 0px 16px; }
+body[data-release-skin="discoman"] .deck-menu { translate: 0px 5px; }
+body[data-release-skin="discoman"] .deck-label { transform: translate(0px, 5px) translateX(-50%); }
+body[data-release-skin="fatamy"] #joystick { translate: -2px 8px; }
+body[data-release-skin="fatamy"] .fire-button { translate: 1px 8px; }
+body[data-release-skin="fatamy"] .grenade-button { translate: -3px 12px; }
+body[data-release-skin="fatamy"] .deck-menu { translate: 0px -7px; }
+body[data-release-skin="fatamy"] .deck-label { transform: translate(0px, -10px) translateX(-50%); }
+body[data-release-skin="drmantis"] #joystick { translate: -5px 6px; }
+body[data-release-skin="drmantis"] .fire-button { translate: 7px 6px; }
+body[data-release-skin="drmantis"] .grenade-button { translate: 0px 11px; }
+body[data-release-skin="drmantis"] .deck-menu { translate: 0px 1px; }
+body[data-release-skin="drmantis"] .deck-label { transform: translate(0px, 0px) translateX(-50%); }
