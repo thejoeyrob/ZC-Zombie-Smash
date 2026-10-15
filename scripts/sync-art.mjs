@@ -23,7 +23,7 @@ const clips = {};
 for (const boss of BOSSES)
   for (const scene of SCENES) {
     const name = `scene-${boss}-${scene}.mp4`;
-    if (files.has(name)) clips[`${boss}/${scene}`] = name;
+    if (files.has(name) && !files.has(`comic-${boss}-${scene}.webp`)) clips[`${boss}/${scene}`] = name;
   }
 writeFileSync(join(root, 'scene-clips.json'), JSON.stringify({ clips }, null, 2) + '\n');
 
@@ -53,6 +53,7 @@ writeFileSync(join(root, 'skins-extra.json'), JSON.stringify({ skins }, null, 2)
 const swPath = join(root, 'sw.js');
 let sw = readFileSync(swPath, 'utf8');
 const wanted = [
+  ...[...files].filter(f => /^(comic-|arena-).+\.webp$/.test(f)).map(f => './'+f),
   './scene-clips.json',
   './skins-extra.json',
   ...Object.values(clips).map((f) => './' + f),
@@ -62,7 +63,7 @@ const lines = sw.split('\n').filter((l) => {
   const m = /^\s*'\.\/([^']+)',\s*$/.exec(l);
   return !(
     m &&
-    (/^scene-.+\.mp4$/.test(m[1]) ||
+    (/^scene-.+\.mp4$/.test(m[1]) || /^(comic-|arena-).+\.webp$/.test(m[1]) || /^icon-opt-/.test(m[1]) ||
       /^(scene-clips|skins-extra)\.json$/.test(m[1]) ||
       skins.some((s) => s.file === m[1]))
   );

@@ -1,11 +1,11 @@
 {
-  "status": "SPEC ONLY - Original image files still required",
+  "status": "7.24 original illustrated replacements; source windows measured at 900 \u00d7 1600",
   "skins": [
     {
       "id": "joeyrob",
       "filename": "console-joeyrob.webp",
       "displayName": "Battle-Tested UK Soldier",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "single determined helmeted Joey close-up, not a zombie",
       "materials_and_motifs": "weathered union flag, blued steel, bullet scuffs, chipped olive paint, tan kit buckles",
       "accent": "#aab3ae",
@@ -14,10 +14,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        85,
+        238,
+        815,
+        1083
       ],
       "width": 900,
       "height": 1600,
@@ -27,7 +27,7 @@
       "id": "jordan",
       "filename": "console-jordan.webp",
       "displayName": "Fireline Survivor",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "red helmet and unmistakable firefighter face",
       "materials_and_motifs": "fire-service crimson metal, yellow reflective chevrons, soot, scorched axe steel",
       "accent": "#ff9a36",
@@ -36,10 +36,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        86,
+        211,
+        814,
+        1008
       ],
       "width": 900,
       "height": 1600,
@@ -49,7 +49,7 @@
       "id": "glowinghumanity",
       "filename": "console-glowinghumanity.webp",
       "displayName": "Neon Fallout",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "rainbow dreadlocks, headband, peace tee, expressive face",
       "materials_and_motifs": "tie-dye rainbow streaks, grungy peace signs, neon test-chamber tubes, neon-green ooze",
       "accent": "#9fff57",
@@ -58,10 +58,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        96,
+        99,
+        802,
+        1063
       ],
       "width": 900,
       "height": 1600,
@@ -71,7 +71,7 @@
       "id": "debo",
       "filename": "console-debo.webp",
       "displayName": "Iron Enforcer",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "backwards cap, chain and intimidating human face, NOT a gasmask",
       "materials_and_motifs": "industrial black steel, woven heavy gold chain, diamond D motif, crushed-barrel textures",
       "accent": "#f1c25d",
@@ -80,10 +80,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        82,
+        208,
+        816,
+        1115
       ],
       "width": 900,
       "height": 1600,
@@ -93,7 +93,7 @@
       "id": "caffeinatedsloth",
       "filename": "console-caffeinatedsloth.webp",
       "displayName": "Overdrive Brew",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "actual animal sloth face and claws with startled eyes, NOT a humanoid",
       "materials_and_motifs": "espresso brown copper, scratched coffee machine trim, beans, hand-painted cup rings",
       "accent": "#cb9b6c",
@@ -102,10 +102,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        70,
+        129,
+        829,
+        1043
       ],
       "width": 900,
       "height": 1600,
@@ -115,7 +115,7 @@
       "id": "discoman",
       "filename": "console-discoman.webp",
       "displayName": "Midnight Dancefloor",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "older silver-haired sunglasses face, wide white collar; no afro",
       "materials_and_motifs": "purple mirrored chrome, silver sequins, disco-ball refractions and music-wave etching",
       "accent": "#e98aff",
@@ -124,10 +124,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
+        75,
+        105,
         824,
-        1161
+        1048
       ],
       "width": 900,
       "height": 1600,
@@ -137,7 +137,7 @@
       "id": "fatamy",
       "filename": "console-fatamy.webp",
       "displayName": "Broken Bond",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "TWO separate clear portraits: fit stage1 ponytailed soldier and large stage3 monster; no gore",
       "materials_and_motifs": "dusty magenta metal, camo weave, claw scratches and restrained red energy",
       "accent": "#ff83bd",
@@ -146,10 +146,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        72,
+        99,
+        828,
+        983
       ],
       "width": 900,
       "height": 1600,
@@ -159,7 +159,7 @@
       "id": "drmantis",
       "filename": "console-drmantis.webp",
       "displayName": "Harvest Crown",
-      "original_art_required": true,
+      "original_art_required": false,
       "portrait_direction": "TWO separate clear portraits: regal human stage1 and giant mantis stage3; no skull-headed sorcerer",
       "materials_and_motifs": "aged jade velvet, tarnished gold filigree, crown engraving, insect-wing and mantis-scythe motifs",
       "accent": "#92e158",
@@ -168,10 +168,10 @@
       "stick": "#d6ad71",
       "bleed": "#182023",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        97,
+        136,
+        802,
+        999
       ],
       "width": 900,
       "height": 1600,

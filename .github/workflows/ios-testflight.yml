@@ -122,10 +122,6 @@ jobs:
           PY
           sed -n 1,20p ios/App/App/AppDelegate.swift
 
-      - name: Add the alternate app icons and the icon switcher
-        shell: bash
-        run: python3 scripts/ios-app-icons.py
-
       - name: Re-activate the audio session when the app comes back
         shell: bash
         run: |
@@ -177,8 +173,7 @@ jobs:
             PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
             MARKETING_VERSION="$APP_VERSION" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            TARGETED_DEVICE_FAMILY=1 \
-            ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES="ZSIconSlime ZSIconMoon ZSIconZombie ZSIconSoldier ZSIconClassic ZSIconGritty ZSIconVivid ZSIconPrev"
+            TARGETED_DEVICE_FAMILY=1
 
       - name: Export and upload to App Store Connect
         shell: bash

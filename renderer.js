@@ -4,6 +4,7 @@
     { ENEMIES, GUNS, BARREL, clamp } = ZSEngine;
   const files = [
     ...MAPS.map((m) => m.file),
+    ...BOSSES.flatMap(b => ['intro','form2','bossdown','joeydown',...(b.stages===3?['form3']:[])].map(k => `comic-${b.id}-${k}.webp`)),
     ...Object.values(ENEMIES).map((e) => e.art),
     ...BOSSES.flatMap((b) => b.sprites),
     'player-transparent.webp',
@@ -72,7 +73,7 @@
                 resolve();
               };
               im.onerror = () => {
-                failed.push(file);
+                if (!file.startsWith('comic-')) failed.push(file);
                 progress(++count / list.length);
                 resolve();
               };
@@ -115,7 +116,7 @@
       c.clearRect(0, 0, W, H);
       c.fillStyle = '#141b19';
       c.fillRect(0, 0, W, H);
-      const map = MAPS[Math.min(6, Math.floor((g.wave - 1) / 2))],
+      const map = MAPS[ZSData.mapIndex(g.wave)],
         im = this.images[map.file];
       if (im?.complete && im.naturalWidth) {
         const k = Math.max(W / im.naturalWidth, H / im.naturalHeight);
@@ -127,8 +128,30 @@
           im.naturalHeight * k,
         );
       }
-      c.fillStyle = '#07110c24';
+      c.fillStyle = '#07110c08';
       c.fillRect(0, 0, W, H);
+      if (ZSData.mapIndex(g.wave) === 4) {
+        for(let row=0;row<7;row++) for(let col=0;col<5;col++) {
+          const hue=(col*63+row*31+(this.reduced?0:g.t*28))%360;
+          c.fillStyle=`hsla(${hue},100%,65%,0.09)`;
+          c.fillRect(40+col*53,60+row*44,51,42);
+        }
+      }
+      this.arenaAtmosphere(g, map);
+      // Floor access hatches sit entirely on open ground, away from the scenery.
+      for(const [x,y] of map.entries) {
+        c.fillStyle='#102b2be0'; c.strokeStyle=map.accent; c.lineWidth=1.5;
+        c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
+        c.strokeStyle='#bac7bd88';
+        for(let n=-10;n<=10;n+=5){ c.beginPath();c.moveTo(x+n,y+8);c.lineTo(x+n,y+16);c.stroke(); }
+      }
+      for(const target of g.arena?.targets || []) {
+        c.fillStyle=target.lit?map.accent:'#182b30b8';c.strokeStyle=map.accent;c.lineWidth=1.4;
+        c.beginPath();c.arc(target.x,target.y,12,0,Math.PI*2);c.fill();c.stroke();
+        c.fillStyle=target.lit?'#102027':'#fff';c.font='bold 12px sans-serif';c.textAlign='center';
+        c.fillText(String(g.arena.targets.indexOf(target)+1),target.x,target.y+4);
+        if(g.arena.cool){c.beginPath();c.arc(target.x,target.y,16,-Math.PI/2,-Math.PI/2+Math.PI*2*g.arena.cool/12);c.stroke();}
+      }
       if (g.shake && !this.reduced)
         c.translate(Math.sin(g.t * 93) * g.shake, Math.cos(g.t * 111) * g.shake * 0.55);
       const haze = c.createLinearGradient(0, 0, 0, 55);
@@ -348,12 +371,39 @@
       }
       c.restore();
     }
+    arenaAtmosphere(g, map) {
+      const c=this.c,index=ZSData.mapIndex(g.wave),t=this.reduced?0:g.t;
+      c.save();
+      // Activity stays at the perimeter so projectiles and targets remain readable.
+      if(index===0 || index===2) {
+        for(let i=0;i<10;i++) {
+          const side=i%2?W-25:25,y=65+((i*37-t*(index===0?14:5))%260+260)%260;
+          c.fillStyle=index===0?'#ffc27866':'#ffe8ae44';
+          c.fillRect(side+Math.sin(i+t*.6)*6,y,index===0?2:1.5,2);
+        }
+      } else if(index===3) {
+        c.strokeStyle='#fff5dd44';c.lineWidth=2;
+        for(const x of [27,W-27]) for(let i=0;i<3;i++) {
+          const y=100+i*80; c.beginPath();c.moveTo(x,y+18);c.bezierCurveTo(x+9*Math.sin(t*.7+i),y+9,x-6,y,x,y-10);c.stroke();
+        }
+      } else if(index!==4) {
+        const alpha=this.reduced ? .25 : .2+.14*(.5+.5*Math.sin(t*1.1));
+        c.globalAlpha=alpha;c.fillStyle=map.accent;
+        for(const x of [22,W-22])for(let i=0;i<4;i++){c.beginPath();c.arc(x,90+i*70,4,0,Math.PI*2);c.fill();}
+      }
+      c.restore();
+    }
     enemy(z, g) {
       if (z.dead) return;
       const c = this.c,
         def = z.boss ? BOSSES.find((b) => b.id === z.bossId) : null,
         h = z.boss ? (z.bossId === 'drmantis' && z.stage === 3 ? 139 : 113) : z.height,
         w = z.boss ? 130 : h * 0.82;
+      c.save();
+      if(!z.boss && z.emerge>0) {
+        c.globalAlpha = 1-z.emerge/0.45;
+        c.beginPath();c.rect(0,z.y-h*.55*(1-z.emerge/0.45),W,H);c.clip();
+      }
       c.fillStyle = '#0006';
       c.beginPath();
       c.ellipse(z.x, z.y + h * 0.34, w * 0.29, 5, 0, 0, Math.PI * 2);
@@ -408,8 +458,17 @@
         c.fillStyle = '#ddb969';
         c.fillRect(z.x - 20, z.y - h * 0.58 - 3, (40 * z.hp) / z.maxHp, 3);
       }
+      c.restore();
     }
     shot(s) {
+      if(s.kind==='record') {
+        const c=this.c; c.save();c.translate(s.x,s.y);c.rotate(this.reduced?0:(s.age||0)*7);
+        c.fillStyle='#15131c';c.strokeStyle='#cab5e4';c.lineWidth=1.2;
+        c.beginPath();c.arc(0,0,12,0,Math.PI*2);c.fill();c.stroke();
+        c.strokeStyle='#62586e';for(const r of [7,9]){c.beginPath();c.arc(0,0,r,0,Math.PI*2);c.stroke();}
+        c.fillStyle='#ff6bc8';c.beginPath();c.arc(0,0,4.5,0,Math.PI*2);c.fill();
+        c.fillStyle='#fff';c.fillRect(-1,-1,2,2);c.restore();return;
+      }
       const c = this.c;
       if (s.kind === 'chain') {
         if (s.age < s.wind) {

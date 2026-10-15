@@ -158,6 +158,7 @@
     clearInput();
     audio.pause(immediate);
     $('cinematic').querySelector('video')?.pause();
+    $('cinematic').classList.add('motion-paused');
     save();
     reloadWhenSafe();
   }
@@ -166,6 +167,7 @@
   function resume() {
     if (!game.active || game.over || landscape) return;
     paused = false;
+    $('cinematic').classList.remove('motion-paused');
     accumulator = 0;
     lastTime = performance.now();
     audio.resume();
@@ -227,7 +229,7 @@
       `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><i class="title-glow" aria-hidden="true"></i><i class="title-fire" aria-hidden="true"></i><canvas id="titleFx" aria-hidden="true"></canvas><i class="title-shine" aria-hidden="true"></i><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
-    titleEmbers();
+    // The illustrated welcome screen uses no background animation loop.
   }
   // Embers drifting up the title art. Runs only while the title screen is on show.
   function titleEmbers() {
@@ -586,7 +588,7 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${nativeApp ? '<button class="menu-action" data-action="icons">APP ICON <small>Change your home screen icon →</small></button>' : ''}${SHOW_COFFEE ? '<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>' : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${SHOW_COFFEE ? '<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>' : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
@@ -794,36 +796,6 @@
     paintSkin(saved || SKINS[0]);
     if (skin) toast(lockText(skin));
   }
-  const ICON_CHOICES = [
-    ['', 'soldierzombie', 'Screaming Zombie'],
-    ['ZSIconPrev', 'prev', 'Zombie Soldier'],
-    ['ZSIconVivid', 'vivid', 'Soldier Vivid'],
-    ['ZSIconGritty', 'yours', 'Gritty Zombie'],
-    ['ZSIconClassic', 'classic', 'Classic Hand'],
-    ['ZSIconSlime', 'slime', 'Slime Hand'],
-    ['ZSIconMoon', 'moon', 'Blood Moon'],
-    ['ZSIconZombie', 'zombie', 'Shattered'],
-    ['ZSIconSoldier', 'soldier', 'Joey Rob'],
-  ];
-  function iconPlugin() {
-    try {
-      return nativeApp ? window.Capacitor?.registerPlugin?.('AppIcon') : null;
-    } catch {
-      return null;
-    }
-  }
-  async function iconPanel() {
-    const plugin = iconPlugin();
-    let now = '';
-    try {
-      now = (await plugin.get()).name || '';
-    } catch {}
-    showPanel(
-      'icons',
-      'APP ICON',
-      `<p class="menu-note">Pick the icon for your home screen. iPhone shows a short confirmation when it changes.</p><div class="skin-options">${ICON_CHOICES.map(([id, file, label]) => `<button class="skin-choice ${now === id ? 'selected' : ''}" data-icon="${id}" data-icon-key="${file}"><img src="${id ? './icon-opt-' + file + '.webp' : './icon-512.png'}" alt="" style="height:96px;width:96px;margin:6px auto;border-radius:22px;object-fit:cover"><b>${label}</b></button>`).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
-    );
-  }
   function skins() {
     const current = read('zs7-skin', 'toxic'),
       open = SKINS.filter((x) => !skinLocked(x)).length,
@@ -844,7 +816,8 @@
     );
   }
   async function board() {
-    showPanel('board', 'HIGH SCORES', '<p class="menu-note">Loading the board…</p>');
+    const local = () => `<h3 class="skin-group">ON THIS DEVICE</h3>${scores.localBoard().map((r,i)=>`<div class="board-row"><b class="rank">${i+1}</b><span>${esc(r.name)}<small>PERSONAL BEST</small></span><b class="points">${r.score.toLocaleString()}</b></div>`).join('') || '<p class="menu-note">Finish a run to set your first score.</p>'}`;
+    showPanel('board', 'HIGH SCORES', local()+'<p class="menu-note">Connecting to the global board…</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>');
     const result = await scores.board();
     if (panel !== 'board') return;
     const rows = Array.isArray(result.rows) ? result.rows : [],
@@ -862,7 +835,7 @@
           ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
           : '';
     $('overlay').querySelector('.panel-content').innerHTML =
-      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+      local() + `<h3 class="skin-group">GLOBAL LEADERBOARD</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   function sound() {
     const set = ['arcade', 'original', 'chip', 'early'].includes(audio.settings.set)
@@ -878,7 +851,7 @@
     showPanel(
       'help',
       'HOLD THE LINE',
-      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
@@ -1064,6 +1037,7 @@
     run.submitted = true;
     const completed = run,
       record = {
+        id: run.id,
         name: run.name,
         score: game.score,
         kills: game.kills,
@@ -1071,6 +1045,8 @@
         wave: game.wave,
         practice: game.practice,
       };
+    scores.recordLocal(record);
+    save();
     if (run.ticketPromise) await run.ticketPromise;
     const result = await scores.finish({ ...record, ticket: completed.ticket });
     if (run !== completed) return;
@@ -1292,6 +1268,12 @@
       if (current() && !paused && !document.hidden) restore();
     });
   }
+  function comicFor(s) {
+    if(!s?.bossId || (s.kind==='arrival' && s.phase===0)) return null;
+    const suffix=s.kind==='mutation'?'form'+s.stage:s.kind==='down'?'bossdown':s.kind==='loss'?'joeydown':s.startStage>1?'form'+s.startStage:'intro';
+    const file=`comic-${s.bossId}-${suffix}.webp`, im=renderer.images[file];
+    return im?.complete && im.naturalWidth ? file : null;
+  }
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
@@ -1322,8 +1304,21 @@
     unclipBox(box);
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
+    const comic = comicFor(s);
+    if(comic && b) {
+      const reaction=s.kind==='arrival' && s.phase===1;
+      const title=reaction?'JOEY ROB':s.kind==='down'?'BOSS DOWN':s.kind==='loss'?'LINE BROKEN':b.name;
+      const line=reaction?b.announce:s.kind==='mutation'?(b.stageLines[s.stage-1]||b.react):s.kind==='down'?b.finalLine:s.kind==='loss'?b.playerLoss:b.tease;
+      const nextIndex=BOSSES.indexOf(b)+1;
+      const detail=s.kind==='down'?(nextIndex<MAPS.length?'NEXT: '+MAPS[nextIndex].name:'INFINITE SURVIVAL UNLOCKED'):s.kind==='mutation'?(s.stage===3?'FINAL MUTATION':'THREAT EVOLVING'):b.title;
+      s.mediaControlled=false; s.duration=reaction?3:Math.max(5.2,line.length*0.035+2);
+      box.classList.add('comic-mode');box.classList.toggle('motion-paused',paused);
+      box.innerHTML=`<img class="comic-plate" src="./${comic}" alt="${esc(b.name)} story scene"><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div><button class="scene-next">CONTINUE →</button>`;
+      box.onclick=e=>{if(!paused && e.target.closest('.scene-next'))game.advanceScene();};
+      return;
+    }
     let content = '';
-    if (s.kind === 'arrival' && s.phase === 0)
+    if (s.kind === 'arrival'  && s.phase === 0)
       content = '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
     else if (s.kind === 'mutation') {
       const reaction = s.stage === 3;
@@ -1398,7 +1393,7 @@
         );
       }
     }
-    $('mapLabel').textContent = MAPS[Math.min(6, Math.floor((game.wave - 1) / 2))].name;
+    $('mapLabel').textContent = MAPS[ZSData.mapIndex(game.wave)].name;
     $('headerName').textContent = run?.name || 'JOEY ROB VS DR MANTIS';
   }
   function inputs() {
@@ -1750,17 +1745,6 @@
   $('overlay').addEventListener('click', async (e) => {
     const button = e.target.closest('button');
     if (!button) return;
-    if (button.dataset.iconKey !== undefined) {
-      try {
-        await iconPlugin().set({ name: button.dataset.icon });
-        document.querySelectorAll('[data-icon-key]').forEach((b) => {
-          b.classList.toggle('selected', b === button);
-        });
-      } catch (err) {
-        toast('Could not change the icon: ' + (err?.message || 'unsupported'));
-      }
-      return;
-    }
     if (button.dataset.preview) {
       previewSkin(button.dataset.preview);
       document.querySelectorAll('.skin-choice').forEach((b) => {
@@ -1817,9 +1801,6 @@
         break;
       case 'skins':
         skins();
-        break;
-      case 'icons':
-        iconPanel();
         break;
       case 'coffee':
         showCoffee(menu, true);

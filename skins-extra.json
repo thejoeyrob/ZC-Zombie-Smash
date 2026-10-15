@@ -5,10 +5,10 @@
       "name": "Battle-Tested UK Soldier",
       "file": "console-joeyrob.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        85,
+        238,
+        815,
+        1083
       ],
       "accent": "#aab3ae",
       "bleed": "#182023",
@@ -21,10 +21,10 @@
       "name": "Fireline Survivor",
       "file": "console-jordan.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        86,
+        211,
+        814,
+        1008
       ],
       "accent": "#ff9a36",
       "bleed": "#182023",
@@ -37,10 +37,10 @@
       "name": "Neon Fallout",
       "file": "console-glowinghumanity.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        96,
+        99,
+        802,
+        1063
       ],
       "accent": "#9fff57",
       "bleed": "#182023",
@@ -53,10 +53,10 @@
       "name": "Iron Enforcer",
       "file": "console-debo.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        82,
+        208,
+        816,
+        1115
       ],
       "accent": "#f1c25d",
       "bleed": "#182023",
@@ -69,10 +69,10 @@
       "name": "Overdrive Brew",
       "file": "console-caffeinatedsloth.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        70,
+        129,
+        829,
+        1043
       ],
       "accent": "#cb9b6c",
       "bleed": "#182023",
@@ -85,10 +85,10 @@
       "name": "Midnight Dancefloor",
       "file": "console-discoman.webp",
       "win": [
-        76,
-        102,
+        75,
+        105,
         824,
-        1161
+        1048
       ],
       "accent": "#e98aff",
       "bleed": "#182023",
@@ -101,10 +101,10 @@
       "name": "Broken Bond",
       "file": "console-fatamy.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        72,
+        99,
+        828,
+        983
       ],
       "accent": "#ff83bd",
       "bleed": "#182023",
@@ -117,10 +117,10 @@
       "name": "Harvest Crown",
       "file": "console-drmantis.webp",
       "win": [
-        76,
-        102,
-        824,
-        1161
+        97,
+        136,
+        802,
+        999
       ],
       "accent": "#92e158",
       "bleed": "#182023",

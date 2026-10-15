@@ -59,12 +59,17 @@
         ).join('');
         write('zs7-device', this.device);
       }
-      this.best = read('zs7-bests', {});
+      const best=read('zs7-bests', {});
+      this.best=Object.assign(Object.create(null),best && typeof best==='object' && !Array.isArray(best)?best:{});
+      this.records=read('zs7-records',[]);
+      if(!Array.isArray(this.records)) this.records=[];
       this.pending = read('zs7-pending', []);
+      if(!Array.isArray(this.pending)) this.pending=[];
       this.flushing = false;
       this.rejected = new Set();
       this.lastError = '';
       addEventListener('online', () => this.flush());
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)this.flush();});
     }
     validName(name) {
       return (
@@ -121,13 +126,24 @@
       }
     }
     getBest(name) {
-      return Number(this.best[name.toLowerCase()] || 0);
+      const n=Number(this.best[String(name).trim().toLowerCase()]);
+      return Number.isFinite(n)?Math.max(0,n):0;
+    }
+    recordLocal(run) {
+      if(run.practice || !run.name || !Number.isFinite(run.score) || run.score<0) return;
+      const name=run.name.trim(), key=name.toLowerCase();
+      this.best[key]=Math.max(this.getBest(name),Math.floor(run.score));
+      write('zs7-bests',this.best);
+      const record={id:run.id||run.ticket||`${key}:${run.score}:${run.seconds}`,name,score:Math.floor(run.score),savedAt:Date.now()};
+      this.records=this.records.filter(r=>r.id!==record.id);this.records.push(record);this.records=this.records.slice(-100);
+      write('zs7-records',this.records);
+    }
+    localBoard() {
+      return Object.entries(this.best).filter(([,v])=>Number.isFinite(Number(v))&&Number(v)>0).map(([key,score])=>({name:this.records.find(r=>r.name?.toLowerCase()===key)?.name||key,score:Number(score)})).sort((a,b)=>b.score-a.score);
     }
     async finish(run) {
       if (run.practice) return { status: 'practice' };
-      const id = run.name.toLowerCase();
-      this.best[id] = Math.max(this.getBest(run.name), run.score);
-      write('zs7-bests', this.best);
+      this.recordLocal(run);
       if (!run.ticket) return { status: 'local' };
       const entry = {
         p_device: this.device,
@@ -149,11 +165,17 @@
             : 'online',
       };
     }
-    async flush() {
-      if (this.flushing) return;
+    flush() {
+      if(this.flushPromise) return this.flushPromise;
+      if(!this.pending.length) return Promise.resolve();
+      this.flushPromise=this.drain().finally(()=>{this.flushPromise=null;});
+      return this.flushPromise;
+    }
+    async drain() {
       this.flushing = true;
       try {
-        for (const run of [...this.pending]) {
+        while (this.pending.length) {
+          const run=this.pending[0];
           try {
             const accepted = await this.rpc('zs7_finish_run', run);
             if (accepted !== true) {
@@ -162,7 +184,7 @@
             }
           } catch (error) {
             this.lastError = this.describe(error);
-            if (![400, 404, 409, 422].includes(error.status)) break;
+            if (![400, 422].includes(error.status)) break;
             this.rejected.add(run.p_ticket);
           }
           this.pending = this.pending.filter((p) => p.p_ticket !== run.p_ticket);
@@ -176,6 +198,7 @@
     async board() {
       try {
         const rows = await this.rpc('zs7_leaderboard');
+        if(!Array.isArray(rows)) throw Error('Invalid board response');
         write('zs7-board', rows);
         this.lastError = '';
         return { rows, online: true };

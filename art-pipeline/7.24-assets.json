@@ -1,0 +1,272 @@
+[
+  {
+    "source": "Golden Fire Station Arena.png",
+    "file": "arena-jordan.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Turquoise Reactor Courtyard Arena.png",
+    "file": "arena-glowinghumanity.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Sunlit Urban Scrapyard Basketball Court.png",
+    "file": "arena-debo.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Overgrown Coffee Depot Arena.png",
+    "file": "arena-caffeinatedsloth.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Neon Disco Dance Floor Arena.png",
+    "file": "arena-discoman.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Rose and olive training courtyard.png",
+    "file": "arena-fatamy.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Emerald Mantis Lab Arena.png",
+    "file": "arena-drmantis.webp",
+    "width": 900,
+    "height": 1080
+  },
+  {
+    "source": "Olive Enamel Zombie Smash Faceplate.png",
+    "file": "console-joeyrob.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Fire-Engine Red Arcade Faceplate.png",
+    "file": "console-jordan.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Turquoise Zombie Smash arcade cabinet.png",
+    "file": "console-glowinghumanity.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Black lacquer arcade faceplate with gold trim.png",
+    "file": "console-debo.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Cream and copper arcade faceplate.png",
+    "file": "console-caffeinatedsloth.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Deep plum neon arcade faceplate.png",
+    "file": "console-discoman.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Olive Enamel Arcade Faceplate.png",
+    "file": "console-fatamy.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Emerald Zombie Smash Arcade Faceplate.png",
+    "file": "console-drmantis.webp",
+    "width": 900,
+    "height": 1600
+  },
+  {
+    "source": "Dramatic boss entrance at fire station.png",
+    "file": "comic-jordan-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Fire Station Mutation.png",
+    "file": "comic-jordan-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Firehouse showdown at dawn.png",
+    "file": "comic-jordan-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey\u2019s fire station showdown.png",
+    "file": "comic-jordan-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Dramatic Boss Entrance at Reactor Courtyard.png",
+    "file": "comic-glowinghumanity-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Boss\u2019s New Mutation.png",
+    "file": "comic-glowinghumanity-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey triumphs over the reactor boss.png",
+    "file": "comic-glowinghumanity-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Courtyard Boss.png",
+    "file": "comic-glowinghumanity-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Boss arrives at the scrapyard court.png",
+    "file": "comic-debo-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Mutation showdown on the scrapyard court.png",
+    "file": "comic-debo-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey triumphs at the scrapyard court.png",
+    "file": "comic-debo-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Scrapyard Boss.png",
+    "file": "comic-debo-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Boss entrance at the overgrown coffee depot.png",
+    "file": "comic-caffeinatedsloth-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Coffee Depot Mutation Showdown.png",
+    "file": "comic-caffeinatedsloth-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Triumphs at the Coffee Depot.png",
+    "file": "comic-caffeinatedsloth-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Coffee Depot Showdown.png",
+    "file": "comic-caffeinatedsloth-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Boss entrance on the neon dance floor.png",
+    "file": "comic-discoman-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Neon Boss Mutation.png",
+    "file": "comic-discoman-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey\u2019s victory on the neon dance floor.png",
+    "file": "comic-discoman-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Kneels Before the Disco Boss.png",
+    "file": "comic-discoman-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "The boss crashes the mess hall.png",
+    "file": "comic-fatamy-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Mutating Boss.png",
+    "file": "comic-fatamy-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey\u2019s victory in the mess hall.png",
+    "file": "comic-fatamy-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey\u2019s Mess Hall Showdown.png",
+    "file": "comic-fatamy-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Boss\u2019s Next Mutation.png",
+    "file": "comic-fatamy-form3.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey faces the emerald lab boss.png",
+    "file": "comic-drmantis-intro.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Mutating Lab Boss.png",
+    "file": "comic-drmantis-form2.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey\u2019s Victory in the Emerald Lab.png",
+    "file": "comic-drmantis-bossdown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Joey Faces the Emerald Lab Boss(1).png",
+    "file": "comic-drmantis-joeydown.webp",
+    "width": 900,
+    "height": 1200
+  },
+  {
+    "source": "Boss Mutation in the Emerald Lab.png",
+    "file": "comic-drmantis-form3.webp",
+    "width": 900,
+    "height": 1200
+  }
+]

@@ -281,36 +281,156 @@ window.ZSData = {
       secret: true,
     },
   ],
+  mapIndex: (wave) => wave <= 14 ? Math.max(0, Math.floor((wave - 1) / 2)) : Math.floor((wave - 15) / 2) % 7,
   MAPS: [
-    {
-      name: 'THE GROUND',
-      file: 'map-concrete.jpg',
-    },
-    {
-      name: 'DESERT DUST',
-      file: 'map-desert.jpg',
-    },
-    {
-      name: 'NORTH ASSAULT',
-      file: 'map-north.jpg',
-    },
-    {
-      name: 'THE HANGAR',
-      file: 'map-hangar.jpg',
-    },
-    {
-      name: 'LAST DANCE',
-      file: 'map-north.jpg',
-    },
-    {
-      name: 'WASTELAND',
-      file: 'map-wasteland.jpg',
-    },
-    {
-      name: 'MANTIS LAB',
-      file: 'map-hangar.jpg',
-    },
-  ],
+  {
+    "name": "FIREHOUSE SQUARE",
+    "file": "arena-jordan.webp",
+    "accent": "#ffac47",
+    "reward": "COOLANT PULSE",
+    "entries": [
+      [
+        112,
+        77
+      ],
+      [
+        231,
+        77
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "PRISM REACTOR",
+    "file": "arena-glowinghumanity.webp",
+    "accent": "#4ef4c5",
+    "reward": "REACTOR DISCHARGE",
+    "entries": [
+      [
+        97,
+        94
+      ],
+      [
+        246,
+        94
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "CHAIN YARD",
+    "file": "arena-debo.webp",
+    "accent": "#ffd361",
+    "reward": "CHAIN SHOCK",
+    "entries": [
+      [
+        112,
+        76
+      ],
+      [
+        231,
+        76
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "ESPRESSO EXPRESS",
+    "file": "arena-caffeinatedsloth.webp",
+    "accent": "#eeb273",
+    "reward": "COFFEE RUSH",
+    "entries": [
+      [
+        114,
+        82
+      ],
+      [
+        229,
+        82
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "NEON PALACE",
+    "file": "arena-discoman.webp",
+    "accent": "#eb7bff",
+    "reward": "DISCO SHIELD",
+    "entries": [
+      [
+        108,
+        70
+      ],
+      [
+        235,
+        70
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "ROSE BARRACKS",
+    "file": "arena-fatamy.webp",
+    "accent": "#ff86b5",
+    "reward": "SUPPLY SHIELD",
+    "entries": [
+      [
+        110,
+        80
+      ],
+      [
+        233,
+        80
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "HARVEST CHAMBER",
+    "file": "arena-drmantis.webp",
+    "accent": "#b6f36a",
+    "reward": "HARVEST PURGE",
+    "entries": [
+      [
+        113,
+        100
+      ],
+      [
+        230,
+        100
+      ]
+    ],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  }
+],
 };
 
 // ZOMBIE SMASH LAUNCH ART v1

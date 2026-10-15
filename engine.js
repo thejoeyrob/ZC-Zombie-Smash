@@ -207,6 +207,7 @@
         pops: [],
         boss: null,
         scene: null,
+        arena: null,
         nextIn: 0,
         active: false,
         over: false,
@@ -252,6 +253,7 @@
       this.input = { axis: 0, fire: false };
     }
     prepareWave(n) {
+      if (ZSData.mapIndex(this.wave) !== ZSData.mapIndex(n)) this.arena = null;
       this.wave = n;
       this.target = Math.min(34, 8 + n * 2);
       this.spawned = 0;
@@ -373,8 +375,18 @@
           charge: 0,
           baseX: 0,
         };
+      if (!minion && y < 0) {
+        const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
+        const entry = map.entries[this.spawned % map.entries.length];
+        const lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
+        z.x = entry[0] + (this.rand() - 0.5) * 8;
+        z.y = entry[1];
+        z.route = { fromX: z.x, fromY: z.y, toX: map.corridor[0] + lane * (map.corridor[1] - map.corridor[0]), toY: map.fanY + this.rand() * 22 };
+        z.emerge = 0.45;
+      }
       z.baseX = z.x;
       z.speed *= this.enemyPace();
+      if(z.route) { z.paceFactor=(H-52-z.route.fromY)/(H-52+28); z.speed*=z.paceFactor; }
       z.hp = z.maxHp = spec.hp * this.enemyHealth(type);
       if (!minion) {
         const m = Math.ceil(z.height * 0.41) + 2;
@@ -434,7 +446,7 @@
         this.spawnIn -= dt;
         if (this.spawnIn <= 0 && this.enemies.length < 13) {
           const z = this.spawn();
-          if (this.spawned % 5 === 0) {
+          if (this.spawned % 5 === 0 && !z.route) {
             z.x = clamp(p.x, z.r + 6, W - z.r - 6);
             z.baseX = z.x;
           }
@@ -468,18 +480,25 @@
             z.charge = 2;
           } else z.charge = 0;
         }
-        if (z.type === 'berserker') z.x = clamp(z.baseX + Math.sin(z.age * 2.7) * 28, 20, W - 20);
-        if (['brute', 'titan', 'armored'].includes(z.type))
-          z.x += clamp(p.x - z.x, -1, 1) * 11 * dt;
-        z.y += speed * dt;
-        if (z.vx) {
-          z.x += z.vx * dt;
-          z.vx *= Math.max(0, 1 - dt * 0.7);
-          if (Math.abs(z.vx) < 2) z.vx = 0;
+        const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
+        speed *= this.arena?.slow > 0 ? 0.55 : 1;
+        z.emerge = Math.max(0, (z.emerge || 0) - dt);
+        if (z.route) {
+          z.y += speed * dt;
+          const t = clamp((z.y - z.route.fromY) / (z.route.toY - z.route.fromY), 0, 1);
+          // Smooth diagonal fan-out: deterministic per run, never a column of enemies.
+          const ease = t * t * (3 - 2 * t);
+          z.x = z.route.fromX + (z.route.toX - z.route.fromX) * ease;
+          if (t >= 1) { z.baseX = z.x; z.route = null; }
+        } else {
+          if (z.type === 'berserker') z.x = z.baseX + Math.sin(z.age * 2.7) * 28;
+          if (['brute', 'titan', 'armored'].includes(z.type)) z.x += clamp(p.x - z.x, -1, 1) * 11 * dt;
+          z.y += speed * dt;
+          if (z.vx) { z.x += z.vx * dt; z.vx *= Math.max(0, 1 - dt * 0.7); if (Math.abs(z.vx) < 2) z.vx = 0; }
         }
         if (!z.minion) {
           const m = Math.ceil(z.height * 0.41) + 2;
-          z.x = clamp(z.x, m, W - m);
+          z.x = clamp(z.x, Math.max(m, map.corridor[0] + Math.max(0,m-27)), Math.min(W - m, map.corridor[1] - Math.max(0,m-27)));
         }
         if (z.type === 'toxic' && z.attack <= 0 && z.y > 25 && z.y < p.y - 70) {
           this.aimedShot(z.x, z.y, 'venom', 108 + Math.min(24, this.wave * 1.5), 8);
@@ -516,6 +535,7 @@
           br.rot += dt * 5;
           if (br.age >= br.T) this.explodeBarrel(br);
         }
+      this.updateArena(dt);
       this.updateBullets(dt);
       this.updateShots(dt);
       this.updatePickups(dt);
@@ -572,6 +592,25 @@
       this.emit('shot', { gun: p.gun });
       return true;
     }
+    updateArena(dt) {
+      const index = ZSData.mapIndex(this.wave);
+      if (!this.arena || this.arena.index !== index) this.arena = { index, cool: 0, slow: 0, pulse: 0, targets: [{x:82,y:190,lit:false},{x:W/2,y:230,lit:false},{x:W-82,y:190,lit:false}] };
+      const a = this.arena, cooling = a.cool > 0;
+      a.cool = Math.max(0,a.cool-dt); a.slow = Math.max(0,a.slow-dt); a.pulse = Math.max(0,a.pulse-dt);
+      if (cooling && !a.cool) a.targets.forEach(t => t.lit=false);
+    }
+    hitArenaTarget(target) {
+      const a = this.arena;
+      if (!a || a.cool || target.lit || this.scene || this.over) return;
+      target.lit = true; this.emit('ricochet');
+      if (!a.targets.every(t => t.lit)) return;
+      a.cool=12; a.pulse=1.2;
+      this.banner=ZSData.MAPS[a.index].reward; this.bannerLeft=1.8; this.emit('boost');
+      if (a.index===0) a.slow=4;
+      else if (a.index===3) this.player.rapid=Math.max(this.player.rapid,4);
+      else if (a.index===4 || a.index===5) this.player.shield=Math.max(this.player.shield,3);
+      else { this.shots=this.shots.filter(s=>s.kind==='chain'); for(const z of [...this.enemies]) this.damage(z,2,'arena'); }
+    }
     updateBullets(dt) {
       for (const b of this.bullets) {
         b.prevX = b.x;
@@ -582,6 +621,8 @@
         const dx = b.x - b.prevX,
           dy = b.y - b.prevY,
           length = dx * dx + dy * dy || 1;
+        for (const target of this.arena?.targets || [])
+          if (segmentDistance(target.x,target.y,b.prevX,b.prevY,b.x,b.y)<16) this.hitArenaTarget(target);
         const hits = [...this.enemies, ...(this.boss ? [this.boss] : []), ...this.barrels]
           .filter(
             (z) =>
@@ -1285,8 +1326,9 @@
           }
           break;
         case 'discoman':
-          if (b.stage === 1) fan('disco', 2, 0.4, 110, 12);
-          else fan('tea', 3, 0.34, 115, 11);
+          b.recordVolley = !b.recordVolley;
+          if (b.stage === 1) fan(b.recordVolley ? 'record' : 'disco', 2, 0.4, 110, 12);
+          else fan(b.recordVolley ? 'record' : 'disco', 3, 0.34, 115, 11);
           b.attack = 2.9;
           break;
         case 'caffeinatedsloth':
@@ -1461,7 +1503,7 @@
         const hpRatio = clamp(z.hp / (z.maxHp || spec.hp), 0, 1);
         z.height = spec.height;
         z.r = spec.r;
-        z.speed = spec.speed * this.enemyPace();
+        z.speed = spec.speed * this.enemyPace() * (z.paceFactor || 1);
         z.maxHp = spec.hp * this.enemyHealth(z.type);
         z.hp = z.maxHp * hpRatio;
       }
