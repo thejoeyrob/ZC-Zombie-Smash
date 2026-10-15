@@ -130,20 +130,39 @@
       }
       c.fillStyle = '#07110c08';
       c.fillRect(0, 0, W, H);
+      const opens = g.openings || [];
       if (ZSData.mapIndex(g.wave) === 4) {
+        // Neon Palace: a lit dance floor in three colour schemes. Tiles go dark where zombies rise.
+        const t = this.reduced ? 0 : g.t, phase = Math.floor(t / 3) % 3;
+        const schemes = [[320, 185], [42, 280], [130, 215]];
         for(let row=0;row<7;row++) for(let col=0;col<5;col++) {
-          const hue=(col*63+row*31+(this.reduced?0:g.t*28))%360;
-          c.fillStyle=`hsla(${hue},100%,65%,0.09)`;
-          c.fillRect(40+col*53,60+row*44,51,42);
+          const tx=40+col*53, ty=60+row*44, cx=tx+25.5, cy=ty+9;
+          const dark = opens.reduce((m,o)=>Math.abs(o.x-cx)<2&&Math.abs(o.y-cy)<2 ? Math.max(m, o.age<1.5?1:Math.max(0,1-(o.age-1.5)/0.5)) : m, 0);
+          const pick = (p) => schemes[p][(row + col) % 2];
+          const hue = pick(phase);
+          const pulse = this.reduced ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4 + row * 0.9 + col * 1.7);
+          c.fillStyle=`hsla(${hue},100%,${58 + pulse * 12}%,${0.17 + pulse * 0.09})`;
+          c.fillRect(tx,ty,51,42);
+          if(dark>0){ c.fillStyle=`rgba(3,0,8,${0.94*dark})`; c.fillRect(tx,ty,51,42); }
         }
       }
       this.arenaAtmosphere(g, map);
-      // Floor access hatches sit entirely on open ground, away from the scenery.
-      for(const [x,y] of map.entries) {
-        c.fillStyle='#102b2be0'; c.strokeStyle=map.accent; c.lineWidth=1.5;
-        c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
-        c.strokeStyle='#bac7bd88';
-        for(let n=-10;n<=10;n+=5){ c.beginPath();c.moveTo(x+n,y+8);c.lineTo(x+n,y+16);c.stroke(); }
+      // Marked entrances differ by map: doors, floor hatches, drain grates; the dance floor uses its tiles instead.
+      const style = map.entryStyle || 'hatch';
+      if (style !== 'tile') for(const [x,y] of map.entries) {
+        const open = opens.reduce((m,o)=>Math.abs(o.x-x)<2&&Math.abs(o.y-y)<2?Math.max(m,1-o.age/2):m,0);
+        c.save(); c.lineWidth=1.5; c.strokeStyle=map.accent;
+        if (style === 'door') {
+          c.fillStyle='#120b08f0'; c.fillRect(x-12,y-14,24,34); c.strokeRect(x-12,y-14,24,34);
+          c.fillStyle=`rgba(255,200,120,${0.12+open*0.5})`; c.fillRect(x-10,y-12,20,30*(0.35+open*0.65));
+          c.strokeStyle='#bac7bd66'; for(let n=0;n<4;n++){ c.beginPath();c.moveTo(x-10,y-6+n*7);c.lineTo(x+10,y-6+n*7);c.stroke(); }
+        } else {
+          c.fillStyle='#102b2be0'; c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
+          if(open>0){ c.fillStyle=`${map.accent}${Math.round(open*90).toString(16).padStart(2,'0')}`; c.fill(); }
+          c.strokeStyle='#bac7bd88';
+          for(let n=-10;n<=10;n+=5){ c.beginPath();c.moveTo(x+n,y+8);c.lineTo(x+n,y+16);c.stroke(); }
+        }
+        c.restore();
       }
       for(const target of g.arena?.targets || []) {
         c.fillStyle=target.lit?map.accent:'#182b30b8';c.strokeStyle=map.accent;c.lineWidth=1.4;

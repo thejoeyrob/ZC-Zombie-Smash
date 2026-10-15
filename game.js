@@ -792,12 +792,12 @@
     if (!previewing) return;
     const skin = SKINS.find((x) => x.id === previewing);
     previewing = '';
-    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'toxic') && !skinLocked(x));
+    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'toxic-pop') && !skinLocked(x));
     paintSkin(saved || SKINS[0]);
     if (skin) toast(lockText(skin));
   }
   function skins() {
-    const current = read('zs7-skin', 'toxic'),
+    const current = read('zs7-skin', 'toxic-pop'),
       open = SKINS.filter((x) => !skinLocked(x)).length,
       tile = (s) => {
         const locked = skinLocked(s),
@@ -1324,7 +1324,7 @@
       const detail=s.kind==='down'?(nextIndex<MAPS.length?'NEXT: '+MAPS[nextIndex].name:'INFINITE SURVIVAL UNLOCKED'):s.kind==='mutation'?(s.stage===3?'FINAL MUTATION':'THREAT EVOLVING'):b.title;
       s.mediaControlled=false; s.duration=reaction?3:Math.max(5.2,line.length*0.035+2);
       box.classList.add('comic-mode');box.classList.toggle('motion-paused',paused);
-      box.innerHTML=`<img class="comic-plate" src="./${comic}" alt="${esc(b.name)} story scene"><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
+      box.innerHTML=`<div class="comic-layers" aria-hidden="true"><img class="comic-plate comic-l1" src="./${comic}" alt=""><img class="comic-plate comic-l2" src="./${comic}" alt=""><img class="comic-plate comic-l3" src="./${comic}" alt=""></div><span class="sr-only">${esc(b.name)} story scene</span><div class="comic-embers" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="left:${(i*37+11)%96}%;animation-delay:${-(i*0.9)%7}s;animation-duration:${5+(i%4)*1.7}s"></i>`).join('')}</div><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
       box.onclick = null;
       return;
     }
@@ -1414,6 +1414,8 @@
         (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0),
       fire = touchFire || keys.has('Space'),
       grenade = false;
+    // Holding FIRE a couple of seconds into a boss scene skips to the next part.
+    if (fire && game.scene?.bossId && !paused && game.scene.time >= 2) game.advanceScene();
     try {
       const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean);
       if (pad) {
@@ -1943,7 +1945,7 @@
     installPrompt = e;
   });
   ZSConsole.apply();
-  applySkin(read('zs7-skin', 'toxic'));
+  applySkin(read('zs7-skin', 'toxic-pop'));
   fetch('./skins-extra.json')
     .then((r) => r.json())
     .then((j) => {
@@ -1961,7 +1963,7 @@
           SKINS.push(s);
           added++;
         }
-      if (added) applySkin(read('zs7-skin', 'toxic'));
+      if (added) applySkin(read('zs7-skin', 'toxic-pop'));
     })
     .catch(() => {});
   showStart();

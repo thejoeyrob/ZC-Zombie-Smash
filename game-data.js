@@ -288,16 +288,8 @@ window.ZSData = {
     "file": "arena-jordan.webp",
     "accent": "#ffac47",
     "reward": "COOLANT PULSE",
-    "entries": [
-      [
-        112,
-        77
-      ],
-      [
-        231,
-        77
-      ]
-    ],
+    "entryStyle": "door",
+    "entries": [[86,82],[142,74],[201,74],[257,82]],
     "corridor": [
       64,
       279
@@ -309,16 +301,8 @@ window.ZSData = {
     "file": "arena-glowinghumanity.webp",
     "accent": "#4ef4c5",
     "reward": "REACTOR DISCHARGE",
-    "entries": [
-      [
-        97,
-        94
-      ],
-      [
-        246,
-        94
-      ]
-    ],
+    "entryStyle": "hatch",
+    "entries": [[80,98],[137,90],[206,90],[263,98]],
     "corridor": [
       64,
       279
@@ -330,16 +314,8 @@ window.ZSData = {
     "file": "arena-debo.webp",
     "accent": "#ffd361",
     "reward": "CHAIN SHOCK",
-    "entries": [
-      [
-        112,
-        76
-      ],
-      [
-        231,
-        76
-      ]
-    ],
+    "entryStyle": "grate",
+    "entries": [[84,80],[148,72],[196,72],[259,80]],
     "corridor": [
       64,
       279
@@ -351,16 +327,8 @@ window.ZSData = {
     "file": "arena-caffeinatedsloth.webp",
     "accent": "#eeb273",
     "reward": "COFFEE RUSH",
-    "entries": [
-      [
-        114,
-        82
-      ],
-      [
-        229,
-        82
-      ]
-    ],
+    "entryStyle": "door",
+    "entries": [[90,86],[145,78],[198,78],[253,86]],
     "corridor": [
       64,
       279
@@ -372,16 +340,8 @@ window.ZSData = {
     "file": "arena-discoman.webp",
     "accent": "#eb7bff",
     "reward": "DISCO SHIELD",
-    "entries": [
-      [
-        108,
-        70
-      ],
-      [
-        235,
-        70
-      ]
-    ],
+    "entryStyle": "tile",
+    "entries": [[66,69],[118,69],[172,69],[224,69],[278,69],[66,113],[118,113],[172,113],[224,113],[278,113],[66,157],[118,157],[172,157],[224,157],[278,157]],
     "corridor": [
       64,
       279
@@ -393,16 +353,8 @@ window.ZSData = {
     "file": "arena-fatamy.webp",
     "accent": "#ff86b5",
     "reward": "SUPPLY SHIELD",
-    "entries": [
-      [
-        110,
-        80
-      ],
-      [
-        233,
-        80
-      ]
-    ],
+    "entryStyle": "hatch",
+    "entries": [[88,84],[142,76],[201,76],[255,84]],
     "corridor": [
       64,
       279
@@ -414,16 +366,8 @@ window.ZSData = {
     "file": "arena-drmantis.webp",
     "accent": "#b6f36a",
     "reward": "HARVEST PURGE",
-    "entries": [
-      [
-        113,
-        100
-      ],
-      [
-        230,
-        100
-      ]
-    ],
+    "entryStyle": "hatch",
+    "entries": [[84,104],[142,96],[201,96],[259,104]],
     "corridor": [
       64,
       279

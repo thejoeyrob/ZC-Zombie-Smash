@@ -377,7 +377,8 @@
         };
       if (!minion && y < 0) {
         const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
-        const entry = map.entries[this.spawned % map.entries.length];
+        const entry = map.entries[Math.floor(this.rand() * map.entries.length)];
+        (this.openings ||= []).push({ x: entry[0], y: entry[1], age: 0 });
         const lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
         z.x = entry[0] + (this.rand() - 0.5) * 8;
         z.y = entry[1];
@@ -398,6 +399,7 @@
       return z;
     }
     step(dt) {
+      if (this.openings?.length) this.openings = this.openings.filter((o) => (o.age += dt) < 2);
       if (!this.active || this.over) return;
       dt = Math.min(dt, 0.05);
       this.t += dt;

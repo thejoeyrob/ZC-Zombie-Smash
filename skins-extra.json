@@ -2,7 +2,7 @@
   "skins": [
     {
       "id": "joeyrob",
-      "name": "Battle-Tested UK Soldier",
+      "name": "UK Soldier",
       "file": "console-joeyrob.webp",
       "win": [
         85,
@@ -82,7 +82,7 @@
     },
     {
       "id": "discoman",
-      "name": "Midnight Dancefloor",
+      "name": "Dancefloor",
       "file": "console-discoman.webp",
       "win": [
         75,
