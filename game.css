@@ -2882,9 +2882,11 @@ body.deck3d .fire-inner::after { content: ''; position: absolute; inset: 15%; bo
   background: radial-gradient(ellipse at 33% 22%, #ffffffee 0 3%, #ffffff80 6%, transparent 21%), radial-gradient(ellipse at 50% 106%, color-mix(in srgb, var(--fire) 60%, #fff) 0, transparent 44%), radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--fire) 60%, #fff) 0, var(--fire) 52%, color-mix(in srgb, var(--fire) 42%, #1c0205) 100%);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--fire) 36%, #0d0102), 0 0 0 4px #000a, inset 0 -7px 9px #0006, inset 0 3px 4px #ffffff66; }
 body.deck3d .fire-inner b { position: absolute; inset: 0; bottom: auto; height: 100%; display: flex; align-items: center; justify-content: center; font: 900 15px Barlow, sans-serif; letter-spacing: 0.12em; transform: translateZ(14px); z-index: 2; text-shadow: 0 2px 2px #5b0610, 0 0 6px #ffffff40; }
-body.deck3d .fire-button.pressed { animation: none; filter: drop-shadow(0 0 16px var(--fire)) drop-shadow(0 0 5px #fff6); }
-body.deck3d .fire-button.pressed .fire-inner::after { transform: translateZ(5px); filter: brightness(1.3); }
-body.deck3d .fire-button.pressed .fire-inner b { transform: translateZ(6px); }
+body.deck3d .fire-button.pressed { animation: none; filter: none; }
+body.deck3d .fire-button.pressed .fire-inner { transform: perspective(620px) rotateX(var(--ft, 50deg)); border: 0; background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa); box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 0 26px 6px var(--fire), 0 0 8px 2px #fff8; }
+body.deck3d .fire-button.pressed .fire-inner::after { transform: translateZ(8px);
+  background: radial-gradient(ellipse at 33% 22%, #fff 0 5%, #ffffffa0 9%, transparent 26%), radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--fire) 40%, #fff) 0, color-mix(in srgb, var(--fire) 70%, #fff) 40%, var(--fire) 100%); }
+body.deck3d .fire-button.pressed .fire-inner b { transform: translateZ(9px); }
 @keyframes fire-idle { 0%, 100% { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--fire) 35%, transparent)); } 50% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--fire) 80%, transparent)); } }
 
 body.deck3d .grenade-button { translate: var(--gx, 0) var(--gy, 0); width: 56px; height: 56px; border: 0; background: none; box-shadow: none; filter: none; opacity: 1; color: #3a2600; }
@@ -2901,7 +2903,8 @@ body.deck3d .grenade-button b { z-index: 3; background: #1e1500; border: 1px sol
 body.deck3d .grenade-button.empty .g3 { border-color: #22404a; box-shadow: 0 1px 0 #11222a, 0 2px 0 #0b161b, 0 3px 0 #070d10, 0 4px 0 #040809; animation: none; }
 body.deck3d .grenade-button.empty .g3::after { background: radial-gradient(ellipse at 33% 22%, #fff8 0 4%, transparent 22%), radial-gradient(circle at 50% 40%, #d8cc9a, #8f8040 60%, #5a4d1b 100%); }
 body.deck3d .grenade-button:active:not(.empty) { transform: none; filter: none; }
-body.deck3d .grenade-button:active:not(.empty) .g3::after { transform: translateZ(4px); filter: brightness(1.18); }
+body.deck3d .grenade-button:active:not(.empty) .g3::after { transform: translateZ(7px);
+  background: radial-gradient(ellipse at 33% 22%, #fff 0 5%, #ffffffa0 9%, transparent 26%), radial-gradient(circle at 50% 42%, #ffffe8 0, #ffe85a 52%, #e8ac00 100%); }
 body.deck3d .grenade-button:active:not(.empty) .g3 { animation: none; border-color: #b2f6ff; box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 14px #8ff0ff, 0 0 30px #30dcff, inset 0 0 14px #8ff0ff; }
 @keyframes ring-ready { 0%, 100% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 6px #30dcff99, 0 0 11px #30dcff66, inset 0 0 6px #30dcff88; } 50% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 12px #30dcff, 0 0 24px #30dcffc0, inset 0 0 12px #30dcffcc; } }
 
