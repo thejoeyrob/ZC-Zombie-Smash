@@ -2997,3 +2997,4 @@ body[data-release-skin="drmantis"] { --ly: -5.6px; }
 .coffee-ui { padding-top: 10px; padding-bottom: 8px; }
 .coffee-ui .coffee-copy { font-size: 11px; line-height: 1.35; }
 .tip-qty span { white-space: nowrap; }
+body.deck3d .fire-inner b { display: none; }
