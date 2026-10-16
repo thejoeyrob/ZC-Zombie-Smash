@@ -596,7 +596,7 @@
   const SHOW_COFFEE = !nativeApp,
     COFFEE_URL = 'https://buymeacoffee.com/JoeyRob';
   let coffeeNext = null;
-  function showCoffee(next, fromMenu = false) {
+  function showCoffee(next, fromMenu = false, skipLabel = '') {
     coffeeNext = next;
     const beans = Array.from(
       { length: 14 },
@@ -606,7 +606,7 @@
     showPanel(
       'coffee',
       '',
-      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p><a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a><button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
+      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p><a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a><button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : skipLabel || 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
       { start: true, closable: false },
     );
   }
@@ -627,7 +627,9 @@
       else showStory(name, 0);
       return;
     }
-    beginRun(name);
+    // Every run starts with the coffee screen (web version only), then plays.
+    if (SHOW_COFFEE) showCoffee(() => beginRun(name), false, 'NOT NOW · PLAY ▶');
+    else beginRun(name);
   }
   // The intro is three animated clips (burned-in captions) that fill the gameplay screen.
   // FIRE skips exactly one clip per press, and each clip moves on by itself when it ends.
@@ -1030,7 +1032,16 @@
       ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
-  function results(reason) {
+  let coffeeShownFor = null;
+  function results(reason, afterCoffee = false) {
+    // The coffee screen also appears when a run ends (web version only); the score is saved first.
+    if (SHOW_COFFEE && !afterCoffee && !game.practice && coffeeShownFor !== run?.id) {
+      coffeeShownFor = run?.id;
+      save();
+      submitScore();
+      showCoffee(() => results(reason, true), false, 'NOT NOW · SEE MY SCORE ▶');
+      return;
+    }
     showPanel(
       'results',
       game.practice ? 'PRACTICE COMPLETE' : 'RUN COMPLETE',
