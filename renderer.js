@@ -147,22 +147,12 @@
         }
       }
       this.arenaAtmosphere(g, map);
-      // Marked entrances differ by map: doors, floor hatches, drain grates; the dance floor uses its tiles instead.
-      const style = map.entryStyle || 'hatch';
-      if (style !== 'tile') for(const [x,y] of map.entries) {
-        const open = opens.reduce((m,o)=>Math.abs(o.x-x)<2&&Math.abs(o.y-y)<2?Math.max(m,1-o.age/2):m,0);
-        c.save(); c.lineWidth=1.5; c.strokeStyle=map.accent;
-        if (style === 'door') {
-          c.fillStyle='#120b08f0'; c.fillRect(x-12,y-14,24,34); c.strokeRect(x-12,y-14,24,34);
-          c.fillStyle=`rgba(255,200,120,${0.12+open*0.5})`; c.fillRect(x-10,y-12,20,30*(0.35+open*0.65));
-          c.strokeStyle='#bac7bd66'; for(let n=0;n<4;n++){ c.beginPath();c.moveTo(x-10,y-6+n*7);c.lineTo(x+10,y-6+n*7);c.stroke(); }
-        } else {
-          c.fillStyle='#102b2be0'; c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
-          if(open>0){ c.fillStyle=`${map.accent}${Math.round(open*90).toString(16).padStart(2,'0')}`; c.fill(); }
-          c.strokeStyle='#bac7bd88';
-          for(let n=-10;n<=10;n+=5){ c.beginPath();c.moveTo(x+n,y+8);c.lineTo(x+n,y+16);c.stroke(); }
-        }
-        c.restore();
+      // Floor access hatches sit entirely on open ground, away from the scenery. The Neon Palace uses its dance-floor tiles instead.
+      if (map.entryStyle !== 'tile') for(const [x,y] of map.entries) {
+        c.fillStyle='#102b2be0'; c.strokeStyle=map.accent; c.lineWidth=1.5;
+        c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
+        c.strokeStyle='#bac7bd88';
+        for(let n=-10;n<=10;n+=5){ c.beginPath();c.moveTo(x+n,y+8);c.lineTo(x+n,y+16);c.stroke(); }
       }
       for(const target of g.arena?.targets || []) {
         c.fillStyle=target.lit?map.accent:'#182b30b8';c.strokeStyle=map.accent;c.lineWidth=1.4;

@@ -377,7 +377,7 @@
         };
       if (!minion && y < 0) {
         const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
-        const entry = map.entries[Math.floor(this.rand() * map.entries.length)];
+        const entry = map.entryStyle === 'tile' ? map.entries[Math.floor(this.rand() * map.entries.length)] : map.entries[this.spawned % map.entries.length];
         (this.openings ||= []).push({ x: entry[0], y: entry[1], age: 0 });
         const lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
         z.x = entry[0] + (this.rand() - 0.5) * 8;
