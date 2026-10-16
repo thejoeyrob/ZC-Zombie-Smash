@@ -7,6 +7,9 @@ name: App Store listing
 
 on:
   workflow_dispatch:
+  # Pushing to this branch also runs it (the Run workflow button only shows for workflows on the default branch).
+  push:
+    branches: [appstore-listing]
 
 concurrency:
   group: app-store-listing
