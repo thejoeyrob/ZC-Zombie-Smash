@@ -44,6 +44,7 @@ if (existsSync(manifestPath)) {
       fire: s.fire,
       grenade: s.grenade,
       stick: s.stick,
+      deck3d: true,
     });
   }
 }

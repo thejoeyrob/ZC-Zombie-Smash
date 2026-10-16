@@ -1987,6 +1987,7 @@
           !SKINS.some((x) => x.id === s.id)
         ) {
           s.group = 'character';
+          s.deck3d = true; // illustrated 3D decks get the 3D controls (the build regenerates this file)
           if (s.id !== 'joeyrob') s.boss = s.id;
           SKINS.push(s);
           added++;
