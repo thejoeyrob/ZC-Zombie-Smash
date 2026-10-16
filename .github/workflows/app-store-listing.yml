@@ -1,0 +1,69 @@
+# Pushes the App Store listing (text, categories, screenshots) from the appstore/ folder to App Store Connect.
+# Run manually: Actions -> "App Store listing" -> Run workflow.
+# It edits the "Prepare for Submission" version only. It never uploads a build, never changes the age rating,
+# privacy answers or in-app purchases, and never submits for review.
+# Uses the same repository secrets as the iOS TestFlight workflow (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8).
+name: App Store listing
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: app-store-listing
+  cancel-in-progress: false
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash' }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Install fastlane
+        run: gem install fastlane --no-document
+
+      - name: Write the API key file
+        shell: bash
+        run: |
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!v}" ] || { echo "::error::Missing secret $v"; exit 1; }
+          done
+          if printf '%s' "$ASC_KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then
+            KEY="$ASC_KEY_P8"
+          else
+            KEY="$(printf '%s' "$ASC_KEY_P8" | base64 --decode)"
+          fi
+          printf '%s' "$KEY" | grep -q 'BEGIN PRIVATE KEY' || { echo "::error::ASC_KEY_P8 is not a valid .p8 key"; exit 1; }
+          jq -n --arg kid "$ASC_KEY_ID" --arg iss "$ASC_ISSUER_ID" --arg key "$KEY" \
+            '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > "$RUNNER_TEMP/api_key.json"
+          chmod 600 "$RUNNER_TEMP/api_key.json"
+          echo "API_KEY_PATH=$RUNNER_TEMP/api_key.json" >> "$GITHUB_ENV"
+
+      - name: Upload listing text and screenshots
+        shell: bash
+        run: |
+          fastlane deliver \
+            --api_key_path "$API_KEY_PATH" \
+            --app_identifier "$BUNDLE_ID" \
+            --metadata_path appstore/metadata \
+            --screenshots_path appstore/screenshots \
+            --skip_binary_upload true \
+            --skip_app_version_update true \
+            --overwrite_screenshots true \
+            --force true \
+            --submit_for_review false \
+            --automatic_release false \
+            --precheck_include_in_app_purchases false
+
+      - name: Remove the API key file
+        if: always()
+        run: rm -f "$API_KEY_PATH"
