@@ -761,6 +761,7 @@
   let previewing = '';
   function paintSkin(skin) {
     document.body.dataset.releaseSkin = skin.id;
+    document.body.classList.toggle('deck3d', !!skin.deck3d);
     for (const [k, v] of Object.entries({
       '--skin-art': `url('./${skin.file}')`,
       '--accent': skin.accent,
@@ -796,7 +797,7 @@
     paintSkin(saved || SKINS[0]);
     if (skin) toast(lockText(skin));
   }
-  function skins() {
+  function skins(group) {
     const current = read('zs7-skin', 'toxic-pop'),
       open = SKINS.filter((x) => !skinLocked(x)).length,
       tile = (s) => {
@@ -805,14 +806,21 @@
           badge = locked ? (boss ? 'BEAT ' + boss.name.split(' ')[0] : 'SECRET') : '';
         return `<button class="skin-choice ${current === s.id && !locked ? 'selected' : ''} ${locked ? 'locked' : ''} ${previewing === s.id ? 'previewing' : ''}" ${locked ? `data-preview="${s.id}"` : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${s.name}</b>${locked ? `<small>🔒 ${badge}</small>` : ''}</button>`;
       },
-      section = (title, list) =>
-        `<h3 class="skin-group">${title}<span>${list.filter((x) => !skinLocked(x)).length} of ${list.length}</span></h3><div class="skin-options">${list.map(tile).join('')}</div>`,
+      grid = (list) => `<div class="skin-options">${list.map(tile).join('')}</div>`,
       characters = SKINS.filter((x) => x.group === 'character'),
-      customs = SKINS.filter((x) => x.group !== 'character');
+      customs = SKINS.filter((x) => x.group !== 'character'),
+      count = (list) => `${list.filter((x) => !skinLocked(x)).length} of ${list.length}`;
+    if (!group)
+      return showPanel(
+        'skins',
+        'CHOOSE YOUR CONSOLE',
+        `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p><button class="skin-group-card" data-action="skins-char"><b>SPECIAL CHARACTER SKINS</b><span>${count(characters)} unlocked</span><i aria-hidden="true">›</i></button><button class="skin-group-card" data-action="skins-custom"><b>CUSTOM SKINS</b><span>${count(customs)} unlocked</span><i aria-hidden="true">›</i></button><button class="secondary-action" data-action="menu">‹ BACK TO MENU</button>`,
+      );
+    const list = group === 'char' ? characters : customs;
     showPanel(
       'skins',
-      'CHOOSE YOUR CONSOLE',
-      `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p>${section('SPECIAL CHARACTER SKINS', characters)}${section('CUSTOM SKINS', customs)}<p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      group === 'char' ? 'CHARACTER SKINS' : 'CUSTOM SKINS',
+      `<button class="back-link" data-action="skins">‹ BACK</button><p class="menu-note">${count(list)} unlocked. Same arena, same controls, same aim — whichever finish you pick.</p>${grid(list)}<button class="secondary-action" data-action="skins">‹ BACK TO SKIN TYPES</button>`
     );
   }
   async function board() {
@@ -1414,6 +1422,8 @@
         (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0),
       fire = touchFire || keys.has('Space'),
       grenade = false;
+    stick.classList.toggle('push-l', axis < -0.15);
+    stick.classList.toggle('push-r', axis > 0.15);
     // Holding FIRE a couple of seconds into a boss scene skips to the next part.
     if (fire && game.scene?.bossId && !paused && game.scene.time >= 2) game.advanceScene();
     try {
@@ -1528,6 +1538,7 @@
       }
     }
     $('stickKnob').style.transform = `translateX(${stickVal * 25}px)`;
+    stick.style.setProperty('--lean', stickVal.toFixed(2));
     stick.setAttribute('aria-valuenow', Math.round(touchAxis * 100));
   }
   stick.addEventListener('pointerdown', (e) => {
@@ -1556,6 +1567,7 @@
         touchAxis = 0;
         stickVal = 0;
         $('stickKnob').style.transform = 'translateX(0)';
+        stick.style.setProperty('--lean', '0');
         stick.setAttribute('aria-valuenow', '0');
       }
     });
@@ -1815,6 +1827,12 @@
       case 'skins':
         skins();
         break;
+      case 'skins-char':
+        skins('char');
+        break;
+      case 'skins-custom':
+        skins('custom');
+        break;
       case 'coffee':
         showCoffee(menu, true);
         break;
@@ -2020,6 +2038,14 @@
           $('offlineStatus').textContent = 'Game download complete · offline play ready.';
       }
     });
+  }
+  {
+    const intro = $('studioIntro');
+    if (intro) {
+      const done = () => intro.remove();
+      intro.addEventListener('pointerdown', done);
+      setTimeout(done, 2900);
+    }
   }
   window.ZSInspect = () => ({
     world: { width: ZSData.W, height: ZSData.H },

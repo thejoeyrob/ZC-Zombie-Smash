@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.25.0';
+const CACHE = 'zombie-smash-v7.26.0';
 const ASSETS = [
   './console-toxic-pop.webp',
   './console-disco-fever.webp',
@@ -58,6 +58,7 @@ const ASSETS = [
   './legacy-board.json',
   './manifest.webmanifest',
   './title-bg.webp',
+  './logo-flat.png',
 
   './map-concrete.jpg',
   './map-desert.jpg',

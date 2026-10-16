@@ -14,7 +14,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "jordan",
@@ -30,7 +31,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "glowinghumanity",
@@ -46,7 +48,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "debo",
@@ -62,7 +65,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "caffeinatedsloth",
@@ -78,7 +82,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "discoman",
@@ -94,7 +99,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "fatamy",
@@ -110,7 +116,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     },
     {
       "id": "drmantis",
@@ -126,7 +133,8 @@
       "bleed": "#182023",
       "fire": "#e44a45",
       "grenade": "#238ec9",
-      "stick": "#d6ad71"
+      "stick": "#d6ad71",
+      "deck3d": true
     }
   ]
 }
