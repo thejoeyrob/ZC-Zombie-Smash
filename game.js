@@ -852,7 +852,7 @@
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">ARCADE pairs the cinematic score with recorded weapon effects. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">SCORE</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">ARCADE pairs the cinematic score with recorded weapon effects. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">SCORE</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
@@ -1895,6 +1895,12 @@
           }
         }
         break;
+      case 'fix-sound': {
+        audio.reset();
+        toast('Audio reset · playing a test sound');
+        setTimeout(() => audio.sfx('pickup'), 350);
+        break;
+      }
       case 'preview-sound': {
         const preview = ++soundPreview;
         audio.resume();
@@ -1952,6 +1958,10 @@
     }
   });
   for (const ev of ['pageshow', 'focus']) addEventListener(ev, () => audio.revive());
+  // iOS can silently interrupt audio mid-game (calls, alerts, Siri): check often and bring it back.
+  setInterval(() => {
+    if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.revive();
+  }, 2500);
   for (const ev of ['pointerdown', 'touchend'])
     document.addEventListener(ev, () => audio.revive(), { capture: true, passive: true });
   addEventListener('pagehide', save);

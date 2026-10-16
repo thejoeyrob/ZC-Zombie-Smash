@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.26.1';
+const CACHE = 'zombie-smash-v7.27.0';
 const ASSETS = [
   './console-toxic-pop.webp',
   './console-disco-fever.webp',

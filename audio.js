@@ -1237,6 +1237,9 @@
           this.musicBus.gain.value = this.settings.music;
           this.musicBus.connect(this.master);
           this.master.gain.value = this.paused ? 0 : 1;
+          this.ctx.onstatechange = () => {
+            if (this.ctx && this.ctx.state !== 'running' && !document.hidden) setTimeout(() => this.revive(), 400);
+          };
           this.synth = new Synth(this.ctx);
           this.tracksSynth = makeTracks(this.synth);
           this.tracksReal = makeTracks(this.synth, true);
@@ -1550,6 +1553,21 @@
         this.track = null;
       }
       if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
+    }
+    // Hard reset for "no sound": throw the context away and build a fresh one.
+    reset() {
+      try {
+        clearInterval(this.seq?.timer);
+        this.music?.stop?.();
+        this.ctx?.close();
+      } catch {}
+      this.ctx = null;
+      this.seq = this.music = null;
+      this.track = null;
+      this.keepAlive?.pause();
+      this.keepAlive = null;
+      this.paused = false;
+      this.unlock();
     }
     // Wake the audio up after the app was in the background: iOS suspends or even closes the context.
     async revive() {
