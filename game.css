@@ -2850,19 +2850,11 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
    full-size; only the artwork inside them is drawn in perspective, so response is unchanged. The flat skins keep the
    original button style.
    Per-skin offsets line each control up with that skin's painted sockets. */
-body[data-release-skin="joeyrob"] { --jx: 1px; --jy: 17px; --fx: -6px; --fy: 17px; --gx: 0px; --gy: -8px; --mx: 0px; --my: 14px; --lx: 0px; --ly: 8px; }
-body[data-release-skin="jordan"] { --jx: 4px; --jy: 7px; --fx: 0px; --fy: 7px; --gx: 2px; --gy: 13px; --mx: 0px; --my: -3px; --lx: 0px; --ly: -5px; }
-body[data-release-skin="glowinghumanity"] { --jx: 0px; --jy: 13px; --fx: 10px; --fy: 13px; --gx: -1px; --gy: 12px; --mx: 1px; --my: 3px; --lx: 0px; --ly: 0px; }
-body[data-release-skin="debo"] { --jx: 1px; --jy: 20px; --fx: 1px; --fy: 20px; --gx: 1px; --gy: -12px; --mx: 0px; --my: -15px; --lx: 0px; --ly: -12px; }
-body[data-release-skin="caffeinatedsloth"] { --jx: 1px; --jy: 21px; --fx: -1px; --fy: 21px; --gx: 0px; --gy: 0px; --mx: 0px; --my: 11px; --lx: 0px; --ly: 8px; }
-body[data-release-skin="discoman"] { --jx: 1px; --jy: 16px; --fx: -1px; --fy: 16px; --gx: 0px; --gy: 19px; --mx: 0px; --my: 5px; --lx: 0px; --ly: 5px; }
-body[data-release-skin="fatamy"] { --jx: -2px; --jy: 11px; --fx: 1px; --fy: 11px; --gx: -3px; --gy: 15px; --mx: 0px; --my: -7px; --lx: 0px; --ly: -10px; }
-body[data-release-skin="drmantis"] { --jx: -5px; --jy: 9px; --fx: 7px; --fy: 9px; --gx: 0px; --gy: 14px; --mx: 0px; --my: 1px; --lx: 0px; --ly: 0px; }
 
 body.deck3d #joystick { translate: var(--jx, 0) var(--jy, 0); background: none; box-shadow: none; }
 body.deck3d #joystick.sped { box-shadow: none; }
 body.deck3d #joystick.sped .stick-knob { filter: drop-shadow(0 0 7px var(--accent)); }
-body.deck3d .stick-track { inset: auto; left: 50%; top: 50%; width: 88px; height: 58px; margin: -26px 0 0 -44px; border-radius: 50%;
+body.deck3d .stick-track { inset: auto; left: 50%; top: 50%; width: var(--jw, 88px); height: var(--jh, 58px); margin: calc(var(--jh, 58px) / -2) 0 0 calc(var(--jw, 88px) / -2); border-radius: 50%;
   background: radial-gradient(ellipse at 50% 38%, #1c2024 0, #050607 64%, #000 100%);
   box-shadow: inset 0 6px 10px #000, inset 0 -2px 3px #ffffff30, 0 0 0 3px #aab3b7, 0 0 0 4px #0c0e0f, 0 4px 0 3px #22282b, 0 9px 8px 3px #000a; }
 body.deck3d .stick-track::before, body.deck3d .stick-track::after { content: ''; position: absolute; top: 50%; margin-top: -6px; width: 0; height: 0; border: 6px solid transparent; opacity: 0.4; transition: opacity 0.08s, filter 0.08s; }
@@ -2877,8 +2869,8 @@ body.deck3d .stick-knob { z-index: 1; width: 38px; height: 38px; left: 50%; top:
   box-shadow: 0 8px 7px #000a, inset -3px -5px 8px #0007, inset 2px 3px 5px #fff6; }
 
 body.deck3d .fire-button { translate: var(--fx, 0) var(--fy, 0); width: 100px; height: 100px; padding: 0; background: none; border: 0; box-shadow: none; animation: fire-idle 2.6s ease-in-out infinite; }
-body.deck3d .fire-inner { position: absolute; left: 50%; top: 50%; width: 96px; height: 96px; margin: -48px 0 0 -48px; border: 0; border-radius: 50%;
-  transform: perspective(620px) rotateX(50deg); transform-style: preserve-3d;
+body.deck3d .fire-inner { position: absolute; left: 50%; top: 50%; width: var(--fd, 96px); height: var(--fd, 96px); margin: calc(var(--fd, 96px) / -2) 0 0 calc(var(--fd, 96px) / -2); border: 0; border-radius: 50%;
+  transform: perspective(620px) rotateX(var(--ft, 50deg)); transform-style: preserve-3d;
   background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa);
   box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 15px 12px #000c; }
 body.deck3d .fire-inner::before { content: ''; position: absolute; inset: 9%; border-radius: 50%; transform: translateZ(1px);
@@ -2896,8 +2888,8 @@ body.deck3d .fire-button.pressed .fire-inner b { transform: translateZ(6px); }
 @keyframes fire-idle { 0%, 100% { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--fire) 35%, transparent)); } 50% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--fire) 80%, transparent)); } }
 
 body.deck3d .grenade-button { translate: var(--gx, 0) var(--gy, 0); width: 56px; height: 56px; border: 0; background: none; box-shadow: none; filter: none; opacity: 1; color: #3a2600; }
-body.deck3d .grenade-button .g3 { display: block; position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px; border: 3px solid #30dcff; border-radius: 50%;
-  transform: perspective(520px) rotateX(50deg); transform-style: preserve-3d; pointer-events: none;
+body.deck3d .grenade-button .g3 { display: block; position: absolute; left: 50%; top: 50%; width: var(--gd, 58px); height: var(--gd, 58px); margin: calc(var(--gd, 58px) / -2) 0 0 calc(var(--gd, 58px) / -2); border: 3px solid #30dcff; border-radius: 50%; box-sizing: border-box;
+  transform: perspective(520px) rotateX(var(--gt, 50deg)); transform-style: preserve-3d; pointer-events: none;
   box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 9px #30dcff, 0 0 18px #30dcffa0, inset 0 0 9px #30dcffaa; animation: ring-ready 1.7s ease-in-out infinite; }
 body.deck3d .grenade-button .g3::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #12181a, #030506 74%); box-shadow: inset 0 5px 8px #000; transform: translateZ(1px); }
 body.deck3d .grenade-button .g3 i { display: block; position: absolute; inset: 17%; border-radius: 50%; transform: translateZ(5px); background: #6b4700; box-shadow: 0 0 0 2px #00000070; }
@@ -2913,13 +2905,13 @@ body.deck3d .grenade-button:active:not(.empty) .g3::after { transform: translate
 body.deck3d .grenade-button:active:not(.empty) .g3 { animation: none; border-color: #b2f6ff; box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 14px #8ff0ff, 0 0 30px #30dcff, inset 0 0 14px #8ff0ff; }
 @keyframes ring-ready { 0%, 100% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 6px #30dcff99, 0 0 11px #30dcff66, inset 0 0 6px #30dcff88; } 50% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 12px #30dcff, 0 0 24px #30dcffc0, inset 0 0 12px #30dcffcc; } }
 
-body.deck3d .deck-menu { translate: var(--mx, 0) var(--my, 0); width: 78px; height: 30px; border: 0; border-radius: 8px; color: var(--accent); text-shadow: 0 0 7px color-mix(in srgb, var(--accent) 70%, transparent), 0 1px 1px #000;
-  transform: perspective(300px) rotateX(24deg);
+body.deck3d .deck-menu { translate: var(--mx, 0) var(--my, 0); width: var(--mw, 78px); height: var(--mh, 30px); margin-left: calc(var(--mw, 78px) / -2); border: 0; border-radius: 8px; color: var(--accent); text-shadow: 0 0 7px color-mix(in srgb, var(--accent) 70%, transparent), 0 1px 1px #000;
+  transform: perspective(300px) rotateX(14deg);
   background: linear-gradient(#5b666c 0, #2c3438 12%, #151a1d 62%, #0d1113 100%);
-  box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #1b2023, 0 3px 0 #14181b, 0 4px 0 #0e1113, 0 5px 0 #080a0b, 0 11px 8px #000b, 0 0 0 1px color-mix(in srgb, var(--accent) 45%, #000); animation: menu-breathe 3.4s ease-in-out infinite; }
-body.deck3d .deck-menu:active, body.deck3d .deck-menu.pressed { transform: perspective(300px) rotateX(24deg) translateY(3px); filter: brightness(1.25); animation: none;
+  box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #14181b, 0 3px 0 #080a0b, 0 7px 6px #000b, 0 0 0 1px color-mix(in srgb, var(--accent) 45%, #000); animation: menu-breathe 3.4s ease-in-out infinite; }
+body.deck3d .deck-menu:active, body.deck3d .deck-menu.pressed { transform: perspective(300px) rotateX(14deg) translateY(2px); filter: brightness(1.25); animation: none;
   box-shadow: inset 0 2px 4px #000a, inset 0 0 0 1px #00000060, 0 1px 0 #080a0b, 0 4px 3px #000b, 0 0 14px var(--accent); }
-@keyframes menu-breathe { 0%, 100% { box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #1b2023, 0 3px 0 #14181b, 0 4px 0 #0e1113, 0 5px 0 #080a0b, 0 11px 8px #000b, 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); } 50% { box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #1b2023, 0 3px 0 #14181b, 0 4px 0 #0e1113, 0 5px 0 #080a0b, 0 11px 8px #000b, 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); } }
+@keyframes menu-breathe { 0%, 100% { box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #14181b, 0 3px 0 #080a0b, 0 7px 6px #000b, 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); } 50% { box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #14181b, 0 3px 0 #080a0b, 0 7px 6px #000b, 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); } }
 body.deck3d .engraving { display: none; }
 body.deck3d .console-header .wordmark { padding: 2px 12px 1px; border-radius: 9px; background: linear-gradient(#000000b8, #000000d8); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000), 0 2px 4px #000a; text-align: center; }
 body.deck3d .console-header .wordmark small { display: block; max-width: 150px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.15em; }
@@ -2957,3 +2949,22 @@ body.deck3d .deck-label { top: 127px; left: 50%; width: 112px; height: auto; mar
 .grenade-button .g3 i { display: none; }
 body.deck3d .grenade-button .g3 { display: block; }
 body.deck3d .grenade-button .g3 i { display: block; }
+
+/* 7.27.1: each control is fitted to the inner edge of its painted socket (measured per skin), with a hairline gap so it sits inside the border. */
+body[data-release-skin="joeyrob"] { --jx: -0.95px; --jy: 21.64px; --jw: 82.99px; --jh: 59.58px; --fx: 0.78px; --fy: 18.04px; --fd: 87.25px; --ft: 39.05deg; --gx: -3.98px; --gy: -14.03px; --gd: 46.59px; --gt: 36.99deg; --mx: -0.11px; --my: 17.04px; --mw: 71.68px; --mh: 30.48px; }
+body[data-release-skin="jordan"] { --jx: -1.17px; --jy: 4.52px; --jw: 86.38px; --jh: 52.99px; --fx: 3.22px; --fy: 0.88px; --fd: 89.88px; --ft: 46.98deg; --gx: -4.61px; --gy: 9.06px; --gd: 41.06px; --gt: 50.25deg; --mx: -0.11px; --my: 2.89px; --mw: 83.09px; --mh: 22.16px; }
+body[data-release-skin="glowinghumanity"] { --jx: -7.22px; --jy: 14.62px; --jw: 91.28px; --jh: 61.5px; --fx: 8.54px; --fy: 10.85px; --fd: 94.12px; --ft: 42.1deg; --gx: -3.44px; --gy: 11.9px; --gd: 52.14px; --gt: 51.57deg; --mx: 0.43px; --my: 12.28px; --mw: 74.7px; --mh: 20.84px; }
+body[data-release-skin="debo"] { --jx: -2.98px; --jy: 23.77px; --jw: 73.63px; --jh: 55.86px; --fx: 4.93px; --fy: 20.46px; --fd: 79.39px; --ft: 35.54deg; --gx: -2.9px; --gy: -16.36px; --gd: 54.39px; --gt: 42.88deg; --mx: 0.42px; --my: -16.32px; --mw: 77.43px; --mh: 34.54px; }
+body[data-release-skin="caffeinatedsloth"] { --jx: 0.22px; --jy: 20.26px; --jw: 82.13px; --jh: 56.92px; --fx: 0.67px; --fy: 16.77px; --fd: 86.32px; --ft: 40.85deg; --gx: -3.98px; --gy: -4.58px; --gd: 51.22px; --gt: 49.2deg; --mx: 0.53px; --my: 13.95px; --mw: 73.68px; --mh: 26.31px; }
+body[data-release-skin="discoman"] { --jx: -0.21px; --jy: 15.68px; --jw: 72.89px; --jh: 49.79px; --fx: 1.09px; --fy: 12.38px; --fd: 77.32px; --ft: 41.52deg; --gx: -4.51px; --gy: 14.27px; --gd: 45.39px; --gt: 44.04deg; --mx: 0.11px; --my: 13.02px; --mw: 68.79px; --mh: 20.84px; }
+body[data-release-skin="fatamy"] { --jx: -3.5px; --jy: 11.54px; --jw: 80px; --jh: 44.69px; --fx: 4.49px; --fy: 8.04px; --fd: 83.87px; --ft: 50.95deg; --gx: -4.61px; --gy: 9.12px; --gd: 49.84px; --gt: 56.36deg; --mx: 0px; --my: 0.4px; --mw: 83.18px; --mh: 25.77px; }
+body[data-release-skin="drmantis"] { --jx: -6.91px; --jy: 10.05px; --jw: 90.97px; --jh: 55.12px; --fx: 8.22px; --fy: 6.17px; --fd: 93.67px; --ft: 47.2deg; --gx: -4.39px; --gy: 9.01px; --gd: 52.94px; --gt: 50.8deg; --mx: 0.11px; --my: 7.6px; --mw: 88.35px; --mh: 22.48px; }
+
+body[data-release-skin="joeyrob"] { --ly: 8px; }
+body[data-release-skin="jordan"] { --ly: -10.4px; }
+body[data-release-skin="glowinghumanity"] { --ly: -2.8px; }
+body[data-release-skin="debo"] { --ly: -16.8px; }
+body[data-release-skin="caffeinatedsloth"] { --ly: 3.9px; }
+body[data-release-skin="discoman"] { --ly: -2.4px; }
+body[data-release-skin="fatamy"] { --ly: -9.3px; }
+body[data-release-skin="drmantis"] { --ly: -5.6px; }
