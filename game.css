@@ -2908,13 +2908,21 @@ body.deck3d .grenade-button:active:not(.empty) .g3::after { transform: translate
 body.deck3d .grenade-button:active:not(.empty) .g3 { animation: none; border-color: #b2f6ff; box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 14px #8ff0ff, 0 0 30px #30dcff, inset 0 0 14px #8ff0ff; }
 @keyframes ring-ready { 0%, 100% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 6px #30dcff99, 0 0 11px #30dcff66, inset 0 0 6px #30dcff88; } 50% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 12px #30dcff, 0 0 24px #30dcffc0, inset 0 0 12px #30dcffcc; } }
 
-body.deck3d .deck-menu { translate: var(--mx, 0) var(--my, 0); width: var(--mw, 78px); height: var(--mh, 30px); margin-left: calc(var(--mw, 78px) / -2); border: 0; border-radius: 8px; color: var(--accent); text-shadow: 0 0 7px color-mix(in srgb, var(--accent) 70%, transparent), 0 1px 1px #000;
-  transform: perspective(300px) rotateX(14deg);
-  background: linear-gradient(#5b666c 0, #2c3438 12%, #151a1d 62%, #0d1113 100%);
-  box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #14181b, 0 3px 0 #080a0b, 0 7px 6px #000b, 0 0 0 1px color-mix(in srgb, var(--accent) 45%, #000); animation: menu-breathe 3.4s ease-in-out infinite; }
-body.deck3d .deck-menu:active, body.deck3d .deck-menu.pressed { transform: perspective(300px) rotateX(14deg) translateY(2px); filter: brightness(1.25); animation: none;
-  box-shadow: inset 0 2px 4px #000a, inset 0 0 0 1px #00000060, 0 1px 0 #080a0b, 0 4px 3px #000b, 0 0 14px var(--accent); }
-@keyframes menu-breathe { 0%, 100% { box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #14181b, 0 3px 0 #080a0b, 0 7px 6px #000b, 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); } 50% { box-shadow: inset 0 1px 0 #ffffff70, inset 0 0 0 1px #00000060, 0 1px 0 #232a2e, 0 2px 0 #14181b, 0 3px 0 #080a0b, 0 7px 6px #000b, 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); } }
+.deck-menu .m3 { display: contents; }
+body.deck3d .deck-menu { translate: var(--mx, 0) var(--my, 0); width: var(--mw, 78px); height: var(--mh, 30px); margin-left: calc(var(--mw, 78px) / -2); padding: 0; border: 0; background: none; box-shadow: none; filter: none; animation: none; color: var(--accent); }
+body.deck3d .deck-menu:active, body.deck3d .deck-menu.pressed { transform: none; filter: none; box-shadow: none; }
+body.deck3d .deck-menu .m3 { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; pointer-events: none;
+  transform: perspective(520px) rotateX(var(--mt, 40deg)); transform-style: preserve-3d;
+  background: linear-gradient(#0b0e10, #050607); border: 1px solid color-mix(in srgb, var(--accent) 55%, #000);
+  box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 7px color-mix(in srgb, var(--accent) 30%, transparent); animation: menu-breathe 3.4s ease-in-out infinite; }
+body.deck3d .deck-menu .m3::before { content: ''; position: absolute; inset: 1px; border-radius: 7px; transform: translateZ(3px); background: #080a0b; box-shadow: 0 0 0 1px #000a; }
+body.deck3d .deck-menu .m3::after { content: ''; position: absolute; inset: 2px; border-radius: 6px; transform: translateZ(8px); transition: transform 0.06s;
+  background: linear-gradient(#5d686e 0, #2f383c 14%, #171c1f 60%, #0f1315 100%); box-shadow: inset 0 1px 0 #ffffff80, inset 0 -3px 5px #0008, 0 0 0 1px #000c; }
+body.deck3d .deck-menu .m3 > * { position: relative; z-index: 2; transform: translateZ(9px); transition: transform 0.06s; text-shadow: 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent), 0 1px 1px #000; }
+body.deck3d .deck-menu.pressed .m3::after, body.deck3d .deck-menu:active .m3::after { transform: translateZ(4px); background: linear-gradient(#7a868d 0, #3c474c 14%, #232a2e 60%, #181d20 100%); }
+body.deck3d .deck-menu.pressed .m3 > *, body.deck3d .deck-menu:active .m3 > * { transform: translateZ(5px); }
+body.deck3d .deck-menu.pressed .m3, body.deck3d .deck-menu:active .m3 { animation: none; box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 0 16px var(--accent); }
+@keyframes menu-breathe { 0%, 100% { box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); } 50% { box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); } }
 body.deck3d .engraving { display: none; }
 body.deck3d .console-header .wordmark { padding: 2px 12px 1px; border-radius: 9px; background: linear-gradient(#000000b8, #000000d8); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000), 0 2px 4px #000a; text-align: center; }
 body.deck3d .console-header .wordmark small { display: block; max-width: 150px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.15em; }
@@ -2954,14 +2962,14 @@ body.deck3d .grenade-button .g3 { display: block; }
 body.deck3d .grenade-button .g3 i { display: block; }
 
 /* 7.27.1: each control is fitted to the inner edge of its painted socket (measured per skin), with a hairline gap so it sits inside the border. */
-body[data-release-skin="joeyrob"] { --jx: -0.95px; --jy: 21.64px; --jw: 82.99px; --jh: 59.58px; --fx: 0.78px; --fy: 18.04px; --fd: 87.25px; --ft: 39.05deg; --gx: -3.98px; --gy: -14.03px; --gd: 46.59px; --gt: 36.99deg; --mx: -0.11px; --my: 17.04px; --mw: 71.68px; --mh: 30.48px; }
-body[data-release-skin="jordan"] { --jx: -1.17px; --jy: 4.52px; --jw: 86.38px; --jh: 52.99px; --fx: 3.22px; --fy: 0.88px; --fd: 89.88px; --ft: 46.98deg; --gx: -4.61px; --gy: 9.06px; --gd: 41.06px; --gt: 50.25deg; --mx: -0.11px; --my: 2.89px; --mw: 83.09px; --mh: 22.16px; }
-body[data-release-skin="glowinghumanity"] { --jx: -7.22px; --jy: 14.62px; --jw: 91.28px; --jh: 61.5px; --fx: 8.54px; --fy: 10.85px; --fd: 94.12px; --ft: 42.1deg; --gx: -3.44px; --gy: 11.9px; --gd: 52.14px; --gt: 51.57deg; --mx: 0.43px; --my: 12.28px; --mw: 74.7px; --mh: 20.84px; }
-body[data-release-skin="debo"] { --jx: -2.98px; --jy: 23.77px; --jw: 73.63px; --jh: 55.86px; --fx: 4.93px; --fy: 20.46px; --fd: 79.39px; --ft: 35.54deg; --gx: -2.9px; --gy: -16.36px; --gd: 54.39px; --gt: 42.88deg; --mx: 0.42px; --my: -16.32px; --mw: 77.43px; --mh: 34.54px; }
-body[data-release-skin="caffeinatedsloth"] { --jx: 0.22px; --jy: 20.26px; --jw: 82.13px; --jh: 56.92px; --fx: 0.67px; --fy: 16.77px; --fd: 86.32px; --ft: 40.85deg; --gx: -3.98px; --gy: -4.58px; --gd: 51.22px; --gt: 49.2deg; --mx: 0.53px; --my: 13.95px; --mw: 73.68px; --mh: 26.31px; }
-body[data-release-skin="discoman"] { --jx: -0.21px; --jy: 15.68px; --jw: 72.89px; --jh: 49.79px; --fx: 1.09px; --fy: 12.38px; --fd: 77.32px; --ft: 41.52deg; --gx: -4.51px; --gy: 14.27px; --gd: 45.39px; --gt: 44.04deg; --mx: 0.11px; --my: 13.02px; --mw: 68.79px; --mh: 20.84px; }
-body[data-release-skin="fatamy"] { --jx: -3.5px; --jy: 11.54px; --jw: 80px; --jh: 44.69px; --fx: 4.49px; --fy: 8.04px; --fd: 83.87px; --ft: 50.95deg; --gx: -4.61px; --gy: 9.12px; --gd: 49.84px; --gt: 56.36deg; --mx: 0px; --my: 0.4px; --mw: 83.18px; --mh: 25.77px; }
-body[data-release-skin="drmantis"] { --jx: -6.91px; --jy: 10.05px; --jw: 90.97px; --jh: 55.12px; --fx: 8.22px; --fy: 6.17px; --fd: 93.67px; --ft: 47.2deg; --gx: -4.39px; --gy: 9.01px; --gd: 52.94px; --gt: 50.8deg; --mx: 0.11px; --my: 7.6px; --mw: 88.35px; --mh: 22.48px; }
+body[data-release-skin="joeyrob"] { --jx: -0.95px; --jy: 21.64px; --jw: 82.99px; --jh: 59.58px; --fx: 0.78px; --fy: 18.04px; --fd: 87.25px; --ft: 39.05deg; --gx: -3.98px; --gy: -14.03px; --gd: 46.59px; --gt: 36.99deg; --mx: -0.11px; --my: 12.81px; --mw: 70.83px; --mh: 38.59px; }
+body[data-release-skin="jordan"] { --jx: -1.17px; --jy: 4.52px; --jw: 86.38px; --jh: 52.99px; --fx: 3.22px; --fy: 0.88px; --fd: 89.88px; --ft: 46.98deg; --gx: -4.61px; --gy: 9.06px; --gd: 41.06px; --gt: 50.25deg; --mx: -0.11px; --my: -0.16px; --mw: 82.38px; --mh: 28.06px; }
+body[data-release-skin="glowinghumanity"] { --jx: -7.22px; --jy: 14.62px; --jw: 91.28px; --jh: 61.5px; --fx: 8.54px; --fy: 10.85px; --fd: 94.12px; --ft: 42.1deg; --gx: -3.44px; --gy: 11.9px; --gd: 52.14px; --gt: 51.57deg; --mx: 0.43px; --my: 9.42px; --mw: 74.09px; --mh: 26.38px; }
+body[data-release-skin="debo"] { --jx: -2.98px; --jy: 23.77px; --jw: 73.63px; --jh: 55.86px; --fx: 4.93px; --fy: 20.46px; --fd: 79.39px; --ft: 35.54deg; --gx: -2.9px; --gy: -16.36px; --gd: 54.39px; --gt: 42.88deg; --mx: 0.42px; --my: -21.13px; --mw: 76.39px; --mh: 43.73px; }
+body[data-release-skin="caffeinatedsloth"] { --jx: 0.22px; --jy: 20.26px; --jw: 82.13px; --jh: 56.92px; --fx: 0.67px; --fy: 16.77px; --fd: 86.32px; --ft: 40.85deg; --gx: -3.98px; --gy: -4.58px; --gd: 51.22px; --gt: 49.2deg; --mx: 0.53px; --my: 10.32px; --mw: 72.95px; --mh: 33.32px; }
+body[data-release-skin="discoman"] { --jx: -0.21px; --jy: 15.68px; --jw: 72.89px; --jh: 49.79px; --fx: 1.09px; --fy: 12.38px; --fd: 77.32px; --ft: 41.52deg; --gx: -4.51px; --gy: 14.27px; --gd: 45.39px; --gt: 44.04deg; --mx: 0.1px; --my: 10.17px; --mw: 68.24px; --mh: 26.38px; }
+body[data-release-skin="fatamy"] { --jx: -3.5px; --jy: 11.54px; --jw: 80px; --jh: 44.69px; --fx: 4.49px; --fy: 8.04px; --fd: 83.87px; --ft: 50.95deg; --gx: -4.61px; --gy: 9.12px; --gd: 49.84px; --gt: 56.36deg; --mx: 0px; --my: -3.14px; --mw: 82.35px; --mh: 32.64px; }
+body[data-release-skin="drmantis"] { --jx: -6.91px; --jy: 10.05px; --jw: 90.97px; --jh: 55.12px; --fx: 8.22px; --fy: 6.17px; --fd: 93.67px; --ft: 47.2deg; --gx: -4.39px; --gy: 9.01px; --gd: 52.94px; --gt: 50.8deg; --mx: 0.1px; --my: 4.53px; --mw: 87.59px; --mh: 28.47px; }
 
 body[data-release-skin="joeyrob"] { --ly: 8px; }
 body[data-release-skin="jordan"] { --ly: -10.4px; }
@@ -2971,3 +2979,21 @@ body[data-release-skin="caffeinatedsloth"] { --ly: 3.9px; }
 body[data-release-skin="discoman"] { --ly: -2.4px; }
 body[data-release-skin="fatamy"] { --ly: -9.3px; }
 body[data-release-skin="drmantis"] { --ly: -5.6px; }
+
+/* 7.30.0: coffee screen cast (Joey Rob the dev and Caffeinated Sloth), compact tip buttons with a how-many stepper. */
+.coffee-art { flex: none; height: calc(var(--ww, 312px) * 0.4); }
+.coffee-joey { position: absolute; left: 3%; bottom: 0; height: 100%; animation: slothSway 3.1s ease-in-out infinite; filter: drop-shadow(0 6px 6px #000); }
+.coffee-art .coffee-sloth { left: auto; right: 3%; scale: -1 1; }
+.coffee-art .coffee-cup { right: auto; left: 50%; translate: -50% 0; height: 62%; }
+.tip-qty { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 2px; font: 800 11px Inter; letter-spacing: 0.14em; color: #f1e3c8; }
+.tip-qty b { font: 900 18px Barlow, sans-serif; color: #ffdd00; margin-left: 4px; }
+.tip-qty button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #ffdd00; background: #2a1a08; color: #ffdd00; font: 900 20px/1 Barlow, sans-serif; }
+.tip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
+.bmc.tip { flex-direction: column; gap: 1px; padding: 8px 4px; font-size: 12px; letter-spacing: 0.04em; animation: none; box-shadow: 0 3px 0 #b89800, 0 0 12px #ffdd0066; }
+.bmc.tip b { font: 900 13px Barlow, sans-serif; }
+.bmc.tip span { font: 800 12px Inter; }
+.coffee-title { font-size: calc(var(--ww, 312px) * 0.165); }
+.coffee-art { height: calc(var(--ww, 312px) * 0.34); }
+.coffee-ui { padding-top: 10px; padding-bottom: 8px; }
+.coffee-ui .coffee-copy { font-size: 11px; line-height: 1.35; }
+.tip-qty span { white-space: nowrap; }

@@ -598,6 +598,14 @@
   const COFFEE_URL = 'https://buymeacoffee.com/JoeyRob',
     TIP_IDS = ['zs_tip_small', 'zs_tip_medium', 'zs_tip_large'];
   let tipProducts = [];
+  let tipQty = 1;
+  const tipPrice = (t, q) => {
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: t.currencyCode }).format(t.price * q);
+    } catch {
+      return q === 1 ? t.priceString : q + ' × ' + t.priceString;
+    }
+  };
   const coffeeOn = () => (nativeApp ? tipProducts.length > 0 : true);
   if (nativeApp && window.Capacitor?.Plugins?.NativePurchases)
     window.Capacitor.Plugins.NativePurchases.getProducts({ productIdentifiers: TIP_IDS, productType: 'inapp' })
@@ -608,6 +616,7 @@
   let coffeeNext = null;
   function showCoffee(next, fromMenu = false, skipLabel = '') {
     coffeeNext = next;
+    tipQty = 1;
     const beans = Array.from(
       { length: 14 },
       (_, i) =>
@@ -616,7 +625,7 @@
     showPanel(
       'coffee',
       '',
-      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p>${nativeApp ? tipProducts.map((t) => `<button class="bmc tip" data-tip="${esc(t.identifier)}"><span class="bmc-cup">☕</span> ${esc(t.title || 'TIP')} · ${esc(t.priceString || '')}</button>`).join('') + '<p class="coffee-copy" style="margin-top:6px;font-size:11px">Tips are optional and unlock nothing. Thank you!</p>' : '<a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a>'}<button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : skipLabel || 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
+      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-joey" src="./player-victory.webp" alt=""><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p>${nativeApp ? `<div class="tip-qty"><button data-tipqty="-1" aria-label="Fewer coffees">−</button><span>HOW MANY? <b id="tipQty">${tipQty}</b></span><button data-tipqty="1" aria-label="More coffees">+</button></div><div class="tip-grid">${tipProducts.map((t) => `<button class="bmc tip" data-tip="${esc(t.identifier)}"><b>${esc(t.title || 'TIP')}</b><span data-tipprice="${esc(t.identifier)}">${esc(tipPrice(t, tipQty))}</span></button>`).join('')}</div>` : `<a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a>`}<button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : skipLabel || 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
       { start: true, closable: false },
     );
   }
@@ -1812,13 +1821,23 @@
       }, 1200);
       return;
     }
+    if (button.dataset.tipqty) {
+      tipQty = Math.max(1, Math.min(10, tipQty + Number(button.dataset.tipqty)));
+      const q = document.getElementById('tipQty');
+      if (q) q.textContent = tipQty;
+      document.querySelectorAll('[data-tipprice]').forEach((el) => {
+        const t = tipProducts.find((x) => x.identifier === el.dataset.tipprice);
+        if (t) el.textContent = tipPrice(t, tipQty);
+      });
+      return;
+    }
     if (button.dataset.tip && nativeApp) {
       (async () => {
         try {
           await window.Capacitor.Plugins.NativePurchases.purchaseProduct({
             productIdentifier: button.dataset.tip,
             productType: 'inapp',
-            quantity: 1,
+            quantity: tipQty,
             isConsumable: true,
           });
           toast('Thank you! You just fuelled the next boss ☕');
