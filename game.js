@@ -1442,7 +1442,7 @@
         );
       }
     }
-    $('mapLabel').textContent = MAPS[ZSData.mapIndex(game.wave)].name;
+    $('mapLabel').textContent = $('mapTag').textContent = MAPS[ZSData.mapIndex(game.wave)].name;
     $('headerName').textContent = run?.name || 'JOEY ROB VS DR MANTIS';
   }
   function inputs() {

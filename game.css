@@ -2872,7 +2872,7 @@ body.deck3d .fire-button { translate: var(--fx, 0) var(--fy, 0); width: 100px; h
 body.deck3d .fire-inner { position: absolute; left: 50%; top: 50%; width: var(--fd, 96px); height: var(--fd, 96px); margin: calc(var(--fd, 96px) / -2) 0 0 calc(var(--fd, 96px) / -2); border: 0; border-radius: 50%;
   transform: perspective(620px) rotateX(var(--ft, 50deg)); transform-style: preserve-3d;
   background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa);
-  box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 15px 12px #000c; }
+  box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 8px 7px #000a; }
 body.deck3d .fire-inner::before { content: ''; position: absolute; inset: 9%; border-radius: 50%; transform: translateZ(1px);
   background: radial-gradient(circle at 50% 38%, #1a1d1f 0, #040505 72%); box-shadow: inset 0 6px 9px #000, inset 0 -2px 3px #ffffff25; }
 body.deck3d .fire-inner .crosshair { display: block; position: absolute; left: 21%; top: 21%; width: 58%; height: 58%; border: 0; border-radius: 50%; opacity: 1; transform: translateZ(6px);
@@ -2962,14 +2962,14 @@ body.deck3d .grenade-button .g3 { display: block; }
 body.deck3d .grenade-button .g3 i { display: block; }
 
 /* 7.27.1: each control is fitted to the inner edge of its painted socket (measured per skin), with a hairline gap so it sits inside the border. */
-body[data-release-skin="joeyrob"] { --jx: -0.95px; --jy: 21.64px; --jw: 82.99px; --jh: 59.58px; --fx: 0.78px; --fy: 18.04px; --fd: 87.25px; --ft: 39.05deg; --gx: -3.98px; --gy: -14.03px; --gd: 46.59px; --gt: 36.99deg; --mx: -0.11px; --my: 12.81px; --mw: 70.83px; --mh: 38.59px; }
-body[data-release-skin="jordan"] { --jx: -1.17px; --jy: 4.52px; --jw: 86.38px; --jh: 52.99px; --fx: 3.22px; --fy: 0.88px; --fd: 89.88px; --ft: 46.98deg; --gx: -4.61px; --gy: 9.06px; --gd: 41.06px; --gt: 50.25deg; --mx: -0.11px; --my: -0.16px; --mw: 82.38px; --mh: 28.06px; }
-body[data-release-skin="glowinghumanity"] { --jx: -7.22px; --jy: 14.62px; --jw: 91.28px; --jh: 61.5px; --fx: 8.54px; --fy: 10.85px; --fd: 94.12px; --ft: 42.1deg; --gx: -3.44px; --gy: 11.9px; --gd: 52.14px; --gt: 51.57deg; --mx: 0.43px; --my: 9.42px; --mw: 74.09px; --mh: 26.38px; }
-body[data-release-skin="debo"] { --jx: -2.98px; --jy: 23.77px; --jw: 73.63px; --jh: 55.86px; --fx: 4.93px; --fy: 20.46px; --fd: 79.39px; --ft: 35.54deg; --gx: -2.9px; --gy: -16.36px; --gd: 54.39px; --gt: 42.88deg; --mx: 0.42px; --my: -21.13px; --mw: 76.39px; --mh: 43.73px; }
-body[data-release-skin="caffeinatedsloth"] { --jx: 0.22px; --jy: 20.26px; --jw: 82.13px; --jh: 56.92px; --fx: 0.67px; --fy: 16.77px; --fd: 86.32px; --ft: 40.85deg; --gx: -3.98px; --gy: -4.58px; --gd: 51.22px; --gt: 49.2deg; --mx: 0.53px; --my: 10.32px; --mw: 72.95px; --mh: 33.32px; }
-body[data-release-skin="discoman"] { --jx: -0.21px; --jy: 15.68px; --jw: 72.89px; --jh: 49.79px; --fx: 1.09px; --fy: 12.38px; --fd: 77.32px; --ft: 41.52deg; --gx: -4.51px; --gy: 14.27px; --gd: 45.39px; --gt: 44.04deg; --mx: 0.1px; --my: 10.17px; --mw: 68.24px; --mh: 26.38px; }
-body[data-release-skin="fatamy"] { --jx: -3.5px; --jy: 11.54px; --jw: 80px; --jh: 44.69px; --fx: 4.49px; --fy: 8.04px; --fd: 83.87px; --ft: 50.95deg; --gx: -4.61px; --gy: 9.12px; --gd: 49.84px; --gt: 56.36deg; --mx: 0px; --my: -3.14px; --mw: 82.35px; --mh: 32.64px; }
-body[data-release-skin="drmantis"] { --jx: -6.91px; --jy: 10.05px; --jw: 90.97px; --jh: 55.12px; --fx: 8.22px; --fy: 6.17px; --fd: 93.67px; --ft: 47.2deg; --gx: -4.39px; --gy: 9.01px; --gd: 52.94px; --gt: 50.8deg; --mx: 0.1px; --my: 4.53px; --mw: 87.59px; --mh: 28.47px; }
+body[data-release-skin="joeyrob"] { --jx: -0.95px; --jy: 21.64px; --jw: 82.99px; --jh: 59.58px; --fx: 0.78px; --fy: 17.06px; --fd: 84.08px; --ft: 42.06deg; --gx: -3.98px; --gy: -14.03px; --gd: 46.59px; --gt: 36.99deg; --mx: -0.11px; --my: 12.81px; --mw: 70.83px; --mh: 38.59px; }
+body[data-release-skin="jordan"] { --jx: -1.17px; --jy: 4.52px; --jw: 86.38px; --jh: 52.99px; --fx: 3.22px; --fy: -0.05px; --fd: 86.8px; --ft: 49.81deg; --gx: -4.61px; --gy: 9.06px; --gd: 41.06px; --gt: 50.25deg; --mx: -0.11px; --my: -0.16px; --mw: 82.38px; --mh: 28.06px; }
+body[data-release-skin="glowinghumanity"] { --jx: -7.22px; --jy: 14.62px; --jw: 91.28px; --jh: 61.5px; --fx: 8.53px; --fy: 9.88px; --fd: 91px; --ft: 44.85deg; --gx: -3.44px; --gy: 11.9px; --gd: 52.14px; --gt: 51.57deg; --mx: 0.43px; --my: 9.42px; --mw: 74.09px; --mh: 26.38px; }
+body[data-release-skin="debo"] { --jx: -2.98px; --jy: 23.77px; --jw: 73.63px; --jh: 55.86px; --fx: 4.92px; --fy: 19.45px; --fd: 76.2px; --ft: 38.93deg; --gx: -2.9px; --gy: -16.36px; --gd: 54.39px; --gt: 42.88deg; --mx: 0.42px; --my: -21.13px; --mw: 76.39px; --mh: 43.73px; }
+body[data-release-skin="caffeinatedsloth"] { --jx: 0.22px; --jy: 20.26px; --jw: 82.13px; --jh: 56.92px; --fx: 0.66px; --fy: 15.8px; --fd: 83.19px; --ft: 43.86deg; --gx: -3.98px; --gy: -4.58px; --gd: 51.22px; --gt: 49.2deg; --mx: 0.53px; --my: 10.32px; --mw: 72.95px; --mh: 33.32px; }
+body[data-release-skin="discoman"] { --jx: -0.21px; --jy: 15.68px; --jw: 72.89px; --jh: 49.79px; --fx: 1.1px; --fy: 11.41px; --fd: 74.18px; --ft: 44.88deg; --gx: -4.51px; --gy: 14.27px; --gd: 45.39px; --gt: 44.04deg; --mx: 0.1px; --my: 10.17px; --mw: 68.24px; --mh: 26.38px; }
+body[data-release-skin="fatamy"] { --jx: -3.5px; --jy: 11.54px; --jw: 80px; --jh: 44.69px; --fx: 4.49px; --fy: 7.11px; --fd: 80.82px; --ft: 53.98deg; --gx: -4.61px; --gy: 9.12px; --gd: 49.84px; --gt: 56.36deg; --mx: 0px; --my: -3.14px; --mw: 82.35px; --mh: 32.64px; }
+body[data-release-skin="drmantis"] { --jx: -6.91px; --jy: 10.05px; --jw: 90.97px; --jh: 55.12px; --fx: 8.22px; --fy: 5.25px; --fd: 90.61px; --ft: 49.92deg; --gx: -4.39px; --gy: 9.01px; --gd: 52.94px; --gt: 50.8deg; --mx: 0.1px; --my: 4.53px; --mw: 87.59px; --mh: 28.47px; }
 
 body[data-release-skin="joeyrob"] { --ly: 8px; }
 body[data-release-skin="jordan"] { --ly: -10.4px; }
@@ -2998,3 +2998,10 @@ body[data-release-skin="drmantis"] { --ly: -5.6px; }
 .coffee-ui .coffee-copy { font-size: 11px; line-height: 1.35; }
 .tip-qty span { white-space: nowrap; }
 body.deck3d .fire-inner b { display: none; }
+
+/* 7.31.0: map name moves onto the game screen; the toast stays inside the screen window. */
+body.deck3d .deck-label { display: none; }
+.map-tag { display: none; position: absolute; left: 6px; top: 5px; z-index: 2; padding: 2px 7px; border-radius: 6px; background: #00000070; color: #ffffffb8; font: 800 8px/1.4 Barlow, sans-serif; letter-spacing: 0.18em; text-transform: uppercase; pointer-events: none; }
+body.deck3d .map-tag { display: block; }
+#toast { left: calc(var(--wx, 16px) + 8px); right: auto; width: calc(var(--ww, 343px) - 16px); box-sizing: border-box; overflow-wrap: anywhere; }
+#toast { top: calc(var(--wy, 55px) + var(--wh, 450px) - 130px); }
