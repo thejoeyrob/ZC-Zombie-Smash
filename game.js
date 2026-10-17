@@ -1614,13 +1614,18 @@
     }
     feedToken('F');
     if (!paused) haptics.impact('MEDIUM', 'press', 0, true);
-    if (paused || !game.active || game.scene) return;
+    if (paused || !game.active) return;
     e.preventDefault();
     fireId = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
     touchFire = true;
     e.currentTarget.classList.add('pressed');
     audio.unlock();
+    // During a boss scene a press (or holding FIRE) skips ahead once the scene has run for a couple of seconds.
+    if (game.scene) {
+      if (game.scene.bossId && game.scene.time >= 2) game.advanceScene();
+      return;
+    }
     game.fire();
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
