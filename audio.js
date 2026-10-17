@@ -1565,60 +1565,50 @@
     }
     // Hard reset for "no sound": throw the context away and build a fresh one.
     reset() {
+      this.keepAlive?.pause();
+      this.keepAlive = null;
+      this.paused = false;
+      return this.rebuild();
+    }
+    // Throw the audio context away and make a fresh one (inside a real touch it starts running at once).
+    rebuild() {
       try {
         clearInterval(this.seq?.timer);
         this.music?.stop?.();
+      } catch {}
+      try {
         this.ctx?.close();
       } catch {}
       this.ctx = null;
       this.seq = this.music = null;
       this.track = null;
-      this.keepAlive?.pause();
-      this.keepAlive = null;
-      this.paused = false;
-      this.unlock();
+      return this.unlock();
     }
-    // Wake the audio up after the app was in the background: iOS suspends or even closes the context.
+    // Wake the audio up after the app was in the background: iOS suspends, interrupts or even closes the context.
+    // `gesture` is true when this runs from a real tap, the only moment a fresh context may start playing.
     async revive(gesture = false) {
       if (!this.ctx) return;
       this.playbackSession();
       if (this.keepAlive?.paused) this.keepAlive.play().catch(() => {});
-      if (this.ctx.state === 'closed') {
-        this.ctx = null;
-        this.seq = this.music = null;
-        this.track = null;
-        await this.unlock();
-        return;
+      if (this.ctx.state === 'closed' || (gesture && this.ctx.state !== 'running')) {
+        // Rebuilt synchronously inside the tap so the new context is allowed to start.
+        await this.rebuild();
+        return this.afterRevive();
       }
       if (this.ctx.state !== 'running') {
         try {
           await Promise.race([this.ctx.resume(), new Promise((r) => setTimeout(r, 700))]);
         } catch {}
       }
-      // Still not running (iOS leaves it "interrupted" after the app was away): build a fresh context, but only
-      // inside a real touch, because a context created without one starts asleep and stays that way.
-      if (this.ctx.state !== 'running' && !gesture) return;
-      if (this.ctx.state !== 'running') {
-        try {
-          this.ctx.close();
-        } catch {}
-        clearInterval(this.seq?.timer);
-        this.ctx = null;
-        this.seq = this.music = null;
-        this.track = null;
-        await this.unlock();
-        return;
-      }
+      // Still asleep without a tap: leave it for the next touch, which rebuilds it.
+      if (this.ctx.state !== 'running') return;
+      this.afterRevive();
+    }
+    afterRevive() {
+      if (!this.ctx || this.ctx.state !== 'running') return;
       // Clear any master mute left over from an earlier pause when the game is running again.
       if (!this.paused) this.master.gain.setTargetAtTime(1, this.ctx.currentTime, 0.02);
-      if (
-        this.ctx.state === 'running' &&
-        this.wantTrack &&
-        !this.paused &&
-        !this.seq &&
-        !this.music &&
-        !this.holdTrack
-      ) {
+      if (this.wantTrack && !this.paused && !this.seq && !this.music && !this.holdTrack) {
         this.track = null;
         this.playMusic(this.wantTrack);
       }
@@ -1648,7 +1638,7 @@
         this.master.gain.setTargetAtTime(1, this.ctx.currentTime, 0.025);
         if (this.seq) this.runSequencer();
       }
-      this.revive();
+      this.revive(true);
       this.unlock();
     }
   }
