@@ -1340,7 +1340,8 @@
       if (this.holdTrack && this.holdUntil > performance.now()) return;
       this.track = track;
       // Debo's own theme is a recorded file in every sound set.
-      if (this.synthMode && track !== 'debo') {
+      const recordedMain = track === 'main' && this.afterBoss && this.settings.set === 'arcade';
+      if (this.synthMode && track !== 'debo' && !recordedMain) {
         this.keyOffset = track === 'disco' ? -5 : 0;
         this.stopMusic();
         this.startSequencer(track);

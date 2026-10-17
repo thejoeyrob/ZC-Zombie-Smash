@@ -131,21 +131,7 @@
       c.fillStyle = '#07110c08';
       c.fillRect(0, 0, W, H);
       const opens = g.openings || [];
-      if (ZSData.mapIndex(g.wave) === 4) {
-        // Neon Palace: a lit dance floor in three colour schemes. Tiles go dark where zombies rise.
-        const t = this.reduced ? 0 : g.t, phase = Math.floor(t / 3) % 3;
-        const schemes = [[320, 185], [42, 280], [130, 215]];
-        for(let row=0;row<7;row++) for(let col=0;col<5;col++) {
-          const tx=40+col*53, ty=60+row*44, cx=tx+25.5, cy=ty+9;
-          const dark = opens.reduce((m,o)=>Math.abs(o.x-cx)<2&&Math.abs(o.y-cy)<2 ? Math.max(m, o.age<1.5?1:Math.max(0,1-(o.age-1.5)/0.5)) : m, 0);
-          const pick = (p) => schemes[p][(row + col) % 2];
-          const hue = pick(phase);
-          const pulse = this.reduced ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4 + row * 0.9 + col * 1.7);
-          c.fillStyle=`hsla(${hue},100%,${58 + pulse * 12}%,${0.17 + pulse * 0.09})`;
-          c.fillRect(tx,ty,51,42);
-          if(dark>0){ c.fillStyle=`rgba(3,0,8,${0.94*dark})`; c.fillRect(tx,ty,51,42); }
-        }
-      }
+      if (ZSData.mapIndex(g.wave) === 4 && map.tileGrid) this.discoFloor(g, map, opens);
       this.arenaAtmosphere(g, map);
       // Floor access hatches sit entirely on open ground, away from the scenery. The Neon Palace uses its dance-floor tiles instead.
       if (map.entryStyle !== 'tile') for(const [x,y] of map.entries) {
@@ -377,6 +363,61 @@
         c.ellipse(b.x, b.y + h * 0.4, w * 0.42, 5, 0, 0, Math.PI * 2);
         c.fill();
         this.fit('prop-barrel.webp', b.x - w / 2, b.y - h / 2, w, h);
+      }
+      c.restore();
+    }
+    // Neon Palace: the painted floor's own tile grid is lit in three colour schemes, tiles black out where zombies
+    // rise, and spotlights, chase lights and a gentle strobe keep the room moving.
+    discoFloor(g, map, opens) {
+      const c = this.c, { cols, rows, pts } = map.tileGrid, P = (r, k) => pts[r * (cols + 1) + k];
+      const t = this.reduced ? 0 : g.t, phase = Math.floor(t / 3) % 3;
+      const schemes = [[320, 185], [42, 280], [130, 215]], beat = (t * 2) % 1;
+      c.save();
+      for (let row = 0; row < rows; row++)
+        for (let col = 0; col < cols; col++) {
+          const a = P(row, col), b = P(row, col + 1), d = P(row + 1, col + 1), e = P(row + 1, col);
+          const cx = (a[0] + b[0] + d[0] + e[0]) / 4, cy = (a[1] + b[1] + d[1] + e[1]) / 4;
+          const dark = opens.reduce((m, o) => Math.abs(o.x - cx) < 2 && Math.abs(o.y - (cy - 12)) < 2 ? Math.max(m, o.age < 1.5 ? 1 : Math.max(0, 1 - (o.age - 1.5) / 0.5)) : m, 0);
+          const hue = schemes[phase][(row + col) % 2];
+          const pulse = this.reduced ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4 + row * 0.9 + col * 1.7);
+          const chase = this.reduced ? 0 : Math.max(0, 1 - Math.abs(((t * 1.1) % (rows + 2)) - row - 1) * 0.9) * 0.14;
+          const poly = (inset) => {
+            c.beginPath();
+            c.moveTo(a[0] + inset, a[1] + inset); c.lineTo(b[0] - inset, b[1] + inset);
+            c.lineTo(d[0] - inset, d[1] - inset); c.lineTo(e[0] + inset, e[1] - inset); c.closePath();
+          };
+          poly(1.2);
+          c.fillStyle = `hsla(${hue},100%,${58 + pulse * 12}%,${0.14 + pulse * 0.1 + chase})`;
+          c.fill();
+          if (dark > 0) { poly(0.6); c.fillStyle = `rgba(3,0,8,${0.95 * dark})`; c.fill(); }
+        }
+      if (!this.reduced) {
+        c.globalCompositeOperation = 'lighter';
+        // Four sweeping spotlights from the top corners and the sides.
+        const beams = [[18, 20, 0], [W - 18, 20, 1.6], [0, 200, 3.1], [W, 200, 4.7]];
+        beams.forEach(([bx, by, ph], i) => {
+          const ang = Math.PI / 2 + Math.sin(t * 0.9 + ph) * 0.75 * (bx < W / 2 ? 1 : -1) * (i > 1 ? 0.8 : 1);
+          const hue = (t * 40 + i * 90) % 360, len = 360, spread = 0.11;
+          const g2 = c.createRadialGradient(bx, by, 0, bx, by, len);
+          g2.addColorStop(0, `hsla(${hue},100%,70%,0.34)`);
+          g2.addColorStop(1, `hsla(${hue},100%,60%,0)`);
+          c.fillStyle = g2;
+          c.beginPath(); c.moveTo(bx, by);
+          c.lineTo(bx + Math.cos(ang - spread) * len, by + Math.sin(ang - spread) * len);
+          c.lineTo(bx + Math.cos(ang + spread) * len, by + Math.sin(ang + spread) * len);
+          c.closePath(); c.fill();
+        });
+        // Chase lights down both sides, flashing on the beat.
+        for (let i = 0; i < 9; i++) {
+          const on = (Math.floor(t * 4) + i) % 3 === 0, y = 60 + i * 38;
+          for (const x of [7, W - 7]) {
+            c.fillStyle = `hsla(${(i * 40 + t * 60) % 360},100%,65%,${on ? 0.55 + 0.35 * (1 - beat) : 0.12})`;
+            c.beginPath(); c.arc(x, y, on ? 4.5 : 3, 0, Math.PI * 2); c.fill();
+          }
+        }
+        // A soft strobe about every 1.8 seconds (never more than a few flashes a second).
+        const sp = (t % 1.8) / 1.8;
+        if (sp < 0.04) { c.fillStyle = `rgba(255,255,255,${0.12 * (1 - sp / 0.04)})`; c.fillRect(0, 0, W, H); }
       }
       c.restore();
     }

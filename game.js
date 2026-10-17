@@ -1201,6 +1201,7 @@
       death: 'loss',
     };
     // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
+    if (type === 'bossDown') audio.afterBoss = true; // later waves use the recorded wave music, not the orchestral synth
     if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
     else if (audio.synthMode && type === 'death') audio.stinger('defeat');
     else if (sounds[type])
