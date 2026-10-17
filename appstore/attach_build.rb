@@ -21,8 +21,7 @@ version.select_build(build_id: build.id)
 puts "Attached build #{build.version} to version #{version.version_string}"
 
 version.get_app_store_version_localizations.each do |loc|
-  a = loc.attributes
-  puts "Locale #{a['locale']}: description #{a['description'].to_s.length} chars, keywords #{a['keywords'].to_s.length} chars, promo #{a['promotionalText'].to_s.length} chars, support #{a['supportUrl']}"
+  puts "Locale #{loc.locale}: description #{loc.description.to_s.length} chars, keywords #{loc.keywords.to_s.length} chars, promo #{loc.promotional_text.to_s.length} chars, support #{loc.support_url}"
   loc.get_app_screenshot_sets.each do |set|
     puts "  screenshots #{set.screenshot_display_type}: #{set.app_screenshots.count}"
   end
