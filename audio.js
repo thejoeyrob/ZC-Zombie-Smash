@@ -1465,7 +1465,21 @@
       p.linearRampToValueAtTime(this.settings.music * depth, now + 0.025);
       p.linearRampToValueAtTime(this.settings.music, now + duration);
     }
+    // Plain HTML audio is the safety net for effects when the Web Audio context is asleep or a file did not decode.
+    fallbackSfx(name, volume = 1) {
+      if (this.paused || this.settings.effects === 0) return;
+      if (this.synthMode && this.settings.set !== 'arcade') return;
+      const t = performance.now();
+      if (t - (this.last['f' + name] || 0) < 60) return;
+      this.last['f' + name] = t;
+      try {
+        const el = new Audio('./sfx-' + name + '.mp3');
+        el.volume = Math.min(1, volume * this.settings.effects);
+        el.play().catch(() => {});
+      } catch {}
+    }
     async sfx(name, volume = 1) {
+      if (this.ctx && this.ctx.state !== 'running') return this.fallbackSfx(name, volume);
       if (!this.ctx || this.paused || this.settings.effects === 0 || this.voices >= 22) return;
       const time = performance.now(),
         minGap = { hit: 50, ricochet: 80, 'boss-attack': 140 }[name] || 25;
@@ -1493,13 +1507,8 @@
       }
       const epoch = this.fxEpoch;
       const buffer = await this.buffer('sfx-' + name + '.mp3');
-      if (
-        !buffer ||
-        this.paused ||
-        epoch !== this.fxEpoch ||
-        this.voices >= 22 ||
-        performance.now() - time > 220
-      )
+      if (!buffer) return this.fallbackSfx(name, volume);
+      if (this.paused || epoch !== this.fxEpoch || this.voices >= 22 || performance.now() - time > 450)
         return;
       const s = this.ctx.createBufferSource(),
         g = this.ctx.createGain();
@@ -1570,7 +1579,7 @@
       this.unlock();
     }
     // Wake the audio up after the app was in the background: iOS suspends or even closes the context.
-    async revive() {
+    async revive(gesture = false) {
       if (!this.ctx) return;
       this.playbackSession();
       if (this.keepAlive?.paused) this.keepAlive.play().catch(() => {});
@@ -1586,7 +1595,9 @@
           await Promise.race([this.ctx.resume(), new Promise((r) => setTimeout(r, 700))]);
         } catch {}
       }
-      // Still not running (iOS leaves it "interrupted" after the app was away): build a fresh context.
+      // Still not running (iOS leaves it "interrupted" after the app was away): build a fresh context, but only
+      // inside a real touch, because a context created without one starts asleep and stays that way.
+      if (this.ctx.state !== 'running' && !gesture) return;
       if (this.ctx.state !== 'running') {
         try {
           this.ctx.close();

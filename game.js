@@ -2020,7 +2020,7 @@
     if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.revive();
   }, 2500);
   for (const ev of ['pointerdown', 'touchend'])
-    document.addEventListener(ev, () => audio.revive(), { capture: true, passive: true });
+    document.addEventListener(ev, () => audio.revive(true), { capture: true, passive: true });
   addEventListener('pagehide', save);
   document.addEventListener('contextmenu', (e) => {
     if (!e.target.closest?.('input,textarea')) e.preventDefault();
