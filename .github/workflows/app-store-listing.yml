@@ -67,6 +67,12 @@ jobs:
             --automatic_release false \
             --precheck_include_in_app_purchases false
 
+      - name: Attach the newest build and report what the version contains
+        shell: bash
+        run: |
+          fastlane run ruby_version >/dev/null 2>&1 || true
+          ruby appstore/attach_build.rb
+
       - name: Remove the API key file
         if: always()
         run: rm -f "$API_KEY_PATH"
