@@ -83,7 +83,7 @@
       );
       if (failed.length) throw Error('Missing artwork: ' + failed.slice(0, 3).join(', '));
     }
-    fit(file, x, y, w, h, { alpha = 1, flip = false, bright = false, rot = 0 } = {}) {
+    fit(file, x, y, w, h, { alpha = 1, flip = false, bright = false, rot = 0, rim = false } = {}) {
       const im = this.images[file];
       if (!im?.complete || !im.naturalWidth) return;
       const c = this.c,
@@ -94,6 +94,11 @@
       c.save();
       c.globalAlpha = alpha;
       if (bright) c.filter = 'brightness(1.7)';
+      if (rim) {
+        // A soft light rim keeps zombies readable on dark floors.
+        c.shadowColor = 'rgba(255,248,215,0.8)';
+        c.shadowBlur = 5;
+      }
       c.translate(x + w / 2, y + h / 2);
       if (rot) c.rotate(rot);
       if (flip) c.scale(-1, 1);
@@ -209,13 +214,13 @@
         }
         const bob = this.reduced ? 0 : Math.abs(g.input.axis) > 0.1 ? Math.sin(g.t * 18) * 1.2 : 0;
         const art =
-          p.inv > 0 && p.inv < 1.2
+          p.hit > 0 && p.hit < 1.2
             ? 'player-hit.webp'
             : p.fireFx > 0
               ? 'player-fire.webp'
               : 'player-transparent.webp';
         this.fit(art, p.x - 35, p.y - 55 + bob, 70, 91, {
-          alpha: p.inv > 0 && Math.floor(g.t * 12) % 2 ? 0.58 : 1,
+          alpha: p.hit > 0 && Math.floor(g.t * 12) % 2 ? 0.58 : 1,
         });
         if (p.fireFx > 0) {
           const fx = p.x,
@@ -494,6 +499,7 @@
       this.fit(art, z.x - w / 2 + jx, z.y - h * 0.55 + wobble + hover, w, h, {
         bright: z.flash > 0,
         rot: lean,
+        rim: !z.boss,
       });
       if (z.type === 'bulwark' && z.age % 3.5 < 2) {
         c.strokeStyle = '#82dffeaa';

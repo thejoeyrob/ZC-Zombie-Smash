@@ -1,6 +1,14 @@
--- Zombie Smash leaderboard: one-time setup for Supabase.
+-- Zombie Smash leaderboard: setup for Supabase (starts with an empty board).
 -- How to run: Supabase dashboard > your project > SQL Editor > New query > paste ALL of this > Run.
 -- It is safe to run again. The game talks to four functions only; the tables are locked down.
+
+-- FRESH START: this removes any earlier leaderboard tables and scores and builds a clean board.
+drop function if exists public.zs7_begin_run(text, text);
+drop function if exists public.zs7_finish_run(text, uuid, integer, integer, integer, integer, boolean);
+drop function if exists public.zs7_leaderboard();
+drop function if exists public.zs7_admin(text, text);
+drop table if exists public.zs7_runs cascade;
+drop table if exists public.zs7_legacy cascade;
 
 create extension if not exists pgcrypto;
 
@@ -31,17 +39,6 @@ alter table public.zs7_runs enable row level security;
 alter table public.zs7_legacy enable row level security;
 alter table public.zs7_admin_codes enable row level security;
 -- No policies on purpose: the app can only use the functions below.
-
-insert into public.zs7_legacy (username, score) values
-  ('Dr mantis', 185875),
-  ('JoeyRob', 135845),
-  ('Jaxons-h9u', 98895),
-  ('GlowingHuemanitee', 95315),
-  ('Caffeinated.Sloth', 91250),
-  ('FatAmyBiotch', 43255),
-  ('Player-FD2DD3', 13225),
-  ('Player-9F433A', 0)
-on conflict (username) do nothing;
 
 -- 1. Start a run: returns a ticket the game keeps until the run ends.
 create or replace function public.zs7_begin_run(p_device text, p_name text)

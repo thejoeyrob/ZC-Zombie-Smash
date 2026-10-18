@@ -418,6 +418,7 @@
       }
       const p = this.player;
       p.inv = Math.max(0, p.inv - dt);
+      p.hit = Math.max(0, (p.hit || 0) - dt);
       p.cool = Math.max(0, p.cool - dt);
       p.shield = Math.max(0, p.shield - dt);
       p.rapid = Math.max(0, p.rapid - dt);
@@ -736,6 +737,7 @@
       if (this.over || this.scene || p.inv > 0 || p.shield > 0 || this.invincible) return;
       p.lives--;
       p.inv = 1.25;
+      p.hit = 1.25; // the hit flash is separate from spawn/boss protection, which must not flash Joey
       this.shake = 2;
       this.resetCombo();
       this.emit('hurt');

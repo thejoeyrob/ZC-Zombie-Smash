@@ -864,16 +864,23 @@
           ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
           : '';
     $('overlay').querySelector('.panel-content').innerHTML =
-      local() + `<h3 class="skin-group">GLOBAL LEADERBOARD</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+      local() + `<h3 class="skin-group">GLOBAL LEADERBOARD</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>A fresh leaderboard: finish a run to claim the top spot.</p>${rows.length ? '' : '<p class="menu-note">No scores yet.</p>'}${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+  }
+  const VIVID = ['none', 'saturate(1.2) brightness(1.1) contrast(1.06)', 'saturate(1.4) brightness(1.22) contrast(1.1)'];
+  function applyVivid() {
+    const v = Math.max(0, Math.min(2, Number(read('zs7-vivid', 1)) || 0));
+    document.documentElement.style.setProperty('--vivid', VIVID[v]);
+    return v;
   }
   function sound() {
     const set = ['arcade', 'original', 'chip', 'early'].includes(audio.settings.set)
       ? audio.settings.set
       : 'new';
+    const vv = applyVivid();
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">ARCADE pairs the cinematic score with recorded weapon effects. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">SCORE</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">ARCADE pairs the cinematic score with recorded weapon effects. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">SCORE</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><div class="setting"><span>SCREEN</span><span class="segmented">${['STANDARD','VIVID','EXTRA'].map((n,i)=>`<button data-vivid="${i}" aria-pressed="${vv===i}" class="${vv===i?'on':''}">${n}</button>`).join('')}</span></div><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
@@ -1124,6 +1131,7 @@
         haptics.notify('ERROR', 'hurt', 0);
         break;
       case 'breach':
+        zombiePop();
         haptics.notify('WARNING', 'breach', 0);
         break;
       case 'explosion':
@@ -1390,6 +1398,19 @@
     if (clip) mountSceneClip(box, s, clip);
   }
 
+  // A zombie got through: a shaking zombie head pops up over the counter.
+  function zombiePop() {
+    const box = $('baseStatus');
+    if (!box) return;
+    box.classList.remove('hit');
+    void box.offsetWidth;
+    box.classList.add('hit');
+    const pop = document.createElement('i');
+    pop.className = 'zpop';
+    pop.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>';
+    box.appendChild(pop);
+    setTimeout(() => pop.remove(), 1000);
+  }
   function hud() {
     const p = game.player;
     $('joystick').classList.toggle('sped', (p.speedUp || 0) > 0);
@@ -1414,7 +1435,17 @@
     $('healthValue').setAttribute('aria-label', p.lives + ' hearts');
     $('gunValue').textContent = ZSEngine.GUNS[p.gun].name;
     $('ammoValue').textContent = !Number.isFinite(p.ammo) || game.infiniteAmmo ? '∞' : p.ammo;
-    $('baseValue').textContent = game.breaches + '/10';
+    {
+      const el = $('baseValue'), n = Math.min(10, game.breaches);
+      if (el.dataset.n !== String(n)) {
+        el.dataset.n = n;
+        el.setAttribute('aria-label', n + ' of 10 zombies through');
+        el.innerHTML = Array.from(
+          { length: 10 },
+          (_, i) => `<svg class="zface${i < n ? ' lit' : ''}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>`,
+        ).join('');
+      }
+    }
     $('grenadeValue').textContent = p.grenades;
     $('grenadeButton').classList.toggle('empty', p.grenades === 0);
     $('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + p.grenades + ' remaining');
@@ -1854,6 +1885,12 @@
       })();
       return;
     }
+    if (button.dataset.vivid) {
+      write('zs7-vivid', Number(button.dataset.vivid));
+      applyVivid();
+      sound();
+      return;
+    }
     if (button.dataset.skin) {
       applySkin(button.dataset.skin);
       document.querySelectorAll('[data-skin]').forEach((b) => {
@@ -2024,6 +2061,11 @@
   // iOS can silently interrupt audio mid-game (calls, alerts, Siri): check often and bring it back.
   setInterval(() => {
     if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.revive();
+    // Music watchdog: while the game is running, the music must be playing. Restart it if it somehow is not.
+    else if (!document.hidden && game.active && !game.over && !paused && !awaitStart && !panel && audio.ctx && !audio.paused && audio.wantTrack && audio.wantTrack !== 'entrance' && !audio.seq && !audio.music && !audio.holdTrack) {
+      audio.track = null;
+      audio.playMusic(audio.wantTrack);
+    }
   }, 2500);
   for (const ev of ['pointerdown', 'touchend'])
     document.addEventListener(ev, () => audio.revive(true), { capture: true, passive: true });
@@ -2036,6 +2078,7 @@
     installPrompt = e;
   });
   ZSConsole.apply();
+  applyVivid();
   applySkin(read('zs7-skin', 'toxic-pop'));
   fetch('./skins-extra.json')
     .then((r) => r.json())

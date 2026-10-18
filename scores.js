@@ -50,6 +50,14 @@
     );
   };
 
+  // One-time fresh start (7.33): earlier scores, cached boards and queued uploads are cleared on this device.
+  try {
+    if (localStorage.getItem('zs7-fresh-board') !== '1') {
+      for (const k of ['zs7-bests', 'zs7-records', 'zs7-board', 'zs7-pending']) localStorage.removeItem(k);
+      localStorage.setItem('zs7-fresh-board', '1');
+    }
+  } catch {}
+
   class Scores {
     constructor() {
       this.device = read('zs7-device', null);

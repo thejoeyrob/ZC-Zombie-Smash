@@ -3005,3 +3005,79 @@ body.deck3d .deck-label { display: none; }
 body.deck3d .map-tag { display: block; }
 #toast { left: calc(var(--wx, 16px) + 8px); right: auto; width: calc(var(--ww, 343px) - 16px); box-sizing: border-box; overflow-wrap: anywhere; }
 #toast { top: calc(var(--wy, 55px) + var(--wh, 450px) - 130px); }
+
+/* 7.33.0: the "let through" counter is ten zombie faces that light up as zombies get past the line. */
+.base-status { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.base-status small { font: 800 6px Inter, sans-serif; letter-spacing: 0.1em; color: #b9c3b9; }
+.base-status b { display: grid; grid-template-columns: repeat(5, 11px); gap: 1px 2px; font-size: 0; }
+.zface { width: 11px; height: 11px; overflow: visible; }
+.zface circle:first-child { fill: #26322b; stroke: #55655a; stroke-width: 1; }
+.zface .zeye { stroke: #55655a; stroke-width: 1.4; fill: none; }
+.zface .zeye2 { fill: #55655a; }
+.zface .zmouth { stroke: #55655a; stroke-width: 1.4; fill: none; }
+.zface.lit circle:first-child { fill: #9bff4a; stroke: #e8ffb0; filter: drop-shadow(0 0 3px #ff3b3b) drop-shadow(0 0 5px #ff3b3b99); }
+.zface.lit .zeye { stroke: #5a0b0b; }
+.zface.lit .zeye2 { fill: #5a0b0b; }
+.zface.lit .zmouth { stroke: #5a0b0b; }
+.base-status.hit b { animation: zcount-shake 0.5s; }
+@keyframes zcount-shake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-2px, 1px) rotate(-3deg); } 30% { transform: translate(2px, -1px) rotate(3deg); } 45% { transform: translate(-2px, 0) rotate(-2deg); } 60% { transform: translate(2px, 1px) rotate(2deg); } 80% { transform: translate(-1px, 0); } }
+.zpop { position: absolute; left: 50%; bottom: 100%; width: 34px; height: 34px; margin-left: -17px; z-index: 6; pointer-events: none; animation: zpop-up 1s ease-out forwards; }
+.zpop svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 6px #ff3b3b) drop-shadow(0 2px 2px #000); animation: zhead-shake 0.12s linear 6; }
+.zpop circle:first-child { fill: #9bff4a; stroke: #1b2a10; stroke-width: 1.4; }
+.zpop .zeye { stroke: #3b0707; stroke-width: 1.6; fill: none; }
+.zpop .zeye2 { fill: #3b0707; }
+.zpop .zmouth { stroke: #3b0707; stroke-width: 1.6; fill: none; }
+@keyframes zpop-up { 0% { transform: translateY(8px) scale(0.4); opacity: 0; } 15% { transform: translateY(0) scale(1.15); opacity: 1; } 70% { transform: translateY(-4px) scale(1); opacity: 1; } 100% { transform: translateY(-12px) scale(0.9); opacity: 0; } }
+@keyframes zhead-shake { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-2px, 1px) rotate(-10deg); } 75% { transform: translate(2px, -1px) rotate(10deg); } }
+@media (prefers-reduced-motion: reduce) { .base-status.hit b, .zpop svg { animation: none; } }
+
+/* Screen vibrance: the game screen is brightened and made more colourful (Menu > Music & Sound > Screen). */
+#gameCanvas { filter: var(--vivid, saturate(1.2) brightness(1.1) contrast(1.06)); }
+
+/* 7.33.0: boss scenes are comic-book panels: a smaller framed picture with thick borders and caption boxes,
+   so the top of the art is no longer cropped. */
+#cinematic.comic-mode {
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--scene-color, #b45139) 40%, #120a0a) 0, #0b0709 100%);
+}
+#cinematic.comic-mode::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; opacity: 0.35;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--scene-color, #b45139) 70%, #fff) 1.3px, transparent 1.7px);
+  background-size: 9px 9px; animation: halftone-drift 14s linear infinite;
+}
+@keyframes halftone-drift { to { background-position: 18px 18px; } }
+#cinematic.comic-mode .comic-layers {
+  inset: auto; left: 13%; right: 13%; top: 12%; bottom: 31%; z-index: 1;
+  border: 5px solid #fdf6e3; outline: 4px solid #0a0a0a; border-radius: 3px; transform: rotate(-1.4deg);
+  box-shadow: 7px 8px 0 #000000cc, 0 0 24px color-mix(in srgb, var(--scene-color, #b45139) 55%, transparent);
+  background: #000;
+}
+#cinematic.comic-mode .comic-plate { object-position: 50% 10%; transform-origin: 50% 20%; }
+#cinematic.comic-mode .comic-embers { z-index: 2; }
+#cinematic.comic-mode .comic-atmosphere { z-index: 2; }
+#cinematic.comic-mode .comic-heading {
+  inset: 3.5% auto auto 6%; z-index: 4; padding: 5px 12px 6px; max-width: 78%;
+  background: #ffd91f; color: #0a0a0a; text-shadow: none; border: 3px solid #0a0a0a; transform: rotate(-2.5deg); box-shadow: 4px 4px 0 #000;
+}
+#cinematic.comic-mode .comic-heading small { font: 800 9px Inter, sans-serif; letter-spacing: 0.14em; color: #3a2a00; }
+#cinematic.comic-mode .comic-heading h2 { font: 900 24px/1 Barlow, sans-serif; margin: 2px 0 0; text-transform: uppercase; }
+#cinematic.comic-mode .comic-dialogue {
+  left: 7%; right: 7%; bottom: 4%; z-index: 4; padding: 10px 14px; color: #0a0a0a; background: #fff8e6; border: 3px solid #0a0a0a;
+  border-radius: 12px; font: 800 15px/1.25 Barlow, sans-serif; box-shadow: 5px 5px 0 #000; transform: rotate(0.6deg);
+}
+#cinematic.comic-mode .comic-dialogue::before {
+  content: ''; position: absolute; left: 24px; top: -15px; width: 20px; height: 20px; background: #fff8e6;
+  border-left: 3px solid #0a0a0a; border-top: 3px solid #0a0a0a; transform: rotate(45deg); border-radius: 3px 0 0 0;
+}
+@media (prefers-reduced-motion: reduce) { #cinematic.comic-mode::before { animation: none; } }
+
+/* The screen glass carries a slow sheen across the whole display. */
+.screen-glass::after {
+  content: ''; position: absolute; inset: 0; border-radius: 4px; overflow: hidden; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, #ffffff00 42%, #ffffff2e 50%, #ffffff00 58%, transparent 62%);
+  background-size: 260% 100%; background-position: 160% 0; animation: screen-sheen 7s ease-in-out 2s infinite;
+}
+@keyframes screen-sheen { 0% { background-position: 160% 0; } 28%, 100% { background-position: -60% 0; } }
+@media (prefers-reduced-motion: reduce) { .screen-glass::after { animation: none; opacity: 0; } }
+.base-status small { display: none; }
+.base-status b { grid-template-columns: repeat(5, 9px); gap: 2px 3px; }
+.zface { width: 9px; height: 9px; }
