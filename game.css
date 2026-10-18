@@ -3118,3 +3118,13 @@ body.in-scene #gameCanvas { filter: none; }
 #cinematic.comic-mode .comic-dialogue { animation: caption-pop 0.5s 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
 @keyframes caption-pop { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
 @media (prefers-reduced-motion: reduce) { #cinematic.comic-mode .comic-l2, .comic-speed, #cinematic.comic-mode .comic-layers { animation: none; } }
+
+/* 7.33.3: the logo's own sweep is removed; one sweep crosses the whole Home Screen, over the artwork and the title. */
+.title-logo:after { display: none; }
+.title-screen .title-shine { display: block; position: absolute; inset: 0; width: auto; height: auto; z-index: 6; overflow: hidden; pointer-events: none; -webkit-mask: none; mask: none; }
+.title-screen .title-shine:after {
+  content: ''; position: absolute; top: -10%; bottom: -10%; left: -70%; width: 55%;
+  background: linear-gradient(105deg, #fff0 0, #ffffff00 22%, #ffffff66 50%, #ffffff00 78%, #fff0 100%);
+  mix-blend-mode: overlay; animation: shineSweep 5s ease-in-out 1.2s infinite;
+}
+@media (prefers-reduced-motion: reduce) { .title-screen .title-shine:after { animation: none; opacity: 0; } }
