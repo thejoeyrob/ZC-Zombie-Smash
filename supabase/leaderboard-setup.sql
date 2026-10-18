@@ -78,14 +78,13 @@ end $$;
 create or replace function public.zs7_leaderboard()
 returns table (username text, score integer, legacy boolean)
 language sql security definer set search_path = public as $$
-  select username, score, legacy from (
-    select distinct on (lower(name)) name as username, score, false as legacy
+  -- One row per player: their best score. A player's cheat-marked runs ('.cht') only count if they have no clean run.
+  select username, score, false as legacy from (
+    select distinct on (lower(regexp_replace(name, '\.cht$', '')))
+           name as username, score
       from zs7_runs where accepted and score is not null
-      order by lower(name), score desc
-    ) a
-  union all
-  select l.username, l.score, true from zs7_legacy l
-    where not exists (select 1 from zs7_runs r where r.accepted and lower(r.name) = lower(l.username) and r.score >= l.score)
+      order by lower(regexp_replace(name, '\.cht$', '')), (lower(name) like '%.cht'), score desc
+  ) best
   order by score desc limit 50;
 $$;
 

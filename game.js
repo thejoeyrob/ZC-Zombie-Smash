@@ -845,7 +845,7 @@
     );
   }
   async function board() {
-    const local = () => `<h3 class="skin-group">ON THIS DEVICE</h3>${scores.localBoard().map((r,i)=>`<div class="board-row"><b class="rank">${i+1}</b><span>${esc(r.name)}<small>PERSONAL BEST</small></span><b class="points">${r.score.toLocaleString()}</b></div>`).join('') || '<p class="menu-note">Finish a run to set your first score.</p>'}`;
+    const local = () => '';
     showPanel('board', 'HIGH SCORES', local()+'<p class="menu-note">Connecting to the global board…</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>');
     const result = await scores.board();
     if (panel !== 'board') return;
@@ -864,7 +864,7 @@
           ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
           : '';
     $('overlay').querySelector('.panel-content').innerHTML =
-      local() + `<h3 class="skin-group">GLOBAL LEADERBOARD</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>A fresh leaderboard: finish a run to claim the top spot.</p>${rows.length ? '' : '<p class="menu-note">No scores yet.</p>'}${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+      local() + `<h3 class="skin-group">LEADERBOARD · ALL PLAYERS</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>A fresh leaderboard: finish a run to claim the top spot.</p>${rows.length ? '' : '<p class="menu-note">No scores yet.</p>'}${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   const VIVID = ['none', 'saturate(1.2) brightness(1.1) contrast(1.06)', 'saturate(1.4) brightness(1.22) contrast(1.1)'];
   function applyVivid() {
