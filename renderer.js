@@ -499,7 +499,7 @@
       this.fit(art, z.x - w / 2 + jx, z.y - h * 0.55 + wobble + hover, w, h, {
         bright: z.flash > 0,
         rot: lean,
-        rim: !z.boss,
+        rim: !z.boss && g.enemies.length <= 8,
       });
       if (z.type === 'bulwark' && z.age % 3.5 < 2) {
         c.strokeStyle = '#82dffeaa';

@@ -1325,6 +1325,7 @@
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
+    document.body.classList.toggle('in-scene', !!s);
     if (!s) {
       // Fade the scene out into the game instead of cutting.
       if (!box.hidden && box.classList.contains('comic-mode') && !box.classList.contains('leaving')) {
@@ -1371,7 +1372,7 @@
       const detail=s.kind==='down'?(nextIndex<MAPS.length?'NEXT: '+MAPS[nextIndex].name:'INFINITE SURVIVAL UNLOCKED'):s.kind==='mutation'?(s.stage===3?'FINAL MUTATION':'THREAT EVOLVING'):b.title;
       s.mediaControlled=false; s.duration=reaction?3:Math.max(5.2,line.length*0.035+2);
       box.classList.add('comic-mode');box.classList.toggle('motion-paused',paused);
-      box.innerHTML=`<div class="comic-layers" aria-hidden="true"><img class="comic-plate comic-l1" src="./${comic}" alt=""><img class="comic-plate comic-l2" src="./${comic}" alt=""><img class="comic-plate comic-l3" src="./${comic}" alt=""></div><span class="sr-only">${esc(b.name)} story scene</span><div class="comic-embers" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="left:${(i*37+11)%96}%;animation-delay:${-(i*0.9)%7}s;animation-duration:${5+(i%4)*1.7}s"></i>`).join('')}</div><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
+      box.innerHTML=`<div class="comic-layers" aria-hidden="true"><img class="comic-plate comic-l2" src="./${comic}" alt=""><i class="comic-speed"></i></div><span class="sr-only">${esc(b.name)} story scene</span><div class="comic-embers" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="left:${(i*37+11)%96}%;animation-delay:${-(i*0.9)%7}s;animation-duration:${5+(i%4)*1.7}s"></i>`).join('')}</div><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
       box.onclick = null;
       return;
     }
