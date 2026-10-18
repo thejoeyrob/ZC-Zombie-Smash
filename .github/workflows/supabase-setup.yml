@@ -1,0 +1,35 @@
+# Creates the leaderboard tables and functions in Supabase, then tests them with the game's public key.
+# Needs ONE repository secret: SUPABASE_DB_URL (Supabase > Project Settings > Database > Connection string > URI, with your password filled in).
+# Runs when the supabase-setup branch is pushed.
+name: Supabase leaderboard setup
+
+on:
+  push:
+    branches: [supabase-setup]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the secret
+        run: '[ -n "$DB_URL" ] || { echo "::error::Add the repository secret SUPABASE_DB_URL first"; exit 1; }'
+      - name: Install psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Run the setup SQL
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/leaderboard-setup.sql
+      - name: Test as the game does
+        run: |
+          set -e
+          EP=https://xdsrnnkuxfaycnlngjbq.supabase.co/rest/v1/rpc
+          KEY=sb_publishable_AicVoQAwV-KnlOs1Fc2RuQ_T81In0MC
+          DEV=$(head -c 32 /dev/urandom | xxd -p -c 64)
+          T=$(curl -sS -f -X POST $EP/zs7_begin_run -H "apikey: $KEY" -H "Content-Type: application/json" -d "{\"p_device\":\"$DEV\",\"p_name\":\"SetupCheck\"}" | tr -d '"')
+          echo "ticket $T"; sleep 11
+          R=$(curl -sS -f -X POST $EP/zs7_finish_run -H "apikey: $KEY" -H "Content-Type: application/json" -d "{\"p_device\":\"$DEV\",\"p_ticket\":\"$T\",\"p_score\":1200,\"p_kills\":10,\"p_seconds\":30,\"p_wave\":2,\"p_practice\":false}")
+          echo "finish accepted: $R"
+          curl -sS -f -X POST $EP/zs7_leaderboard -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}' | head -c 500; echo
+          psql "$DB_URL" -c "delete from zs7_runs where name = 'SetupCheck';"
