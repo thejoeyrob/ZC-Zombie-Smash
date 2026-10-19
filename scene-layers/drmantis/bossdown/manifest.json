@@ -1,0 +1,111 @@
+{
+  "scene": "drmantis-bossdown",
+  "width": 720,
+  "height": 960,
+  "arena": "HARVEST CHAMBER",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "BOSS DOWN",
+      "view": {
+        "x": 0.5,
+        "y": 0.46,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "drmantis-bossdown-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-bossdown-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-bossdown-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-bossdown-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-bossdown-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Mantis falls in the chamber."
+    },
+    {
+      "id": 2,
+      "seconds": 3.09,
+      "slide": "from-right",
+      "caption": "Dr Mantis: \"The harvest... cannot end here...\"",
+      "view": {
+        "x": 0.7,
+        "y": 0.6,
+        "zoom": 1.55
+      },
+      "layers": [
+        {
+          "file": "drmantis-bossdown-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-bossdown-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-bossdown-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-bossdown-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-bossdown-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Close on his last harvest line."
+    },
+    {
+      "id": 3,
+      "seconds": 3.59,
+      "slide": "from-left",
+      "caption": "Joey Rob: \"Mantis is down. Infinite survival starts now.\"",
+      "view": {
+        "x": 0.29,
+        "y": 0.4,
+        "zoom": 1.6
+      },
+      "layers": [
+        {
+          "file": "drmantis-bossdown-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-bossdown-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-bossdown-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-bossdown-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-bossdown-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Joey announces infinite survival."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

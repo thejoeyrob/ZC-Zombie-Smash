@@ -1,0 +1,111 @@
+{
+  "scene": "fatamy-intro",
+  "width": 720,
+  "height": 960,
+  "arena": "ROSE BARRACKS",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "ROSE BARRACKS",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "fatamy-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "fatamy-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "fatamy-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "fatamy-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "fatamy-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Rose Barracks establishes Amy and the pink military surroundings."
+    },
+    {
+      "id": 2,
+      "seconds": 2.6,
+      "slide": "from-right",
+      "caption": "OMG... is that FAT AMY?!",
+      "view": {
+        "x": 0.27,
+        "y": 0.53,
+        "zoom": 1.6
+      },
+      "layers": [
+        {
+          "file": "fatamy-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "fatamy-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "fatamy-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "fatamy-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "fatamy-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Joey recognises Amy."
+    },
+    {
+      "id": 3,
+      "seconds": 2.91,
+      "slide": "from-left",
+      "caption": "Fat Amy: \"Come here... my little crumpet.\"",
+      "view": {
+        "x": 0.66,
+        "y": 0.32,
+        "zoom": 1.45
+      },
+      "layers": [
+        {
+          "file": "fatamy-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "fatamy-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "fatamy-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "fatamy-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "fatamy-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Amy advances in the reference pose."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

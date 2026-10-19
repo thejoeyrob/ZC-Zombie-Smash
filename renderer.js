@@ -139,11 +139,20 @@
       if (ZSData.mapIndex(g.wave) === 4 && map.tileGrid) this.discoFloor(g, map, opens);
       this.arenaAtmosphere(g, map);
       // Floor access hatches sit entirely on open ground, away from the scenery. The Neon Palace uses its dance-floor tiles instead.
-      if (map.entryStyle !== 'tile') for(const [x,y] of map.entries) {
+      if (map.entryStyle !== 'tile' && map.entryStyle !== 'portal') for(const [x,y] of map.entries) {
         c.fillStyle='#102b2be0'; c.strokeStyle=map.accent; c.lineWidth=1.5;
         c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
         c.strokeStyle='#bac7bd88';
         for(let n=-10;n<=10;n+=5){ c.beginPath();c.moveTo(x+n,y+8);c.lineTo(x+n,y+16);c.stroke(); }
+      }
+      if (map.entryStyle === 'portal') for (const [x,y] of map.entries) {
+        const active = opens.some(o => Math.abs(o.x-x) < 1 && Math.abs(o.y-y) < 1);
+        c.save(); c.strokeStyle = map.accent; c.lineWidth = active ? 2.2 : 1;
+        c.fillStyle = active ? '#112a10e0' : '#173d1940';
+        c.beginPath(); c.ellipse(x,y+12,27,10,0,0,Math.PI*2); c.fill(); c.stroke();
+        c.globalAlpha = active ? .9 : .45;
+        for(let k=0;k<8;k++) { const a=k*Math.PI/4+(this.reduced?0:g.t*.35); c.beginPath(); c.moveTo(x+Math.cos(a)*29,y+12+Math.sin(a)*12);c.lineTo(x+Math.cos(a)*33,y+12+Math.sin(a)*15);c.stroke(); }
+        c.restore();
       }
       for(const target of g.arena?.targets || []) {
         c.fillStyle=target.lit?map.accent:'#182b30b8';c.strokeStyle=map.accent;c.lineWidth=1.4;
@@ -383,7 +392,7 @@
           const a = P(row, col), b = P(row, col + 1), d = P(row + 1, col + 1), e = P(row + 1, col);
           const cx = (a[0] + b[0] + d[0] + e[0]) / 4, cy = (a[1] + b[1] + d[1] + e[1]) / 4;
           const dark = opens.reduce((m, o) => Math.abs(o.x - cx) < 2 && Math.abs(o.y - (cy - 12)) < 2 ? Math.max(m, o.age < 1.5 ? 1 : Math.max(0, 1 - (o.age - 1.5) / 0.5)) : m, 0);
-          const hue = schemes[phase][(row + col) % 2];
+          const hue = schemes[phase][(row + col + Math.floor(t / 1.5)) % 2];
           const pulse = this.reduced ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4 + row * 0.9 + col * 1.7);
           const chase = this.reduced ? 0 : Math.max(0, 1 - Math.abs(((t * 1.1) % (rows + 2)) - row - 1) * 0.9) * 0.14;
           const poly = (inset) => {
@@ -392,7 +401,7 @@
             c.lineTo(d[0] - inset, d[1] - inset); c.lineTo(e[0] + inset, e[1] - inset); c.closePath();
           };
           poly(1.2);
-          c.fillStyle = `hsla(${hue},100%,${58 + pulse * 12}%,${0.14 + pulse * 0.1 + chase})`;
+          c.fillStyle = `hsla(${hue},100%,${58 + pulse * 12}%,${0.25 + pulse * 0.13 + chase})`;
           c.fill();
           if (dark > 0) { poly(0.6); c.fillStyle = `rgba(3,0,8,${0.95 * dark})`; c.fill(); }
         }
@@ -420,9 +429,7 @@
             c.beginPath(); c.arc(x, y, on ? 4.5 : 3, 0, Math.PI * 2); c.fill();
           }
         }
-        // A soft strobe about every 1.8 seconds (never more than a few flashes a second).
-        const sp = (t % 1.8) / 1.8;
-        if (sp < 0.04) { c.fillStyle = `rgba(255,255,255,${0.12 * (1 - sp / 0.04)})`; c.fillRect(0, 0, W, H); }
+
       }
       c.restore();
     }

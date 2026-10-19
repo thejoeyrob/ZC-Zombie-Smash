@@ -198,6 +198,9 @@
         target: 10,
         spawnIn: 0.6,
         enemies: [],
+        openings: [],
+        tileBag: [],
+        tileBagMap: -1,
         bullets: [],
         shots: [],
         pickups: [],
@@ -253,7 +256,7 @@
       this.input = { axis: 0, fire: false };
     }
     prepareWave(n) {
-      if (ZSData.mapIndex(this.wave) !== ZSData.mapIndex(n)) this.arena = null;
+      if (ZSData.mapIndex(this.wave) !== ZSData.mapIndex(n)) { this.arena = null; this.openings = []; this.tileBag = []; this.tileBagMap = -1; }
       this.wave = n;
       this.target = Math.min(34, 8 + n * 2);
       this.spawned = 0;
@@ -377,10 +380,27 @@
         };
       if (!minion && y < 0) {
         const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
-        const entry = map.entryStyle === 'tile' ? map.entries[Math.floor(this.rand() * map.entries.length)] : map.entries[this.spawned % map.entries.length];
+        let entry;
+        if (map.entryStyle === 'tile') {
+          const mapId = ZSData.mapIndex(this.wave);
+          if (this.tileBagMap !== mapId || !this.tileBag?.length) {
+            this.tileBagMap = mapId;
+            this.tileBag = map.entries.map((_, i) => i).filter(i => map.entries[i][0] >= map.corridor[0] && map.entries[i][0] <= map.corridor[1]);
+            for (let i = this.tileBag.length - 1; i > 0; i--) {
+              const j = Math.floor(this.rand() * (i + 1));
+              [this.tileBag[i], this.tileBag[j]] = [this.tileBag[j], this.tileBag[i]];
+            }
+            // A shuffled bag gives variety without repeated use of one square.
+            if (this.tileBag.length > 1 && this.tileBag.at(-1) === this.lastTileEntry)
+              [this.tileBag[0], this.tileBag[this.tileBag.length - 1]] = [this.tileBag.at(-1), this.tileBag[0]];
+          }
+          this.lastTileEntry = this.tileBag.pop();
+          entry = map.entries[this.lastTileEntry];
+        } else entry = map.entries[this.spawned % map.entries.length];
         (this.openings ||= []).push({ x: entry[0], y: entry[1], age: 0 });
         const lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
-        z.x = entry[0] + (this.rand() - 0.5) * 8;
+        z.x = entry[0] + (map.entryStyle === 'tile' ? 0 : (this.rand() - 0.5) * 8);
+        z.entryStyle = map.entryStyle || 'grate';
         z.y = entry[1];
         z.route = { fromX: z.x, fromY: z.y, toX: map.corridor[0] + lane * (map.corridor[1] - map.corridor[0]), toY: map.fanY + this.rand() * 22 };
         z.emerge = 0.45;
@@ -486,6 +506,7 @@
         const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
         speed *= this.arena?.slow > 0 ? 0.55 : 1;
         z.emerge = Math.max(0, (z.emerge || 0) - dt);
+        if (z.emerge > 0 && (z.entryStyle === 'tile' || z.entryStyle === 'portal')) continue;
         if (z.route) {
           z.y += speed * dt;
           const t = clamp((z.y - z.route.fromY) / (z.route.toY - z.route.fromY), 0, 1);
@@ -1491,6 +1512,7 @@
       if (!saved || typeof saved.t !== 'number' || !saved.player) return false;
       const fn = this.onEvent;
       Object.assign(this, saved);
+      if (this.scene) { this.scene.mediaControlled = false; this.scene.time = 0; }
       this.onEvent = fn;
       this.player.ammo = this.player.ammo ?? GUNS[this.player.gun].ammo;
       this.player.inventory = {

@@ -42,6 +42,8 @@
   // Finished scene clips and extra console skins are listed by scripts/sync-art.mjs.
   // A scene with no listed clip, or a clip that fails to load, uses the built-in scene.
   let sceneClips = {};
+  const sceneLayers = window.ZSSceneLayers ? new ZSSceneLayers() : null;
+  let layerHandle = null;
   let soundPreview = 0;
   const failedClips = new Set();
   fetch('./scene-clips.json')
@@ -139,6 +141,7 @@
     stickDir = 0;
     game.resetInput();
     $('stickKnob').style.transform = 'translateX(0)';
+    $('joystick').style.setProperty('--lean', '0deg');
     $('fireButton').classList.remove('pressed');
     $('joystick').setAttribute('aria-valuenow', '0');
   }
@@ -653,8 +656,13 @@
   // The intro is three animated clips (burned-in captions) that fill the gameplay screen.
   // FIRE skips exactly one clip per press, and each clip moves on by itself when it ends.
   let storyActive = false,
-    storyPreload = null;
+    storyPreload = null,
+    storyWatchdog = null,
+    storyLoadToken = 0;
   function showStory(name, index = 0) {
+    const token = ++storyLoadToken;
+    clearInterval(storyWatchdog);
+    if (storyPreload) { storyPreload.removeAttribute('src'); storyPreload.load?.(); storyPreload = null; }
     pendingName = name;
     storyStep = index;
     storyActive = true;
@@ -673,14 +681,21 @@
     const v = $('storyVideo');
     storyVideo = v;
     v.onended = () => {
-      if (storyActive && panel === 'story') storyNext();
+      if (token === storyLoadToken && storyActive && panel === 'story') storyNext();
     };
     // If a clip cannot load, move on instead of leaving a black screen.
     v.onerror = () => {
       setTimeout(() => {
-        if (storyActive && panel === 'story' && storyVideo === v) storyNext();
+        if (token === storyLoadToken && storyActive && panel === 'story' && storyVideo === v) storyNext();
       }, 400);
     };
+    let lastProgress = performance.now(), lastPosition = -1;
+    storyWatchdog = setInterval(() => {
+      if (token !== storyLoadToken || !storyActive || panel !== 'story') return;
+      const now = performance.now();
+      if (document.hidden || v.currentTime > lastPosition + 0.01) { lastProgress = now; lastPosition = v.currentTime; }
+      else if (now - lastProgress > 12000) storyNext();
+    }, 1000);
     v.src = `./story-${index + 1}.mp4`;
     v.currentTime = 0;
     v.play().catch(() => {});
@@ -699,11 +714,14 @@
     else storyEnd();
   }
   function storyEnd() {
+    ++storyLoadToken;
+    clearInterval(storyWatchdog);
     storyActive = false;
     $('fireButton').classList.remove('story-hint');
     const v = $('storyVideo');
     if (v) {
       v.onended = null;
+      v.onerror = null;
       v.pause();
       v.removeAttribute('src');
       v.load?.();
@@ -1325,6 +1343,10 @@
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
+    if (layerHandle && (layerHandle.scene !== s || layerHandle.phase !== s?.phase)) {
+      layerHandle.dispose(); layerHandle = null;
+    }
+    if (s) layerHandle?.tick(s.time);
     document.body.classList.toggle('in-scene', !!s);
     if (!s) {
       // Fade the scene out into the game instead of cutting.
@@ -1374,6 +1396,10 @@
       box.classList.add('comic-mode');box.classList.toggle('motion-paused',paused);
       box.innerHTML=`<div class="comic-layers" aria-hidden="true"><img class="comic-plate comic-l2" src="./${comic}" alt=""><i class="comic-speed"></i></div><span class="sr-only">${esc(b.name)} story scene</span><div class="comic-embers" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="left:${(i*37+11)%96}%;animation-delay:${-(i*0.9)%7}s;animation-duration:${5+(i%4)*1.7}s"></i>`).join('')}</div><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
       box.onclick = null;
+      if (sceneLayers) {
+        const phase = s.phase;
+        layerHandle = sceneLayers.mount(box, s, () => game.scene === s && s.phase === phase);
+      }
       return;
     }
     let content = '';
@@ -1487,8 +1513,6 @@
       grenade = false;
     stick.classList.toggle('push-l', axis < -0.15);
     stick.classList.toggle('push-r', axis > 0.15);
-    // Holding FIRE a couple of seconds into a boss scene skips to the next part.
-    if (fire && game.scene?.bossId && !paused && game.scene.time >= 2) game.advanceScene();
     try {
       const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean);
       if (pad) {
@@ -1502,6 +1526,8 @@
     } catch {}
     if (stickId !== null && performance.now() < flickUntil && Math.sign(axis) !== -flickDir)
       axis = flickDir;
+    // Holding FIRE a couple of seconds into a boss scene skips to the next part.
+    if (fire && game.scene?.bossId && !paused && game.scene.time >= 2) game.advanceScene();
     padGrenade = grenade;
     trackStick(axis);
     game.setInput(axis, fire);
@@ -1605,6 +1631,7 @@
     stick.setAttribute('aria-valuenow', Math.round(touchAxis * 100));
   }
   stick.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || stickId !== null) return;
     if (awaitStart || storyActive) {
       e.preventDefault();
       startNow();
@@ -1635,6 +1662,7 @@
       }
     });
   $('fireButton').addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || fireId !== null) return;
     if (storyActive) {
       e.preventDefault();
       storyNext();

@@ -1,0 +1,77 @@
+{
+  "scene": "jordan-form2",
+  "width": 720,
+  "height": 960,
+  "arena": "FIREHOUSE SQUARE",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "He is burning through the line.",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "jordan-form2-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "jordan-form2-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "jordan-form2-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "jordan-form2-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "jordan-form2-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Jordan ignites; the firehouse and Joey establish the scale."
+    },
+    {
+      "id": 2,
+      "seconds": 2.6,
+      "slide": "from-right",
+      "caption": "The fire is spreading!",
+      "view": {
+        "x": 0.64,
+        "y": 0.34,
+        "zoom": 1.35
+      },
+      "layers": [
+        {
+          "file": "jordan-form2-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "jordan-form2-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "jordan-form2-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "jordan-form2-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "jordan-form2-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Close impact: Jordan breaks through rubble, Joey braces."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

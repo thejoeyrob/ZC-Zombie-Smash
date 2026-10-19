@@ -1,0 +1,111 @@
+{
+  "scene": "caffeinatedsloth-intro",
+  "width": 720,
+  "height": 960,
+  "arena": "ESPRESSO EXPRESS",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "ESPRESSO EXPRESS",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "caffeinatedsloth-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Espresso Express establishes coffee machines and the sloth."
+    },
+    {
+      "id": 2,
+      "seconds": 2.6,
+      "slide": "from-right",
+      "caption": "Is that CAFFEINATED SLOTH?!",
+      "view": {
+        "x": 0.27,
+        "y": 0.53,
+        "zoom": 1.6
+      },
+      "layers": [
+        {
+          "file": "caffeinatedsloth-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Joey reacts to the impossible speed."
+    },
+    {
+      "id": 3,
+      "seconds": 3.18,
+      "slide": "from-left",
+      "caption": "Caffeinated Sloth: \"One coffee... isn't enough.\"",
+      "view": {
+        "x": 0.66,
+        "y": 0.32,
+        "zoom": 1.45
+      },
+      "layers": [
+        {
+          "file": "caffeinatedsloth-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "caffeinatedsloth-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "The animal sloth lunges on all fours; the coffee cup belongs to its transformed pose."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

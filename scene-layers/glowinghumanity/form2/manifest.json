@@ -1,0 +1,77 @@
+{
+  "scene": "glowinghumanity-form2",
+  "width": 720,
+  "height": 960,
+  "arena": "PRISM REACTOR",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "That glow is getting stronger.",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "glowinghumanity-form2-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "glowinghumanity-form2-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "glowinghumanity-form2-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "glowinghumanity-form2-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "glowinghumanity-form2-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "The reactor brightens around both characters."
+    },
+    {
+      "id": 2,
+      "seconds": 2.6,
+      "slide": "from-right",
+      "caption": "The radiation is spiking!",
+      "view": {
+        "x": 0.64,
+        "y": 0.34,
+        "zoom": 1.35
+      },
+      "layers": [
+        {
+          "file": "glowinghumanity-form2-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "glowinghumanity-form2-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "glowinghumanity-form2-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "glowinghumanity-form2-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "glowinghumanity-form2-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Close on the intensified luminous form."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

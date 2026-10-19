@@ -1,0 +1,111 @@
+{
+  "scene": "drmantis-intro",
+  "width": 720,
+  "height": 960,
+  "arena": "HARVEST CHAMBER",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "HARVEST CHAMBER",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "drmantis-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Harvest Chamber establishes the crowned doctor and laboratory."
+    },
+    {
+      "id": 2,
+      "seconds": 2.6,
+      "slide": "from-right",
+      "caption": "DR MANTIS... this ends NOW.",
+      "view": {
+        "x": 0.27,
+        "y": 0.53,
+        "zoom": 1.6
+      },
+      "layers": [
+        {
+          "file": "drmantis-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Joey confronts Mantis."
+    },
+    {
+      "id": 3,
+      "seconds": 3.64,
+      "slide": "from-left",
+      "caption": "Dr Mantis: \"It's time for your surgery, Joseph Robertson.\"",
+      "view": {
+        "x": 0.66,
+        "y": 0.32,
+        "zoom": 1.45
+      },
+      "layers": [
+        {
+          "file": "drmantis-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Crowned Mantis announces the surgery."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

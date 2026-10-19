@@ -1,0 +1,111 @@
+{
+  "scene": "debo-intro",
+  "width": 720,
+  "height": 960,
+  "arena": "CHAIN YARD",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "CHAIN YARD",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "debo-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "debo-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "debo-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "debo-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "debo-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Chain Yard establishes Debo amid industrial chains."
+    },
+    {
+      "id": 2,
+      "seconds": 2.6,
+      "slide": "from-right",
+      "caption": "DEBO?! This just got serious.",
+      "view": {
+        "x": 0.27,
+        "y": 0.53,
+        "zoom": 1.6
+      },
+      "layers": [
+        {
+          "file": "debo-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "debo-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "debo-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "debo-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "debo-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Joey reacts, drawing attention to the gold D chain."
+    },
+    {
+      "id": 3,
+      "seconds": 3.23,
+      "slide": "from-left",
+      "caption": "Joey better tuck that chain in... here come Debo.",
+      "view": {
+        "x": 0.66,
+        "y": 0.32,
+        "zoom": 1.45
+      },
+      "layers": [
+        {
+          "file": "debo-intro-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "debo-intro-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "debo-intro-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "debo-intro-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "debo-intro-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Debo steps forward in the black jacket and white tee; the gold D chain remains visible."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

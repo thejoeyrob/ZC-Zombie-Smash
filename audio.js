@@ -1474,7 +1474,7 @@
       if (t - (this.last['f' + name] || 0) < 60) return;
       this.last['f' + name] = t;
       try {
-        const el = new Audio('./sfx-' + name + '.mp3');
+        const el = new Audio('./sfx-' + (name === 'doom' ? 'boss-attack' : name) + '.mp3');
         el.volume = Math.min(1, volume * this.settings.effects);
         el.play().catch(() => {});
       } catch {}
@@ -1507,7 +1507,7 @@
         return;
       }
       const epoch = this.fxEpoch;
-      const buffer = await this.buffer('sfx-' + name + '.mp3');
+      const buffer = await this.buffer('sfx-' + (name === 'doom' ? 'boss-attack' : name) + '.mp3');
       if (!buffer) return this.fallbackSfx(name, volume);
       if (this.paused || epoch !== this.fxEpoch || this.voices >= 22 || performance.now() - time > 450)
         return;

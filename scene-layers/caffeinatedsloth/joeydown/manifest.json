@@ -1,0 +1,77 @@
+{
+  "scene": "caffeinatedsloth-joeydown",
+  "width": 720,
+  "height": 960,
+  "arena": "ESPRESSO EXPRESS",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 2.6,
+      "slide": "from-left",
+      "caption": "JOEY ROB IS DOWN.",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "caffeinatedsloth-joeydown-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Joey has fallen in the coffee-shop approach."
+    },
+    {
+      "id": 2,
+      "seconds": 3.59,
+      "slide": "from-right",
+      "caption": "Caffeinated Sloth: \"Decaf? Never. You're slower than me.\"",
+      "view": {
+        "x": 0.65,
+        "y": 0.3,
+        "zoom": 1.35
+      },
+      "layers": [
+        {
+          "file": "caffeinatedsloth-joeydown-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "caffeinatedsloth-joeydown-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "The sloth delivers the decaf quip."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}

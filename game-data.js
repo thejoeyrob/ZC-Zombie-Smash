@@ -360,9 +360,10 @@ window.ZSData = {
   {
     "name": "HARVEST CHAMBER",
     "file": "arena-drmantis.webp",
+    "entryStyle": "portal",
     "accent": "#b6f36a",
     "reward": "HARVEST PURGE",
-    "entries": [[113,100],[230,100]],
+    "entries": [[171.5,121]],
     "corridor": [
       64,
       279

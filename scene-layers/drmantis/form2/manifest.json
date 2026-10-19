@@ -1,0 +1,77 @@
+{
+  "scene": "drmantis-form2",
+  "width": 720,
+  "height": 960,
+  "arena": "HARVEST CHAMBER",
+  "panels": [
+    {
+      "id": 1,
+      "seconds": 3.0,
+      "slide": "from-left",
+      "caption": "King robes, crown and all. Time to end this.",
+      "view": {
+        "x": 0.5,
+        "y": 0.43,
+        "zoom": 1
+      },
+      "layers": [
+        {
+          "file": "drmantis-form2-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-form2-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-form2-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-form2-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-form2-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "The crown falls and the transformation starts."
+    },
+    {
+      "id": 2,
+      "seconds": 2.95,
+      "slide": "from-right",
+      "caption": "His crown is down \u2014 something is happening!",
+      "view": {
+        "x": 0.64,
+        "y": 0.34,
+        "zoom": 1.35
+      },
+      "layers": [
+        {
+          "file": "drmantis-form2-p1-bg.webp",
+          "depth": 0.1
+        },
+        {
+          "file": "drmantis-form2-p1-mid.webp",
+          "depth": 0.3
+        },
+        {
+          "file": "drmantis-form2-p1-boss.webp",
+          "depth": 0.6
+        },
+        {
+          "file": "drmantis-form2-p1-joey.webp",
+          "depth": 0.7
+        },
+        {
+          "file": "drmantis-form2-p1-fg.webp",
+          "depth": 1
+        }
+      ],
+      "description": "Close on the second form from the supplied model."
+    }
+  ],
+  "notes": "Five aligned layers; panels reuse the p1 set with fixed recrops. Reconstructed from flattened references, not pixel-identical recovery of hidden surfaces."
+}
