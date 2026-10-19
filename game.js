@@ -658,6 +658,7 @@
   let storyActive = false,
     storyPreload = null,
     storyWatchdog = null,
+    storyStage = null,
     storyLoadToken = 0;
   function showStory(name, index = 0) {
     const token = ++storyLoadToken;
@@ -678,34 +679,65 @@
       audio.resume();
       audio.playMusic('story');
     }
-    const v = $('storyVideo');
-    storyVideo = v;
-    v.onended = () => {
-      if (token === storyLoadToken && storyActive && panel === 'story') storyNext();
+    // Preferred: the layered opening card (live art, parallax, typed caption). The old film is the fallback.
+    const holder = document.querySelector('#overlay .story-full');
+    if (storyStage) { storyStage.dispose(); storyStage = null; }
+    holder?.querySelector('.ls-story-host')?.remove();
+    const playVideo = () => {
+      const v = $('storyVideo');
+      storyVideo = v;
+      v.onended = () => {
+        if (token === storyLoadToken && storyActive && panel === 'story') storyNext();
+      };
+      // If a clip cannot load, move on instead of leaving a black screen.
+      v.onerror = () => {
+        setTimeout(() => {
+          if (token === storyLoadToken && storyActive && panel === 'story' && storyVideo === v) storyNext();
+        }, 400);
+      };
+      let lastProgress = performance.now(), lastPosition = -1;
+      storyWatchdog = setInterval(() => {
+        if (token !== storyLoadToken || !storyActive || panel !== 'story') return;
+        const now = performance.now();
+        if (document.hidden || v.currentTime > lastPosition + 0.01) { lastProgress = now; lastPosition = v.currentTime; }
+        else if (now - lastProgress > 12000) storyNext();
+      }, 1000);
+      v.src = `./story-${index + 1}.mp4`;
+      v.currentTime = 0;
+      v.play().catch(() => {});
+      audio.sfx('whoosh', 0.7);
+      if (index < 2) {
+        storyPreload = document.createElement('video');
+        storyPreload.preload = 'auto';
+        storyPreload.muted = true;
+        storyPreload.src = `./story-${index + 2}.mp4`;
+      }
     };
-    // If a clip cannot load, move on instead of leaving a black screen.
-    v.onerror = () => {
-      setTimeout(() => {
-        if (token === storyLoadToken && storyActive && panel === 'story' && storyVideo === v) storyNext();
-      }, 400);
-    };
-    let lastProgress = performance.now(), lastPosition = -1;
-    storyWatchdog = setInterval(() => {
-      if (token !== storyLoadToken || !storyActive || panel !== 'story') return;
-      const now = performance.now();
-      if (document.hidden || v.currentTime > lastPosition + 0.01) { lastProgress = now; lastPosition = v.currentTime; }
-      else if (now - lastProgress > 12000) storyNext();
-    }, 1000);
-    v.src = `./story-${index + 1}.mp4`;
-    v.currentTime = 0;
-    v.play().catch(() => {});
-    audio.sfx('whoosh', 0.7);
-    if (index < 2) {
-      storyPreload = document.createElement('video');
-      storyPreload.preload = 'auto';
-      storyPreload.muted = true;
-      storyPreload.src = `./story-${index + 2}.mp4`;
+    if (sceneLayers && holder && sceneLayers.mountStory) {
+      const v0 = $('storyVideo');
+      if (v0) v0.hidden = true;
+      const host = document.createElement('div');
+      host.className = 'ls-story-host';
+      holder.appendChild(host);
+      storyStage = sceneLayers.mountStory(
+        host,
+        index,
+        () => {
+          if (token === storyLoadToken && storyActive && panel === 'story') storyNext();
+        },
+        () => {
+          if (token !== storyLoadToken) return;
+          host.remove();
+          storyStage = null;
+          if (v0) v0.hidden = false;
+          playVideo();
+        },
+      );
+      storyVideo = storyStage;
+      audio.sfx('whoosh', 0.7);
+      return;
     }
+    playVideo();
   }
   function storyNext() {
     if (!storyActive) return;
@@ -716,6 +748,7 @@
   function storyEnd() {
     ++storyLoadToken;
     clearInterval(storyWatchdog);
+    if (storyStage) { storyStage.dispose(); storyStage = null; }
     storyActive = false;
     $('fireButton').classList.remove('story-hint');
     const v = $('storyVideo');

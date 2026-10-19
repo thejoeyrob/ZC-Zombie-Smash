@@ -3135,3 +3135,36 @@ body.in-scene #gameCanvas { filter: none; }
 #cinematic.layer-mode .comic-embers,#cinematic.layer-mode .comic-atmosphere{display:none;}
 #cinematic.layer-mode .comic-dialogue{min-height:2.6em;}
 @media(prefers-reduced-motion:reduce){#cinematic.layer-mode .comic-heading,#cinematic.layer-mode .comic-dialogue{animation:none!important;}}
+
+/* 7.34.1 layered scenes: the stage fills the whole game window (no tilted, cropped frame). */
+#cinematic.layer-mode .comic-layers {
+  position: absolute; inset: 0; left: 0; right: 0; top: 0; bottom: 0; border: 0; outline: 0; border-radius: 0;
+  transform: none; box-shadow: none; animation: none !important; overflow: hidden; background: #000;
+}
+.ls-stage { position: absolute; inset: 0; overflow: hidden; contain: strict; }
+.ls-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; will-change: transform; user-select: none; pointer-events: none; }
+.ls-wipe { position: absolute; top: -10%; bottom: -10%; left: -30%; width: 60%; z-index: 3; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, #fff0, #fff 30%, #fff 70%, #fff0); will-change: transform; }
+/* Comic frame over the art: ink border, paper edge, halftone corners. */
+#cinematic.layer-mode::after {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  box-shadow: inset 0 0 0 3px #0a0a0a, inset 0 0 0 5px #fdf6e3, inset 0 0 0 8px #0a0a0a, inset 0 0 40px #000000a0;
+}
+#cinematic.layer-mode::before { display: none; }
+#cinematic.layer-mode .comic-speed { display: none; }
+#cinematic.layer-mode .comic-heading { inset: 14px auto auto 12px; max-width: 78%; z-index: 4; }
+#cinematic.layer-mode .comic-dialogue { left: 14px; right: 14px; bottom: 16px; z-index: 4; min-height: 0; }
+#cinematic.layer-mode .comic-dialogue.ls-quiet { opacity: 0; }
+
+/* Opening story cards. */
+.ls-story-host { position: absolute; inset: 0; background: #000; }
+.ls-story { overflow: hidden; }
+.ls-story-stage { position: absolute; inset: 0; overflow: hidden; }
+.ls-story-host::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  box-shadow: inset 0 0 0 3px #0a0a0a, inset 0 0 0 5px #fdf6e3, inset 0 0 0 8px #0a0a0a, inset 0 -140px 90px -60px #000000d0; }
+.ls-story-title { position: absolute; left: 12px; top: 16px; max-width: 80%; z-index: 4; padding: 5px 12px 6px; background: #ffd91f; color: #0a0a0a;
+  border: 3px solid #0a0a0a; box-shadow: 4px 4px 0 #000; transform: rotate(-2deg); font: 900 18px/1.1 Barlow, sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+.ls-story-caption { position: absolute; left: 14px; right: 14px; bottom: 18px; z-index: 4; min-height: 3.4em; padding: 10px 13px; color: #0a0a0a; background: #fff8e6;
+  border: 3px solid #0a0a0a; border-radius: 12px; box-shadow: 5px 5px 0 #000; font: 800 14px/1.28 Barlow, sans-serif; }
+.ls-story-count { position: absolute; right: 14px; top: 14px; z-index: 4; padding: 2px 8px; border-radius: 10px; background: #000000b0; color: #fff; font: 800 10px Inter, sans-serif; letter-spacing: 0.12em; }
+@media (prefers-reduced-motion: reduce) { .ls-wipe { display: none; } }

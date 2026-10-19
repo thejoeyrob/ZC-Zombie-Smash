@@ -1,0 +1,35 @@
+{
+ "scene": "story-2",
+ "width": 720,
+ "height": 960,
+ "seconds": 8.75,
+ "title": "YOUR MATES. HIS ARMY.",
+ "caption": "He has brainwashed JoeyRob\u2019s former comrades and raised an army of zombies. Every familiar face is now a boss standing in your way.",
+ "motion": "One-way lateral parallax; fixed scale; separate text overlay.",
+ "layers": [
+  {
+   "file": "story-2-bg.webp",
+   "depth": 0.1
+  },
+  {
+   "file": "story-2-horde.webp",
+   "depth": 0.3
+  },
+  {
+   "file": "story-2-debo.webp",
+   "depth": 0.55
+  },
+  {
+   "file": "story-2-disco.webp",
+   "depth": 0.6
+  },
+  {
+   "file": "story-2-mantis.webp",
+   "depth": 0.75
+  },
+  {
+   "file": "story-2-fx.webp",
+   "depth": 1
+  }
+ ]
+}

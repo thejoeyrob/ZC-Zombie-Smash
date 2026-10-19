@@ -1,0 +1,27 @@
+{
+ "scene": "story-3",
+ "width": 720,
+ "height": 960,
+ "seconds": 8.75,
+ "title": "ONE LAST LINE OF DEFENCE.",
+ "caption": "JoeyRob has one job: free his mates, stop the harvest, and hold the line. Move left and right. Fire up the street. Make it count.",
+ "motion": "One-way lateral parallax; fixed scale; separate text overlay.",
+ "layers": [
+  {
+   "file": "story-3-bg.webp",
+   "depth": 0.1
+  },
+  {
+   "file": "story-3-horde.webp",
+   "depth": 0.3
+  },
+  {
+   "file": "story-3-joey.webp",
+   "depth": 0.75
+  },
+  {
+   "file": "story-3-fx.webp",
+   "depth": 1
+  }
+ ]
+}

@@ -68,7 +68,7 @@ const lines = sw.split('\n').filter((l) => {
   const m = /^\s*'\.\/([^']+)',\s*$/.exec(l);
   return !(
     m &&
-    (m[1].startsWith('scene-layers/') || /^scene-.+\.mp4$/.test(m[1]) || /^(comic-|arena-).+\.webp$/.test(m[1]) || /^icon-opt-/.test(m[1]) ||
+    (m[1].startsWith('scene-layers/') || m[1].startsWith('opening-layers/') || /^scene-.+\.mp4$/.test(m[1]) || /^(comic-|arena-).+\.webp$/.test(m[1]) || /^icon-opt-/.test(m[1]) ||
       /^(scene-clips|skins-extra)\.json$/.test(m[1]) ||
       skins.some((s) => s.file === m[1]))
   );

@@ -1,0 +1,7 @@
+{
+ "scenes": {
+  "story-1": "story-1/manifest.json",
+  "story-2": "story-2/manifest.json",
+  "story-3": "story-3/manifest.json"
+ }
+}

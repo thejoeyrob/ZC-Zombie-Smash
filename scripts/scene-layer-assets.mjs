@@ -35,5 +35,14 @@ export function sceneLayerAssets(root) {
       }
     }
   }
+  // The opening story layers (optional): one manifest per story card, each naming its own layer files.
+  const open = resolve(root, 'opening-layers'), openIndex = resolve(open, 'index.json');
+  if (existsSync(openIndex)) {
+    assets.add('./opening-layers/index.json');
+    for (const entry of Object.values(JSON.parse(readFileSync(openIndex, 'utf8')).scenes || {})) {
+      const mp = file(open, entry);
+      for (const l of JSON.parse(readFileSync(mp, 'utf8')).layers || []) file(dirname(mp), l.file);
+    }
+  }
   return [...assets].sort();
 }
