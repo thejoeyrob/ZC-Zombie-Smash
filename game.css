@@ -3173,3 +3173,49 @@ body.in-scene #gameCanvas { filter: none; }
 .scene-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 .scene-row .scene-btn { flex: 1 1 30%; width: auto; min-width: 0; margin: 0; padding: 9px 6px; font-size: 12px; letter-spacing: 0.06em; }
 .menu-action.admin-entry { color: #ffd91f; }
+
+/* 7.36 finished comic films */
+/* Opt-in media styling only. Load AFTER game.css once all new films are installed.
+   No cabinet coordinates, skin artwork, controls or gameplay canvas sizes change.
+   The existing clip-ready lifecycle must be removed on end/skip/error/scene exit. */
+.screen:has(#cinematic.clip-mode.clip-ready:not([hidden])) .playfield {
+  position: static;
+  overflow: visible;
+}
+.screen:has(#cinematic.clip-mode.clip-ready:not([hidden])) #cinematic {
+  position: absolute;
+  inset: 0 !important;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transform: none;
+  animation: none;
+  z-index: 30 !important;
+  background: #101017;
+}
+.screen:has(#cinematic.clip-mode.clip-ready:not([hidden])) > :is(.hud-top,.hud-bottom,.boost-meter) {
+  visibility: hidden;
+}
+#cinematic.clip-mode.clip-ready .scene-clip {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: none;
+  z-index: 3;
+}
+#cinematic.clip-mode.clip-ready::before,
+#cinematic.clip-mode.clip-ready::after { display: none; }
+#cinematic.clip-mode.clip-ready > :not(video):not(.scene-next) { visibility: hidden; }
+#cinematic.clip-mode.clip-ready .scene-next {
+  position: absolute;
+  inset: auto 4px 4px auto;
+  min-width: 44px;
+  min-height: 44px;
+  z-index: 5;
+}
+.story-full video { object-fit: contain; object-position: center; }

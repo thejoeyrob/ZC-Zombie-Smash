@@ -26,7 +26,7 @@ const clips = {};
 for (const boss of BOSSES)
   for (const scene of SCENES) {
     const name = `scene-${boss}-${scene}.mp4`;
-    if (files.has(name) && !files.has(`comic-${boss}-${scene}.webp`)) clips[`${boss}/${scene}`] = name;
+    if (files.has(name)) clips[`${boss}/${scene}`] = name;
   }
 writeFileSync(join(root, 'scene-clips.json'), JSON.stringify({ clips }, null, 2) + '\n');
 

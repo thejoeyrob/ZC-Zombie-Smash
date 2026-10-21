@@ -726,7 +726,7 @@
         storyPreload.src = `./story-${index + 2}.mp4`;
       }
     };
-    if (sceneLayers && holder && sceneLayers.mountStory) {
+    if (false && sceneLayers && holder && sceneLayers.mountStory) {
       const v0 = $('storyVideo');
       if (v0) v0.hidden = true;
       const host = document.createElement('div');
@@ -1483,7 +1483,8 @@
     unclipBox(box);
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
-    const comic = comicFor(s);
+    // Finished comic films win; the layered stage and static plates are only the fallback.
+    const comic = clip ? null : comicFor(s);
     if(comic && b) {
       const reaction=s.kind==='arrival' && s.phase===1;
       const title=reaction?'JOEY ROB':s.kind==='down'?'BOSS DOWN':s.kind==='loss'?'LINE BROKEN':b.name;
