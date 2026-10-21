@@ -60,12 +60,16 @@
   }
   // BOT_ before a player name switches on cheat mode: it is never shown, it dispenses the secret skins
   // and it opens the CHEATS menu, where every cheat has a code made of joystick flicks and button taps.
-  const BOT_PREFIX = /^bot_/i;
+  // Both are case sensitive: BOT_ exactly, and the admin name exactly as JR_AdmiN_jr.
+  const BOT_PREFIX = /^BOT_/;
+  const ADMIN_NAME = 'JR_AdmiN_jr';
   const parseName = (raw) => {
     raw = String(raw ?? '').trim();
+    if (raw === ADMIN_NAME) return { bot: false, admin: true, name: 'Admin' };
     const isBot = BOT_PREFIX.test(raw);
     return {
       bot: isBot,
+      admin: false,
       name: isBot ? raw.replace(BOT_PREFIX, '').trim() : raw,
     };
   };
@@ -102,6 +106,8 @@
     paused = true,
     landscape = false,
     admin = false,
+    jrAdmin = false,
+    pendingAdmin = false,
     run = null,
     pendingName = '',
     sceneKey = '',
@@ -591,7 +597,7 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${jrAdmin ? '<button class="menu-action admin-entry" data-action="scenes">SCENE SELECT <small>Admin · play any scene →</small></button><button class="menu-action admin-entry" data-action="admin">ADMIN CONTROLS <small>Bosses, waves & cheats →</small></button>' : ''}${nativeApp || jrAdmin ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
@@ -636,7 +642,7 @@
     storyReplay = false;
     audio.unlock();
     raw = String(raw ?? '').trim();
-    const { bot: isBot, name } = parseName(raw);
+    const { bot: isBot, admin: isAdmin, name } = parseName(raw);
     if (!scores.validName(name)) {
       toast('Use 2–24 letters, numbers, spaces, dots, dashes or underscores. Keep it friendly.');
       return;
@@ -644,6 +650,7 @@
     write('zs7-name', raw);
     pendingName = name;
     pendingBot = isBot;
+    pendingAdmin = isAdmin;
     if (!skipIntro) {
       if (coffeeOn()) showCoffee(() => showStory(name, 0));
       else showStory(name, 0);
@@ -659,6 +666,7 @@
     storyPreload = null,
     storyWatchdog = null,
     storyStage = null,
+    storyOnly = false,
     storyLoadToken = 0;
   function showStory(name, index = 0) {
     const token = ++storyLoadToken;
@@ -742,7 +750,7 @@
   function storyNext() {
     if (!storyActive) return;
     haptics.impact('LIGHT', 'ui', 0, true);
-    if (storyStep < 2) showStory(pendingName, storyStep + 1);
+    if (storyStep < 2 && !storyOnly) showStory(pendingName, storyStep + 1);
     else storyEnd();
   }
   function storyEnd() {
@@ -765,6 +773,11 @@
     $('overlay').innerHTML = '';
     if (storyReplay) {
       storyReplay = false;
+      if (jrAdmin) {
+        storyOnly = false;
+        sceneSelect();
+        return;
+      }
       closePanel();
     } else beginRun(pendingName || parseName(read('zs7-name', 'Player')).name || 'Player');
   }
@@ -803,7 +816,9 @@
     clearTimeout(storyTimer);
     write('zs7-story-seen', true);
     bot = pendingBot;
-    run = { id: newId(), name, ticket: null, submitted: false, bot };
+    jrAdmin = pendingAdmin;
+    if (jrAdmin) admin = true;
+    run = { id: newId(), name, ticket: null, submitted: false, bot, admin: jrAdmin };
     if (bot) {
       const added = unlockSecretSkins();
       setTimeout(
@@ -817,7 +832,8 @@
       );
     }
     const thisRun = run;
-    thisRun.ticketPromise = scores.begin(name).then((ticket) => {
+    if (jrAdmin) setTimeout(() => toast('ADMIN · Menu → SCENE SELECT to play any scene'), 600);
+    thisRun.ticketPromise = (jrAdmin ? Promise.resolve(null) : scores.begin(name)).then((ticket) => {
       thisRun.ticket = ticket;
       if (run === thisRun) save();
       return ticket;
@@ -827,6 +843,7 @@
     panel = '';
     sceneKey = '';
     game.start();
+    if (jrAdmin) game.practice = true;
     save();
     armStart();
   }
@@ -972,6 +989,38 @@
           '',
         )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(' ')}</div></div>`).join('')}`,
     );
+  }
+  // Admin scene select (JR_AdmiN_jr): play the opening cards or any boss scene without playing up to it, fight a
+  // boss straight away or jump to any arena. Previews return here when they finish.
+  function sceneSelect() {
+    const btn = (attrs, label) => `<button class="secondary-action scene-btn" ${attrs}>${label}</button>`;
+    showPanel(
+      'scenes',
+      'SCENE SELECT',
+      `<p class="menu-note">Admin preview. Tap a scene to play it; it comes back here when it ends. Hold or tap FIRE to skip ahead. Fights and wave jumps are practice runs (no scores).</p>` +
+        `<h3 class="skin-group">OPENING</h3><div class="scene-row">${[0, 1, 2].map((i) => btn(`data-story="${i}"`, 'CARD ' + (i + 1))).join('')}${btn('data-story="all"', 'ALL 3')}</div>` +
+        BOSSES.map(
+          (b) =>
+            `<h3 class="skin-group">${esc(b.name)}</h3><div class="scene-row">` +
+            btn(`data-preview-scene="arrival" data-pboss="${b.id}" data-pstage="1"`, 'ENTRANCE') +
+            Array.from({ length: b.stages - 1 }, (_, k) => btn(`data-preview-scene="mutation" data-pboss="${b.id}" data-pstage="${k + 2}"`, 'FORM ' + (k + 2))).join('') +
+            btn(`data-preview-scene="down" data-pboss="${b.id}" data-pstage="${b.stages}"`, 'BOSS DOWN') +
+            btn(`data-preview-scene="loss" data-pboss="${b.id}" data-pstage="1"`, 'JOEY DOWN') +
+            btn(`data-boss="${b.id}" data-stage="1"`, 'FIGHT') +
+            `</div>`,
+        ).join('') +
+        `<h3 class="skin-group">JUMP TO ARENA</h3><div class="scene-row">${MAPS.map((m, i) => btn(`data-jump-wave="${i * 2 + 1}"`, esc(m.name))).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+    );
+  }
+  function previewScene(kind, id, stage) {
+    if (!practice()) return;
+    game.enemies = [];
+    game.shots = [];
+    game.bullets = [];
+    game.boss = null;
+    game.scene = { kind, bossId: id, stage, startStage: kind === 'arrival' ? stage : undefined, phase: 0, time: 0, duration: kind === 'arrival' ? 0.7 : 4.5, preview: true };
+    sceneKey = '';
+    closePanel();
   }
   function practice() {
     if (!admin) return false;
@@ -1260,6 +1309,12 @@
       death: 'loss',
     };
     // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
+    if (type === 'previewDone' && jrAdmin) {
+      sceneKey = '';
+      pause();
+      sceneSelect();
+      return;
+    }
     if (type === 'bossDown') audio.afterBoss = true; // later waves use the recorded wave music, not the orchestral synth
     if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
     else if (audio.synthMode && type === 'death') audio.stinger('defeat');
@@ -1947,6 +2002,33 @@
       })();
       return;
     }
+    if (button.dataset.previewScene && jrAdmin) {
+      previewScene(button.dataset.previewScene, button.dataset.pboss, Number(button.dataset.pstage) || 1);
+      return;
+    }
+    if (button.dataset.story && jrAdmin) {
+      storyReplay = true;
+      const name = parseName(read('zs7-name', 'Player')).name || 'Player';
+      storyOnly = false;
+      if (button.dataset.story === 'all') showStory(name, 0);
+      else {
+        showStory(name, Number(button.dataset.story));
+        storyOnly = true;
+      }
+      return;
+    }
+    if (button.dataset.jumpWave && jrAdmin) {
+      if (practice()) {
+        game.scene = null;
+        game.boss = null;
+        game.enemies = [];
+        game.prepareWave(Number(button.dataset.jumpWave));
+        sceneKey = '';
+        closePanel();
+        toast('Arena jump · practice mode');
+      }
+      return;
+    }
     if (button.dataset.vivid) {
       write('zs7-vivid', Number(button.dataset.vivid));
       applyVivid();
@@ -2020,7 +2102,10 @@
         if (!nativeApp) install();
         break;
       case 'admin':
-        if (!nativeApp) adminPanel();
+        if (!nativeApp || jrAdmin) adminPanel();
+        break;
+      case 'scenes':
+        if (jrAdmin) sceneSelect();
         break;
       case 'restart':
         showPanel(
@@ -2038,6 +2123,7 @@
         break;
       case 'story':
         storyReplay = true;
+        storyOnly = false;
         showStory(parseName(read('zs7-name', 'Player')).name || 'Player', 0);
         break;
       case 'grenades':

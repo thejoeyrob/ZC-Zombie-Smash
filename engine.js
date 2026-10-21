@@ -979,6 +979,12 @@
         this.emit('panel', { phase: s.phase });
         return;
       }
+      // Admin previews only show the scene: no boss spawns, no game over.
+      if (s.preview) {
+        this.scene = null;
+        this.emit('previewDone');
+        return;
+      }
       this.scene = null;
       if (s.kind === 'arrival') this.spawnBoss(s.bossId, s.startStage || 1);
       if (s.kind === 'down') {
