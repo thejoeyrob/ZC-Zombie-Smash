@@ -201,11 +201,13 @@
       showStory(pendingName, storyStep);
       return;
     }
+    const wasMenu = panel === 'menu';
     panel = '';
     $('overlay').hidden = true;
     clearInput();
     if (game.active && !game.over) {
       if (!awaitStart) resume();
+      if (wasMenu && !awaitStart && performance.now() - menuOpenedAt < 6000) armCheats();
     } else showStart();
     $('menuButton').focus({ preventScroll: true });
   }
@@ -594,10 +596,11 @@
       closePanel();
       return;
     }
+    menuOpenedAt = performance.now();
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${jrAdmin ? '<button class="menu-action admin-entry" data-action="scenes">SCENE SELECT <small>Admin · play any scene →</small></button><button class="menu-action admin-entry" data-action="admin">ADMIN CONTROLS <small>Bosses, waves & cheats →</small></button>' : ''}${nativeApp || jrAdmin ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${jrAdmin ? '<button class="menu-action admin-entry" data-action="scenes">SCENE SELECT <small>Admin · play any scene →</small></button><button class="menu-action admin-entry" data-action="admin">ADMIN CONTROLS <small>Bosses, waves & cheats →</small></button><button class="menu-action admin-entry" data-action="exitadmin">EXIT ADMIN MODE <small>Restart as a normal player →</small></button>' : ''}${nativeApp || jrAdmin ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
@@ -987,11 +990,23 @@
         )
         .join(
           '',
-        )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(' ')}</div></div>`).join('')}`,
+        )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(' ')}</div></div>`).join('')}${jrAdmin ? '<button class="secondary-action" data-action="scenes">SCENE SELECT</button><button class="secondary-action" data-action="exitadmin">EXIT ADMIN MODE</button>' : ''}`,
     );
   }
   // Admin scene select (JR_AdmiN_jr): play the opening cards or any boss scene without playing up to it, fight a
   // boss straight away or jump to any arena. Previews return here when they finish.
+  // Leave admin mode: forget the admin run and the admin name, then restart the app as a normal player.
+  function exitAdmin() {
+    jrAdmin = false;
+    admin = false;
+    pendingAdmin = false;
+    try {
+      localStorage.removeItem('zs7-run');
+      localStorage.removeItem('zs7-name');
+    } catch {}
+    toast('Leaving admin mode · restarting');
+    setTimeout(() => location.reload(), 350);
+  }
   function sceneSelect() {
     const btn = (attrs, label) => `<button class="secondary-action scene-btn" ${attrs}>${label}</button>`;
     showPanel(
@@ -1009,7 +1024,7 @@
             btn(`data-boss="${b.id}" data-stage="1"`, 'FIGHT') +
             `</div>`,
         ).join('') +
-        `<h3 class="skin-group">JUMP TO ARENA</h3><div class="scene-row">${MAPS.map((m, i) => btn(`data-jump-wave="${i * 2 + 1}"`, esc(m.name))).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+        `<h3 class="skin-group">JUMP TO ARENA</h3><div class="scene-row">${MAPS.map((m, i) => btn(`data-jump-wave="${i * 2 + 1}"`, esc(m.name))).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button><button class="secondary-action" data-action="exitadmin">EXIT ADMIN MODE</button>`,
     );
   }
   function previewScene(kind, id, stage) {
@@ -1077,17 +1092,6 @@
       },
     },
     {
-      id: 'wave',
-      name: 'SKIP WAVE',
-      info: 'Clears the current wave.',
-      seq: 'RLRLFF',
-      run: () => {
-        if (game.boss || game.scene) return;
-        game.enemies = [];
-        game.spawned = game.resolved = game.target;
-      },
-    },
-    {
       id: 'boss',
       name: 'JUMP TO NEXT BOSS',
       info: 'Starts the next boss you have not beaten.',
@@ -1117,8 +1121,18 @@
       return ticket;
     });
   }
+  // Codes only work for 10 seconds after the arming gesture: open the MENU and close it again (press MENU twice,
+  // or open it and tap RESUME) within 6 seconds. Normal play can never trigger a cheat by accident.
+  let cheatArmedUntil = 0,
+    menuOpenedAt = 0;
+  function armCheats() {
+    cheatArmedUntil = performance.now() + 10000;
+    cheatBuf = '';
+    toast('CHEATS ARMED · enter a code now (10 seconds)');
+  }
   function feedToken(token) {
     if (paused || !game.active || game.over) return;
+    if (performance.now() > cheatArmedUntil) return;
     const now = performance.now();
     if (now - cheatLast > 2200) cheatBuf = '';
     cheatLast = now;
@@ -1126,6 +1140,7 @@
     const hit = CHEATS.find((c) => cheatBuf.endsWith(c.seq));
     if (!hit) return;
     cheatBuf = '';
+    cheatArmedUntil = 0; // each cheat needs a fresh arming
     const wasPractice = game.practice;
     if (!bot) markCheated();
     hit.run();
@@ -1152,7 +1167,7 @@
     showPanel(
       'cheats',
       'CHEATS',
-      `<p class="menu-note">BOT mode is on. While you play, enter a code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button. Keep each tap within about 2 seconds. Any cheat makes the run practice-only: scores stay off the board. Outside BOT mode the same codes work too, and the score counts but is marked ✦ on the board.</p>${CHEATS.map(
+      `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. You will see CHEATS ARMED.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
           `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? 'on' : ''}">${c.state() ? 'ON' : 'OFF'}</span>` : ''}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
       ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
@@ -2106,6 +2121,9 @@
         break;
       case 'scenes':
         if (jrAdmin) sceneSelect();
+        break;
+      case 'exitadmin':
+        if (jrAdmin) exitAdmin();
         break;
       case 'restart':
         showPanel(
