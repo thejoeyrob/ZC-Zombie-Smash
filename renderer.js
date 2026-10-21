@@ -312,7 +312,6 @@
         c.fillRect(26, 47, W - 52, 28);
         this.text(g.banner, W / 2, 66, 16, '#f5da98');
       }
-      if (g.practice) this.text('PRACTICE · SCORES OFF', W / 2, H - 8, 10, '#ffc16e');
       c.restore();
     }
 

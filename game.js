@@ -654,6 +654,8 @@
     pendingName = name;
     pendingBot = isBot;
     pendingAdmin = isAdmin;
+    jrAdmin = isAdmin;
+    if (isAdmin) admin = true;
     if (!skipIntro) {
       if (coffeeOn()) showCoffee(() => showStory(name, 0));
       else showStory(name, 0);
@@ -822,20 +824,8 @@
     jrAdmin = pendingAdmin;
     if (jrAdmin) admin = true;
     run = { id: newId(), name, ticket: null, submitted: false, bot, admin: jrAdmin };
-    if (bot) {
-      const added = unlockSecretSkins();
-      setTimeout(
-        () =>
-          toast(
-            added
-              ? 'BOT MODE · ' + added + ' SECRET SKINS DISPENSED · CHEATS MENU UNLOCKED'
-              : 'BOT MODE · CHEATS MENU UNLOCKED',
-          ),
-        600,
-      );
-    }
+    if (bot) unlockSecretSkins();
     const thisRun = run;
-    if (jrAdmin) setTimeout(() => toast('ADMIN · Menu → SCENE SELECT to play any scene'), 600);
     thisRun.ticketPromise = (jrAdmin ? Promise.resolve(null) : scores.begin(name)).then((ticket) => {
       thisRun.ticket = ticket;
       if (run === thisRun) save();
@@ -1027,13 +1017,25 @@
         `<h3 class="skin-group">JUMP TO ARENA</h3><div class="scene-row">${MAPS.map((m, i) => btn(`data-jump-wave="${i * 2 + 1}"`, esc(m.name))).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button><button class="secondary-action" data-action="exitadmin">EXIT ADMIN MODE</button>`,
     );
   }
+  function storyAbort() {
+    ++storyLoadToken;
+    clearInterval(storyWatchdog);
+    clearTimeout(storyTimer);
+    if (storyStage) { storyStage.dispose(); storyStage = null; }
+    storyActive = false;
+    storyReplay = false;
+    $('overlay').classList.remove('story-mode');
+    $('fireButton')?.classList.remove('story-hint');
+    try { $('storyVideo')?.pause(); } catch {}
+  }
   function previewScene(kind, id, stage) {
+    storyAbort();
     if (!practice()) return;
     game.enemies = [];
     game.shots = [];
     game.bullets = [];
     game.boss = null;
-    game.scene = { kind, bossId: id, stage, startStage: kind === 'arrival' ? stage : undefined, phase: 0, time: 0, duration: kind === 'arrival' ? 0.7 : 4.5, preview: true };
+    game.scene = { kind, bossId: id, stage, startStage: kind === 'arrival' ? stage : undefined, phase: kind === 'arrival' ? 2 : 0, time: 0, duration: kind === 'arrival' ? 2.8 : 4.5, preview: true };
     sceneKey = '';
     closePanel();
   }
@@ -1128,7 +1130,6 @@
   function armCheats() {
     cheatArmedUntil = performance.now() + 10000;
     cheatBuf = '';
-    toast('CHEATS ARMED · enter a code now (10 seconds)');
   }
   function feedToken(token) {
     if (paused || !game.active || game.over) return;
@@ -1149,12 +1150,6 @@
     save();
     audio.sfx('boost');
     haptics.notify('SUCCESS', 'cheat', 0);
-    toast(
-      'CHEAT · ' +
-        hit.name +
-        (hit.state ? (hit.state() ? ' ON' : ' OFF') : '') +
-        (bot ? ' · scores off' : ' · score marked ✦'),
-    );
   }
   function trackStick(axis) {
     const dir = axis < -0.6 ? -1 : axis > 0.6 ? 1 : Math.abs(axis) < 0.25 ? 0 : stickDir;
@@ -1169,7 +1164,7 @@
       'CHEATS',
       `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. You will see CHEATS ARMED.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
-          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? 'on' : ''}">${c.state() ? 'ON' : 'OFF'}</span>` : ''}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
+          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b></div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
       ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
@@ -1186,7 +1181,7 @@
     showPanel(
       'results',
       game.practice ? 'PRACTICE COMPLETE' : 'RUN COMPLETE',
-      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : run?.cheated ? 'Cheats used · your score will be marked ✦ on the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
+      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
       { closable: false },
     );
     save();
@@ -1963,7 +1958,6 @@
       if (cheat === 'tenHearts') game.setTenHearts(e.target.checked);
       else game[cheat] = e.target.checked;
       save();
-      toast('Practice mode · scores off');
     }
   });
   $('overlay').addEventListener('click', async (e) => {
@@ -2033,6 +2027,7 @@
       return;
     }
     if (button.dataset.jumpWave && jrAdmin) {
+      storyAbort();
       if (practice()) {
         game.scene = null;
         game.boss = null;
@@ -2040,7 +2035,6 @@
         game.prepareWave(Number(button.dataset.jumpWave));
         sceneKey = '';
         closePanel();
-        toast('Arena jump · practice mode');
       }
       return;
     }
@@ -2060,6 +2054,7 @@
       return;
     }
     if (button.dataset.boss && admin) {
+      storyAbort();
       practice();
       game.skipBoss(button.dataset.boss, Number(button.dataset.stage));
       sceneKey = '';
@@ -2070,7 +2065,6 @@
     if (button.dataset.gun && admin) {
       practice();
       game.equip(button.dataset.gun);
-      toast('Weapon ready · practice mode');
       return;
     }
     switch (button.dataset.action) {
@@ -2147,7 +2141,6 @@
       case 'grenades':
         if (practice()) {
           game.player.grenades = 9;
-          toast('Grenades refilled · practice mode');
         }
         break;
       case 'continue':
