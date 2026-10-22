@@ -1123,7 +1123,7 @@
       } catch {
         this.settings = defaults;
       }
-      if (!['arcade', 'new', 'original', 'chip', 'early'].includes(this.settings.set))
+      if (!['arcade', 'original'].includes(this.settings.set))
         this.settings.set = 'arcade';
       for (const key of ['music', 'effects']) {
         const value = Number(this.settings[key]);
@@ -1139,10 +1139,10 @@
     // Three sets: NEW (synthesized, orchestral music), CHIP (synthesized, chip-style music) and ORIGINAL (the
     // first recorded sound files).
     get synthMode() {
-      return this.settings.set !== 'original';
+      return false; // both sets use the recorded score and effects; the old synthesized sets are retired
     }
     get style() {
-      return ['new', 'arcade'].includes(this.settings.set) ? 'real' : 'synth';
+      return this.settings.set === 'arcade' ? 'real' : 'synth';
     }
     playbackSession() {
       try {
@@ -1548,7 +1548,7 @@
     }
     // Switch between the new synthesized sounds and the original recorded ones.
     setSoundSet(name) {
-      this.settings.set = ['arcade', 'new', 'original', 'chip', 'early'].includes(name)
+      this.settings.set = ['arcade', 'original'].includes(name)
         ? name
         : 'arcade';
       this.fxEpoch++;
