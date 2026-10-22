@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  // The packaged iPhone app loads from capacitor://; on the web we keep the install and admin tools.
+  // The packaged iPhone app loads from capacitor://; on the web we keep the install tool.
   const nativeApp = location.protocol === 'capacitor:' || !!window.Capacitor?.isNativePlatform?.();
   const newId = () =>
     crypto.randomUUID?.() ??
@@ -42,8 +42,6 @@
   // Finished scene clips and extra console skins are listed by scripts/sync-art.mjs.
   // A scene with no listed clip, or a clip that fails to load, uses the built-in scene.
   let sceneClips = {};
-  const sceneLayers = window.ZSSceneLayers ? new ZSSceneLayers() : null;
-  let layerHandle = null;
   let soundPreview = 0;
   const failedClips = new Set();
   fetch('./scene-clips.json')
@@ -60,16 +58,13 @@
   }
   // BOT_ before a player name switches on cheat mode: it is never shown, it dispenses the secret skins
   // and it opens the CHEATS menu, where every cheat has a code made of joystick flicks and button taps.
-  // Both are case sensitive: BOT_ exactly, and the admin name exactly as JR_AdmiN_jr.
+  // Case sensitive: BOT_ exactly.
   const BOT_PREFIX = /^BOT_/;
-  const ADMIN_NAME = 'JR_AdmiN_jr';
   const parseName = (raw) => {
     raw = String(raw ?? '').trim();
-    if (raw === ADMIN_NAME) return { bot: false, admin: true, name: 'Admin' };
     const isBot = BOT_PREFIX.test(raw);
     return {
       bot: isBot,
-      admin: false,
       name: isBot ? raw.replace(BOT_PREFIX, '').trim() : raw,
     };
   };
@@ -105,9 +100,6 @@
   let ready = false,
     paused = true,
     landscape = false,
-    admin = false,
-    jrAdmin = false,
-    pendingAdmin = false,
     run = null,
     pendingName = '',
     sceneKey = '',
@@ -167,7 +159,6 @@
     clearInput();
     audio.pause(immediate);
     $('cinematic').querySelector('video')?.pause();
-    $('cinematic').classList.add('motion-paused');
     save();
     reloadWhenSafe();
   }
@@ -176,7 +167,6 @@
   function resume() {
     if (!game.active || game.over || landscape) return;
     paused = false;
-    $('cinematic').classList.remove('motion-paused');
     accumulator = 0;
     lastTime = performance.now();
     audio.resume();
@@ -600,7 +590,7 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${jrAdmin ? '<button class="menu-action admin-entry" data-action="scenes">SCENE SELECT <small>Admin · play any scene →</small></button><button class="menu-action admin-entry" data-action="admin">ADMIN CONTROLS <small>Bosses, waves & cheats →</small></button><button class="menu-action admin-entry" data-action="exitadmin">EXIT ADMIN MODE <small>Restart as a normal player →</small></button>' : ''}${nativeApp || jrAdmin ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
@@ -637,7 +627,7 @@
     showPanel(
       'coffee',
       '',
-      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-joey" src="./player-victory.webp" alt=""><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p>${nativeApp ? `<div class="tip-qty"><button data-tipqty="-1" aria-label="Fewer coffees">−</button><span>HOW MANY? <b id="tipQty">${tipQty}</b></span><button data-tipqty="1" aria-label="More coffees">+</button></div><div class="tip-grid">${tipProducts.map((t) => `<button class="bmc tip" data-tip="${esc(t.identifier)}"><b>${esc(t.title || 'TIP')}</b><span data-tipprice="${esc(t.identifier)}">${esc(tipPrice(t, tipQty))}</span></button>`).join('')}</div>` : `<a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a>`}<button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : skipLabel || 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
+      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-joey" src="./player-victory.webp" alt=""><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.${nativeApp ? ' Tips are optional and unlock nothing in the game.' : ''}</p>${nativeApp ? `<div class="tip-qty"><button data-tipqty="-1" aria-label="Fewer coffees">−</button><span>HOW MANY? <b id="tipQty">${tipQty}</b></span><button data-tipqty="1" aria-label="More coffees">+</button></div><div class="tip-grid">${tipProducts.map((t) => `<button class="bmc tip" data-tip="${esc(t.identifier)}"><b>${esc(t.title || 'TIP')}</b><span data-tipprice="${esc(t.identifier)}">${esc(tipPrice(t, tipQty))}</span></button>`).join('')}</div>` : `<a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a>`}<button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : skipLabel || 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
       { start: true, closable: false },
     );
   }
@@ -645,7 +635,7 @@
     storyReplay = false;
     audio.unlock();
     raw = String(raw ?? '').trim();
-    const { bot: isBot, admin: isAdmin, name } = parseName(raw);
+    const { bot: isBot, name } = parseName(raw);
     if (!scores.validName(name)) {
       toast('Use 2–24 letters, numbers, spaces, dots, dashes or underscores. Keep it friendly.');
       return;
@@ -653,9 +643,6 @@
     write('zs7-name', raw);
     pendingName = name;
     pendingBot = isBot;
-    pendingAdmin = isAdmin;
-    jrAdmin = isAdmin;
-    if (isAdmin) admin = true;
     if (!skipIntro) {
       if (coffeeOn()) showCoffee(() => showStory(name, 0));
       else showStory(name, 0);
@@ -670,8 +657,6 @@
   let storyActive = false,
     storyPreload = null,
     storyWatchdog = null,
-    storyStage = null,
-    storyOnly = false,
     storyLoadToken = 0;
   function showStory(name, index = 0) {
     const token = ++storyLoadToken;
@@ -692,10 +677,6 @@
       audio.resume();
       audio.playMusic('story');
     }
-    // Preferred: the layered opening card (live art, parallax, typed caption). The old film is the fallback.
-    const holder = document.querySelector('#overlay .story-full');
-    if (storyStage) { storyStage.dispose(); storyStage = null; }
-    holder?.querySelector('.ls-story-host')?.remove();
     const playVideo = () => {
       const v = $('storyVideo');
       storyVideo = v;
@@ -726,42 +707,17 @@
         storyPreload.src = `./story-${index + 2}.mp4`;
       }
     };
-    if (false && sceneLayers && holder && sceneLayers.mountStory) {
-      const v0 = $('storyVideo');
-      if (v0) v0.hidden = true;
-      const host = document.createElement('div');
-      host.className = 'ls-story-host';
-      holder.appendChild(host);
-      storyStage = sceneLayers.mountStory(
-        host,
-        index,
-        () => {
-          if (token === storyLoadToken && storyActive && panel === 'story') storyNext();
-        },
-        () => {
-          if (token !== storyLoadToken) return;
-          host.remove();
-          storyStage = null;
-          if (v0) v0.hidden = false;
-          playVideo();
-        },
-      );
-      storyVideo = storyStage;
-      audio.sfx('whoosh', 0.7);
-      return;
-    }
     playVideo();
   }
   function storyNext() {
     if (!storyActive) return;
     haptics.impact('LIGHT', 'ui', 0, true);
-    if (storyStep < 2 && !storyOnly) showStory(pendingName, storyStep + 1);
+    if (storyStep < 2) showStory(pendingName, storyStep + 1);
     else storyEnd();
   }
   function storyEnd() {
     ++storyLoadToken;
     clearInterval(storyWatchdog);
-    if (storyStage) { storyStage.dispose(); storyStage = null; }
     storyActive = false;
     $('fireButton').classList.remove('story-hint');
     const v = $('storyVideo');
@@ -778,11 +734,6 @@
     $('overlay').innerHTML = '';
     if (storyReplay) {
       storyReplay = false;
-      if (jrAdmin) {
-        storyOnly = false;
-        sceneSelect();
-        return;
-      }
       closePanel();
     } else beginRun(pendingName || parseName(read('zs7-name', 'Player')).name || 'Player');
   }
@@ -821,12 +772,10 @@
     clearTimeout(storyTimer);
     write('zs7-story-seen', true);
     bot = pendingBot;
-    jrAdmin = pendingAdmin;
-    if (jrAdmin) admin = true;
-    run = { id: newId(), name, ticket: null, submitted: false, bot, admin: jrAdmin };
+    run = { id: newId(), name, ticket: null, submitted: false, bot };
     if (bot) unlockSecretSkins();
     const thisRun = run;
-    thisRun.ticketPromise = (jrAdmin ? Promise.resolve(null) : scores.begin(name)).then((ticket) => {
+    thisRun.ticketPromise = scores.begin(name).then((ticket) => {
       thisRun.ticket = ticket;
       if (run === thisRun) save();
       return ticket;
@@ -836,7 +785,6 @@
     panel = '';
     sceneKey = '';
     game.start();
-    if (jrAdmin) game.practice = true;
     save();
     armStart();
   }
@@ -946,7 +894,7 @@
     showPanel(
       'help',
       'HOLD THE LINE',
-      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br><strong>STORY SCENES</strong> — tap FIRE to skip a scene.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
@@ -956,96 +904,6 @@
       'TAKE THE HORDE WITH YOU',
       `<img class="start-art" src="./game-banner.webp" alt="Zombie Smash game advertisement"><h3 style="font:900 26px Barlow;color:#ffdc8b;margin:12px 0">SEVEN BOSSES. ONE LAST STAND.</h3><p class="menu-note">Big boss reveals. Explosive weapons. Your next high score.<br>Launch straight from your Home Screen, and play offline once the game has finished downloading.</p>${installed ? '<p class="menu-note">✓ You’re already playing the installed game.</p>' : installPrompt ? '<button class="primary-action" data-action="install-now">INSTALL ZOMBIE SMASH</button>' : '<p class="menu-note"><strong>iPhone / iPad</strong><br>Open this game in Safari. Tap Share, then “Add to Home Screen”.<br><br><strong>Android</strong><br>Open your browser menu and choose “Install app” or “Add to Home screen”.</p>'}<p class="menu-note" id="offlineStatus">${read('zs7-offline-ready', false) ? 'Game download complete · offline play ready.' : 'Keep the game open while its artwork and music download.'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
-  }
-  function adminPanel() {
-    if (!admin) {
-      showPanel(
-        'admin',
-        'ADMIN CODE',
-        `<p class="menu-note">Use your existing admin code to unlock boss selection and practice cheats.</p><form id="adminForm"><label class="name-field">ADMIN CODE<input type="password" name="code" id="adminCode" autocomplete="off" required></label><button class="primary-action">UNLOCK</button></form><p class="menu-note" id="adminStatus"></p>`,
-      );
-      return;
-    }
-    showPanel(
-      'admin',
-      'BOSSES & CHEATS',
-      `<p class="menu-note">Using a cheat or boss jump makes the run practice-only. Practice scores never enter the board.</p><label class="setting">INVINCIBLE <input type="checkbox" data-cheat="invincible" ${game.invincible ? 'checked' : ''}></label><label class="setting">UNLIMITED AMMO <input type="checkbox" data-cheat="infiniteAmmo" ${game.infiniteAmmo ? 'checked' : ''}></label><label class="setting">10 HEARTS (5 RED + 5 GOLD) <input type="checkbox" data-cheat="tenHearts" ${(game.maxLives || 5) > 5 ? 'checked' : ''}></label><button class="secondary-action" data-action="grenades">REFILL GRENADES</button><div style="display:flex;gap:5px">${Object.keys(
-        ZSEngine.GUNS,
-      )
-        .map(
-          (g) =>
-            `<button class="secondary-action" data-gun="${g}" style="font-size:11px">${g.toUpperCase()}</button>`,
-        )
-        .join(
-          '',
-        )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(' ')}</div></div>`).join('')}${jrAdmin ? '<button class="secondary-action" data-action="scenes">SCENE SELECT</button><button class="secondary-action" data-action="exitadmin">EXIT ADMIN MODE</button>' : ''}`,
-    );
-  }
-  // Admin scene select (JR_AdmiN_jr): play the opening cards or any boss scene without playing up to it, fight a
-  // boss straight away or jump to any arena. Previews return here when they finish.
-  // Leave admin mode: forget the admin run and the admin name, then restart the app as a normal player.
-  function exitAdmin() {
-    jrAdmin = false;
-    admin = false;
-    pendingAdmin = false;
-    try {
-      localStorage.removeItem('zs7-run');
-      localStorage.removeItem('zs7-name');
-    } catch {}
-    toast('Leaving admin mode · restarting');
-    setTimeout(() => location.reload(), 350);
-  }
-  function sceneSelect() {
-    const btn = (attrs, label) => `<button class="secondary-action scene-btn" ${attrs}>${label}</button>`;
-    showPanel(
-      'scenes',
-      'SCENE SELECT',
-      `<p class="menu-note">Admin preview. Tap a scene to play it; it comes back here when it ends. Hold or tap FIRE to skip ahead. Fights and wave jumps are practice runs (no scores).</p>` +
-        `<h3 class="skin-group">OPENING</h3><div class="scene-row">${[0, 1, 2].map((i) => btn(`data-story="${i}"`, 'CARD ' + (i + 1))).join('')}${btn('data-story="all"', 'ALL 3')}</div>` +
-        BOSSES.map(
-          (b) =>
-            `<h3 class="skin-group">${esc(b.name)}</h3><div class="scene-row">` +
-            btn(`data-preview-scene="arrival" data-pboss="${b.id}" data-pstage="1"`, 'ENTRANCE') +
-            Array.from({ length: b.stages - 1 }, (_, k) => btn(`data-preview-scene="mutation" data-pboss="${b.id}" data-pstage="${k + 2}"`, 'FORM ' + (k + 2))).join('') +
-            btn(`data-preview-scene="down" data-pboss="${b.id}" data-pstage="${b.stages}"`, 'BOSS DOWN') +
-            btn(`data-preview-scene="loss" data-pboss="${b.id}" data-pstage="1"`, 'JOEY DOWN') +
-            btn(`data-boss="${b.id}" data-stage="1"`, 'FIGHT') +
-            `</div>`,
-        ).join('') +
-        `<h3 class="skin-group">JUMP TO ARENA</h3><div class="scene-row">${MAPS.map((m, i) => btn(`data-jump-wave="${i * 2 + 1}"`, esc(m.name))).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button><button class="secondary-action" data-action="exitadmin">EXIT ADMIN MODE</button>`,
-    );
-  }
-  function storyAbort() {
-    ++storyLoadToken;
-    clearInterval(storyWatchdog);
-    clearTimeout(storyTimer);
-    if (storyStage) { storyStage.dispose(); storyStage = null; }
-    storyActive = false;
-    storyReplay = false;
-    $('overlay').classList.remove('story-mode');
-    $('fireButton')?.classList.remove('story-hint');
-    try { $('storyVideo')?.pause(); } catch {}
-  }
-  function previewScene(kind, id, stage) {
-    storyAbort();
-    if (!practice()) return;
-    game.enemies = [];
-    game.shots = [];
-    game.bullets = [];
-    game.boss = null;
-    game.scene = { kind, bossId: id, stage, startStage: kind === 'arrival' ? stage : undefined, phase: kind === 'arrival' ? 2 : 0, time: 0, duration: kind === 'arrival' ? 2.8 : 4.5, preview: true };
-    sceneKey = '';
-    closePanel();
-  }
-  function practice() {
-    if (!admin) return false;
-    if (!run || !game.active) {
-      run = { id: newId(), name: read('zs7-name', 'Player'), ticket: null };
-      game.reset();
-      game.start();
-    }
-    game.practice = true;
-    return true;
   }
   // Cheat codes. Tokens: L / R = joystick pushed fully left / right (release between), F = FIRE tap, G = GRENADE tap.
   // Codes only work in BOT mode, while playing, with about two seconds at most between taps.
@@ -1160,7 +1018,7 @@
     showPanel(
       'cheats',
       'CHEATS',
-      `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. You will see CHEATS ARMED.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
+      `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. Nothing is shown: cheats are now armed.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
           `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b></div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
       ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
@@ -1317,12 +1175,6 @@
       death: 'loss',
     };
     // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
-    if (type === 'previewDone' && jrAdmin) {
-      sceneKey = '';
-      pause();
-      sceneSelect();
-      return;
-    }
     if (type === 'bossDown') audio.afterBoss = true; // later waves use the recorded wave music, not the orchestral synth
     if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
     else if (audio.synthMode && type === 'death') audio.stinger('defeat');
@@ -1429,32 +1281,11 @@
       if (current() && !paused && !document.hidden) restore();
     });
   }
-  function comicFor(s) {
-    // The warning and Joey's shocked, shaking reaction come first; the illustrated scene starts at the reveal.
-    if(!s?.bossId || (s.kind==='arrival' && s.phase<2)) return null;
-    const suffix=s.kind==='mutation'?'form'+s.stage:s.kind==='down'?'bossdown':s.kind==='loss'?'joeydown':s.startStage>1?'form'+s.startStage:'intro';
-    const file=`comic-${s.bossId}-${suffix}.webp`, im=renderer.images[file];
-    return im?.complete && im.naturalWidth ? file : null;
-  }
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
-    if (layerHandle && (layerHandle.scene !== s || layerHandle.phase !== s?.phase)) {
-      layerHandle.dispose(); layerHandle = null;
-    }
-    if (s) layerHandle?.tick(s.time);
     document.body.classList.toggle('in-scene', !!s);
     if (!s) {
-      // Fade the scene out into the game instead of cutting.
-      if (!box.hidden && box.classList.contains('comic-mode') && !box.classList.contains('leaving')) {
-        box.classList.add('leaving');
-        setTimeout(() => {
-          box.classList.remove('leaving', 'comic-mode');
-          if (!game.scene) cinematic();
-        }, 320);
-        return;
-      }
-      if (box.classList.contains('leaving')) return;
       box.hidden = true;
       sceneKey = '';
       box.classList.remove('clip-mode', 'clip-ready');
@@ -1481,24 +1312,6 @@
     unclipBox(box);
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
-    // Finished comic films win; the layered stage and static plates are only the fallback.
-    const comic = clip ? null : comicFor(s);
-    if(comic && b) {
-      const reaction=s.kind==='arrival' && s.phase===1;
-      const title=reaction?'JOEY ROB':s.kind==='down'?'BOSS DOWN':s.kind==='loss'?'LINE BROKEN':b.name;
-      const line=reaction?b.announce:s.kind==='mutation'?(b.stageLines[s.stage-1]||b.react):s.kind==='down'?b.finalLine:s.kind==='loss'?b.playerLoss:b.tease;
-      const nextIndex=BOSSES.indexOf(b)+1;
-      const detail=s.kind==='down'?(nextIndex<MAPS.length?'NEXT: '+MAPS[nextIndex].name:'INFINITE SURVIVAL UNLOCKED'):s.kind==='mutation'?(s.stage===3?'FINAL MUTATION':'THREAT EVOLVING'):b.title;
-      s.mediaControlled=false; s.duration=reaction?3:Math.max(5.2,line.length*0.035+2);
-      box.classList.add('comic-mode');box.classList.toggle('motion-paused',paused);
-      box.innerHTML=`<div class="comic-layers" aria-hidden="true"><img class="comic-plate comic-l2" src="./${comic}" alt=""><i class="comic-speed"></i></div><span class="sr-only">${esc(b.name)} story scene</span><div class="comic-embers" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="left:${(i*37+11)%96}%;animation-delay:${-(i*0.9)%7}s;animation-duration:${5+(i%4)*1.7}s"></i>`).join('')}</div><div class="comic-atmosphere" aria-hidden="true"></div><div class="comic-heading"><small>${esc(detail)}</small><h2>${esc(title)}</h2></div><div class="comic-dialogue">${esc(line)}${s.kind==='down'?'<br>'+esc(b.victory):''}</div>`;
-      box.onclick = null;
-      if (sceneLayers) {
-        const phase = s.phase;
-        layerHandle = sceneLayers.mount(box, s, () => game.scene === s && s.phase === phase);
-      }
-      return;
-    }
     let content = '';
     if (s.kind === 'arrival'  && s.phase === 0)
       content = '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
@@ -1918,21 +1731,6 @@
     if (e.target.id === 'startForm') {
       if (ready) start($('username').value);
     }
-    if (e.target.id === 'adminForm') {
-      const button = e.target.querySelector('button'),
-        code = $('adminCode').value;
-      $('adminCode').value = '';
-      button.disabled = true;
-      try {
-        admin = (await scores.admin(code)) === true;
-        if (admin) adminPanel();
-        else $('adminStatus').textContent = 'Code not accepted. Try again.';
-      } catch {
-        $('adminStatus').textContent = 'Could not verify the code. Check your connection.';
-      } finally {
-        button.disabled = false;
-      }
-    }
   });
   // Every menu button, skin tile and switch gives a light tap.
   $('overlay').addEventListener('pointerdown', (e) => {
@@ -1951,12 +1749,6 @@
     if (e.target.hasAttribute('data-haptics')) {
       haptics.set(e.target.checked);
       return;
-    }
-    const cheat = e.target.dataset.cheat;
-    if (cheat && admin && practice()) {
-      if (cheat === 'tenHearts') game.setTenHearts(e.target.checked);
-      else game[cheat] = e.target.checked;
-      save();
     }
   });
   $('overlay').addEventListener('click', async (e) => {
@@ -2010,33 +1802,6 @@
       })();
       return;
     }
-    if (button.dataset.previewScene && jrAdmin) {
-      previewScene(button.dataset.previewScene, button.dataset.pboss, Number(button.dataset.pstage) || 1);
-      return;
-    }
-    if (button.dataset.story && jrAdmin) {
-      storyReplay = true;
-      const name = parseName(read('zs7-name', 'Player')).name || 'Player';
-      storyOnly = false;
-      if (button.dataset.story === 'all') showStory(name, 0);
-      else {
-        showStory(name, Number(button.dataset.story));
-        storyOnly = true;
-      }
-      return;
-    }
-    if (button.dataset.jumpWave && jrAdmin) {
-      storyAbort();
-      if (practice()) {
-        game.scene = null;
-        game.boss = null;
-        game.enemies = [];
-        game.prepareWave(Number(button.dataset.jumpWave));
-        sceneKey = '';
-        closePanel();
-      }
-      return;
-    }
     if (button.dataset.vivid) {
       write('zs7-vivid', Number(button.dataset.vivid));
       applyVivid();
@@ -2050,20 +1815,6 @@
         b.classList.toggle('selected', selected);
         b.setAttribute('aria-pressed', selected);
       });
-      return;
-    }
-    if (button.dataset.boss && admin) {
-      storyAbort();
-      practice();
-      game.skipBoss(button.dataset.boss, Number(button.dataset.stage));
-      sceneKey = '';
-      closePanel();
-      save();
-      return;
-    }
-    if (button.dataset.gun && admin) {
-      practice();
-      game.equip(button.dataset.gun);
       return;
     }
     switch (button.dataset.action) {
@@ -2109,15 +1860,6 @@
       case 'install':
         if (!nativeApp) install();
         break;
-      case 'admin':
-        if (!nativeApp || jrAdmin) adminPanel();
-        break;
-      case 'scenes':
-        if (jrAdmin) sceneSelect();
-        break;
-      case 'exitadmin':
-        if (jrAdmin) exitAdmin();
-        break;
       case 'restart':
         showPanel(
           'restart',
@@ -2134,13 +1876,7 @@
         break;
       case 'story':
         storyReplay = true;
-        storyOnly = false;
         showStory(parseName(read('zs7-name', 'Player')).name || 'Player', 0);
-        break;
-      case 'grenades':
-        if (practice()) {
-          game.player.grenades = 9;
-        }
         break;
       case 'continue':
         {

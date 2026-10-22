@@ -4,7 +4,6 @@
     { ENEMIES, GUNS, BARREL, clamp } = ZSEngine;
   const files = [
     ...MAPS.map((m) => m.file),
-    ...BOSSES.flatMap(b => ['intro','form2','bossdown','joeydown',...(b.stages===3?['form3']:[])].map(k => `comic-${b.id}-${k}.webp`)),
     ...Object.values(ENEMIES).map((e) => e.art),
     ...BOSSES.flatMap((b) => b.sprites),
     'player-transparent.webp',
@@ -73,7 +72,7 @@
                 resolve();
               };
               im.onerror = () => {
-                if (!file.startsWith('comic-')) failed.push(file);
+                failed.push(file);
                 progress(++count / list.length);
                 resolve();
               };

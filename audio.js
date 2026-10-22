@@ -1180,12 +1180,7 @@
       } catch {}
     }
     get tracks() {
-      const set = this.settings.set;
-      return set === 'early' && this.tracksEarly
-        ? this.tracksEarly
-        : this.style === 'synth'
-          ? this.tracksSynth
-          : this.tracksReal;
+      return this.style === 'synth' ? this.tracksSynth : this.tracksReal;
     }
     // Loudness matching: each set and track is lifted to the loudness of the recorded music, measured in
     // LUFS (target about -19 for the wave music, -17 for boss tracks, -18 for the stingers).
@@ -1243,11 +1238,6 @@
           this.synth = new Synth(this.ctx);
           this.tracksSynth = makeTracks(this.synth);
           this.tracksReal = makeTracks(this.synth, true);
-          try {
-            // The first synthesized music set (7.11) keeps its own wave, boss, disco and entrance tracks.
-            const old = window.ZSAudioEarly?.internals.makeTracks(this.synth);
-            if (old) this.tracksEarly = { ...this.tracksSynth, ...old };
-          } catch {}
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
             for (const name of FILES) this.buffer('sfx-' + name + '.mp3');

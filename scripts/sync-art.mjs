@@ -1,4 +1,3 @@
-import { sceneLayerAssets } from './scene-layer-assets.mjs';
 import { fileURLToPath } from 'node:url';
 // Finds finished scene clips and extra console skins in the project folder and wires them into the game.
 //   - scene-<boss>-<scene>.mp4   -> scene-clips.json   (scene = intro, form2, form3, bossdown, joeydown)
@@ -10,7 +9,6 @@ import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const files = new Set(readdirSync(root));
-const layerAssets = sceneLayerAssets(root);
 const BOSSES = [
   'jordan',
   'glowinghumanity',
@@ -57,8 +55,7 @@ writeFileSync(join(root, 'skins-extra.json'), JSON.stringify({ skins }, null, 2)
 const swPath = join(root, 'sw.js');
 let sw = readFileSync(swPath, 'utf8');
 const wanted = [
-  ...layerAssets,
-  ...[...files].filter(f => /^(comic-|arena-).+\.webp$/.test(f)).map(f => './'+f),
+  ...[...files].filter(f => /^arena-.+\.webp$/.test(f)).map(f => './'+f),
   './scene-clips.json',
   './skins-extra.json',
   ...Object.values(clips).map((f) => './' + f),

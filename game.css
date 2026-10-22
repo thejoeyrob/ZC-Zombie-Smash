@@ -1979,17 +1979,6 @@ body {
   color: #9eb0a3;
   margin: 2px 0 6px;
 }
-.cheat-state {
-  font: 900 10px Inter;
-  padding: 2px 6px;
-  border-radius: 2px;
-  background: #2c3731;
-  color: #93a597;
-}
-.cheat-state.on {
-  background: #6fe06a;
-  color: #07210a;
-}
 .cheat-code {
   display: flex;
   flex-wrap: wrap;
@@ -2785,32 +2774,9 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 .title-ui {z-index:4;}
 .titleFx,.title-fx {display:none;}
 .title-logo {animation:none;filter:drop-shadow(0 3px 3px #000);}
-#cinematic.comic-mode {display:block;padding:0;overflow:hidden;background:#111d19;isolation:isolate;}
-.comic-plate {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;}
-.comic-heading {position:absolute;top:0;left:0;right:0;padding:16px 15px 28px;background:linear-gradient(#071014ed,#07101400);color:#fff;text-shadow:0 2px 3px #000;}
-.comic-heading small {font:700 12px Inter,sans-serif;letter-spacing:1.5px;color:#ffe9b6;}
-.comic-heading h2 {font:900 32px/1 Barlow,sans-serif;margin:6px 0;}
-.comic-dialogue {position:absolute;bottom:70px;left:14px;right:14px;padding:12px 14px;border:2px solid var(--scene-color);background:#10201af0;color:#fff7dc;font:700 17px/1.25 Barlow,sans-serif;box-shadow:3px 4px 0 #0008;}
-#cinematic.comic-mode .scene-next {position:absolute;top:auto;bottom:12px;right:14px;width:auto;min-width:130px;min-height:44px;margin:0;padding:9px 16px;z-index:5;}
-@media (prefers-reduced-motion:reduce) {.comic-plate {animation:none;}}
 
 /* Gentle movement preserves the original illustration and avoids body warping. */
-.comic-plate {left:-2%;right:auto;width:104%;animation:comic-drift 9s ease-in-out infinite alternate;}
-.comic-atmosphere {position:absolute;inset:-10%;pointer-events:none;opacity:.35;mix-blend-mode:screen;background:radial-gradient(ellipse at 18% 70%,var(--scene-color),transparent 24%),radial-gradient(circle at 85% 30%,var(--scene-color),transparent 18%);animation:comic-atmosphere 6s ease-in-out infinite alternate;}
-.motion-paused .comic-plate,.motion-paused .comic-atmosphere {animation-play-state:paused;}
-@keyframes comic-drift {from{transform:translateX(-1%)}to{transform:translateX(1%)}}
-@keyframes comic-atmosphere {from{transform:translateY(2%);opacity:.12}to{transform:translateY(-2%);opacity:.3}}
-@media (prefers-reduced-motion:reduce) {.comic-plate,.comic-atmosphere {animation:none;transform:none;}.comic-atmosphere{opacity:.15;}}
 
-/* 7.24.2: scenes move on by themselves; stronger, slower camera movement on the illustrated plates. */
-@keyframes comic-drift {
-  from { transform: translate(-2.6%, 1.2%) scale(1.04); }
-  to { transform: translate(2.6%, -1.2%) scale(1.14); }
-}
-.comic-plate { animation: comic-drift 10s ease-in-out infinite alternate; transform-origin: 50% 45%; }
-.comic-atmosphere { opacity: 0.32; }
-#cinematic.comic-mode { animation: comic-in 0.45s ease-out both; }
-@keyframes comic-in { from { opacity: 0; } to { opacity: 1; } }
 /* Joey's shocked reaction trembles. */
 @keyframes joey-tremble {
   0%, 100% { transform: translate(0, 0) rotate(0); }
@@ -2821,30 +2787,14 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
   80% { transform: translate(-3px, 1px) rotate(-1deg); }
 }
 .scene-name + .scene-figures .scene-art.joey { animation: reveal 0.4s ease-out both, joey-tremble 0.28s linear 0.4s infinite; }
-@media (prefers-reduced-motion: reduce) { .comic-plate, .scene-name + .scene-figures .scene-art.joey { animation: none; } }
-#cinematic.leaving { animation: comic-out 0.32s ease-in both; }
-@keyframes comic-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {  .scene-name + .scene-figures .scene-art.joey { animation: none; } }
 
 /* 7.25.0: one line per skin name so every tile lines up. */
 .skin-choice b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; height: 1.2em; margin: 7px 0 4px; }
 
 /* 7.25.0: boss scenes are built from three depth layers that drift at different speeds:
    a soft, slow background, the sharp middle ground, and a fast foreground edge with drifting embers. */
-.comic-layers { position: absolute; inset: 0; overflow: hidden; }
-.comic-layers .comic-plate { animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate; }
-.comic-l1 { filter: blur(2.5px) brightness(0.8) saturate(1.1); animation-name: comic-deep; animation-duration: 12s; }
-.comic-l2 { -webkit-mask-image: radial-gradient(ellipse 78% 70% at 50% 50%, #000 52%, transparent 100%); mask-image: radial-gradient(ellipse 78% 70% at 50% 50%, #000 52%, transparent 100%); animation-name: comic-mid; animation-duration: 9s; }
-.comic-l3 { -webkit-mask-image: linear-gradient(to top, #000 0, #000 16%, transparent 38%), linear-gradient(to right, #000 0, transparent 14%, transparent 86%, #000 100%); -webkit-mask-composite: source-over; mask-image: linear-gradient(to top, #000 0, #000 16%, transparent 38%), linear-gradient(to right, #000 0, transparent 14%, transparent 86%, #000 100%); animation-name: comic-near; animation-duration: 7s; }
-@keyframes comic-deep { from { transform: translate(2.5%, -0.8%) scale(1.22); } to { transform: translate(-2.5%, 0.8%) scale(1.14); } }
-@keyframes comic-mid { from { transform: translate(-1.8%, 1%) scale(1.07); } to { transform: translate(1.8%, -1%) scale(1.13); } }
-@keyframes comic-near { from { transform: translate(-4%, 2%) scale(1.16); } to { transform: translate(4%, -2%) scale(1.28); } }
-.comic-embers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.comic-embers i { position: absolute; bottom: -6px; width: 4px; height: 4px; border-radius: 50%; background: var(--scene-color, #ffb347); box-shadow: 0 0 8px var(--scene-color, #ffb347); opacity: 0; animation: ember-rise linear infinite; }
-@keyframes ember-rise { 0% { transform: translate(0, 0) scale(1); opacity: 0; } 12% { opacity: 0.9; } 100% { transform: translate(24px, -560px) scale(0.3); opacity: 0; } }
-.motion-paused .comic-layers .comic-plate, .motion-paused .comic-embers i { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) { .comic-layers .comic-plate, .comic-embers i { animation: none; } .comic-embers { display: none; } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
 
 /* 7.26.0: the eight illustrated skins (body.deck3d) get purpose-built 3D controls. The tap areas stay flat and
    full-size; only the artwork inside them is drawn in perspective, so response is unchanged. The flat skins keep the
@@ -3034,42 +2984,6 @@ body.deck3d .map-tag { display: block; }
 /* Screen vibrance: the game screen is brightened and made more colourful (Menu > Music & Sound > Screen). */
 #gameCanvas { filter: var(--vivid, saturate(1.2) brightness(1.1) contrast(1.06)); }
 
-/* 7.33.0: boss scenes are comic-book panels: a smaller framed picture with thick borders and caption boxes,
-   so the top of the art is no longer cropped. */
-#cinematic.comic-mode {
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--scene-color, #b45139) 40%, #120a0a) 0, #0b0709 100%);
-}
-#cinematic.comic-mode::before {
-  content: ''; position: absolute; inset: 0; z-index: 0; opacity: 0.35;
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--scene-color, #b45139) 70%, #fff) 1.3px, transparent 1.7px);
-  background-size: 9px 9px; animation: halftone-drift 14s linear infinite;
-}
-@keyframes halftone-drift { to { background-position: 18px 18px; } }
-#cinematic.comic-mode .comic-layers {
-  inset: auto; left: 13%; right: 13%; top: 12%; bottom: 31%; z-index: 1;
-  border: 5px solid #fdf6e3; outline: 4px solid #0a0a0a; border-radius: 3px; transform: rotate(-1.4deg);
-  box-shadow: 7px 8px 0 #000000cc, 0 0 24px color-mix(in srgb, var(--scene-color, #b45139) 55%, transparent);
-  background: #000;
-}
-#cinematic.comic-mode .comic-plate { object-position: 50% 10%; transform-origin: 50% 20%; }
-#cinematic.comic-mode .comic-embers { z-index: 2; }
-#cinematic.comic-mode .comic-atmosphere { z-index: 2; }
-#cinematic.comic-mode .comic-heading {
-  inset: 3.5% auto auto 6%; z-index: 4; padding: 5px 12px 6px; max-width: 78%;
-  background: #ffd91f; color: #0a0a0a; text-shadow: none; border: 3px solid #0a0a0a; transform: rotate(-2.5deg); box-shadow: 4px 4px 0 #000;
-}
-#cinematic.comic-mode .comic-heading small { font: 800 9px Inter, sans-serif; letter-spacing: 0.14em; color: #3a2a00; }
-#cinematic.comic-mode .comic-heading h2 { font: 900 24px/1 Barlow, sans-serif; margin: 2px 0 0; text-transform: uppercase; }
-#cinematic.comic-mode .comic-dialogue {
-  left: 7%; right: 7%; bottom: 4%; z-index: 4; padding: 10px 14px; color: #0a0a0a; background: #fff8e6; border: 3px solid #0a0a0a;
-  border-radius: 12px; font: 800 15px/1.25 Barlow, sans-serif; box-shadow: 5px 5px 0 #000; transform: rotate(0.6deg);
-}
-#cinematic.comic-mode .comic-dialogue::before {
-  content: ''; position: absolute; left: 24px; top: -15px; width: 20px; height: 20px; background: #fff8e6;
-  border-left: 3px solid #0a0a0a; border-top: 3px solid #0a0a0a; transform: rotate(45deg); border-radius: 3px 0 0 0;
-}
-@media (prefers-reduced-motion: reduce) { #cinematic.comic-mode::before { animation: none; } }
-
 /* The screen glass carries a slow sheen across the whole display. */
 .screen-glass::after {
   content: ''; position: absolute; inset: 0; border-radius: 4px; overflow: hidden; pointer-events: none;
@@ -3095,29 +3009,6 @@ body.deck3d .map-tag { display: block; }
 /* Smooth boss scenes: no blur, masks or blend modes. One big framed panel that slides in, with a clearly visible
    pan and zoom on the picture. The game canvas drops its colour filter while a scene is showing. */
 body.in-scene #gameCanvas { filter: none; }
-#cinematic.comic-mode::before { animation: none; opacity: 0.28; }
-#cinematic.comic-mode .comic-layers {
-  left: -3%; right: -3%; top: 8%; bottom: 25%; border-width: 6px; outline-width: 4px; transform: rotate(-1.6deg);
-  animation: panel-slide 0.55s cubic-bezier(0.2, 0.9, 0.25, 1) both;
-}
-@keyframes panel-slide { from { transform: translateX(-115%) rotate(-6deg); } to { transform: translateX(0) rotate(-1.6deg); } }
-#cinematic.comic-mode .comic-l1, #cinematic.comic-mode .comic-l3 { display: none; }
-#cinematic.comic-mode .comic-l2 {
-  -webkit-mask-image: none; mask-image: none; filter: none; left: 0; width: 100%; object-position: 50% 8%;
-  transform-origin: 50% 25%; will-change: transform; animation: comic-pan 7s ease-in-out infinite alternate;
-}
-@keyframes comic-pan { from { transform: translate3d(-5%, 3%, 0) scale(1.24); } to { transform: translate3d(5%, -3%, 0) scale(1.1); } }
-.comic-speed { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0.22;
-  background: repeating-conic-gradient(from 0deg at 50% 45%, #ffffff00 0 5deg, #ffffffcc 5.5deg 6.5deg, #ffffff00 7deg 12deg);
-  -webkit-mask-image: radial-gradient(circle at 50% 45%, transparent 38%, #000 90%); mask-image: radial-gradient(circle at 50% 45%, transparent 38%, #000 90%);
-  animation: speed-pulse 1.4s ease-in-out infinite alternate; }
-@keyframes speed-pulse { from { opacity: 0.1; transform: scale(1); } to { opacity: 0.3; transform: scale(1.06); } }
-#cinematic.comic-mode .comic-atmosphere { mix-blend-mode: normal; opacity: 0.18; animation: none; }
-#cinematic.comic-mode .comic-embers i { box-shadow: none; width: 5px; height: 5px; }
-#cinematic.comic-mode .comic-heading { animation: caption-pop 0.5s 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
-#cinematic.comic-mode .comic-dialogue { animation: caption-pop 0.5s 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
-@keyframes caption-pop { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
-@media (prefers-reduced-motion: reduce) { #cinematic.comic-mode .comic-l2, .comic-speed, #cinematic.comic-mode .comic-layers { animation: none; } }
 
 /* 7.33.3: the logo's own sweep is removed; one sweep crosses the whole Home Screen, over the artwork and the title. */
 .title-logo:after { display: none; }
@@ -3130,49 +3021,13 @@ body.in-scene #gameCanvas { filter: none; }
 @media (prefers-reduced-motion: reduce) { .title-screen .title-shine:after { animation: none; opacity: 0; } }
 
 /* Preserve the authoritative cabinet and comic window geometry. */
-#cinematic.comic-mode.layer-mode .comic-layers{animation:none!important;}
-#cinematic.layer-mode .layer-canvas{display:block;width:100%;height:100%;}
-#cinematic.layer-mode .comic-embers,#cinematic.layer-mode .comic-atmosphere{display:none;}
-#cinematic.layer-mode .comic-dialogue{min-height:2.6em;}
-@media(prefers-reduced-motion:reduce){#cinematic.layer-mode .comic-heading,#cinematic.layer-mode .comic-dialogue{animation:none!important;}}
 
 /* 7.34.1 layered scenes: the stage fills the whole game window (no tilted, cropped frame). */
-#cinematic.layer-mode .comic-layers {
-  position: absolute; inset: 0; left: 0; right: 0; top: 0; bottom: 0; border: 0; outline: 0; border-radius: 0;
-  transform: none; box-shadow: none; animation: none !important; overflow: hidden; background: #000;
-}
-.ls-stage { position: absolute; inset: 0; overflow: hidden; contain: strict; }
-.ls-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; will-change: transform; user-select: none; pointer-events: none; }
-.ls-wipe { position: absolute; top: -10%; bottom: -10%; left: -30%; width: 60%; z-index: 3; pointer-events: none; opacity: 0;
-  background: linear-gradient(90deg, #fff0, #fff 30%, #fff 70%, #fff0); will-change: transform; }
 /* Comic frame over the art: ink border, paper edge, halftone corners. */
-#cinematic.layer-mode::after {
-  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
-  box-shadow: inset 0 0 0 3px #0a0a0a, inset 0 0 0 5px #fdf6e3, inset 0 0 0 8px #0a0a0a, inset 0 0 40px #000000a0;
-}
-#cinematic.layer-mode::before { display: none; }
-#cinematic.layer-mode .comic-speed { display: none; }
-#cinematic.layer-mode .comic-heading { inset: 14px auto auto 12px; max-width: 78%; z-index: 4; }
-#cinematic.layer-mode .comic-dialogue { left: 14px; right: 14px; bottom: 16px; z-index: 4; min-height: 0; }
-#cinematic.layer-mode .comic-dialogue.ls-quiet { opacity: 0; }
 
 /* Opening story cards. */
-.ls-story-host { position: absolute; inset: 0; background: #000; }
-.ls-story { overflow: hidden; }
-.ls-story-stage { position: absolute; inset: 0; overflow: hidden; }
-.ls-story-host::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
-  box-shadow: inset 0 0 0 3px #0a0a0a, inset 0 0 0 5px #fdf6e3, inset 0 0 0 8px #0a0a0a, inset 0 -140px 90px -60px #000000d0; }
-.ls-story-title { position: absolute; left: 12px; top: 16px; max-width: 80%; z-index: 4; padding: 5px 12px 6px; background: #ffd91f; color: #0a0a0a;
-  border: 3px solid #0a0a0a; box-shadow: 4px 4px 0 #000; transform: rotate(-2deg); font: 900 18px/1.1 Barlow, sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
-.ls-story-caption { position: absolute; left: 14px; right: 14px; bottom: 18px; z-index: 4; min-height: 3.4em; padding: 10px 13px; color: #0a0a0a; background: #fff8e6;
-  border: 3px solid #0a0a0a; border-radius: 12px; box-shadow: 5px 5px 0 #000; font: 800 14px/1.28 Barlow, sans-serif; }
-.ls-story-count { position: absolute; right: 14px; top: 14px; z-index: 4; padding: 2px 8px; border-radius: 10px; background: #000000b0; color: #fff; font: 800 10px Inter, sans-serif; letter-spacing: 0.12em; }
-@media (prefers-reduced-motion: reduce) { .ls-wipe { display: none; } }
 
 /* Admin scene select. */
-.scene-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
-.scene-row .scene-btn { flex: 1 1 30%; width: auto; min-width: 0; margin: 0; padding: 9px 6px; font-size: 12px; letter-spacing: 0.06em; }
-.menu-action.admin-entry { color: #ffd91f; }
 
 /* 7.36 finished comic films */
 /* Opt-in media styling only. Load AFTER game.css once all new films are installed.

@@ -213,18 +213,9 @@
       } catch (error) {
         const reason = this.describe(error);
         this.lastError = reason;
-        let rows = read('zs7-board', null);
-        if (!rows)
-          try {
-            rows = await (await fetch('./legacy-board.json')).json();
-          } catch {
-            rows = [];
-          }
+        const rows = read('zs7-board', null) || [];
         return { rows, online: false, error: reason };
       }
-    }
-    async admin(code) {
-      return this.rpc('zs7_admin', { p_device: this.device, p_code: code });
     }
   }
   window.ZSScores = Scores;
