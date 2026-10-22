@@ -1081,6 +1081,7 @@
     alarm: 0.9,
     doom: 0.7,
   };
+  const ARCADE_SFX = new Set(['pistol', 'hit', 'pickup', 'boost', 'victory', 'loss', 'whoosh']);
   const FILES = [
     'pistol',
     'smg',
@@ -1240,27 +1241,39 @@
           this.tracksReal = makeTracks(this.synth, true);
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
-            for (const name of FILES) this.buffer('sfx-' + name + '.mp3');
+            for (const name of FILES) this.buffer(this.sfxFile(name));
         }
         if (this.ctx.state !== 'running') await this.ctx.resume();
         if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
       } catch {}
     }
+    // ARCADE swaps in a few new recordings; everything else (and all of ORIGINAL) uses the original files.
+    sfxFile(name) {
+      const base = name === 'doom' ? 'boss-attack' : name;
+      return this.settings.set === 'arcade' && ARCADE_SFX.has(base) ? 'arcade-' + base + '.mp3' : 'sfx-' + base + '.mp3';
+    }
+    musicFile(track) {
+      const t = track === 'story' ? 'entrance' : track;
+      return this.settings.set === 'arcade' && t === 'main' ? 'arcade-main.mp3' : 'music-' + t + '.mp3';
+    }
     async buffer(file) {
       if (this.buffers.has(file)) return this.buffers.get(file);
       if (this.loading.has(file)) return this.loading.get(file);
+      const context = this.ctx;
+      const loading = this.loading;
       const task = fetch('./' + file)
         .then((r) => {
           if (!r.ok) throw Error(file);
           return r.arrayBuffer();
         })
-        .then((b) => this.ctx.decodeAudioData(b))
+        .then((b) => context.decodeAudioData(b))
         .then((b) => {
+          if (this.ctx !== context) return null;
           this.buffers.set(file, b);
           return b;
         })
         .catch(() => null)
-        .finally(() => this.loading.delete(file));
+        .finally(() => loading.delete(file));
       this.loading.set(file, task);
       return task;
     }
@@ -1339,7 +1352,7 @@
       }
       const epoch = this.musicEpoch;
       const buffer = await this.buffer(
-        'music-' + (track === 'story' ? 'entrance' : track) + '.mp3',
+        this.musicFile(track),
       );
       if (epoch !== this.musicEpoch) {
         if (this.track === track && !this.music && !this.seq) this.track = null;
@@ -1464,7 +1477,7 @@
       if (t - (this.last['f' + name] || 0) < 60) return;
       this.last['f' + name] = t;
       try {
-        const el = new Audio('./sfx-' + (name === 'doom' ? 'boss-attack' : name) + '.mp3');
+        const el = new Audio('./' + this.sfxFile(name));
         el.volume = Math.min(1, volume * this.settings.effects);
         el.play().catch(() => {});
       } catch {}
@@ -1497,7 +1510,8 @@
         return;
       }
       const epoch = this.fxEpoch;
-      const buffer = await this.buffer('sfx-' + (name === 'doom' ? 'boss-attack' : name) + '.mp3');
+      const buffer = await this.buffer(this.sfxFile(name));
+      if (this.paused || epoch !== this.fxEpoch) return;
       if (!buffer) return this.fallbackSfx(name, volume);
       if (this.paused || epoch !== this.fxEpoch || this.voices >= 22 || performance.now() - time > 450)
         return;
@@ -1546,7 +1560,7 @@
       this.save();
       if (!this.ctx) return;
       if (!this.synthMode || this.settings.set === 'arcade')
-        for (const n of FILES) this.buffer('sfx-' + n + '.mp3');
+        for (const n of FILES) this.buffer(this.sfxFile(n));
       this.wet.gain.setTargetAtTime(this.style === 'synth' ? 0 : 0.18, this.ctx.currentTime, 0.05);
       if (this.track && !this.holdTrack) {
         this.stopMusic(0.15);
@@ -1563,9 +1577,15 @@
     }
     // Throw the audio context away and make a fresh one (inside a real touch it starts running at once).
     rebuild() {
+      // Invalidate pending work owned by the context being replaced.
+      this.fxEpoch++;
+      this.musicEpoch++;
+      this.loading = new Map();
+      this.cancelStinger(0);
+      clearTimeout(this.muteTimer);
       try {
         clearInterval(this.seq?.timer);
-        this.music?.stop?.();
+        this.music?.source?.stop?.();
       } catch {}
       try {
         this.ctx?.close();

@@ -887,7 +887,7 @@
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">ARCADE has the cinematic score and punchy weapon effects. ORIGINAL is the first dry mix. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><div class="setting"><span>SCREEN</span><span class="segmented">${['STANDARD','VIVID','EXTRA'].map((n,i)=>`<button data-vivid="${i}" aria-pressed="${vv===i}" class="${vv===i?'on':''}">${n}</button>`).join('')}</span></div><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">ARCADE has a new 132 BPM arcade tune with fresh pickup, combo, boss, shot and hit sounds. ORIGINAL is the first mix. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><div class="setting"><span>SCREEN</span><span class="segmented">${['STANDARD','VIVID','EXTRA'].map((n,i)=>`<button data-vivid="${i}" aria-pressed="${vv===i}" class="${vv===i?'on':''}">${n}</button>`).join('')}</span></div><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
@@ -1194,7 +1194,7 @@
     if (!s.bossId || (s.kind === 'arrival' && s.phase < 2)) return null;
     const name =
         s.kind === 'arrival'
-          ? 'intro'
+          ? ((s.startStage || 1) > 1 ? 'form' + s.startStage : 'intro')
           : s.kind === 'mutation'
             ? 'form' + s.stage
             : s.kind === 'down'
