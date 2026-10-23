@@ -2,7 +2,7 @@
 
 Zombie Smash is a single-player portrait arcade shooter. No account or login is needed.
 
-How to play: type any player name, tap PRESS START, watch or skip the short opening story (tap FIRE to skip). Slide the joystick to move, hold FIRE to shoot, tap the grenade button to throw a grenade. A boss arrives every second wave; each boss has short illustrated story scenes (tap FIRE to skip).
+How to play: type any player name, tap PRESS START, watch or skip the short opening story (tap FIRE to bring in the next panel and move on). Slide the joystick to move, hold FIRE to shoot, tap the grenade button to throw a grenade. A boss arrives every second wave; each boss has short illustrated story scenes (tap FIRE to bring in the next panel and move on).
 
 Online leaderboard: when a run ends, the player name and score are sent to our leaderboard (Supabase). No personal data is collected; the name is whatever the player types. Menu → HIGH SCORES shows the board.
 

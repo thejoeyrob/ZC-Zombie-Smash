@@ -57,6 +57,7 @@ let sw = readFileSync(swPath, 'utf8');
 const wanted = [
   ...[...files].filter(f => /^arena-.+\.webp$/.test(f)).map(f => './'+f),
   './scene-clips.json',
+  './scene-beats.json',
   './skins-extra.json',
   ...Object.values(clips).map((f) => './' + f),
   ...skins.map((s) => './' + s.file),
@@ -66,7 +67,7 @@ const lines = sw.split('\n').filter((l) => {
   return !(
     m &&
     (m[1].startsWith('scene-layers/') || m[1].startsWith('opening-layers/') || /^scene-.+\.mp4$/.test(m[1]) || /^(comic-|arena-).+\.webp$/.test(m[1]) || /^icon-opt-/.test(m[1]) ||
-      /^(scene-clips|skins-extra)\.json$/.test(m[1]) ||
+      /^(scene-clips|scene-beats|skins-extra)\.json$/.test(m[1]) ||
       skins.some((s) => s.file === m[1]))
   );
 });

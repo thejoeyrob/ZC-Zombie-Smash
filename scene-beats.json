@@ -1,0 +1,136 @@
+{
+ "beats": {
+  "glowinghumanity-bossdown": [
+   1.38,
+   4.23
+  ],
+  "glowinghumanity-form2": [
+   1.38,
+   3.69
+  ],
+  "glowinghumanity-intro": [
+   1.38,
+   3.69
+  ],
+  "glowinghumanity-joeydown": [
+   1.38,
+   3.69
+  ],
+  "jordan-bossdown": [
+   1.38,
+   3.72
+  ],
+  "jordan-form2": [
+   1.38,
+   3.69
+  ],
+  "jordan-intro": [
+   1.38,
+   3.69
+  ],
+  "jordan-joeydown": [
+   1.38,
+   3.69
+  ],
+  "caffeinatedsloth-bossdown": [
+   1.38,
+   3.69
+  ],
+  "caffeinatedsloth-form2": [
+   1.38,
+   4.23
+  ],
+  "caffeinatedsloth-intro": [
+   1.38,
+   3.69
+  ],
+  "caffeinatedsloth-joeydown": [
+   1.38,
+   3.69
+  ],
+  "debo-bossdown": [
+   1.38,
+   3.69
+  ],
+  "debo-form2": [
+   1.38,
+   3.69
+  ],
+  "debo-intro": [
+   1.38,
+   3.69
+  ],
+  "debo-joeydown": [
+   1.38,
+   3.69
+  ],
+  "discoman-bossdown": [
+   1.38,
+   3.69
+  ],
+  "discoman-form2": [
+   1.38,
+   3.97
+  ],
+  "discoman-intro": [
+   1.38,
+   3.72
+  ],
+  "discoman-joeydown": [
+   1.38,
+   3.69
+  ],
+  "fatamy-bossdown": [
+   1.38,
+   3.72
+  ],
+  "fatamy-form2": [
+   1.38,
+   3.72
+  ],
+  "fatamy-form3": [
+   1.38,
+   3.72
+  ],
+  "fatamy-intro": [
+   1.38,
+   3.69
+  ],
+  "fatamy-joeydown": [
+   1.38,
+   3.69
+  ],
+  "drmantis-bossdown": [
+   1.38,
+   3.72
+  ],
+  "drmantis-form2": [
+   1.38,
+   4.23
+  ],
+  "drmantis-form3": [
+   1.38,
+   4.23
+  ],
+  "drmantis-intro": [
+   1.38,
+   3.69
+  ],
+  "drmantis-joeydown": [
+   1.38,
+   3.69
+  ],
+  "story-1": [
+   1.38,
+   4.23
+  ],
+  "story-2": [
+   1.38,
+   5.26
+  ],
+  "story-3": [
+   1.38,
+   6.54
+  ]
+ }
+}

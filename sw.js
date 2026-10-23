@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.38.5';
+const CACHE = 'zombie-smash-v7.39.0';
 const ASSETS = [
   './console-toxic-pop.webp',
   './console-disco-fever.webp',
@@ -114,6 +114,7 @@ const ASSETS = [
   './arena-glowinghumanity.webp',
   './arena-jordan.webp',
   './scene-clips.json',
+  './scene-beats.json',
   './skins-extra.json',
   './scene-jordan-intro.mp4',
   './scene-jordan-form2.mp4',

@@ -1359,12 +1359,12 @@
         if (this.track === track && !this.music && !this.seq) this.track = null;
         return;
       }
-      // The file could not be decoded as a buffer: stream it through an audio element instead.
-      if (!buffer && this.wantTrack === track && !this.paused && track === 'debo') {
+      // The file could not be decoded as a buffer: stream it through an audio element instead (any track).
+      if (!buffer && this.wantTrack === track && !this.paused) {
         try {
           this.stopMusic();
-          const el = new Audio('./music-debo.mp3');
-          el.loop = true;
+          const el = new Audio('./' + this.musicFile(track));
+          el.loop = track !== 'entrance';
           el.setAttribute('playsinline', '');
           const src = this.ctx.createMediaElementSource(el),
             gain = this.ctx.createGain();

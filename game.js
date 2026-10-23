@@ -50,6 +50,29 @@
       sceneClips = j.clips || {};
     })
     .catch(() => {});
+  // Each film's panel entry times (seconds). FIRE jumps to the next panel instead of skipping the whole scene.
+  let sceneBeats = {};
+  fetch('./scene-beats.json')
+    .then((r) => r.json())
+    .then((j) => {
+      sceneBeats = j.beats || {};
+    })
+    .catch(() => {});
+  // Seek a playing film to its next panel; false when every panel has already been shown.
+  function beatNext(video, key) {
+    const list = sceneBeats[key];
+    if (!video || !list || !Number.isFinite(video.currentTime)) return false;
+    const next = list.find((t) => t > video.currentTime + 0.25);
+    if (next === undefined) return false;
+    video.currentTime = next;
+    video.play?.()?.catch?.(() => {});
+    return true;
+  }
+  function sceneAdvance() {
+    const v = document.querySelector('#cinematic video.scene-clip');
+    if (v && beatNext(v, v.dataset.key)) return;
+    game.advanceScene();
+  }
   let pendingReload = false;
   function reloadWhenSafe() {
     if (!pendingReload || (typeof game !== 'undefined' && game.active && !paused)) return;
@@ -709,6 +732,14 @@
     };
     playVideo();
   }
+  // A FIRE press brings in the next close-up panel first; once both are shown it moves to the next part of the story.
+  function storySkip() {
+    if (storyActive && beatNext(storyVideo, 'story-' + (storyStep + 1))) {
+      haptics.impact('LIGHT', 'ui', 0, true);
+      return;
+    }
+    storyNext();
+  }
   function storyNext() {
     if (!storyActive) return;
     haptics.impact('LIGHT', 'ui', 0, true);
@@ -761,7 +792,7 @@
         any = !!pad && pad.buttons.some((b) => b.pressed);
       if (any && !padHeld) {
         if (storyActive) {
-          if (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed) storyNext();
+          if (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed) storySkip();
         } else if (awaitStart) startNow();
       }
       padHeld = any;
@@ -894,7 +925,7 @@
     showPanel(
       'help',
       'HOLD THE LINE',
-      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br><strong>STORY SCENES</strong> — tap FIRE to skip a scene.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br><strong>STORY SCENES</strong> — tap FIRE to bring in the next panel; tap again to move on.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
@@ -1238,6 +1269,7 @@
       sceneKey = '';
     };
     v.className = 'scene-clip';
+    v.dataset.key = file.replace(/^scene-|\.mp4$/g, '');
     v.muted = true;
     v.playsInline = true;
     v.setAttribute('playsinline', '');
@@ -1330,7 +1362,7 @@
       content +
       '';
     box.onclick = (e) => {
-      if (!paused && e.target.closest('.scene-next')) game.advanceScene();
+      if (!paused && e.target.closest('.scene-next')) sceneAdvance();
     };
     if (clip) mountSceneClip(box, s, clip);
   }
@@ -1436,8 +1468,6 @@
     } catch {}
     if (stickId !== null && performance.now() < flickUntil && Math.sign(axis) !== -flickDir)
       axis = flickDir;
-    // Holding FIRE a couple of seconds into a boss scene skips to the next part.
-    if (fire && game.scene?.bossId && !paused && game.scene.time >= 2) game.advanceScene();
     padGrenade = grenade;
     trackStick(axis);
     game.setInput(axis, fire);
@@ -1558,24 +1588,48 @@
     audio.unlock();
   });
   stick.addEventListener('pointermove', moveStick);
+  function releaseStick() {
+    stickId = null;
+    stickOrigin = null;
+    flickUntil = 0;
+    touchAxis = 0;
+    stickVal = 0;
+    $('stickKnob').style.transform = 'translateX(0)';
+    stick.style.setProperty('--lean', '0');
+    stick.setAttribute('aria-valuenow', '0');
+  }
+  function releaseFire() {
+    touchFire = false;
+    fireId = null;
+    $('fireButton').classList.remove('pressed');
+  }
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
     stick.addEventListener(type, (e) => {
-      if (e.pointerId === stickId) {
-        stickId = null;
-        stickOrigin = null;
-        flickUntil = 0;
-        touchAxis = 0;
-        stickVal = 0;
-        $('stickKnob').style.transform = 'translateX(0)';
-        stick.style.setProperty('--lean', '0');
-        stick.setAttribute('aria-valuenow', '0');
-      }
+      if (e.pointerId === stickId) releaseStick();
     });
+  // iPhone can swallow a finger-up (edge swipes, banners, calls). Never leave the stick or FIRE held:
+  // release on any window-level lift/cancel, when no finger is left on the screen, and when the app loses focus.
+  for (const type of ['pointerup', 'pointercancel'])
+    addEventListener(type, (e) => {
+      if (e.pointerId === stickId) releaseStick();
+      if (e.pointerId === fireId) releaseFire();
+    }, true);
+  for (const type of ['touchend', 'touchcancel'])
+    addEventListener(type, (e) => {
+      if (e.touches.length === 0) {
+        if (stickId !== null) releaseStick();
+        if (fireId !== null) releaseFire();
+      }
+    }, true);
+  addEventListener('blur', () => {
+    if (stickId !== null) releaseStick();
+    if (fireId !== null) releaseFire();
+  });
   $('fireButton').addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || fireId !== null) return;
     if (storyActive) {
       e.preventDefault();
-      storyNext();
+      storySkip();
       return;
     }
     if (awaitStart) {
@@ -1594,7 +1648,7 @@
     audio.unlock();
     // During a boss scene a press (or holding FIRE) skips ahead once the scene has run for a couple of seconds.
     if (game.scene) {
-      if (game.scene.bossId && game.scene.time >= 2) game.advanceScene();
+      if (game.scene.bossId && game.scene.time >= 0.4) sceneAdvance();
       return;
     }
     game.fire();
@@ -1677,7 +1731,7 @@
     if (storyActive) {
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
-        if (!e.repeat) storyNext();
+        if (!e.repeat) storySkip();
       }
       return;
     }
