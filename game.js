@@ -1238,7 +1238,7 @@
   }
   function unclipBox(box) {
     box.style.bottom = box.style.zIndex = '';
-    box.closest('.screen')?.classList.remove('clip-full');
+    box.closest('.screen')?.classList.remove('clip-full', 'clip-live');
   }
   function removeSceneClip(box) {
     const v = box.querySelector('video.scene-clip');
@@ -1282,6 +1282,7 @@
       if (!current()) return;
       lastProgress = performance.now();
       box.classList.add('clip-ready');
+      box.closest('.screen')?.classList.add('clip-live');
     });
     v.addEventListener('ended', () => {
       if (!current()) return;

@@ -3033,11 +3033,11 @@ body.in-scene #gameCanvas { filter: none; }
 /* Opt-in media styling only. Load AFTER game.css once all new films are installed.
    No cabinet coordinates, skin artwork, controls or gameplay canvas sizes change.
    The existing clip-ready lifecycle must be removed on end/skip/error/scene exit. */
-.screen:has(#cinematic.clip-mode.clip-ready:not([hidden])) .playfield {
+.screen.clip-live .playfield {
   position: static;
   overflow: visible;
 }
-.screen:has(#cinematic.clip-mode.clip-ready:not([hidden])) #cinematic {
+.screen.clip-live #cinematic {
   position: absolute;
   inset: 0 !important;
   width: 100%;
@@ -3050,7 +3050,7 @@ body.in-scene #gameCanvas { filter: none; }
   z-index: 30 !important;
   background: #101017;
 }
-.screen:has(#cinematic.clip-mode.clip-ready:not([hidden])) > :is(.hud-top,.hud-bottom,.boost-meter) {
+.screen.clip-live > :is(.hud-top,.hud-bottom,.boost-meter) {
   visibility: hidden;
 }
 #cinematic.clip-mode.clip-ready .scene-clip {
