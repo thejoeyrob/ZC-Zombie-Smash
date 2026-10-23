@@ -1081,7 +1081,8 @@
     alarm: 0.9,
     doom: 0.7,
   };
-  const ARCADE_SFX = new Set(['pistol', 'hit', 'pickup', 'boost', 'victory', 'loss', 'whoosh']);
+  // The NEW set is its own thing: the new arcade tune and effects, then the original recordings for everything else.
+  const NEW_SFX = new Set(['pistol', 'hit', 'pickup', 'boost', 'victory', 'loss', 'whoosh']);
   const FILES = [
     'pistol',
     'smg',
@@ -1124,7 +1125,7 @@
       } catch {
         this.settings = defaults;
       }
-      if (!['arcade', 'original'].includes(this.settings.set))
+      if (!['arcade', 'neo', 'original'].includes(this.settings.set))
         this.settings.set = 'arcade';
       for (const key of ['music', 'effects']) {
         const value = Number(this.settings[key]);
@@ -1134,13 +1135,14 @@
       }
       this.fxEpoch = 0;
       this.musicEpoch = 0;
+      this.musicSeq = 0;
       // iPhone: Web Audio is silenced by the ring/silent switch unless the page asks for "playback" audio.
       this.playbackSession();
     }
     // Three sets: NEW (synthesized, orchestral music), CHIP (synthesized, chip-style music) and ORIGINAL (the
     // first recorded sound files).
     get synthMode() {
-      return false; // both sets use the recorded score and effects; the old synthesized sets are retired
+      return !['original', 'neo'].includes(this.settings.set);
     }
     get style() {
       return this.settings.set === 'arcade' ? 'real' : 'synth';
@@ -1181,7 +1183,12 @@
       } catch {}
     }
     get tracks() {
-      return this.style === 'synth' ? this.tracksSynth : this.tracksReal;
+      const set = this.settings.set;
+      return set === 'early' && this.tracksEarly
+        ? this.tracksEarly
+        : this.style === 'synth'
+          ? this.tracksSynth
+          : this.tracksReal;
     }
     // Loudness matching: each set and track is lifted to the loudness of the recorded music, measured in
     // LUFS (target about -19 for the wave music, -17 for boss tracks, -18 for the stingers).
@@ -1239,6 +1246,11 @@
           this.synth = new Synth(this.ctx);
           this.tracksSynth = makeTracks(this.synth);
           this.tracksReal = makeTracks(this.synth, true);
+          try {
+            // The first synthesized music set (7.11) keeps its own wave, boss, disco and entrance tracks.
+            const old = window.ZSAudioEarly?.internals.makeTracks(this.synth);
+            if (old) this.tracksEarly = { ...this.tracksSynth, ...old };
+          } catch {}
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
             for (const name of FILES) this.buffer(this.sfxFile(name));
@@ -1247,33 +1259,28 @@
         if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
       } catch {}
     }
-    // ARCADE swaps in a few new recordings; everything else (and all of ORIGINAL) uses the original files.
     sfxFile(name) {
       const base = name === 'doom' ? 'boss-attack' : name;
-      return this.settings.set === 'arcade' && ARCADE_SFX.has(base) ? 'arcade-' + base + '.mp3' : 'sfx-' + base + '.mp3';
+      return this.settings.set === 'neo' && NEW_SFX.has(base) ? 'new-' + base + '.mp3' : 'sfx-' + base + '.mp3';
     }
     musicFile(track) {
-      const t = track;
-      return this.settings.set === 'arcade' && t === 'main' ? 'arcade-main.mp3' : 'music-' + t + '.mp3';
+      return this.settings.set === 'neo' && track === 'main' ? 'new-main.mp3' : 'music-' + track + '.mp3';
     }
     async buffer(file) {
       if (this.buffers.has(file)) return this.buffers.get(file);
       if (this.loading.has(file)) return this.loading.get(file);
-      const context = this.ctx;
-      const loading = this.loading;
       const task = fetch('./' + file)
         .then((r) => {
           if (!r.ok) throw Error(file);
           return r.arrayBuffer();
         })
-        .then((b) => context.decodeAudioData(b))
+        .then((b) => this.ctx.decodeAudioData(b))
         .then((b) => {
-          if (this.ctx !== context) return null;
           this.buffers.set(file, b);
           return b;
         })
         .catch(() => null)
-        .finally(() => loading.delete(file));
+        .finally(() => this.loading.delete(file));
       this.loading.set(file, task);
       return task;
     }
@@ -1336,13 +1343,14 @@
     }
     async playMusic(track) {
       // Story uses the entrance score in every set, including the default synth music.
-      // The opening story is silent film: it plays the looping wave music (the 3-second entrance cue is too short).
-      if (track === 'story') track = 'main';
+      // Recorded sets have no long entrance score, so the opening story plays the looping wave music there.
+      if (track === 'story') track = this.synthMode ? 'entrance' : 'main';
       this.wantTrack = track;
       if (!this.ctx || this.paused || (this.track === track && (this.music || this.seq))) return;
       // A victory or defeat stinger finishes first; the hold timer then plays whatever is wanted.
       if (this.holdTrack && this.holdUntil > performance.now()) return;
       this.track = track;
+      const seq = ++this.musicSeq;
       // Debo's own theme is a recorded file in every sound set.
       const recordedMain = track === 'main' && this.afterBoss && this.settings.set === 'arcade';
       if (this.synthMode && track !== 'debo' && !recordedMain) {
@@ -1352,19 +1360,19 @@
         return;
       }
       const epoch = this.musicEpoch;
-      const buffer = await this.buffer(
-        this.musicFile(track),
-      );
+      const buffer = await this.buffer(this.musicFile(track));
+      // Another playMusic call started while this one was loading: only the newest may start a track.
+      if (seq !== this.musicSeq) return;
       if (epoch !== this.musicEpoch) {
         if (this.track === track && !this.music && !this.seq) this.track = null;
         return;
       }
-      // The file could not be decoded as a buffer: stream it through an audio element instead (any track).
-      if (!buffer && this.wantTrack === track && !this.paused) {
+      // The file could not be decoded as a buffer: stream it through an audio element instead.
+      if (!buffer && this.wantTrack === track && !this.paused && track === 'debo') {
         try {
           this.stopMusic();
-          const el = new Audio('./' + this.musicFile(track));
-          el.loop = track !== 'entrance';
+          const el = new Audio('./music-debo.mp3');
+          el.loop = true;
           el.setAttribute('playsinline', '');
           const src = this.ctx.createMediaElementSource(el),
             gain = this.ctx.createGain();
@@ -1512,7 +1520,6 @@
       }
       const epoch = this.fxEpoch;
       const buffer = await this.buffer(this.sfxFile(name));
-      if (this.paused || epoch !== this.fxEpoch) return;
       if (!buffer) return this.fallbackSfx(name, volume);
       if (this.paused || epoch !== this.fxEpoch || this.voices >= 22 || performance.now() - time > 450)
         return;
@@ -1553,7 +1560,7 @@
     }
     // Switch between the new synthesized sounds and the original recorded ones.
     setSoundSet(name) {
-      this.settings.set = ['arcade', 'original'].includes(name)
+      this.settings.set = ['arcade', 'neo', 'original'].includes(name)
         ? name
         : 'arcade';
       this.fxEpoch++;
@@ -1578,15 +1585,9 @@
     }
     // Throw the audio context away and make a fresh one (inside a real touch it starts running at once).
     rebuild() {
-      // Invalidate pending work owned by the context being replaced.
-      this.fxEpoch++;
-      this.musicEpoch++;
-      this.loading = new Map();
-      this.cancelStinger(0);
-      clearTimeout(this.muteTimer);
       try {
         clearInterval(this.seq?.timer);
-        this.music?.source?.stop?.();
+        this.music?.stop?.();
       } catch {}
       try {
         this.ctx?.close();

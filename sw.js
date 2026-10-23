@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.39.0';
+const CACHE = 'zombie-smash-v7.40.0';
 const ASSETS = [
   './console-toxic-pop.webp',
   './console-disco-fever.webp',
@@ -65,14 +65,14 @@ const ASSETS = [
   './music-disco.mp3',
   './music-entrance.mp3',
   './music-main.mp3',
-  './arcade-main.mp3',
-  './arcade-pickup.mp3',
-  './arcade-boost.mp3',
-  './arcade-victory.mp3',
-  './arcade-loss.mp3',
-  './arcade-pistol.mp3',
-  './arcade-hit.mp3',
-  './arcade-whoosh.mp3',
+  './new-main.mp3',
+  './new-pickup.mp3',
+  './new-boost.mp3',
+  './new-victory.mp3',
+  './new-loss.mp3',
+  './new-pistol.mp3',
+  './new-hit.mp3',
+  './new-whoosh.mp3',
   './pickup-bomb.webp',
   './pickup-clock.webp',
   './pickup-dmr.webp',
