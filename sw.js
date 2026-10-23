@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.40.1';
+const CACHE = 'zombie-smash-v7.41.0';
 const ASSETS = [
   './console-toxic-pop.webp',
   './console-disco-fever.webp',
@@ -190,15 +190,18 @@ self.addEventListener('install', (event) =>
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) =>
-        Promise.all(
-          ASSETS.map(async (a) => {
-            const r = await fetch(a, { cache: 'reload' });
-            if (!r.ok) throw new Error(a);
-            await cache.put(a, await clean(r));
-          }),
-        ),
-      )
+      .then(async (cache) => {
+        // Six downloads at a time instead of all of them at once.
+        for (let i = 0; i < ASSETS.length; i += 6) {
+          await Promise.all(
+            ASSETS.slice(i, i + 6).map(async (a) => {
+              const r = await fetch(a, { cache: 'reload' });
+              if (!r.ok) throw new Error(a);
+              await cache.put(a, await clean(r));
+            }),
+          );
+        }
+      })
       .then(() => self.skipWaiting()),
   ),
 );

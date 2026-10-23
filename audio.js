@@ -1240,8 +1240,10 @@
           this.musicBus.gain.value = this.settings.music;
           this.musicBus.connect(this.master);
           this.master.gain.value = this.paused ? 0 : 1;
+          const openedContext = this.ctx;
           this.ctx.onstatechange = () => {
-            if (this.ctx && this.ctx.state !== 'running' && !document.hidden) setTimeout(() => this.revive(), 400);
+            if (openedContext === this.ctx && openedContext.state !== 'running' && !document.hidden)
+              setTimeout(() => this.revive(), 400);
           };
           this.synth = new Synth(this.ctx);
           this.tracksSynth = makeTracks(this.synth);
@@ -1269,18 +1271,21 @@
     async buffer(file) {
       if (this.buffers.has(file)) return this.buffers.get(file);
       if (this.loading.has(file)) return this.loading.get(file);
+      const decodeContext = this.ctx;
       const task = fetch('./' + file)
         .then((r) => {
           if (!r.ok) throw Error(file);
           return r.arrayBuffer();
         })
-        .then((b) => this.ctx.decodeAudioData(b))
+        .then((b) => decodeContext.decodeAudioData(b))
         .then((b) => {
           this.buffers.set(file, b);
           return b;
         })
         .catch(() => null)
-        .finally(() => this.loading.delete(file));
+        .finally(() => {
+          if (this.loading.get(file) === task) this.loading.delete(file);
+        });
       this.loading.set(file, task);
       return task;
     }
@@ -1585,10 +1590,15 @@
     }
     // Throw the audio context away and make a fresh one (inside a real touch it starts running at once).
     rebuild() {
+      this.musicSeq++;
+      this.musicEpoch++;
+      this.fxEpoch++;
+      this.cancelStinger?.(0);
       try {
         clearInterval(this.seq?.timer);
-        this.music?.stop?.();
+        this.music?.source?.stop?.();
       } catch {}
+      this.loading.clear();
       try {
         this.ctx?.close();
       } catch {}

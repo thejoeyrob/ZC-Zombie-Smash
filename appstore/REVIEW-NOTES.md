@@ -1,13 +1,13 @@
 # App Review notes (paste into App Store Connect → App Review Information → Notes)
 
-Zombie Smash is a single-player portrait arcade shooter. No account or login is needed.
+Zombie Smash is a single-player portrait arcade shooter. No sign-in or account is required, and there are no ads.
 
-How to play: type any player name, tap PRESS START, watch or skip the short opening story (tap FIRE to bring in the next panel and move on). Slide the joystick to move, hold FIRE to shoot, tap the grenade button to throw a grenade. A boss arrives every second wave; each boss has short illustrated story scenes (tap FIRE to bring in the next panel and move on).
+How to play: enter a player name, press START, then watch or skip the opening story. Move left/right with the joystick, hold FIRE to shoot and tap the grenade button to throw. A boss arrives every second wave; tapping FIRE brings in the next comic panel and moves on.
 
-Online leaderboard: when a run ends, the player name and score are sent to our leaderboard (Supabase). No personal data is collected; the name is whatever the player types. Menu → HIGH SCORES shows the board.
+Online leaderboard: when a run starts, the game sends the chosen player name and a random, locally generated persistent identifier to our Supabase leaderboard service. When the run finishes, the score and run details (kills, elapsed time, wave) are submitted. The name and score may appear on the public leaderboard. No hardware identifier, advertising identifier or tracking is used. The privacy policy is available inside the app (MENU → PRIVACY POLICY) and at https://zc2.quest/privacy.html, including how to request deletion.
 
-Tip jar: Menu → TIP JAR. Tips are optional consumable in-app purchases and unlock nothing in the game.
+Tip jar: MENU → TIP JAR (shown only when App Store in-app products are available). Tips are optional consumable in-app purchases, unlock nothing and are processed by Apple.
 
-Cheat codes (part of the game): starting a name with BOT_ (for example BOT_Reviewer) enables a fun cheat mode. Menu → CHEATS lists the codes. Codes are entered on the console after pressing MENU twice. In BOT_ mode, using a code makes the run practice-only (not added to the leaderboard); outside BOT_ mode the score still counts but is marked ✦.
+Cheat codes: a name beginning with BOT_ (for example BOT_Reviewer) activates a cheat mode. MENU → CHEATS lists the codes, which are entered on the console after pressing MENU twice. In BOT_ mode, using a code makes the run practice-only. Outside BOT_ mode, a cheat can still be used and the leaderboard score is shown with a ✦ mark.
 
-Sound plays with the silent switch on (the game uses the playback audio session). Settings: Menu → MUSIC & SOUND.
+Settings: MENU → MUSIC & SOUND. The playback audio session lets sound play with the silent switch on.

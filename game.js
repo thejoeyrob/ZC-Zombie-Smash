@@ -613,7 +613,7 @@
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">${nativeApp ? 'TIP JAR' : 'BUY ME A COFFEE'} <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button><button class="menu-action" data-action="privacy">PRIVACY POLICY <small>How leaderboard data is used →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
   // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
@@ -760,7 +760,11 @@
       v.load?.();
     }
     storyVideo = null;
-    storyPreload = null;
+    if (storyPreload) {
+      storyPreload.removeAttribute('src');
+      storyPreload.load?.();
+      storyPreload = null;
+    }
     $('overlay').classList.remove('story-mode');
     $('overlay').innerHTML = '';
     if (storyReplay) {
@@ -926,6 +930,20 @@
       'help',
       'HOLD THE LINE',
       `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br><strong>STORY SCENES</strong> — tap FIRE to bring in the next panel; tap again to move on.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+    );
+  }
+  // The privacy policy is bundled with the app and shown inside it (no browser needed); the web copy is the fallback.
+  async function privacyPanel() {
+    let body = '';
+    try {
+      const html = await (await fetch('./privacy.html')).text();
+      body = new DOMParser().parseFromString(html, 'text/html').querySelector('main')?.innerHTML || '';
+    } catch {}
+    if (!body) body = '<p>The privacy policy is available at <a href="https://zc2.quest/privacy.html" target="_blank" rel="noopener">zc2.quest/privacy.html</a>.</p>';
+    showPanel(
+      'privacy',
+      'PRIVACY POLICY',
+      `<div class="menu-note privacy-text" style="text-align:left">${body}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
@@ -1381,13 +1399,18 @@
     box.appendChild(pop);
     setTimeout(() => pop.remove(), 1000);
   }
+  function hudText(id, value) {
+    const el = $(id),
+      next = String(value);
+    if (el.textContent !== next) el.textContent = next;
+  }
   function hud() {
     const p = game.player;
     $('joystick').classList.toggle('sped', (p.speedUp || 0) > 0);
-    $('waveValue').textContent = game.wave;
-    $('leftValue').textContent = game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved);
-    $('scoreValue').textContent = game.score.toLocaleString();
-    $('bestValue').textContent = scores.getBest(run?.name || read('zs7-name', '')).toLocaleString();
+    hudText('waveValue', game.wave);
+    hudText('leftValue', game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved));
+    hudText('scoreValue', game.score.toLocaleString());
+    hudText('bestValue', scores.getBest(run?.name || read('zs7-name', '')).toLocaleString());
     {
       const max = game.maxLives || 5,
         l = Math.max(0, p.lives),
@@ -1905,6 +1928,9 @@
         break;
       case 'sound':
         sound();
+        break;
+      case 'privacy':
+        privacyPanel();
         break;
       case 'help':
         help();
