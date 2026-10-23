@@ -1253,7 +1253,7 @@
       return this.settings.set === 'arcade' && ARCADE_SFX.has(base) ? 'arcade-' + base + '.mp3' : 'sfx-' + base + '.mp3';
     }
     musicFile(track) {
-      const t = track === 'story' ? 'entrance' : track;
+      const t = track;
       return this.settings.set === 'arcade' && t === 'main' ? 'arcade-main.mp3' : 'music-' + t + '.mp3';
     }
     async buffer(file) {
@@ -1336,7 +1336,8 @@
     }
     async playMusic(track) {
       // Story uses the entrance score in every set, including the default synth music.
-      if (track === 'story') track = 'entrance';
+      // The opening story is silent film: it plays the looping wave music (the 3-second entrance cue is too short).
+      if (track === 'story') track = 'main';
       this.wantTrack = track;
       if (!this.ctx || this.paused || (this.track === track && (this.music || this.seq))) return;
       // A victory or defeat stinger finishes first; the hold timer then plays whatever is wanted.
