@@ -1083,6 +1083,21 @@
   };
   // The NEW set is its own thing: the new arcade tune and effects, then the original recordings for everything else.
   const NEW_SFX = new Set(['pistol', 'hit', 'pickup', 'boost', 'victory', 'loss', 'whoosh']);
+  // A loop that starts or ends on a loud sample clicks when it wraps. Ease the first and last 8 ms once per decoded buffer.
+  const softened = new WeakSet();
+  function softEdges(buffer) {
+    if (softened.has(buffer)) return;
+    softened.add(buffer);
+    const n = Math.min(Math.round(buffer.sampleRate * 0.008), buffer.length >> 1);
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const d = buffer.getChannelData(c);
+      for (let i = 0; i < n; i++) {
+        const k = i / n;
+        d[i] *= k;
+        d[d.length - 1 - i] *= k;
+      }
+    }
+  }
   const FILES = [
     'pistol',
     'smg',
@@ -1395,6 +1410,7 @@
         if (this.track === track) this.track = null;
         return;
       }
+      if (track !== 'entrance') softEdges(buffer);
       this.stopMusic();
       const now = this.ctx.currentTime,
         source = this.ctx.createBufferSource(),
