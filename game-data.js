@@ -363,7 +363,7 @@ window.ZSData = {
     "entryStyle": "portal",
     "accent": "#b6f36a",
     "reward": "HARVEST PURGE",
-    "entries": [[171.5,121]],
+    "entries": [[98,121],[171.5,121],[245,121]],
     "corridor": [
       64,
       279

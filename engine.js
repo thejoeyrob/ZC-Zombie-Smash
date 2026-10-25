@@ -1015,8 +1015,8 @@
         vy: 0,
         mode: 'idle',
         shake: 0,
-        maxHp: b.hp * 1.55,
-        hp: b.hp * 1.55 * (1 - (stage - 1) / b.stages),
+        maxHp: b.hp * 1.8,
+        hp: b.hp * 1.8 * (1 - (stage - 1) / b.stages),
         stages: b.stages,
         stage,
         phaseGrace: 1.4,
@@ -1171,7 +1171,7 @@
       b.phaseGrace = Math.max(0, (b.phaseGrace || 0) - dt);
       b.age += dt;
       b.flash = Math.max(0, b.flash - dt);
-      b.attack -= dt;
+      b.attack -= dt * 1.12; // bosses attack a little more often
       if (!this.shots.some((s) => s.kind === 'chain' && s.life > 0)) this.bossMove(b, dt);
       b.wind = b.attack > 0 && b.attack <= 0.48 ? 1 : 0;
       // Later forms mix a main pattern with a brief follow-up. All use the same

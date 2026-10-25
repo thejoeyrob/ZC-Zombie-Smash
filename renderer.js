@@ -104,20 +104,24 @@
       let v = this.variants.get(key);
       if (!v && (rim || bright)) {
         if (this.variants.size > 400) this.variants.clear();
+        // Painted at double size and drawn back at half size, so the copy is as sharp as the original artwork.
+        const K = 2;
         v = document.createElement('canvas');
-        v.width = Math.ceil(dw) + pad * 2;
-        v.height = Math.ceil(dh) + pad * 2;
+        v.width = Math.ceil((dw + pad * 2) * K);
+        v.height = Math.ceil((dh + pad * 2) * K);
+        v.logicalW = v.width / K;
+        v.logicalH = v.height / K;
         const vc = v.getContext('2d');
         vc.imageSmoothingQuality = 'high';
         if (bright) vc.filter = 'brightness(1.7)';
         if (rim) {
           vc.shadowColor = 'rgba(255,248,215,0.8)';
-          vc.shadowBlur = 5;
+          vc.shadowBlur = 5 * K;
         }
-        vc.drawImage(im, ...b, pad, pad, dw, dh);
+        vc.drawImage(im, ...b, pad * K, pad * K, dw * K, dh * K);
         this.variants.set(key, v);
       }
-      if (v) c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad);
+      if (v) c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad, v.logicalW, v.logicalH);
       else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
       c.restore();
     }

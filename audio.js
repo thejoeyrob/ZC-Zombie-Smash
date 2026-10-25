@@ -1374,9 +1374,8 @@
       if (this.holdTrack && this.holdUntil > performance.now()) return;
       this.track = track;
       const seq = ++this.musicSeq;
-      // Debo's own theme is a recorded file in every sound set.
       const recordedMain = track === 'main' && this.afterBoss && this.settings.set === 'arcade';
-      if (this.synthMode && track !== 'debo' && !recordedMain) {
+      if (this.synthMode && !recordedMain) {
         this.keyOffset = track === 'disco' ? -5 : 0;
         this.stopMusic();
         this.startSequencer(track);
@@ -1389,25 +1388,6 @@
       if (epoch !== this.musicEpoch) {
         if (this.track === track && !this.music && !this.seq) this.track = null;
         return;
-      }
-      // The file could not be decoded as a buffer: stream it through an audio element instead.
-      if (!buffer && this.wantTrack === track && !this.paused && track === 'debo') {
-        try {
-          this.stopMusic();
-          const el = new Audio('./music-debo.mp3');
-          el.loop = true;
-          el.setAttribute('playsinline', '');
-          const src = this.ctx.createMediaElementSource(el),
-            gain = this.ctx.createGain();
-          src.connect(gain);
-          gain.connect(this.musicBus);
-          await el.play();
-          this.music = {
-            source: { stop: () => el.pause() },
-            gain,
-          };
-          return;
-        } catch {}
       }
       if (!buffer || this.wantTrack !== track || this.paused) {
         if (this.track === track) this.track = null;

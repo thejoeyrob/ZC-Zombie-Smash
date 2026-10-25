@@ -186,8 +186,8 @@
     save();
     reloadWhenSafe();
   }
-  // The music for a boss fight: Debo and Disco Man have their own themes.
-  const bossTrack = (id) => (id === 'debo' ? 'debo' : id === 'discoman' ? 'disco' : 'boss');
+  // The music for a boss fight: Disco Man has his own theme, every other boss uses the boss music.
+  const bossTrack = (id) => (id === 'discoman' ? 'disco' : 'boss');
   function resume() {
     if (!game.active || game.over || landscape) return;
     paused = false;
@@ -195,15 +195,7 @@
     lastTime = performance.now();
     audio.resume();
     audio.playMusic(
-      game.boss?.bossId === 'debo' || (game.scene?.bossId === 'debo' && game.scene.phase >= 2)
-        ? 'debo'
-        : game.scene?.kind === 'arrival'
-          ? 'entrance'
-          : game.boss
-            ? bossTrack(game.boss.bossId)
-            : game.scene?.bossId === 'debo' && game.scene.phase >= 2
-              ? 'debo'
-              : 'main',
+      game.scene?.kind === 'arrival' ? 'entrance' : game.boss ? bossTrack(game.boss.bossId) : 'main',
     );
   }
   function closePanel() {
@@ -1180,15 +1172,8 @@
         if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
       }
     }
-    if (type === 'panel' && data.phase === 2 && game.scene?.bossId === 'debo') {
-      audio.playMusic('debo'); // the boss reveal: Debo's theme starts as he appears
-    }
-    if (type === 'entrance' && data.id === 'debo') audio.buffer('music-debo.mp3'); // preload
     if (type === 'music') {
-      const debo = game.scene?.bossId === 'debo' || game.boss?.bossId === 'debo';
-      if (game.scene?.kind === 'arrival')
-        audio.playMusic(debo && game.scene.phase >= 2 ? 'debo' : 'entrance');
-      else audio.playMusic(debo && data.track === 'boss' ? 'debo' : data.track);
+      audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : data.track);
       return;
     }
     const sounds = {
@@ -1214,10 +1199,13 @@
     if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
     else if (audio.synthMode && type === 'death') audio.stinger('defeat');
     else if (sounds[type])
-      audio.sfx(sounds[type], type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : 1);
+      audio.sfx(
+        sounds[type],
+        type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : type === 'pickup' ? 0.4 : type === 'clear' ? 0.5 : 1,
+      );
     buzz(type, data);
     if (type === 'fight') {
-      audio.playMusic(data.id === 'debo' ? 'debo' : data.id === 'discoman' ? 'disco' : 'boss');
+      audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
       audio.sfx('doom');
     }
     if (type === 'over') results(data.reason);
