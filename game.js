@@ -71,7 +71,46 @@
   function sceneAdvance() {
     const v = document.querySelector('#cinematic video.scene-clip');
     if (v && beatNext(v, v.dataset.key)) return;
+    // Both close-ups are showing: the picture splits apart straight into the game.
+    if (v && game.scene) {
+      v._endScene?.();
+      return;
+    }
     game.advanceScene();
+  }
+  // The last frame is copied onto two canvases (a diagonal cut) that slide off the screen, so the game appears
+  // underneath. Nothing but two stills moves, and the video itself is released at once.
+  function splitAway(box, done) {
+    if (box.classList.contains('splitting')) return;
+    const v = box.querySelector('video.scene-clip');
+    if (!v || !v.videoWidth || matchMedia('(prefers-reduced-motion:reduce)').matches) {
+      done();
+      return;
+    }
+    box.classList.add('splitting');
+    box.closest('.screen')?.classList.add('clip-split');
+    const wrap = document.createElement('div');
+    wrap.className = 'split-halves';
+    for (const [name, clip] of [
+      ['top', 'polygon(0 0, 100% 0, 100% 57%, 0 43%)'],
+      ['bottom', 'polygon(0 43%, 100% 57%, 100% 100%, 0 100%)'],
+    ]) {
+      const cv = document.createElement('canvas');
+      cv.width = v.videoWidth;
+      cv.height = v.videoHeight;
+      cv.getContext('2d').drawImage(v, 0, 0);
+      cv.className = 'split-' + name;
+      cv.style.clipPath = clip;
+      wrap.appendChild(cv);
+    }
+    box.appendChild(wrap);
+    v.pause();
+    setTimeout(() => {
+      wrap.remove();
+      box.classList.remove('splitting');
+      box.closest('.screen')?.classList.remove('clip-split');
+      done();
+    }, 430);
   }
   let pendingReload = false;
   function reloadWhenSafe() {
@@ -973,12 +1012,18 @@
       box.classList.add('clip-ready');
       box.closest('.screen')?.classList.add('clip-live');
     });
-    v.addEventListener('ended', () => {
-      if (!current()) return;
-      s.mediaControlled = false;
-      s.duration = 0.25;
-      s.time = 0;
-    });
+    // The film ends on the two close-ups; leaving is a split into the game (also used when FIRE skips the last hold).
+    v._endScene = () => {
+      if (!current() || v._leaving) return;
+      v._leaving = true;
+      splitAway(box, () => {
+        if (game.scene !== s) return;
+        s.mediaControlled = false;
+        s.duration = 0.05;
+        s.time = 0;
+      });
+    };
+    v.addEventListener('ended', () => v._endScene());
     v.addEventListener('error', restore);
     const watchdog = setInterval(() => {
       if (!current()) return;
@@ -1020,7 +1065,7 @@
     const playing = box.querySelector('video.scene-clip');
     if (playing) {
       if (paused) playing.pause();
-      else if (!playing.ended && playing.paused && playing.readyState > 2)
+      else if (!playing._leaving && !playing.ended && playing.paused && playing.readyState > 2)
         playing.play().catch(() => {});
     }
     const key = [s.kind, s.bossId, s.phase, s.stage].join(':');
