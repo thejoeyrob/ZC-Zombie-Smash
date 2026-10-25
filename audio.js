@@ -105,225 +105,6 @@
     }
   }
 
-  // Sound effects. Each returns its length in seconds.
-  const SFX = {
-    pistol(s, d, t) {
-      s.noise(d, t, { dur: 0.09, gain: 0.55, filter: { type: 'highpass', f: 1400, f2: 700 } });
-      s.tone(d, t, { type: 'sine', f: 240, f2: 55, dur: 0.12, gain: 0.55 });
-      s.tone(d, t, { type: 'square', f: 900, f2: 200, dur: 0.04, gain: 0.12 });
-      return 0.2;
-    },
-    smg(s, d, t) {
-      s.noise(d, t, { dur: 0.05, gain: 0.4, filter: { type: 'bandpass', f: 2600, q: 0.9 } });
-      s.tone(d, t, { type: 'sine', f: 320, f2: 90, dur: 0.06, gain: 0.4 });
-      return 0.1;
-    },
-    shotgun(s, d, t) {
-      s.noise(d, t, { dur: 0.32, gain: 0.8, filter: { type: 'lowpass', f: 3800, f2: 300 } });
-      s.noise(d, t, { dur: 0.08, gain: 0.5, filter: { type: 'highpass', f: 2200 } });
-      s.tone(d, t, { type: 'sine', f: 120, f2: 36, dur: 0.3, gain: 0.8 });
-      s.tone(d, t + 0.17, { type: 'sine', f: 90, f2: 40, dur: 0.18, gain: 0.25 });
-      return 0.4;
-    },
-    dmr(s, d, t) {
-      s.noise(d, t, { dur: 0.38, gain: 0.7, filter: { type: 'highpass', f: 1800, f2: 500 } });
-      s.noise(d, t, { dur: 0.22, gain: 0.6, filter: { type: 'lowpass', f: 2400, f2: 200 } });
-      s.tone(d, t, { type: 'sine', f: 170, f2: 32, dur: 0.3, gain: 0.75 });
-      s.tone(d, t, { type: 'triangle', f: 2100, f2: 1500, dur: 0.22, gain: 0.1 });
-      s.tone(d, t + 0.12, { type: 'sine', f: 110, f2: 40, dur: 0.25, gain: 0.18 });
-      return 0.45;
-    },
-    burst(s, d, t) {
-      for (let i = 0; i < 3; i++) {
-        const u = t + i * 0.035;
-        s.tone(d, u, {
-          type: 'sawtooth',
-          f: 1700,
-          f2: 380,
-          dur: 0.09,
-          gain: 0.22,
-          filter: { type: 'bandpass', f: 1400, q: 1.4 },
-        });
-        s.noise(d, u, { dur: 0.03, gain: 0.2, filter: { type: 'highpass', f: 4000 } });
-      }
-      return 0.2;
-    },
-    hit(s, d, t) {
-      const k = rnd(0.9, 1.15);
-      s.tone(d, t, { type: 'sine', f: 190 * k, f2: 60, dur: 0.1, gain: 0.55 });
-      s.noise(d, t, { dur: 0.07, gain: 0.35, filter: { type: 'lowpass', f: 1500, f2: 400 } });
-      s.tone(d, t, { type: 'square', f: 520 * k, f2: 180, dur: 0.035, gain: 0.07 });
-      return 0.15;
-    },
-    hurt(s, d, t) {
-      s.tone(d, t, {
-        type: 'sawtooth',
-        f: 330,
-        f2: 90,
-        dur: 0.38,
-        gain: 0.38,
-        filter: { type: 'lowpass', f: 1400, f2: 250 },
-        vib: { rate: 24, depth: 22 },
-      });
-      s.noise(d, t, { dur: 0.16, gain: 0.35, filter: { type: 'lowpass', f: 1800, f2: 300 } });
-      s.tone(d, t + 0.01, { type: 'sine', f: 110, f2: 40, dur: 0.25, gain: 0.5 });
-      return 0.45;
-    },
-    grenade(s, d, t) {
-      s.noise(d, t, { dur: 0.9, gain: 0.95, filter: { type: 'lowpass', f: 2600, f2: 90 } });
-      s.noise(d, t, { dur: 0.25, gain: 0.5, filter: { type: 'highpass', f: 1500 } });
-      s.tone(d, t, { type: 'sine', f: 95, f2: 26, dur: 0.8, gain: 0.95 });
-      for (let i = 0; i < 6; i++)
-        s.noise(d, t + 0.18 + i * rnd(0.04, 0.09), {
-          dur: 0.05,
-          gain: 0.18,
-          filter: { type: 'bandpass', f: rnd(900, 3200), q: 2 },
-        });
-      return 1;
-    },
-    throw(s, d, t) {
-      s.noise(d, t, {
-        dur: 0.26,
-        gain: 0.35,
-        attack: 0.1,
-        filter: { type: 'bandpass', f: 400, f2: 2000, q: 1.2 },
-      });
-      s.tone(d, t, { type: 'triangle', f: 300, f2: 760, dur: 0.2, gain: 0.18, glide: 'lin' });
-      return 0.3;
-    },
-    ricochet(s, d, t) {
-      const k = rnd(0.9, 1.2);
-      s.tone(d, t, { type: 'triangle', f: 2600 * k, f2: 1700 * k, dur: 0.16, gain: 0.3 });
-      s.tone(d, t, { type: 'sine', f: 3900 * k, f2: 2500 * k, dur: 0.1, gain: 0.14 });
-      s.noise(d, t, { dur: 0.03, gain: 0.25, filter: { type: 'highpass', f: 5000 } });
-      return 0.2;
-    },
-    pickup(s, d, t) {
-      [72, 76, 79, 84].forEach((n, i) =>
-        s.tone(d, t + i * 0.055, {
-          type: 'square',
-          f: midi(n),
-          dur: 0.16,
-          gain: 0.16,
-          filter: { type: 'lowpass', f: 4200 },
-        }),
-      );
-      s.tone(d, t + 0.17, { type: 'sine', f: midi(96), dur: 0.3, gain: 0.08 });
-      return 0.5;
-    },
-    boost(s, d, t) {
-      s.tone(d, t, {
-        type: 'sawtooth',
-        f: 180,
-        f2: 1500,
-        dur: 0.4,
-        gain: 0.26,
-        glide: 'lin',
-        filter: { type: 'lowpass', f: 3000 },
-      });
-      [60, 67, 72, 79].forEach((n, i) =>
-        s.tone(d, t + 0.1 + i * 0.07, { type: 'square', f: midi(n), dur: 0.22, gain: 0.12 }),
-      );
-      return 0.6;
-    },
-    alarm(s, d, t) {
-      for (let i = 0; i < 4; i++)
-        s.tone(d, t + i * 0.24, {
-          type: 'square',
-          f: i % 2 ? 440 : 620,
-          dur: 0.22,
-          gain: 0.26,
-          attack: 0.01,
-          hold: 0.12,
-          filter: { type: 'lowpass', f: 1800 },
-        });
-      s.tone(d, t, { type: 'sine', f: 55, f2: 40, dur: 1, gain: 0.4 });
-      return 1.1;
-    },
-    whoosh(s, d, t) {
-      s.noise(d, t, {
-        dur: 0.45,
-        gain: 0.4,
-        attack: 0.18,
-        filter: { type: 'bandpass', f: 250, f2: 2800, q: 0.9 },
-      });
-      s.tone(d, t, { type: 'sine', f: 70, f2: 38, dur: 0.35, gain: 0.35 });
-      return 0.5;
-    },
-    victory(s, d, t) {
-      const notes = [60, 64, 67, 72, 67, 72, 76, 79];
-      notes.forEach((n, i) => {
-        const u = t + i * 0.11,
-          long = i === notes.length - 1;
-        s.tone(d, u, {
-          type: 'square',
-          f: midi(n),
-          dur: long ? 0.9 : 0.14,
-          gain: 0.17,
-          hold: long ? 0.5 : 0,
-          filter: { type: 'lowpass', f: 3600 },
-        });
-        s.tone(d, u, { type: 'triangle', f: midi(n - 12), dur: long ? 0.9 : 0.14, gain: 0.2 });
-      });
-      s.noise(d, t + 0.88, { dur: 0.6, gain: 0.2, filter: { type: 'highpass', f: 6000 } });
-      return 1.8;
-    },
-    loss(s, d, t) {
-      [67, 65, 63, 60].forEach((n, i) => {
-        const u = t + i * 0.34;
-        s.tone(d, u, {
-          type: 'sawtooth',
-          f: midi(n - 12),
-          f2: midi(n - 12) * 0.97,
-          dur: 0.5,
-          gain: 0.28,
-          filter: { type: 'lowpass', f: 900 },
-        });
-        s.tone(d, u, { type: 'sine', f: midi(n - 24), dur: 0.5, gain: 0.3 });
-      });
-      s.tone(d, t + 1.1, { type: 'sine', f: 60, f2: 24, dur: 1.1, gain: 0.5 });
-      return 2.3;
-    },
-    // The boss lands: a deep, heavy impact with a rising scrape that drops away.
-    doom(s, d, t) {
-      s.tone(d, t, { type: 'sine', f: 90, f2: 24, dur: 1.1, gain: 0.95 });
-      s.tone(d, t, {
-        type: 'sawtooth',
-        f: 160,
-        f2: 40,
-        dur: 0.9,
-        gain: 0.3,
-        filter: { type: 'lowpass', f: 900, f2: 120 },
-      });
-      s.noise(d, t, { dur: 1.1, gain: 0.7, filter: { type: 'lowpass', f: 3000, f2: 120 } });
-      s.noise(d, t, { dur: 0.2, gain: 0.45, filter: { type: 'highpass', f: 2500 } });
-      return 1.3;
-    },
-    'boss-attack'(s, d, t) {
-      s.tone(d, t, {
-        type: 'sawtooth',
-        f: 120,
-        f2: 52,
-        dur: 0.5,
-        gain: 0.4,
-        filter: { type: 'lowpass', f: 1200, f2: 200 },
-        detune: -8,
-      });
-      s.tone(d, t, {
-        type: 'sawtooth',
-        f: 123,
-        f2: 55,
-        dur: 0.5,
-        gain: 0.3,
-        filter: { type: 'lowpass', f: 1200, f2: 200 },
-        detune: 9,
-      });
-      s.noise(d, t, { dur: 0.3, gain: 0.4, filter: { type: 'lowpass', f: 2200, f2: 200 } });
-      s.tone(d, t + 0.02, { type: 'square', f: 300, f2: 70, dur: 0.14, gain: 0.12 });
-      return 0.6;
-    },
-  };
-
   // ---------------------------------------------------------------------------------------------
   // Music: a small step sequencer. Every track is one loop that repeats, played live by the synth.
   // ---------------------------------------------------------------------------------------------
@@ -1070,17 +851,6 @@
   // ---------------------------------------------------------------------------------------------
   // The audio system the game talks to.
   // ---------------------------------------------------------------------------------------------
-  // Loudness trims measured by rendering each effect offline, so the loud ones do not clip the mix.
-  const TRIM = {
-    pistol: 0.95,
-    shotgun: 0.75,
-    dmr: 0.55,
-    grenade: 0.58,
-    hit: 1,
-    hurt: 1,
-    alarm: 0.9,
-    doom: 0.7,
-  };
   // The NEW set is its own thing: the new arcade tune and effects, then the original recordings for everything else.
   const NEW_SFX = new Set(['pistol', 'hit', 'pickup', 'boost', 'victory', 'loss', 'whoosh']);
   // A loop that starts or ends on a loud sample clicks when it wraps. Ease the first and last 8 ms once per decoded buffer.
@@ -1201,23 +971,13 @@
       } catch {}
     }
     get tracks() {
-      const set = this.settings.set;
-      return set === 'early' && this.tracksEarly
-        ? this.tracksEarly
-        : this.style === 'synth'
-          ? this.tracksSynth
-          : this.tracksReal;
+      return this.tracksReal;
     }
     // Loudness matching: each set and track is lifted to the loudness of the recorded music, measured in
     // LUFS (target about -19 for the wave music, -17 for boss tracks, -18 for the stingers).
     levelFor(track) {
-      const DB = {
-        new: { main: 2.7, entrance: 0.1, boss: 0.1, disco: 1.8, victory: 1.9, defeat: -0.1 },
-        chip: { main: 7.5, entrance: 2.7, boss: 3.6, disco: 5.8, victory: 5.3, defeat: 3.2 },
-        early: { main: 2.5, entrance: 4.2, boss: 3.9, disco: 5.8, victory: 5.3, defeat: 3.2 },
-      };
-      const set = ['early', 'chip'].includes(this.settings.set) ? this.settings.set : 'new';
-      return Math.pow(10, (DB[set][track] ?? 0) / 20);
+      const DB = { main: 2.7, entrance: 0.1, boss: 0.1, disco: 1.8, victory: 1.9, defeat: -0.1 };
+      return Math.pow(10, (DB[track] ?? 0) / 20);
     }
     // A hall reverb that only the "real" music style feeds.
     buildReverb() {
@@ -1264,13 +1024,7 @@
               setTimeout(() => this.revive(), 400);
           };
           this.synth = new Synth(this.ctx);
-          this.tracksSynth = makeTracks(this.synth);
           this.tracksReal = makeTracks(this.synth, true);
-          try {
-            // The first synthesized music set (7.11) keeps its own wave, boss, disco and entrance tracks.
-            const old = window.ZSAudioEarly?.internals.makeTracks(this.synth);
-            if (old) this.tracksEarly = { ...this.tracksSynth, ...old };
-          } catch {}
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
             for (const name of FILES) this.buffer(this.sfxFile(name));
@@ -1505,24 +1259,6 @@
       this.last[name] = time;
       if (['grenade', 'doom', 'hurt'].includes(name))
         this.duckMusic(name === 'hurt' ? 0.78 : 0.6, name === 'grenade' ? 0.65 : 0.42);
-      if (this.synthMode && this.settings.set !== 'arcade') {
-        if (name === 'victory' || name === 'loss') return;
-        const fn = SFX[name];
-        if (!fn) return;
-        const bus = this.ctx.createGain();
-        bus.gain.value = volume * (TRIM[name] ?? 1);
-        bus.connect(this.fx);
-        const len = fn(this.synth, bus, this.ctx.currentTime + 0.005);
-        this.voices++;
-        setTimeout(
-          () => {
-            this.voices--;
-            bus.disconnect();
-          },
-          (len + 0.2) * 1000,
-        );
-        return;
-      }
       const epoch = this.fxEpoch;
       const buffer = await this.buffer(this.sfxFile(name));
       if (!buffer) return this.fallbackSfx(name, volume);
@@ -1673,6 +1409,6 @@
       this.unlock();
     }
   }
-  AudioSystem.internals = { Synth, SFX, makeTracks }; // exposed for offline rendering in tests
+  AudioSystem.internals = { Synth, makeTracks }; // exposed for offline rendering in tests
   window.ZSAudio = AudioSystem;
 })();

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const { W, H, BOSSES, MAPS } = ZSData,
-    { ENEMIES, GUNS, BARREL, clamp } = ZSEngine;
+    { ENEMIES, GUNS, SPECIALS, BARREL, clamp } = ZSEngine;
   const files = [
     ...MAPS.map((m) => m.file),
     ...Object.values(ENEMIES).map((e) => e.art),
@@ -29,7 +29,6 @@
       'venom',
       'bodypart',
       'disco',
-      'tea',
     ]
       .concat(['green', 'pink', 'blue', 'orange', 'yellow', 'violet'].map((c) => 'glowstick-' + c))
       .map((k) => 'weapon-' + k + '.webp'),
@@ -125,6 +124,129 @@
       else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
       c.restore();
     }
+    // Bullets of the special weapons are drawn from shapes, so they need no artwork.
+    specialBullet(b, g) {
+      const c = this.c,
+        ang = Math.atan2(b.vy, b.vx);
+      c.save();
+      c.translate(b.x, b.y);
+      switch (b.sp) {
+        case 'hose':
+          c.rotate(ang);
+          c.globalAlpha = 0.45;
+          c.fillStyle = '#2aa8ff';
+          c.beginPath();
+          c.ellipse(-3, 0, 17, 7, 0, 0, Math.PI * 2);
+          c.fill();
+          c.globalAlpha = 1;
+          c.fillStyle = '#d6f3ff';
+          c.beginPath();
+          c.ellipse(0, 0, 11, 4, 0, 0, Math.PI * 2);
+          c.fill();
+          break;
+        case 'rainbow':
+          c.fillStyle = `hsl(${(g.t * 420 + b.id * 47) % 360},100%,62%)`;
+          c.beginPath();
+          c.arc(0, 0, 5.5, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#fff';
+          c.beginPath();
+          c.arc(-1, -1, 2, 0, Math.PI * 2);
+          c.fill();
+          break;
+        case 'bass': {
+          const k = 1 + Math.sin(g.t * 26 + b.id) * 0.18;
+          c.strokeStyle = '#ffb23d';
+          c.lineWidth = 3;
+          c.beginPath();
+          c.arc(0, 0, 11 * k, 0, Math.PI * 2);
+          c.stroke();
+          c.strokeStyle = '#fff2c4';
+          c.lineWidth = 1.6;
+          c.beginPath();
+          c.arc(0, 0, 6.5 * k, 0, Math.PI * 2);
+          c.stroke();
+          c.fillStyle = '#fff6d6';
+          c.beginPath();
+          c.arc(0, 0, 3, 0, Math.PI * 2);
+          c.fill();
+          break;
+        }
+        case 'beans':
+          c.rotate(ang);
+          c.fillStyle = '#7a4a1f';
+          c.beginPath();
+          c.ellipse(0, 0, 4.4, 2.8, 0, 0, Math.PI * 2);
+          c.fill();
+          c.strokeStyle = '#d9a566';
+          c.lineWidth = 0.9;
+          c.beginPath();
+          c.moveTo(-3.4, 0);
+          c.lineTo(3.4, 0);
+          c.stroke();
+          break;
+        case 'remover':
+          c.fillStyle = 'rgba(255,196,226,0.9)';
+          c.beginPath();
+          c.arc(0, 0, 7, 0, Math.PI * 2);
+          c.arc(-7, 5, 4, 0, Math.PI * 2);
+          c.arc(6, 6, 3, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = '#fff';
+          c.beginPath();
+          c.arc(-2, -2.5, 2.2, 0, Math.PI * 2);
+          c.fill();
+          break;
+        case 'purge':
+          c.globalAlpha = 0.4;
+          c.fillStyle = '#7dff2a';
+          c.beginPath();
+          c.arc(0, 0, 10, 0, Math.PI * 2);
+          c.fill();
+          c.globalAlpha = 1;
+          c.fillStyle = '#d4ff9a';
+          c.beginPath();
+          c.arc(0, 0, 5, 0, Math.PI * 2);
+          c.fill();
+          break;
+      }
+      c.restore();
+    }
+    // The laser column and the chain-lightning arcs.
+    specialEffects(g) {
+      const c = this.c;
+      for (const b of g.beams || []) {
+        const k = b.life / b.total,
+          w = b.width * (0.55 + 0.45 * k),
+          hue = (g.t * 900) % 360;
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.55 * k + 0.25;
+        c.fillStyle = `hsl(${hue},100%,60%)`;
+        c.fillRect(b.x - w, 0, w * 2, b.y);
+        c.globalAlpha = 0.9;
+        c.fillStyle = '#fff';
+        c.fillRect(b.x - w * 0.28, 0, w * 0.56, b.y);
+        c.restore();
+      }
+      for (const a of g.arcs || []) {
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        c.strokeStyle = '#b8ff5a';
+        c.lineWidth = 2.4;
+        c.globalAlpha = Math.min(1, a.life / a.total + 0.2);
+        c.beginPath();
+        c.moveTo(a.x1, a.y1);
+        const n = 5;
+        for (let i = 1; i < n; i++) {
+          const t = i / n;
+          c.lineTo(a.x1 + (a.x2 - a.x1) * t + (Math.random() - 0.5) * 12, a.y1 + (a.y2 - a.y1) * t + (Math.random() - 0.5) * 12);
+        }
+        c.lineTo(a.x2, a.y2);
+        c.stroke();
+        c.restore();
+      }
+    }
     text(str, x, y, size = 11, color = '#fff', align = 'center') {
       const c = this.c;
       c.font = `800 ${size}px Barlow, sans-serif`;
@@ -159,7 +281,7 @@
       if (ZSData.mapIndex(g.wave) === 4 && map.tileGrid) this.discoFloor(g, map, opens);
       this.arenaAtmosphere(g, map);
       // Floor access hatches sit entirely on open ground, away from the scenery. The Neon Palace uses its dance-floor tiles instead.
-      if (map.entryStyle !== 'tile' && map.entryStyle !== 'portal') for(const [x,y] of map.entries) {
+      if (map.entryStyle !== 'tile' && map.entryStyle !== 'portal' && map.entryStyle !== 'edge') for(const [x,y] of map.entries) {
         c.fillStyle='#102b2be0'; c.strokeStyle=map.accent; c.lineWidth=1.5;
         c.beginPath(); c.ellipse(x,y+12,18,7,0,0,Math.PI*2); c.fill(); c.stroke();
         c.strokeStyle='#bac7bd88';
@@ -221,12 +343,17 @@
       for (const z of [...g.enemies, ...(g.boss ? [g.boss] : [])].sort((a, b) => a.y - b.y))
         this.enemy(z, g);
       for (const b of g.bullets) {
+        if (b.sp) {
+          this.specialBullet(b, g);
+          continue;
+        }
         c.save();
         c.translate(b.x, b.y);
         c.rotate(Math.atan2(b.vy, b.vx) + Math.PI / 6);
         this.fit(GUNS[b.gun].art, -11, -7.5, 22, 15);
         c.restore();
       }
+      this.specialEffects(g);
       for (const s of g.shots) this.shot(s, g);
       const p = g.player;
       if (!g.over) {
@@ -234,6 +361,20 @@
         c.beginPath();
         c.ellipse(p.x, p.y + 30, 28, 7, 0, 0, Math.PI * 2);
         c.fill();
+        if (p.special) {
+          // The special weapon wraps Joey in its colour; it flickers when about to run out.
+          const sp = SPECIALS.find((s) => s.id === p.special.id);
+          if (sp && (p.special.left > 2 || Math.floor(g.t * 8) % 2)) {
+            c.save();
+            c.strokeStyle = sp.color;
+            c.lineWidth = 2.5;
+            c.globalAlpha = 0.6 + 0.3 * Math.sin(g.t * 9);
+            c.beginPath();
+            c.ellipse(p.x, p.y - 6, 41, 49, 0, 0, Math.PI * 2);
+            c.stroke();
+            c.restore();
+          }
+        }
         if (p.shield > 0 || g.invincible) {
           c.strokeStyle = '#8bdffc';
           c.lineWidth = 2;

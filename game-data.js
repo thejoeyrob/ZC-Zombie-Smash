@@ -281,7 +281,8 @@ window.ZSData = {
       secret: true,
     },
   ],
-  mapIndex: (wave) => wave <= 14 ? Math.max(0, Math.floor((wave - 1) / 2)) : Math.floor((wave - 15) / 2) % 7,
+  // Seven arenas, two waves each; after Dr Mantis the endless waves stay in the Harvest Chamber.
+  mapIndex: (wave) => Math.min(6, Math.max(0, Math.floor((wave - 1) / 2))),
   MAPS: [
   {
     "name": "FIREHOUSE SQUARE",
@@ -360,10 +361,10 @@ window.ZSData = {
   {
     "name": "HARVEST CHAMBER",
     "file": "arena-drmantis.webp",
-    "entryStyle": "portal",
+    "entryStyle": "edge",
     "accent": "#b6f36a",
-    "reward": "HARVEST PURGE",
-    "entries": [[98,121],[171.5,121],[245,121]],
+    "reward": "PURGE ARC",
+    "entries": [[91,-24],[266,-24],[-16,143],[-16,232],[359,131],[359,178],[359,232]],
     "corridor": [
       64,
       279

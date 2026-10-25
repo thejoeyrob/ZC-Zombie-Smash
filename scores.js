@@ -146,9 +146,6 @@
       this.records=this.records.filter(r=>r.id!==record.id);this.records.push(record);this.records=this.records.slice(-100);
       write('zs7-records',this.records);
     }
-    localBoard() {
-      return Object.entries(this.best).filter(([,v])=>Number.isFinite(Number(v))&&Number(v)>0).map(([key,score])=>({name:this.records.find(r=>r.name?.toLowerCase()===key)?.name||key,score:Number(score)})).sort((a,b)=>b.score-a.score);
-    }
     async finish(run) {
       if (run.practice) return { status: 'practice' };
       this.recordLocal(run);

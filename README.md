@@ -10,17 +10,18 @@ A portrait arcade shooter: Joey Rob against Dr Mantis and six more bosses, built
 | `game.js` | Menus, input, story, saving, and the glue between everything |
 | `engine.js` | Game rules: waves, enemies, bosses, weapons, scoring |
 | `renderer.js` | Drawing the playfield on the canvas |
-| `audio.js` | Arcade mix, cinematic/chip scores and original recorded audio |
+| `audio.js` | Sound: the ARCADE cinematic score, the NEW set and the ORIGINAL recordings |
 | `haptics.js` | Phone vibration for gunfire, hits, damage and boss scenes |
 | `scores.js` | Leaderboard client (guest only, no sign-in) and the name filter |
 | `game-data.js`, `console-layout.js` | Boss, weapon, skin and layout data |
 | `sw.js`, `manifest.webmanifest` | Offline support for the web version |
-| `capacitor.config.json`, `scripts/`, `ios-assets/` | Packaging for the App Store |
-| `art-pipeline/` | The brief, manifests and tools for the 30 boss scene clips and the 8 extra console skins |
+| `capacitor.config.json`, `scripts/`, `ios-assets/` | Packaging for the App Store (app icon and splash) |
+| `art-pipeline/` | The console skin manifest used by `scripts/sync-art.mjs` |
 | `scene-clips.json`, `skins-extra.json` | Lists of finished scene clips and extra skins (written by `scripts/sync-art.mjs`) |
 | `.github/workflows/ios-testflight.yml` | Cloud build that signs the app and uploads it to TestFlight |
 | `privacy.html`, `support.html` | Pages the App Store listing links to |
-| `docs/` | The App Store guide and older build notes |
+| `docs/` | The App Store guide and the console skin template |
+| `appstore/` | App Store listing text, screenshots and review notes |
 
 ## Run it locally
 

@@ -314,16 +314,6 @@ body {
   will-change: transform;
   pointer-events: none;
 }
-.stick-arrows {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font: 10px Barlow;
-  color: #acb9b7;
-  pointer-events: none;
-}
 .fire-button {
   position: absolute;
   right: 20px;
@@ -680,34 +670,6 @@ body {
   letter-spacing: 0.14em;
   margin-top: 3px;
 }
-.boss-choice {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border-bottom: 1px solid #354038;
-  padding: 8px 0;
-}
-.boss-choice img {
-  width: 48px;
-  height: 55px;
-  object-fit: contain;
-}
-.boss-choice > div {
-  flex: 1;
-}
-.boss-choice b {
-  display: block;
-  font: 900 15px Barlow;
-  color: #e5d4a7;
-}
-.boss-choice button {
-  background: #28382f;
-  border: 1px solid #657564;
-  color: #e9e6d7;
-  padding: 6px 8px;
-  font: 700 11px Barlow;
-  margin-top: 5px;
-}
 .score-result {
   font: 900 53px Barlow;
   color: #ffdc81;
@@ -905,9 +867,6 @@ body {
   fill: none;
   stroke-width: 3;
 }
-.sound-off .wordmark small {
-  color: #a5aaa3;
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
@@ -967,9 +926,6 @@ body {
     color-mix(in srgb, var(--stick) 54%, #5d3d16) 78%,
     #2a1d13
   );
-}
-.stick-arrows {
-  display: none !important;
 }
 .fire-button {
   right: 21px;
@@ -1083,50 +1039,6 @@ body {
 .skin-choice.selected {
   border-color: var(--accent);
 }
-.story-art {
-  display: block;
-  width: 100%;
-  max-height: 265px;
-  object-fit: cover;
-  object-position: center top;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, #4c5149);
-  background: #080c0a;
-}
-.story-copy {
-  margin: 10px 0 12px;
-  padding: 8px 10px;
-  border-left: 3px solid var(--accent);
-  background: #0c1510;
-}
-.story-copy p {
-  margin: 5px 0;
-  font: 700 11px/1.35 Inter;
-  color: #c8d3c5;
-}
-.story-copy b {
-  color: #f2d87b;
-}
-.install-art {
-  object-position: center 18%;
-}
-.scene-dual {
-  position: absolute;
-  inset: 35px 0 58px;
-}
-.scene-dual .scene-art.joey {
-  left: -35px;
-  top: 42px;
-  width: 205px;
-  height: 250px;
-  opacity: 0.92;
-}
-.scene-dual .scene-art.boss-form {
-  right: -14px;
-  top: 24px;
-  width: 225px;
-  height: 270px;
-  animation: boss-enter 0.45s cubic-bezier(0.15, 0.8, 0.3, 1) both;
-}
 .scene-copy {
   z-index: 4;
 }
@@ -1148,40 +1060,6 @@ body {
 .start-art {
   object-fit: contain;
   background: #090e0e;
-}
-.story-art {
-  height: 220px;
-  max-height: none;
-  object-fit: contain;
-  background: #050809;
-}
-.story-copy {
-  min-height: 96px;
-  margin: 8px 0;
-  padding: 8px 10px;
-}
-.story-copy h3 {
-  font: 900 21px/1 Barlow;
-  margin: 0 0 6px;
-  color: var(--accent);
-}
-.story-copy p {
-  font-size: 11px;
-  line-height: 1.45;
-}
-.story-dots {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  margin: 8px;
-}
-.story-dots i {
-  height: 3px;
-  width: 22px;
-  background: #34423a;
-}
-.story-dots .current {
-  background: var(--accent);
 }
 #cinematic {
   display: grid;
@@ -1429,12 +1307,6 @@ body {
 }
 .hud-bottom #healthValue .heart.empty {
   color: #74806f;
-}
-.story-art {
-  height: min(220px, calc(var(--wh, 450px) * 0.42));
-}
-.story-copy {
-  min-height: 78px;
 }
 #joystick:before {
   content: '';
@@ -1702,32 +1574,6 @@ body {
   font: 900 12px Barlow !important;
   letter-spacing: 0.14em;
 }
-.title-ticker {
-  overflow: hidden;
-  white-space: nowrap;
-  margin: 6px -14px 0;
-  border-top: 1px solid #8cff5555;
-  border-bottom: 1px solid #8cff5555;
-  background: #00000099;
-  font:
-    700 9px 'Courier New',
-    monospace;
-  letter-spacing: 0.14em;
-  color: #ff8a4a;
-}
-.title-ticker span {
-  display: inline-block;
-  padding: 2px 0;
-  animation: ticker 26s linear infinite;
-}
-@keyframes ticker {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
 .title-bottom .loading-line {
   margin-top: 5px;
   font:
@@ -1850,8 +1696,7 @@ body {
   .title-screen,
   .title-logo span,
   .title-tag,
-  .press-start,
-  .title-ticker span {
+  .press-start{
     animation: none !important;
   }
 }
@@ -2159,13 +2004,6 @@ body {
   to {
     transform: scale(1.07);
   }
-}
-.title-logo-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 .title-screen {
   animation: none;
@@ -2772,7 +2610,7 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 .title-screen {background: #101b1a url('./story-joey.webp') 44% 38% / cover no-repeat;}
 .title-screen:before {background:linear-gradient(180deg,#07131188 0%,#07131108 35%,#071311bb 66%,#071311f2 100%);z-index:1;animation:none;}
 .title-ui {z-index:4;}
-.titleFx,.title-fx {display:none;}
+.titleFx{display:none;}
 .title-logo {animation:none;filter:drop-shadow(0 3px 3px #000);}
 
 /* Gentle movement preserves the original illustration and avoids body warping. */
@@ -2794,7 +2632,6 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 
 /* 7.25.0: boss scenes are built from three depth layers that drift at different speeds:
    a soft, slow background, the sharp middle ground, and a fast foreground edge with drifting embers. */
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* 7.26.0: the eight illustrated skins (body.deck3d) get purpose-built 3D controls. The tap areas stay flat and
    full-size; only the artwork inside them is drawn in perspective, so response is unchanged. The flat skins keep the
@@ -2939,10 +2776,6 @@ body[data-release-skin="drmantis"] { --ly: -5.6px; }
 .coffee-joey { position: absolute; left: 3%; bottom: 0; height: 100%; animation: slothSway 3.1s ease-in-out infinite; filter: drop-shadow(0 6px 6px #000); }
 .coffee-art .coffee-sloth { left: auto; right: 3%; scale: -1 1; }
 .coffee-art .coffee-cup { right: auto; left: 50%; translate: -50% 0; height: 62%; }
-.tip-qty { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 2px; font: 800 11px Inter; letter-spacing: 0.14em; color: #f1e3c8; }
-.tip-qty b { font: 900 18px Barlow, sans-serif; color: #ffdd00; margin-left: 4px; }
-.tip-qty button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #ffdd00; background: #2a1a08; color: #ffdd00; font: 900 20px/1 Barlow, sans-serif; }
-.tip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; }
 .bmc.tip { flex-direction: column; gap: 1px; padding: 8px 4px; font-size: 12px; letter-spacing: 0.04em; animation: none; box-shadow: 0 3px 0 #b89800, 0 0 12px #ffdd0066; }
 .bmc.tip b { font: 900 13px Barlow, sans-serif; }
 .bmc.tip span { font: 800 12px Inter; }
@@ -2950,7 +2783,6 @@ body[data-release-skin="drmantis"] { --ly: -5.6px; }
 .coffee-art { height: calc(var(--ww, 312px) * 0.34); }
 .coffee-ui { padding-top: 10px; padding-bottom: 8px; }
 .coffee-ui .coffee-copy { font-size: 11px; line-height: 1.35; }
-.tip-qty span { white-space: nowrap; }
 body.deck3d .fire-inner b { display: none; }
 
 /* 7.31.0: map name moves onto the game screen; the toast stays inside the screen window. */

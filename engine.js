@@ -42,6 +42,17 @@
     chainExtend: 0.22,
   });
   const GLOW = ['green', 'pink', 'blue', 'orange', 'yellow', 'violet'];
+  // The reward for lighting all three floor targets: a temporary special weapon themed on the arena's boss.
+  // `sound` is the existing gun sound it borrows; `hit` effects are applied in specialHit().
+  const SPECIALS = [
+    { id: 'hose', name: 'WATER PULSE', color: '#6fd0ff', sound: 'smg', time: 10, delay: 0.075, damage: 0.95, speed: 540, pierce: 3, life: 0.6, knock: 7, size: 6 },
+    { id: 'rainbow', name: 'RAINBOW SPRAY', color: '#ff6ad5', sound: 'burst', time: 10, delay: 0.12, damage: 0.8, speed: 560, pierce: 1, life: 0.9, fan: [-0.26, -0.13, 0, 0.13, 0.26], size: 5 },
+    { id: 'bass', name: 'BASS CANNON', color: '#ffb23d', sound: 'shotgun', time: 10, delay: 0.5, damage: 2.4, speed: 430, pierce: 1, life: 1.4, blast: 52, size: 9 },
+    { id: 'beans', name: 'ESPRESSO BLASTER', color: '#c98a4b', sound: 'smg', time: 10, delay: 0.04, damage: 0.55, speed: 740, pierce: 1, life: 0.9, jitter: 0.09, size: 3 },
+    { id: 'laser', name: 'LASER PULSE', color: '#ff2fd2', sound: 'dmr', time: 10, delay: 0.17, damage: 1.7, hitscan: true, width: 13 },
+    { id: 'remover', name: 'MAKEUP REMOVER', color: '#ff9fcb', sound: 'smg', time: 10, delay: 0.13, damage: 1.0, speed: 500, pierce: 2, life: 0.8, slow: true, strip: true, size: 6 },
+    { id: 'purge', name: 'PURGE ARC', color: '#9dff4a', sound: 'burst', time: 10, delay: 0.24, damage: 1.5, speed: 600, pierce: 1, life: 0.9, chain: 3, size: 5 },
+  ];
   const GUNS = {
     pistol: {
       name: 'PISTOL',
@@ -207,6 +218,8 @@
         grenades: [],
         barrels: [],
         effects: [],
+        beams: [],
+        arcs: [],
         pops: [],
         boss: null,
         scene: null,
@@ -378,8 +391,23 @@
           charge: 0,
           baseX: 0,
         };
-      if (!minion && y < 0) {
-        const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
+      const spawnMap = ZSData.MAPS[ZSData.mapIndex(this.wave)];
+      if (!minion && y < 0 && spawnMap.entryStyle === 'edge') {
+        // The Harvest Chamber has no hatches: the horde walks in from the edges of the map.
+        const entry = spawnMap.entries[this.spawned % spawnMap.entries.length],
+          lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
+        z.x = entry[0];
+        z.y = entry[1];
+        z.entryStyle = 'edge';
+        z.route = {
+          edge: true,
+          fromX: z.x,
+          fromY: z.y,
+          toX: spawnMap.corridor[0] + lane * (spawnMap.corridor[1] - spawnMap.corridor[0]),
+          toY: Math.max(z.y, spawnMap.fanY - 20) + this.rand() * 22,
+        };
+      } else if (!minion && y < 0) {
+        const map = spawnMap;
         let entry;
         if (map.entryStyle === 'tile') {
           const mapId = ZSData.mapIndex(this.wave);
@@ -409,7 +437,7 @@
       z.speed *= this.enemyPace();
       if(z.route) { z.paceFactor=(H-52-z.route.fromY)/(H-52+28); z.speed*=z.paceFactor; }
       z.hp = z.maxHp = spec.hp * this.enemyHealth(type);
-      if (!minion) {
+      if (!minion && !z.route?.edge) {
         const m = Math.ceil(z.height * 0.41) + 2;
         z.x = clamp(z.x, m, W - m);
         z.baseX = z.x;
@@ -426,6 +454,13 @@
       this.shake = Math.max(0, this.shake - dt * 16);
       this.bannerLeft = Math.max(0, this.bannerLeft - dt);
       this.effects = this.effects.filter((f) => (f.life -= dt) > 0);
+      this.beams = (this.beams || []).filter((b) => (b.life -= dt) > 0);
+      this.arcs = (this.arcs || []).filter((a) => (a.life -= dt) > 0);
+      if (this.player.special && (this.player.special.left -= dt) <= 0) {
+        this.player.special = null;
+        this.banner = 'WEAPON SPENT';
+        this.bannerLeft = 1;
+      }
       this.pops = this.pops.filter((p) => (p.life -= dt) > 0);
       for (const f of this.effects) {
         f.x += (f.vx || 0) * dt;
@@ -507,7 +542,25 @@
         speed *= this.arena?.slow > 0 ? 0.55 : 1;
         z.emerge = Math.max(0, (z.emerge || 0) - dt);
         if (z.emerge > 0 && (z.entryStyle === 'tile' || z.entryStyle === 'portal')) continue;
-        if (z.route) {
+        if (z.slowT > 0) {
+          z.slowT -= dt;
+          speed *= 0.5;
+        }
+        if (z.route?.edge) {
+          const dx = z.route.toX - z.x,
+            dy = z.route.toY - z.y,
+            d = Math.hypot(dx, dy),
+            stride = speed * dt;
+          if (d <= stride + 0.5) {
+            z.x = z.route.toX;
+            z.y = z.route.toY;
+            z.baseX = z.x;
+            z.route = null;
+          } else {
+            z.x += (dx / d) * stride;
+            z.y += (dy / d) * stride;
+          }
+        } else if (z.route) {
           z.y += speed * dt;
           const t = clamp((z.y - z.route.fromY) / (z.route.toY - z.route.fromY), 0, 1);
           // Smooth diagonal fan-out: deterministic per run, never a column of enemies.
@@ -520,7 +573,7 @@
           z.y += speed * dt;
           if (z.vx) { z.x += z.vx * dt; z.vx *= Math.max(0, 1 - dt * 0.7); if (Math.abs(z.vx) < 2) z.vx = 0; }
         }
-        if (!z.minion) {
+        if (!z.minion && !z.route?.edge) {
           const m = Math.ceil(z.height * 0.41) + 2;
           z.x = clamp(z.x, Math.max(m, map.corridor[0] + Math.max(0,m-27)), Math.min(W - m, map.corridor[1] - Math.max(0,m-27)));
         }
@@ -587,6 +640,7 @@
     fire() {
       const p = this.player;
       if (!this.active || this.over || this.scene || p.cool > 0 || this.nextIn > 0) return false;
+      if (p.special) return this.fireSpecial();
       if (p.ammo <= 0 && !this.infiniteAmmo) this.equip('pistol');
       const gun = GUNS[p.gun],
         angles =
@@ -629,11 +683,91 @@
       target.lit = true; this.emit('ricochet');
       if (!a.targets.every(t => t.lit)) return;
       a.cool=12; a.pulse=1.2;
-      this.banner=ZSData.MAPS[a.index].reward; this.bannerLeft=1.8; this.emit('boost');
-      if (a.index===0) a.slow=4;
-      else if (a.index===3) this.player.rapid=Math.max(this.player.rapid,4);
-      else if (a.index===4 || a.index===5) this.player.shield=Math.max(this.player.shield,3);
-      else { this.shots=this.shots.filter(s=>s.kind==='chain'); for(const z of [...this.enemies]) this.damage(z,2,'arena'); }
+      this.grantSpecial(a.index);
+    }
+    // All three targets lit: the arena hands Joey a temporary special weapon.
+    grantSpecial(index) {
+      const sp = SPECIALS[index] || SPECIALS[0];
+      this.player.special = { id: sp.id, left: sp.time };
+      this.player.cool = 0;
+      this.banner = sp.name + '!';
+      this.bannerLeft = 2.2;
+      this.shake = 2;
+      this.effects.push({ kind: 'ring', x: this.player.x, y: this.player.y - 20, r: 120, life: 0.6, total: 0.6, color: sp.color });
+      this.burst(this.player.x, this.player.y - 20, sp.color, 26, 190);
+      this.emit('boost');
+      this.emit('special', { id: sp.id });
+    }
+    // One shot (or one sweep) of the special weapon.
+    fireSpecial() {
+      const p = this.player,
+        sp = SPECIALS.find((s) => s.id === p.special.id);
+      if (!sp) {
+        p.special = null;
+        return false;
+      }
+      p.cool = sp.delay * (p.rapid > 0 ? 0.65 : 1);
+      p.fireFx = 0.065;
+      if (sp.hitscan) {
+        // A strobing laser column: everything in front of Joey takes the hit, shields included.
+        const reach = sp.width / 2;
+        for (const z of [...this.enemies, ...(this.boss ? [this.boss] : [])])
+          if (!z.dead && z.y < p.y - 14 && Math.abs(z.x - p.x) < reach + (z.r || 14) * 0.8) this.damage(z, sp.damage, 'dmr');
+        for (const target of this.arena?.targets || []) if (Math.abs(target.x - p.x) < reach + 12) this.hitArenaTarget(target);
+        for (const item of this.pickups) if (item.life > 0 && Math.abs(item.x - p.x) < reach + 14) this.collect(item);
+        for (const barrel of this.barrels) if (!barrel.dead && Math.abs(barrel.x - p.x) < reach + 12) { barrel.hp -= sp.damage; if (barrel.hp <= 0) this.explodeBarrel(barrel); }
+        this.beams.push({ x: p.x, y: p.y - 30, life: 0.11, total: 0.11, width: sp.width, color: sp.color });
+      } else {
+        for (const a of sp.fan || [0]) {
+          const j = a + (sp.jitter ? (this.rand() - 0.5) * 2 * sp.jitter : 0);
+          this.bullets.push({
+            id: this.nextId++,
+            x: p.x,
+            y: p.y - 27,
+            prevX: p.x,
+            prevY: p.y - 27,
+            vx: Math.sin(j) * sp.speed,
+            vy: -Math.cos(j) * sp.speed,
+            damage: sp.damage,
+            gun: 'special',
+            sp: sp.id,
+            pierce: sp.pierce,
+            hit: [],
+            life: sp.life,
+          });
+        }
+      }
+      this.emit('shot', { gun: sp.sound });
+      return true;
+    }
+    // What a special bullet does to what it hits, besides damage.
+    specialHit(b, z) {
+      const sp = SPECIALS.find((s) => s.id === b.sp);
+      if (!sp) return;
+      if (sp.knock && !z.boss) z.y = Math.max(-10, z.y - sp.knock);
+      if (sp.slow && !z.boss) z.slowT = 2.2;
+      if (sp.blast) this.explode(b.x, b.y, sp.blast, sp.damage * 0.7, false);
+      if (sp.chain) {
+        let from = z;
+        const used = new Set([z.id]);
+        for (let hop = 0; hop < sp.chain; hop++) {
+          let best = null,
+            bd = 95;
+          for (const o of this.enemies)
+            if (!o.dead && !used.has(o.id)) {
+              const d = Math.hypot(o.x - from.x, o.y - from.y);
+              if (d < bd) {
+                bd = d;
+                best = o;
+              }
+            }
+          if (!best) break;
+          used.add(best.id);
+          this.arcs.push({ x1: from.x, y1: from.y - 10, x2: best.x, y2: best.y - 10, life: 0.16, total: 0.16 });
+          this.damage(best, sp.damage * 0.7, 'chain');
+          from = best;
+        }
+      }
     }
     updateBullets(dt) {
       for (const b of this.bullets) {
@@ -663,7 +797,10 @@
           if (b.pierce <= 0 || z.dead || this.scene) break;
           b.hit.push(z.id);
           b.pierce--;
-          if (z.r !== undefined) this.damage(z, b.damage, b.gun);
+          if (z.r !== undefined) {
+            this.damage(z, b.damage, b.sp === 'remover' ? 'dmr' : b.gun);
+            if (b.sp) this.specialHit(b, z);
+          }
           else {
             z.hp -= b.damage;
             if (z.hp <= 0) this.explodeBarrel(z);
@@ -786,6 +923,7 @@
       const ammo = p.inventory[gun];
       if (p.gun !== 'pistol' && p.ammo > 0) p.inventory[p.gun] = p.ammo;
       p.inventory[gun] = 0;
+      p.special = null; // choosing a stored gun hands back the normal weapon
       this.equip(gun, ammo);
       this.emit('weaponUse', { gun });
       return true;
@@ -1015,8 +1153,8 @@
         vy: 0,
         mode: 'idle',
         shake: 0,
-        maxHp: b.hp * 1.8,
-        hp: b.hp * 1.8 * (1 - (stage - 1) / b.stages),
+        maxHp: b.hp * 1.55,
+        hp: b.hp * 1.55 * (1 - (stage - 1) / b.stages),
         stages: b.stages,
         stage,
         phaseGrace: 1.4,
@@ -1171,7 +1309,7 @@
       b.phaseGrace = Math.max(0, (b.phaseGrace || 0) - dt);
       b.age += dt;
       b.flash = Math.max(0, b.flash - dt);
-      b.attack -= dt * 1.12; // bosses attack a little more often
+      b.attack -= dt;
       if (!this.shots.some((s) => s.kind === 'chain' && s.life > 0)) this.bossMove(b, dt);
       b.wind = b.attack > 0 && b.attack <= 0.48 ? 1 : 0;
       // Later forms mix a main pattern with a brief follow-up. All use the same
@@ -1264,7 +1402,9 @@
       if (b.attack > 0) return;
       b.cycle++;
       b.attack = 3;
-      const V = 1.1 + (b.stage - 1) * 0.045,
+      // Disco Man's and Fat Amy's throws were too slow: their projectiles fly faster (nothing else changes).
+      const FAST = b.bossId === 'discoman' || b.bossId === 'fatamy' ? 1.4 : 1,
+        V = (1.1 + (b.stage - 1) * 0.045) * FAST,
         fan = (kind, n, gap, speed, r) => {
           for (let i = 0; i < n; i++)
             this.aimedShot(b.x, b.y, kind, speed * V, r, (i - (n - 1) / 2) * gap);
@@ -1377,8 +1517,8 @@
               this.shots.push({
                 x: b.x,
                 y: b.y,
-                vx: side * 98,
-                vy: 92,
+                vx: side * 98 * FAST,
+                vy: 92 * FAST,
                 kind: 'donut',
                 r: 11,
                 life: 7,
@@ -1539,5 +1679,5 @@
       return true;
     }
   }
-  window.ZSEngine = { Game, ENEMIES, GUNS, BARREL, segmentDistance, clamp };
+  window.ZSEngine = { Game, ENEMIES, GUNS, SPECIALS, BARREL, segmentDistance, clamp };
 })();

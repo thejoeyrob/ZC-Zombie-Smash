@@ -1,1 +1,0 @@
-shooter,survival,horde,monster,blaster,score,challenge,waves,joystick,casual,offline,handheld
