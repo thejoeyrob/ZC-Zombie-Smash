@@ -1119,14 +1119,14 @@
         haptics.impact(
           data.gun === 'shotgun' || data.gun === 'dmr' ? 'MEDIUM' : 'LIGHT',
           'shot',
-          data.gun === 'smg' ? 85 : 55,
+          data.gun === 'smg' ? 130 : 95,
         );
         break;
       case 'hit':
-        haptics.impact('LIGHT', 'hit', data.boss ? 70 : 90);
+        haptics.impact('LIGHT', 'hit', data.boss ? 120 : 160);
         break;
       case 'kill':
-        haptics.impact('MEDIUM', 'kill', 60);
+        haptics.impact('MEDIUM', 'kill', 110);
         break;
       case 'hurt':
         haptics.notify('ERROR', 'hurt', 0);
@@ -1183,7 +1183,7 @@
     if (type === 'panel' && data.phase === 2 && game.scene?.bossId === 'debo') {
       audio.playMusic('debo'); // the boss reveal: Debo's theme starts as he appears
     }
-    if (type === 'entrance' && data.id === 'debo') audio.preload('debo');
+    if (type === 'entrance' && data.id === 'debo') audio.buffer('music-debo.mp3'); // preload
     if (type === 'music') {
       const debo = game.scene?.bossId === 'debo' || game.boss?.bossId === 'debo';
       if (game.scene?.kind === 'arrival')

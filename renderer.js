@@ -96,29 +96,29 @@
       c.translate(x + w / 2, y + h / 2);
       if (rot) c.rotate(rot);
       if (flip) c.scale(-1, 1);
-      if (rim || bright) {
-        // The soft rim light and the hit flash are expensive to compute live (canvas shadow and filter), so each
-        // look is painted once per sprite size and then drawn like any other image.
-        const pad = rim ? 10 : 0,
-          key = file + '|' + Math.round(dw) + 'x' + Math.round(dh) + (rim ? 'r' : '') + (bright ? 'b' : '');
-        let v = this.variants.get(key);
-        if (!v) {
-          if (this.variants.size > 240) this.variants.clear();
-          v = document.createElement('canvas');
-          v.width = Math.ceil(dw) + pad * 2;
-          v.height = Math.ceil(dh) + pad * 2;
-          const vc = v.getContext('2d');
-          if (bright) vc.filter = 'brightness(1.7)';
-          if (rim) {
-            // A soft light rim keeps zombies readable on dark floors.
-            vc.shadowColor = 'rgba(255,248,215,0.8)';
-            vc.shadowBlur = 5;
-          }
-          vc.drawImage(im, ...b, pad, pad, dw, dh);
-          this.variants.set(key, v);
+      // The soft rim light and the hit flash (a canvas shadow and a filter) are expensive to compute live, so each
+      // look is painted once per sprite size and reused. Plain sprites are drawn straight from their image: copying
+      // every sprite into its own small canvas was measured and made busy screens slower.
+      const pad = rim ? 10 : 0,
+        key = file + '|' + Math.round(dw) + 'x' + Math.round(dh) + (rim ? 'r' : '') + (bright ? 'b' : '');
+      let v = this.variants.get(key);
+      if (!v && (rim || bright)) {
+        if (this.variants.size > 400) this.variants.clear();
+        v = document.createElement('canvas');
+        v.width = Math.ceil(dw) + pad * 2;
+        v.height = Math.ceil(dh) + pad * 2;
+        const vc = v.getContext('2d');
+        vc.imageSmoothingQuality = 'high';
+        if (bright) vc.filter = 'brightness(1.7)';
+        if (rim) {
+          vc.shadowColor = 'rgba(255,248,215,0.8)';
+          vc.shadowBlur = 5;
         }
-        c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad);
-      } else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
+        vc.drawImage(im, ...b, pad, pad, dw, dh);
+        this.variants.set(key, v);
+      }
+      if (v) c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad);
+      else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
       c.restore();
     }
     text(str, x, y, size = 11, color = '#fff', align = 'center') {
