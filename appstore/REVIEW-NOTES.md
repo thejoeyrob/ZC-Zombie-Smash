@@ -1,13 +1,26 @@
-# App Review notes (paste into App Store Connect → App Review Information → Notes)
+# App Review notes (paste into App Store Connect → App Review Information → Notes, and send as the reply to Apple's Guideline 2.1 message)
 
-Zombie Smash is a single-player portrait arcade shooter. No sign-in or account is required, and there are no ads.
+Answers to the six items in Apple's message:
 
-How to play: enter a player name, press START, then watch or skip the opening story. Move left/right with the joystick, hold FIRE to shoot and tap the grenade button to throw. A boss arrives every second wave; tapping FIRE brings in the next comic panel and moves on.
+1. SCREEN RECORDING
+A recording from a physical iPhone, starting from launching the app, is attached to the reply. It shows: launch → enter a player name → PRESS START → the opening story → playing a wave (move, fire, grenade) → a boss scene → MENU (Music & Sound, Privacy Policy, High Scores). The app has no account registration, login or account deletion (there are no accounts), no paid content or in-app purchases, and the only user-generated content is the player name described in item 4.
 
-Online leaderboard: when a run starts, the game sends the chosen player name and a random, locally generated persistent identifier to our Supabase leaderboard service. When the run finishes, the score and run details (kills, elapsed time, wave) are submitted. The name and score may appear on the public leaderboard. No hardware identifier, advertising identifier or tracking is used. The privacy policy is available inside the app (MENU → PRIVACY POLICY) and at https://zc2.quest/privacy.html, including how to request deletion.
+2. PURPOSE AND TARGET AUDIENCE
+Zombie Smash is a free, single-player, retro-style arcade shooter for iPhone. The player holds a defence line at the bottom of the screen, shoots incoming zombies, fights seven boss characters across seven arenas, and tries to set a high score. It is entertainment for casual players aged 12 and over who enjoy short arcade sessions; it has cartoon-style zombie violence only. It solves nothing beyond fun: quick, pick-up-and-play arcade action with no ads and no sign-in.
 
-The app contains no in-app purchases.
+3. HOW TO USE IT (no login or sample files needed)
+Type any player name (2 to 24 letters or numbers) and press PRESS START. Watch or skip the opening story (tap FIRE to bring in the next comic panel). Slide the joystick left and right to move, hold FIRE to shoot, tap the blue button to throw a grenade. Waves of zombies arrive from the top; a boss arrives every second wave. Letting 10 zombies through ends the run. MENU pauses and opens settings, console skins, the high-score list, how to play and the privacy policy.
+For testing: a name beginning with BOT_ (for example BOT_Reviewer) turns on a cheat mode. MENU → CHEATS lists the codes, entered on the console after pressing MENU twice. Runs in this mode never reach the public leaderboard.
 
-Cheat codes: a name beginning with BOT_ (for example BOT_Reviewer) activates a cheat mode. MENU → CHEATS lists the codes, which are entered on the console after pressing MENU twice. In BOT_ mode, using a code makes the run practice-only. Outside BOT_ mode, a cheat can still be used and the leaderboard score is shown with a ✦ mark.
+4. EXTERNAL SERVICES
+- Supabase (supabase.com): hosts the online high-score list. When a run starts the app sends the player name and a random, locally generated identifier; when it ends it sends the score, kills, time and wave. The name and score may appear on the public leaderboard. Names are checked against an objectionable-words filter before use, and any name can be removed on request (support page: https://zc2.quest/support.html).
+- zc2.quest (web hosting): serves only the privacy policy and support pages. The privacy policy is also inside the app (MENU → PRIVACY POLICY).
+No advertising, analytics, tracking, social login, payment processor or AI service is used. No hardware or advertising identifier is read. The app is fully playable offline (scores are saved on the device and uploaded later).
 
-Settings: MENU → MUSIC & SOUND. The playback audio session lets sound play with the silent switch on.
+5. REGIONAL DIFFERENCES
+None. The app functions the same in every region, in English, with the same content.
+
+6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
+The app is not in a regulated industry. All characters, artwork, music and sound effects were created for this game by the developer; no licensed or third-party protected material is used.
+
+Other: the app contains no in-app purchases. Sound plays with the silent switch on (playback audio session); settings are in MENU → MUSIC & SOUND.
