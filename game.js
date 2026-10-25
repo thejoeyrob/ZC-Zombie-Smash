@@ -1201,7 +1201,7 @@
     else if (sounds[type])
       audio.sfx(
         sounds[type],
-        type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : type === 'pickup' ? 0.4 : type === 'clear' ? 0.5 : 1,
+        type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : type === 'pickup' ? 0.75 : type === 'clear' ? 0.6 : 1,
       );
     buzz(type, data);
     if (type === 'fight') {

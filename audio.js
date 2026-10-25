@@ -1281,7 +1281,8 @@
     }
     sfxFile(name) {
       const base = name === 'doom' ? 'boss-attack' : name;
-      return this.settings.set === 'neo' && NEW_SFX.has(base) ? 'new-' + base + '.mp3' : 'sfx-' + base + '.mp3';
+      // The pickup chime from the NEW set is used in every set.
+      return (this.settings.set === 'neo' && NEW_SFX.has(base)) || base === 'pickup' ? 'new-' + base + '.mp3' : 'sfx-' + base + '.mp3';
     }
     musicFile(track) {
       return this.settings.set === 'neo' && track === 'main' ? 'new-main.mp3' : 'music-' + track + '.mp3';
