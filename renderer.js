@@ -40,6 +40,7 @@
       this.c = canvas.getContext('2d', { alpha: false, desynchronized: true });
       this.images = {};
       this.bounds = {};
+      this.variants = new Map();
       this.reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
       this.resize();
     }
@@ -92,16 +93,32 @@
         dh = b[3] * scale;
       c.save();
       c.globalAlpha = alpha;
-      if (bright) c.filter = 'brightness(1.7)';
-      if (rim) {
-        // A soft light rim keeps zombies readable on dark floors.
-        c.shadowColor = 'rgba(255,248,215,0.8)';
-        c.shadowBlur = 5;
-      }
       c.translate(x + w / 2, y + h / 2);
       if (rot) c.rotate(rot);
       if (flip) c.scale(-1, 1);
-      c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
+      if (rim || bright) {
+        // The soft rim light and the hit flash are expensive to compute live (canvas shadow and filter), so each
+        // look is painted once per sprite size and then drawn like any other image.
+        const pad = rim ? 10 : 0,
+          key = file + '|' + Math.round(dw) + 'x' + Math.round(dh) + (rim ? 'r' : '') + (bright ? 'b' : '');
+        let v = this.variants.get(key);
+        if (!v) {
+          if (this.variants.size > 240) this.variants.clear();
+          v = document.createElement('canvas');
+          v.width = Math.ceil(dw) + pad * 2;
+          v.height = Math.ceil(dh) + pad * 2;
+          const vc = v.getContext('2d');
+          if (bright) vc.filter = 'brightness(1.7)';
+          if (rim) {
+            // A soft light rim keeps zombies readable on dark floors.
+            vc.shadowColor = 'rgba(255,248,215,0.8)';
+            vc.shadowBlur = 5;
+          }
+          vc.drawImage(im, ...b, pad, pad, dw, dh);
+          this.variants.set(key, v);
+        }
+        c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad);
+      } else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
       c.restore();
     }
     text(str, x, y, size = 11, color = '#fff', align = 'center') {

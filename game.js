@@ -132,7 +132,8 @@
     saveClock = 0,
     toastTimer,
     installPrompt,
-    lastFit = '';
+    lastFit = '',
+    fitDirty = true; // the layout is measured when the window changes, not on every frame
   let storyStep = 0,
     storyTimer = null,
     storyVideo = null,
@@ -772,9 +773,12 @@
     resume();
     return true;
   }
+  // Gamepads are only polled once one has announced itself.
+  let padOn = false;
+  addEventListener('gamepadconnected', () => (padOn = true));
   function padWatch() {
     try {
-      const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean),
+      const pad = padOn ? Array.from(navigator.getGamepads?.() || []).find(Boolean) : null,
         any = !!pad && pad.buttons.some((b) => b.pressed);
       if (any && !padHeld) {
         if (storyActive) {
@@ -1179,7 +1183,7 @@
     if (type === 'panel' && data.phase === 2 && game.scene?.bossId === 'debo') {
       audio.playMusic('debo'); // the boss reveal: Debo's theme starts as he appears
     }
-    if (type === 'entrance' && data.id === 'debo') audio.buffer('music-debo.mp3'); // preload
+    if (type === 'entrance' && data.id === 'debo') audio.preload('debo');
     if (type === 'music') {
       const debo = game.scene?.bossId === 'debo' || game.boss?.bossId === 'debo';
       if (game.scene?.kind === 'arrival')
@@ -1381,76 +1385,101 @@
     box.appendChild(pop);
     setTimeout(() => pop.remove(), 1000);
   }
-  function hudText(id, value) {
-    const el = $(id),
-      next = String(value);
-    if (el.textContent !== next) el.textContent = next;
+  // The HUD only touches the page when a value changes. Writing the same text, class or width every frame
+  // forced the phone to restyle (and sometimes re-layout) the whole console 60 times a second.
+  const hudCache = Object.create(null),
+    hudEl = Object.create(null),
+    hel = (id) => hudEl[id] || (hudEl[id] = $(id));
+  function hudSet(key, value, apply) {
+    if (hudCache[key] === value) return;
+    hudCache[key] = value;
+    apply(value);
   }
+  const hudText = (id, value) => hudSet(id, String(value), (t) => (hel(id).textContent = t));
+  let nameCache = '',
+    nameAt = -1e9;
+  function savedName() {
+    const t = performance.now();
+    if (t - nameAt > 1000) {
+      nameAt = t;
+      nameCache = read('zs7-name', '');
+    }
+    return nameCache;
+  }
+  const weaponButtons = {};
   function hud() {
     const p = game.player;
-    $('joystick').classList.toggle('sped', (p.speedUp || 0) > 0);
+    hudSet('sped', (p.speedUp || 0) > 0, (v) => hel('joystick').classList.toggle('sped', v));
     hudText('waveValue', game.wave);
     hudText('leftValue', game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved));
-    hudText('scoreValue', game.score.toLocaleString());
-    hudText('bestValue', scores.getBest(run?.name || read('zs7-name', '')).toLocaleString());
+    hudSet('score', game.score, (v) => (hel('scoreValue').textContent = v.toLocaleString()));
+    hudSet('best', scores.getBest(run?.name || savedName()), (v) => (hel('bestValue').textContent = v.toLocaleString()));
     {
       const max = game.maxLives || 5,
-        l = Math.max(0, p.lives),
-        el = $('healthValue');
-      el.classList.toggle('tenhearts', max > 5);
-      if (el.dataset.health !== max + ':' + l) {
+        l = Math.max(0, p.lives);
+      hudSet('hearts', max + ':' + l + ':' + p.lives, () => {
+        const el = hel('healthValue');
+        el.classList.toggle('tenhearts', max > 5);
         el.dataset.health = max + ':' + l;
         el.innerHTML = Array.from(
           { length: max },
           (_, i) =>
             `<span class="heart${i >= 5 ? ' gold' : ''}${i < l ? '' : ' empty'}">${i < l ? '♥' : '♡'}</span>`,
         ).join('');
-      }
+        el.setAttribute('aria-label', p.lives + ' hearts');
+      });
     }
-    $('healthValue').setAttribute('aria-label', p.lives + ' hearts');
-    $('gunValue').textContent = ZSEngine.GUNS[p.gun].name;
-    $('ammoValue').textContent = !Number.isFinite(p.ammo) || game.infiniteAmmo ? '∞' : p.ammo;
+    hudText('gunValue', ZSEngine.GUNS[p.gun].name);
+    hudText('ammoValue', !Number.isFinite(p.ammo) || game.infiniteAmmo ? '∞' : p.ammo);
     {
-      const el = $('baseValue'), n = Math.min(10, game.breaches);
-      if (el.dataset.n !== String(n)) {
+      const n = Math.min(10, game.breaches);
+      hudSet('breach', n, () => {
+        const el = hel('baseValue');
         el.dataset.n = n;
         el.setAttribute('aria-label', n + ' of 10 zombies through');
         el.innerHTML = Array.from(
           { length: 10 },
           (_, i) => `<svg class="zface${i < n ? ' lit' : ''}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>`,
         ).join('');
-      }
+      });
     }
-    $('grenadeValue').textContent = p.grenades;
-    $('grenadeButton').classList.toggle('empty', p.grenades === 0);
-    $('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + p.grenades + ' remaining');
-    $('boostText').textContent = 'BOOST ×' + game.multiplier;
-    $('boostFill').style.width = Math.max(0, (game.comboLeft / 7) * 100) + '%';
-    $('comboText').textContent =
+    hudSet('grenades', p.grenades, (v) => {
+      hel('grenadeValue').textContent = v;
+      hel('grenadeButton').classList.toggle('empty', v === 0);
+      hel('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + v + ' remaining');
+    });
+    hudText('boostText', 'BOOST ×' + game.multiplier);
+    hudSet('boostFill', Math.round(Math.max(0, game.comboLeft / 7) * 200) / 2, (v) => (hel('boostFill').style.width = v + '%'));
+    hudText(
+      'comboText',
       game.combo >= 30
         ? '×10 · KEEP IT GOING'
         : (game.combo < 10 ? 10 : game.combo < 20 ? 20 : 30) -
-          game.combo +
-          ' KILLS TO ×' +
-          (game.combo < 10 ? 2 : game.combo < 20 ? 4 : 10);
+            game.combo +
+            ' KILLS TO ×' +
+            (game.combo < 10 ? 2 : game.combo < 20 ? 4 : 10),
+    );
     for (const gun of ['smg', 'shotgun', 'dmr', 'burst']) {
-      const el = $('inv-' + gun);
       const active = p.gun === gun,
         ammo = active ? p.ammo : p.inventory?.[gun] || 0;
-      if (el) el.textContent = ammo || '—';
-      const btn = document.querySelector(`[data-weapon="${gun}"]`);
-      if (btn) {
-        btn.disabled = active || !(ammo > 0);
-        btn.classList.toggle('ready', ammo > 0);
-        btn.classList.toggle('equipped', active);
-        btn.setAttribute(
-          'aria-label',
-          `${active ? 'Equipped' : 'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`,
-        );
-      }
+      hudSet('w:' + gun, active + ':' + ammo, () => {
+        const el = $('inv-' + gun);
+        if (el) el.textContent = ammo || '—';
+        const btn = weaponButtons[gun] || (weaponButtons[gun] = document.querySelector(`[data-weapon="${gun}"]`));
+        if (btn) {
+          btn.disabled = active || !(ammo > 0);
+          btn.classList.toggle('ready', ammo > 0);
+          btn.classList.toggle('equipped', active);
+          btn.setAttribute(
+            'aria-label',
+            `${active ? 'Equipped' : 'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`,
+          );
+        }
+      });
     }
-    $('mapLabel').textContent = $('mapTag').textContent = MAPS[ZSData.mapIndex(game.wave)].name;
-    $('headerName').textContent = run?.name || 'JOEY ROB VS DR MANTIS';
+    const mapName = MAPS[ZSData.mapIndex(game.wave)].name;
+    hudSet('map', mapName, (v) => (hel('mapLabel').textContent = hel('mapTag').textContent = v));
+    hudText('headerName', run?.name || 'JOEY ROB VS DR MANTIS');
   }
   function inputs() {
     let axis =
@@ -1462,7 +1491,7 @@
     stick.classList.toggle('push-l', axis < -0.15);
     stick.classList.toggle('push-r', axis > 0.15);
     try {
-      const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean);
+      const pad = padOn ? Array.from(navigator.getGamepads?.() || []).find(Boolean) : null;
       if (pad) {
         if (Math.abs(pad.axes[0] || 0) > 0.14) axis = pad.axes[0];
         if (pad.buttons[14]?.pressed) axis = -1;
@@ -1517,7 +1546,10 @@
     renderer.resize();
   }
   function frame(now) {
-    fit();
+    if (fitDirty) {
+      fitDirty = false;
+      fit();
+    }
     if (storyActive || awaitStart) padWatch();
     const dt = Math.min(0.1, (now - lastTime) / 1000 || 0);
     lastTime = now;
@@ -1540,6 +1572,8 @@
     hud();
     requestAnimationFrame(frame);
   }
+  // iOS toolbars and the keyboard can change the size without a resize event: re-measure twice a second.
+  setInterval(() => (fitDirty = true), 500);
   let flickDir = 0,
     flickUntil = 0,
     stickHist = [],
@@ -1960,12 +1994,15 @@
   });
   addEventListener('resize', () => {
     lastFit = '';
+    fitDirty = true;
   });
   visualViewport?.addEventListener('resize', () => {
     lastFit = '';
+    fitDirty = true;
   });
   screen.orientation?.addEventListener('change', () => {
     lastFit = '';
+    fitDirty = true;
   });
   addEventListener('blur', () => {
     clearInput();

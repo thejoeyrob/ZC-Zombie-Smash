@@ -2818,7 +2818,9 @@ body.deck3d .stick-knob { z-index: 1; width: 38px; height: 38px; left: 50%; top:
   background: radial-gradient(ellipse at 33% 24%, #fffffff0 0 3%, #ffffff70 7%, transparent 20%), radial-gradient(circle at 50% 108%, color-mix(in srgb, var(--ball) 70%, #fff) 0, transparent 40%), radial-gradient(circle at 45% 40%, var(--ball) 0, color-mix(in srgb, var(--ball) 55%, #000) 62%, #050505 100%);
   box-shadow: 0 8px 7px #000a, inset -3px -5px 8px #0007, inset 2px 3px 5px #fff6; }
 
-body.deck3d .fire-button { translate: var(--fx, 0) var(--fy, 0); width: 100px; height: 100px; padding: 0; background: none; border: 0; box-shadow: none; animation: fire-idle 2.6s ease-in-out infinite; }
+body.deck3d .fire-button { translate: var(--fx, 0) var(--fy, 0); width: 100px; height: 100px; padding: 0; background: none; border: 0; box-shadow: none; }
+body.deck3d .fire-button::before { content: ''; position: absolute; left: 50%; top: 50%; width: var(--fd, 96px); height: var(--fd, 96px); margin: calc(var(--fd, 96px) / -2) 0 0 calc(var(--fd, 96px) / -2); border-radius: 50%; pointer-events: none;
+  transform: perspective(620px) rotateX(var(--ft, 50deg)); box-shadow: 0 0 12px color-mix(in srgb, var(--fire) 80%, transparent), 0 0 4px color-mix(in srgb, var(--fire) 60%, transparent); opacity: 0.3; animation: glow-pulse 2.6s ease-in-out infinite; }
 body.deck3d .fire-inner { position: absolute; left: 50%; top: 50%; width: var(--fd, 96px); height: var(--fd, 96px); margin: calc(var(--fd, 96px) / -2) 0 0 calc(var(--fd, 96px) / -2); border: 0; border-radius: 50%;
   transform: perspective(620px) rotateX(var(--ft, 50deg)); transform-style: preserve-3d;
   background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa);
@@ -2832,17 +2834,20 @@ body.deck3d .fire-inner::after { content: ''; position: absolute; inset: 15%; bo
   background: radial-gradient(ellipse at 33% 22%, #ffffffee 0 3%, #ffffff80 6%, transparent 21%), radial-gradient(ellipse at 50% 106%, color-mix(in srgb, var(--fire) 60%, #fff) 0, transparent 44%), radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--fire) 60%, #fff) 0, var(--fire) 52%, color-mix(in srgb, var(--fire) 42%, #1c0205) 100%);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--fire) 36%, #0d0102), 0 0 0 4px #000a, inset 0 -7px 9px #0006, inset 0 3px 4px #ffffff66; }
 body.deck3d .fire-inner b { position: absolute; inset: 0; bottom: auto; height: 100%; display: flex; align-items: center; justify-content: center; font: 900 15px Barlow, sans-serif; letter-spacing: 0.12em; transform: translateZ(14px); z-index: 2; text-shadow: 0 2px 2px #5b0610, 0 0 6px #ffffff40; }
-body.deck3d .fire-button.pressed { animation: none; filter: none; }
+body.deck3d .fire-button.pressed { filter: none; }
+body.deck3d .fire-button.pressed::before { display: none; }
 body.deck3d .fire-button.pressed .fire-inner { transform: perspective(620px) rotateX(var(--ft, 50deg)); border: 0; background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa); box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 0 26px 6px var(--fire), 0 0 8px 2px #fff8; }
 body.deck3d .fire-button.pressed .fire-inner::after { transform: translateZ(8px);
   background: radial-gradient(ellipse at 33% 22%, #fff 0 5%, #ffffffa0 9%, transparent 26%), radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--fire) 40%, #fff) 0, color-mix(in srgb, var(--fire) 70%, #fff) 40%, var(--fire) 100%); }
 body.deck3d .fire-button.pressed .fire-inner b { transform: translateZ(9px); }
-@keyframes fire-idle { 0%, 100% { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--fire) 35%, transparent)); } 50% { filter: drop-shadow(0 0 12px color-mix(in srgb, var(--fire) 80%, transparent)); } }
-
+@keyframes glow-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 body.deck3d .grenade-button { translate: var(--gx, 0) var(--gy, 0); width: 56px; height: 56px; border: 0; background: none; box-shadow: none; filter: none; opacity: 1; color: #3a2600; }
 body.deck3d .grenade-button .g3 { display: block; position: absolute; left: 50%; top: 50%; width: var(--gd, 58px); height: var(--gd, 58px); margin: calc(var(--gd, 58px) / -2) 0 0 calc(var(--gd, 58px) / -2); border: 3px solid #30dcff; border-radius: 50%; box-sizing: border-box;
   transform: perspective(520px) rotateX(var(--gt, 50deg)); transform-style: preserve-3d; pointer-events: none;
-  box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 9px #30dcff, 0 0 18px #30dcffa0, inset 0 0 9px #30dcffaa; animation: ring-ready 1.7s ease-in-out infinite; }
+  box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 9px #30dcff, 0 0 18px #30dcffa0, inset 0 0 9px #30dcffaa; }
+body.deck3d .grenade-button::before { content: ''; position: absolute; left: 50%; top: 50%; width: var(--gd, 58px); height: var(--gd, 58px); margin: calc(var(--gd, 58px) / -2) 0 0 calc(var(--gd, 58px) / -2); border-radius: 50%; pointer-events: none;
+  transform: perspective(520px) rotateX(var(--gt, 50deg)); box-shadow: 0 0 12px #30dcff, 0 0 24px #30dcffc0; opacity: 0.3; animation: glow-pulse 1.7s ease-in-out infinite; }
+body.deck3d .grenade-button.empty::before, body.deck3d .grenade-button:active:not(.empty)::before { display: none; }
 body.deck3d .grenade-button .g3::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #12181a, #030506 74%); box-shadow: inset 0 5px 8px #000; transform: translateZ(1px); }
 body.deck3d .grenade-button .g3 i { display: block; position: absolute; inset: 17%; border-radius: 50%; transform: translateZ(5px); background: #6b4700; box-shadow: 0 0 0 2px #00000070; }
 body.deck3d .grenade-button .g3::after { content: ''; position: absolute; inset: 12%; border-radius: 50%; transform: translateZ(11px);
@@ -2856,15 +2861,15 @@ body.deck3d .grenade-button:active:not(.empty) { transform: none; filter: none; 
 body.deck3d .grenade-button:active:not(.empty) .g3::after { transform: translateZ(7px);
   background: radial-gradient(ellipse at 33% 22%, #fff 0 5%, #ffffffa0 9%, transparent 26%), radial-gradient(circle at 50% 42%, #ffffe8 0, #ffe85a 52%, #e8ac00 100%); }
 body.deck3d .grenade-button:active:not(.empty) .g3 { animation: none; border-color: #b2f6ff; box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 14px #8ff0ff, 0 0 30px #30dcff, inset 0 0 14px #8ff0ff; }
-@keyframes ring-ready { 0%, 100% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 6px #30dcff99, 0 0 11px #30dcff66, inset 0 0 6px #30dcff88; } 50% { box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 12px #30dcff, 0 0 24px #30dcffc0, inset 0 0 12px #30dcffcc; } }
-
 .deck-menu .m3 { display: contents; }
 body.deck3d .deck-menu { translate: var(--mx, 0) var(--my, 0); width: var(--mw, 78px); height: var(--mh, 30px); margin-left: calc(var(--mw, 78px) / -2); padding: 0; border: 0; background: none; box-shadow: none; filter: none; animation: none; color: var(--accent); }
 body.deck3d .deck-menu:active, body.deck3d .deck-menu.pressed { transform: none; filter: none; box-shadow: none; }
 body.deck3d .deck-menu .m3 { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; pointer-events: none;
   transform: perspective(520px) rotateX(var(--mt, 40deg)); transform-style: preserve-3d;
   background: linear-gradient(#0b0e10, #050607); border: 1px solid color-mix(in srgb, var(--accent) 55%, #000);
-  box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 7px color-mix(in srgb, var(--accent) 30%, transparent); animation: menu-breathe 3.4s ease-in-out infinite; }
+  box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 7px color-mix(in srgb, var(--accent) 30%, transparent); }
+body.deck3d .deck-menu::before { content: ''; position: absolute; inset: 0; border-radius: 8px; pointer-events: none; transform: perspective(520px) rotateX(var(--mt, 40deg)); box-shadow: 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); opacity: 0.25; animation: glow-pulse 3.4s ease-in-out infinite; }
+body.deck3d .deck-menu.pressed::before, body.deck3d .deck-menu:active::before { display: none; }
 body.deck3d .deck-menu .m3::before { content: ''; position: absolute; inset: 1px; border-radius: 7px; transform: translateZ(3px); background: #080a0b; box-shadow: 0 0 0 1px #000a; }
 body.deck3d .deck-menu .m3::after { content: ''; position: absolute; inset: 2px; border-radius: 6px; transform: translateZ(8px); transition: transform 0.06s;
   background: linear-gradient(#5d686e 0, #2f383c 14%, #171c1f 60%, #0f1315 100%); box-shadow: inset 0 1px 0 #ffffff80, inset 0 -3px 5px #0008, 0 0 0 1px #000c; }
@@ -2872,7 +2877,6 @@ body.deck3d .deck-menu .m3 > * { position: relative; z-index: 2; transform: tran
 body.deck3d .deck-menu.pressed .m3::after, body.deck3d .deck-menu:active .m3::after { transform: translateZ(4px); background: linear-gradient(#7a868d 0, #3c474c 14%, #232a2e 60%, #181d20 100%); }
 body.deck3d .deck-menu.pressed .m3 > *, body.deck3d .deck-menu:active .m3 > * { transform: translateZ(5px); }
 body.deck3d .deck-menu.pressed .m3, body.deck3d .deck-menu:active .m3 { animation: none; box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 0 16px var(--accent); }
-@keyframes menu-breathe { 0%, 100% { box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); } 50% { box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); } }
 body.deck3d .engraving { display: none; }
 body.deck3d .console-header .wordmark { padding: 2px 12px 1px; border-radius: 9px; background: linear-gradient(#000000b8, #000000d8); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000), 0 2px 4px #000a; text-align: center; }
 body.deck3d .console-header .wordmark small { display: block; max-width: 150px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.15em; }
