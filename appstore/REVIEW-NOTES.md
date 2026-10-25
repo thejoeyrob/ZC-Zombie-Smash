@@ -6,7 +6,7 @@ How to play: enter a player name, press START, then watch or skip the opening st
 
 Online leaderboard: when a run starts, the game sends the chosen player name and a random, locally generated persistent identifier to our Supabase leaderboard service. When the run finishes, the score and run details (kills, elapsed time, wave) are submitted. The name and score may appear on the public leaderboard. No hardware identifier, advertising identifier or tracking is used. The privacy policy is available inside the app (MENU → PRIVACY POLICY) and at https://zc2.quest/privacy.html, including how to request deletion.
 
-Tip jar: MENU → TIP JAR (shown only when App Store in-app products are available). Tips are optional consumable in-app purchases, unlock nothing and are processed by Apple.
+The app contains no in-app purchases.
 
 Cheat codes: a name beginning with BOT_ (for example BOT_Reviewer) activates a cheat mode. MENU → CHEATS lists the codes, which are entered on the console after pressing MENU twice. In BOT_ mode, using a code makes the run practice-only. Outside BOT_ mode, a cheat can still be used and the leaderboard score is shown with a ✦ mark.
 
