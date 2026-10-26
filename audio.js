@@ -870,6 +870,10 @@
   }
   // Most overlapping voices allowed per sound (the fast guns repeat quicker than their sound lasts).
   const CAP = { pistol: 3, smg: 3, shotgun: 3, dmr: 3, burst: 3, hit: 3, ricochet: 2, hurt: 2, throw: 2, 'boss-attack': 2 };
+  // The ARCADE boss and Disco Man music and the victory/defeat stingers are rendered to short files, because
+  // building them live (hundreds of synthesized notes a second) made the phone stutter in boss fights.
+  const ARC_FILES = ['arc-boss.mp3', 'arc-disco.mp3', 'arc-victory.mp3', 'arc-victory-d.mp3', 'arc-defeat.mp3', 'arc-defeat-d.mp3'];
+  const STINGER_LENGTH = { victory: 10, defeat: 12.2 };
   const FILES = [
     'pistol',
     'smg',
@@ -1028,6 +1032,7 @@
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
             for (const name of FILES) this.buffer(this.sfxFile(name));
+          if (this.settings.set === 'arcade') for (const f of ARC_FILES) this.buffer(f);
         }
         if (this.ctx.state !== 'running') await this.ctx.resume();
         if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
@@ -1039,6 +1044,7 @@
       return (this.settings.set === 'neo' && NEW_SFX.has(base)) || base === 'pickup' ? 'new-' + base + '.mp3' : 'sfx-' + base + '.mp3';
     }
     musicFile(track) {
+      if (this.settings.set === 'arcade' && (track === 'boss' || track === 'disco')) return 'arc-' + track + '.mp3';
       return this.settings.set === 'neo' && track === 'main' ? 'new-main.mp3' : 'music-' + track + '.mp3';
     }
     async buffer(file) {
@@ -1130,8 +1136,9 @@
       this.track = track;
       const seq = ++this.musicSeq;
       const recordedMain = track === 'main' && this.afterBoss && this.settings.set === 'arcade';
-      if (this.synthMode && !recordedMain) {
-        this.keyOffset = track === 'disco' ? -5 : 0;
+      const rendered = this.settings.set === 'arcade' && (track === 'boss' || track === 'disco');
+      this.keyOffset = track === 'disco' ? -5 : 0;
+      if (this.synthMode && !recordedMain && !rendered) {
         this.stopMusic();
         this.startSequencer(track);
         return;
@@ -1173,26 +1180,17 @@
 
     // ---- stingers: victory after a boss, defeat when Joey falls ---------------------------------
     // The running music fades out and the stinger plays, in the same key, all the way through.
-    stinger(name) {
+    async stinger(name) {
       if (!this.ctx || this.paused || !this.synthMode) return;
-      const def = this.tracks[name];
-      if (!def) return;
+      const file = 'arc-' + name + (this.keyOffset ? '-d' : '') + '.mp3';
+      const length = STINGER_LENGTH[name];
+      if (!length) return;
       this.cancelStinger(0.05);
       this.stopMusic(name === 'defeat' ? 0.3 : 0.45);
       const ctx = this.ctx,
-        sd = 60 / def.bpm / 4,
-        total = def.bars * 16,
-        off = this.keyOffset || 0,
-        t0 = ctx.currentTime + (name === 'defeat' ? 0.28 : 0.1),
         gain = ctx.createGain();
-      gain.gain.value = (def.level ?? 0.6) * this.levelFor(name);
+      gain.gain.value = 1;
       gain.connect(this.musicBus);
-      for (let s = 0; s < total; s++) {
-        try {
-          def.step(gain, t0 + s * sd, s, s % 16, Math.floor(s / 16), sd, off);
-        } catch {}
-      }
-      const length = t0 - ctx.currentTime + total * sd + (def.tail || 2);
       this.stingerGain = gain;
       this.track = name;
       this.holdTrack = name;
@@ -1207,6 +1205,13 @@
         setTimeout(() => gain.disconnect(), 500);
         if (!this.paused && this.wantTrack) this.playMusic(this.wantTrack);
       }, length * 1000);
+      const buffer = await this.buffer(file);
+      if (!buffer || this.stingerGain !== gain) return;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(gain);
+      source.start(ctx.currentTime + (name === 'defeat' ? 0.28 : 0.1));
+      this.stingerSource = source;
     }
     cancelStinger(fade = 0.2) {
       clearTimeout(this.holdTimer);
@@ -1218,6 +1223,10 @@
         g.gain.linearRampToValueAtTime(0, now + fade);
         setTimeout(() => g.disconnect(), (fade + 0.1) * 1000);
       }
+      try {
+        this.stingerSource?.stop(this.ctx.currentTime + fade + 0.05);
+      } catch {}
+      this.stingerSource = null;
       this.stingerGain = null;
       if (this.holdTrack && this.track === this.holdTrack) this.track = null;
       this.holdTrack = null;
