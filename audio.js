@@ -47,6 +47,7 @@
       g.gain.linearRampToValueAtTime(gain, t + attack);
       if (hold > 0) g.gain.setValueAtTime(gain, t + attack + hold);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      const nodes = [osc, g];
       let node = osc;
       if (filter) {
         const fl = c.createBiquadFilter();
@@ -54,6 +55,7 @@
         fl.Q.value = filter.q ?? 0.7;
         fl.frequency.setValueAtTime(filter.f, t);
         if (filter.f2) fl.frequency.exponentialRampToValueAtTime(Math.max(20, filter.f2), t + dur);
+        nodes.push(fl);
         node.connect(fl);
         node = fl;
       }
@@ -62,6 +64,7 @@
       if (vib) {
         const lfo = c.createOscillator(),
           lg = c.createGain();
+        nodes.push(lfo, lg);
         lfo.frequency.value = vib.rate;
         lg.gain.value = vib.depth;
         lfo.connect(lg);
@@ -69,6 +72,7 @@
         lfo.start(t);
         lfo.stop(t + dur + 0.05);
       }
+      osc.onended = () => { for (const node of nodes) node.disconnect(); };
       osc.start(t);
       osc.stop(t + dur + 0.05);
       return g;
@@ -99,6 +103,7 @@
       src.connect(fl);
       fl.connect(g);
       g.connect(dest);
+      src.onended = () => { src.disconnect(); fl.disconnect(); g.disconnect(); };
       src.start(t, Math.random() * 0.8);
       src.stop(t + dur + 0.05);
       return g;
@@ -852,7 +857,6 @@
   // The audio system the game talks to.
   // ---------------------------------------------------------------------------------------------
   // The NEW set is its own thing: the new arcade tune and effects, then the original recordings for everything else.
-  const NEW_SFX = new Set(['pistol', 'hit', 'pickup', 'boost', 'victory', 'loss', 'whoosh']);
   // A loop that starts or ends on a loud sample clicks when it wraps. Ease the first and last 8 ms once per decoded buffer.
   const softened = new WeakSet();
   function softEdges(buffer) {
@@ -874,6 +878,9 @@
   // building them live (hundreds of synthesized notes a second) made the phone stutter in boss fights.
   const ARC_FILES = ['arc-boss.mp3', 'arc-disco.mp3', 'arc-victory.mp3', 'arc-victory-d.mp3', 'arc-defeat.mp3', 'arc-defeat-d.mp3'];
   const STINGER_LENGTH = { victory: 10, defeat: 12.2 };
+  // Reserve four effect voices for information the player needs to hear over gunfire.
+  const IMPORTANT = new Set(['hurt', 'grenade', 'pickup', 'boost', 'doom', 'alarm', 'whoosh', 'victory', 'loss', 'boss-attack']);
+  const MAX_FX = 12, ROUTINE_FX = 8;
   const FILES = [
     'pistol',
     'smg',
@@ -905,6 +912,8 @@
       this.paused = true;
       this.last = {};
       this.voices = 0;
+      this.effectSources = new Set();
+      this.fallbackSources = new Set();
       this.live = {}; // voices playing right now, per sound
       this.seq = null;
       this.keepAlive = null;
@@ -917,8 +926,8 @@
       } catch {
         this.settings = defaults;
       }
-      if (!['arcade', 'neo', 'original'].includes(this.settings.set))
-        this.settings.set = 'arcade';
+      // One curated soundtrack; keep existing volume levels when migrating older sound selections.
+      this.settings.set = 'arcade';
       for (const key of ['music', 'effects']) {
         const value = Number(this.settings[key]);
         this.settings[key] = Number.isFinite(value)
@@ -934,10 +943,10 @@
     // Three sets: NEW (synthesized, orchestral music), CHIP (synthesized, chip-style music) and ORIGINAL (the
     // first recorded sound files).
     get synthMode() {
-      return !['original', 'neo'].includes(this.settings.set);
+      return true;
     }
     get style() {
-      return this.settings.set === 'arcade' ? 'real' : 'synth';
+      return 'real';
     }
     playbackSession() {
       try {
@@ -1041,11 +1050,11 @@
     sfxFile(name) {
       const base = name === 'doom' ? 'boss-attack' : name;
       // The pickup chime from the NEW set is used in every set.
-      return (this.settings.set === 'neo' && NEW_SFX.has(base)) || base === 'pickup' ? 'new-' + base + '.mp3' : 'sfx-' + base + '.mp3';
+      return (base === 'pickup' ? 'new-' : 'sfx-') + base + '.mp3';
     }
     musicFile(track) {
       if (this.settings.set === 'arcade' && (track === 'boss' || track === 'disco')) return 'arc-' + track + '.mp3';
-      return this.settings.set === 'neo' && track === 'main' ? 'new-main.mp3' : 'music-' + track + '.mp3';
+      return 'music-' + track + '.mp3';
     }
     async buffer(file) {
       if (this.buffers.has(file)) return this.buffers.get(file);
@@ -1212,6 +1221,10 @@
       source.connect(gain);
       source.start(ctx.currentTime + (name === 'defeat' ? 0.28 : 0.1));
       this.stingerSource = source;
+      source.onended = () => {
+        source.disconnect(); gain.disconnect();
+        if (this.stingerSource === source) this.stingerSource = null;
+      };
     }
     cancelStinger(fade = 0.2) {
       clearTimeout(this.holdTimer);
@@ -1250,52 +1263,68 @@
     fallbackSfx(name, volume = 1) {
       if (this.paused || this.settings.effects === 0) return;
       if (this.synthMode && this.settings.set !== 'arcade') return;
-      const t = performance.now();
-      if (t - (this.last['f' + name] || 0) < 60) return;
+      const t = performance.now(), limit = IMPORTANT.has(name) ? 4 : 3;
+      if (this.fallbackSources.size >= limit || t - (this.last['f' + name] ?? -Infinity) < 100) return;
       this.last['f' + name] = t;
       try {
         const el = new Audio('./' + this.sfxFile(name));
         el.volume = Math.min(1, volume * this.settings.effects);
-        el.play().catch(() => {});
+        this.fallbackSources.add(el);
+        const done = () => { this.fallbackSources.delete(el); el.onended = el.onerror = null; };
+        el.onended = el.onerror = done;
+        el.play().catch(done);
       } catch {}
+    }
+    stopEffects() {
+      for (const voice of this.effectSources) {
+        try { voice.source.stop(); } catch {}
+        voice.done();
+      }
+      for (const el of this.fallbackSources) {
+        el.pause(); el.onended = el.onerror = null;
+        el.removeAttribute('src'); el.load();
+      }
+      this.fallbackSources.clear();
     }
     async sfx(name, volume = 1) {
       if (this.ctx && this.ctx.state !== 'running') return this.fallbackSfx(name, volume);
-      if (!this.ctx || this.paused || this.settings.effects === 0 || this.voices >= 16) return;
+      const limit = IMPORTANT.has(name) ? MAX_FX : ROUTINE_FX;
+      if (!this.ctx || this.paused || this.settings.effects === 0 || this.voices >= limit) return;
       const time = performance.now(),
         minGap = { hit: 70, ricochet: 100, 'boss-attack': 140 }[name] || 25;
-      if (time - (this.last[name] || 0) < minGap) return;
+      if (time - (this.last[name] ?? -Infinity) < minGap) return;
       this.last[name] = time;
+      const epoch = this.fxEpoch, ctx = this.ctx, file = this.sfxFile(name);
+      // Cached effects start immediately; decoding a new file must not queue delayed gunshots.
+      const buffer = this.buffers.get(file) || await this.buffer(file);
+      if (this.paused || epoch !== this.fxEpoch || ctx !== this.ctx || this.voices >= limit || performance.now() - time > 450)
+        return;
+      if (!buffer) return this.fallbackSfx(name, volume);
+      const live = this.live[name] || 0;
+      if (live >= (CAP[name] || 3)) return;
       if (['grenade', 'doom', 'hurt'].includes(name))
         this.duckMusic(name === 'hurt' ? 0.78 : 0.6, name === 'grenade' ? 0.65 : 0.42);
-      const epoch = this.fxEpoch;
-      const buffer = await this.buffer(this.sfxFile(name));
-      if (!buffer) return this.fallbackSfx(name, volume);
-      if (this.paused || epoch !== this.fxEpoch || this.voices >= 16 || performance.now() - time > 450)
-        return;
-      // Rapid fire must never pile up voices: each sound may only have a few playing at once.
-      const live = (this.live[name] = this.live[name] || 0);
-      if (live >= (CAP[name] || 6)) return;
-      this.live[name] = live + 1;
-      const s = this.ctx.createBufferSource(),
-        g = volume === 1 ? null : this.ctx.createGain();
-      s.buffer = buffer;
-      s.playbackRate.value = ['hit', 'pistol', 'smg'].includes(name)
-        ? 0.96 + Math.random() * 0.08
-        : 1;
-      if (g) {
-        g.gain.value = volume;
-        s.connect(g);
-        g.connect(this.fx);
-      } else s.connect(this.fx);
-      this.voices++;
-      s.onended = () => {
-        this.voices--;
-        this.live[name]--;
-        s.disconnect();
-        g?.disconnect();
-      };
-      s.start();
+      const source = ctx.createBufferSource(),
+        gain = volume === 1 ? null : ctx.createGain();
+      source.buffer = buffer;
+      source.playbackRate.value = ['hit', 'pistol', 'smg'].includes(name)
+        ? 0.96 + Math.random() * 0.08 : 1;
+      if (gain) { gain.gain.value = volume; source.connect(gain); gain.connect(this.fx); }
+      else source.connect(this.fx);
+      this.voices++; this.live[name] = live + 1;
+      let ended = false;
+      const voice = { source, done: () => {
+        if (ended) return;
+        ended = true;
+        this.voices = Math.max(0, this.voices - 1);
+        this.live[name] = Math.max(0, (this.live[name] || 0) - 1);
+        this.effectSources.delete(voice);
+        source.onended = null;
+        source.disconnect(); gain?.disconnect();
+      }};
+      this.effectSources.add(voice);
+      source.onended = voice.done;
+      try { source.start(); } catch { voice.done(); }
     }
     save() {
       try {
@@ -1315,24 +1344,6 @@
         }
       }
     }
-    // Switch between the new synthesized sounds and the original recorded ones.
-    setSoundSet(name) {
-      this.settings.set = ['arcade', 'neo', 'original'].includes(name)
-        ? name
-        : 'arcade';
-      this.fxEpoch++;
-      this.musicEpoch++;
-      this.save();
-      if (!this.ctx) return;
-      if (!this.synthMode || this.settings.set === 'arcade')
-        for (const n of FILES) this.buffer(this.sfxFile(n));
-      this.wet.gain.setTargetAtTime(this.style === 'synth' ? 0 : 0.18, this.ctx.currentTime, 0.05);
-      if (this.track && !this.holdTrack) {
-        this.stopMusic(0.15);
-        this.track = null;
-      }
-      if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
-    }
     // Hard reset for "no sound": throw the context away and build a fresh one.
     reset() {
       this.keepAlive?.pause();
@@ -1347,6 +1358,7 @@
       this.musicEpoch++;
       this.fxEpoch++;
       this.cancelStinger?.(0);
+      this.stopEffects();
       try {
         clearInterval(this.seq?.timer);
         this.music?.source?.stop?.();
@@ -1392,6 +1404,7 @@
     pause(immediate = false) {
       this.paused = true;
       this.fxEpoch++;
+      this.stopEffects();
       if (immediate) this.keepAlive?.pause();
       if (this.ctx) {
         // The results screen opens while the defeat cadence is still ringing: let it finish, then go quiet.

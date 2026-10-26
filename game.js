@@ -206,7 +206,19 @@
     $('fireButton').classList.remove('pressed');
     $('joystick').setAttribute('aria-valuenow', '0');
   }
+  let pendingSave = null;
+  function queueSave() {
+    if (pendingSave !== null) return;
+    const callback = () => { pendingSave = null; save(); };
+    pendingSave = window.requestIdleCallback
+      ? window.requestIdleCallback(callback, {timeout: 1200}) : setTimeout(callback, 0);
+  }
   function save() {
+    if (pendingSave !== null) {
+      if (window.requestIdleCallback) window.cancelIdleCallback(pendingSave);
+      else clearTimeout(pendingSave);
+      pendingSave = null;
+    }
     if (run && game.active && !game.over)
       write('zs7-run', {
         engine: game.snapshot(),
@@ -282,10 +294,9 @@
     showPanel(
       'start',
       '',
-      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><i class="title-glow" aria-hidden="true"></i><i class="title-fire" aria-hidden="true"></i><canvas id="titleFx" aria-hidden="true"></canvas><i class="title-shine" aria-hidden="true"></i><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+      `<div class="welcome-screen"><div class="welcome-score">HIGH SCORE <b>${Number(hi[1]).toLocaleString()}</b></div><div class="welcome-hero"><span class="welcome-edition">POCKET ARCADE</span><h1>ZOMBIE<br><strong>SMASH</strong></h1><span class="welcome-tag">HOLD THE LINE</span></div><div class="welcome-actions"><form id="startForm"><label class="name-field" for="username">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action" data-action="continue">CONTINUE · WAVE ${saved.engine.wave}</button>` : ''}<div class="welcome-progress">${beaten.size} / ${BOSSES.length} BOSSES DEFEATED</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div>`,
       { start: true, closable: false },
     );
-    titleEmbers();
   }
   // Embers drifting up the title art. Runs only while the title screen is on show.
   function titleEmbers() {
@@ -572,12 +583,12 @@
     if (!previewing) return;
     const skin = SKINS.find((x) => x.id === previewing);
     previewing = '';
-    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'toxic-pop') && !skinLocked(x));
+    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'retro-handheld') && !skinLocked(x));
     paintSkin(saved || SKINS[0]);
     if (skin) toast(lockText(skin));
   }
   function skins(group) {
-    const current = read('zs7-skin', 'toxic-pop'),
+    const current = read('zs7-skin', 'retro-handheld'),
       open = SKINS.filter((x) => !skinLocked(x)).length,
       tile = (s) => {
         const locked = skinLocked(s),
@@ -624,19 +635,11 @@
     $('overlay').querySelector('.panel-content').innerHTML =
       local() + `<h3 class="skin-group">LEADERBOARD · ALL PLAYERS</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>A fresh leaderboard: finish a run to claim the top spot.</p>${rows.length ? '' : '<p class="menu-note">No scores yet.</p>'}${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
-  const VIVID = ['none', 'saturate(1.2) brightness(1.1) contrast(1.06)', 'saturate(1.4) brightness(1.22) contrast(1.1)'];
-  function applyVivid() {
-    const v = Math.max(0, Math.min(2, Number(read('zs7-vivid', 1)) || 0));
-    document.documentElement.style.setProperty('--vivid', VIVID[v]);
-    return v;
-  }
   function sound() {
-    const set = ['original', 'neo'].includes(audio.settings.set) ? audio.settings.set : 'arcade';
-    const vv = applyVivid();
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">ARCADE is the cinematic score. NEW is a separate set with a 132 BPM arcade tune and fresh pickup, combo, boss, shot and hit sounds. ORIGINAL is the first mix. Each set plays on its own. Choose your sound, adjust the mix and set haptics. Sound may play even with the iPhone silent switch on.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="arcade" aria-pressed="${set === 'arcade'}" class="${set === 'arcade' ? 'on' : ''}">ARCADE</button><button data-sound-set="neo" aria-pressed="${set === 'neo'}" class="${set === 'neo' ? 'on' : ''}">NEW</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><div class="setting"><span>SCREEN</span><span class="segmented">${['STANDARD','VIVID','EXTRA'].map((n,i)=>`<button data-vivid="${i}" aria-pressed="${vv===i}" class="${vv===i?'on':''}">${n}</button>`).join('')}</span></div><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">Set your music and effects mix. Sound may play even with the iPhone silent switch on.</p><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
@@ -945,7 +948,7 @@
       audio.sfx('doom');
     }
     if (type === 'over') results(data.reason);
-    if (type === 'wave') save();
+    if (type === 'wave') queueSave();
   }
   // Which finished clip (if any) covers the scene that is playing now.
   function sceneClipFor(s) {
@@ -1276,13 +1279,16 @@
     $('cabinet').style.top = T + 333.5 * scale + 'px';
     renderer.resize();
   }
+  let lastDraw = -Infinity, lastHud = -Infinity;
   function frame(now) {
     if (fitDirty) {
       fitDirty = false;
       fit();
     }
     if (storyActive || awaitStart) padWatch();
-    const dt = Math.min(0.1, (now - lastTime) / 1000 || 0);
+    const elapsed = now - lastTime;
+    const dt = Math.min(0.1, elapsed / 1000 || 0);
+    renderer.observeFrame(elapsed, !paused && !landscape && !document.hidden && ready && !game.scene);
     lastTime = now;
     if (!paused && !landscape && !document.hidden && ready) {
       inputs();
@@ -1295,12 +1301,19 @@
       saveClock += dt;
       if (saveClock > 5) {
         saveClock = 0;
-        save();
+        queueSave();
       }
     } else accumulator = 0;
-    renderer.draw(game);
-    cinematic();
-    hud();
+    if (!document.hidden) {
+      // Keep controls and simulation at full rate; avoid drawing a static menu or the same 60 Hz pose at 120 Hz.
+      const interval = paused || game.scene ? 1000 / 15 : 1000 / 60;
+      if (now - lastDraw >= interval - 0.5) {
+        renderer.draw(game);
+        lastDraw = now - ((now - (Number.isFinite(lastDraw) ? lastDraw : now)) % interval);
+      }
+      cinematic();
+      if (now - lastHud >= 1000 / 30) { hud(); lastHud = now; }
+    }
     requestAnimationFrame(frame);
   }
   // iOS toolbars and the keyboard can change the size without a resize event: re-measure twice a second.
@@ -1586,26 +1599,6 @@
       });
       return;
     }
-    if (button.dataset.soundSet) {
-      audio.setSoundSet(button.dataset.soundSet);
-      document.querySelectorAll('[data-sound-set]').forEach((b) => {
-        const on = b.dataset.soundSet === button.dataset.soundSet;
-        b.classList.toggle('on', on);
-        b.setAttribute('aria-pressed', on);
-      });
-      audio.resume();
-      audio.sfx('pickup');
-      setTimeout(() => {
-        if (paused) audio.pause();
-      }, 1200);
-      return;
-    }
-    if (button.dataset.vivid) {
-      write('zs7-vivid', Number(button.dataset.vivid));
-      applyVivid();
-      sound();
-      return;
-    }
     if (button.dataset.skin) {
       applySkin(button.dataset.skin);
       document.querySelectorAll('[data-skin]').forEach((b) => {
@@ -1781,9 +1774,13 @@
     e.preventDefault();
     installPrompt = e;
   });
+  // Move the former default to the new standard once; preserve other chosen skins.
+  if (!read('zs7-retro-default', false)) {
+    if (read('zs7-skin', 'toxic-pop') === 'toxic-pop') write('zs7-skin', 'retro-handheld');
+    write('zs7-retro-default', true);
+  }
   ZSConsole.apply();
-  applyVivid();
-  applySkin(read('zs7-skin', 'toxic-pop'));
+  applySkin(read('zs7-skin', 'retro-handheld'));
   fetch('./skins-extra.json')
     .then((r) => r.json())
     .then((j) => {
@@ -1802,7 +1799,7 @@
           SKINS.push(s);
           added++;
         }
-      if (added) applySkin(read('zs7-skin', 'toxic-pop'));
+      if (added) applySkin(read('zs7-skin', 'retro-handheld'));
     })
     .catch(() => {});
   showStart();
@@ -1864,7 +1861,7 @@
     const intro = $('studioIntro');
     if (intro) {
       const done = () => intro.remove();
-      intro.addEventListener('pointerdown', done);
+      intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(); });
       setTimeout(done, 2900);
     }
   }

@@ -2817,8 +2817,8 @@ body.deck3d .map-tag { display: block; }
 @keyframes zhead-shake { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-2px, 1px) rotate(-10deg); } 75% { transform: translate(2px, -1px) rotate(10deg); } }
 @media (prefers-reduced-motion: reduce) { .base-status.hit b, .zpop svg { animation: none; } }
 
-/* Screen vibrance: the game screen is brightened and made more colourful (Menu > Music & Sound > Screen). */
-#gameCanvas { filter: var(--vivid, saturate(1.2) brightness(1.1) contrast(1.06)); }
+/* Original artwork colours: avoid a full-canvas colour-processing pass during combat. */
+#gameCanvas { filter: none; }
 
 /* The screen glass carries a slow sheen across the whole display. */
 .screen-glass::after {
@@ -2922,3 +2922,37 @@ body.in-scene #gameCanvas { filter: none; }
 .split-bottom { animation: split-down 0.42s cubic-bezier(0.55, 0, 0.9, 0.4) forwards; }
 @keyframes split-up { to { transform: translate(-6%, -108%); } }
 @keyframes split-down { to { transform: translate(6%, 108%); } }
+
+/* 7.49: precise vector shell; all control positions and hit targets remain unchanged. */
+body[data-release-skin="retro-handheld"] .wordmark { color: #363b49; text-shadow: none; }
+body[data-release-skin="retro-handheld"] .wordmark b { color: #71334c; }
+body[data-release-skin="retro-handheld"] .engraving,
+body[data-release-skin="retro-handheld"] .deck-label { color: #474b52; text-shadow: none; }
+body[data-release-skin="retro-handheld"] #joystick { background: linear-gradient(#44494a,#24282b); border-color: #999b9e; box-shadow: inset 0 2px 5px #0009, 0 1px #e6e7e8; }
+body[data-release-skin="retro-handheld"] .stick-knob { background: linear-gradient(#626669,#34373b); border-color: #777b7d; box-shadow: 0 3px 3px #0008,inset 0 1px #a0a4a4; }
+body[data-release-skin="retro-handheld"] .fire-button,
+body[data-release-skin="retro-handheld"] .grenade-button { background: linear-gradient(#a54764,#6b233c); border-color: #552134; box-shadow: 0 4px 0 #4a2333,0 6px 5px #0005,inset 0 1px #d2788f; color: #fff0e4; }
+body[data-release-skin="retro-handheld"] .fire-inner { background: transparent; box-shadow: inset 0 1px 3px #ffffff24; }
+body[data-release-skin="retro-handheld"] .deck-menu { color: #eeeadd; background: linear-gradient(#62686a,#414649); border-color: #777c79; box-shadow: 0 3px #292e30; }
+body[data-release-skin="retro-handheld"] .fire-button.pressed,
+body[data-release-skin="retro-handheld"] .grenade-button:active { box-shadow: 0 1px #4a2333,inset 0 2px 5px #0005; filter: brightness(.92); }
+.start-panel:has(.welcome-screen) { padding: 0; overflow: auto; background: #111e1a; }
+.welcome-screen { min-height: 100%; display: flex; flex-direction: column; padding: 18px 22px 14px; color: #e8e9ca; background: radial-gradient(ellipse at 50% 25%,#314439 0,#15251d 60%,#101b17 100%); text-align: center; }
+.welcome-score { display: flex; justify-content: space-between; font: 700 9px/1.4 monospace; letter-spacing: .12em; color: #b6c4a4; }
+.welcome-score b { color: #e9edce; }
+.welcome-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 198px; padding: 16px 0; }
+.welcome-edition { font: 700 9px/1.5 monospace; letter-spacing: .24em; color: #b2c19a; }
+.start-panel .welcome-hero h1 { font: 900 66px/.8 Barlow,sans-serif; margin: 17px 0 15px; letter-spacing: -.02em; color: #e4e6bb; text-shadow: 0 3px #526846, 0 6px #09120f; }
+.welcome-hero h1 strong { color: #bfd48e; font-weight: 900; }
+.welcome-tag { font: 700 10px/1.4 monospace; letter-spacing: .24em; color: #cad4b6; }
+.welcome-actions { width: 100%; }
+.welcome-screen .name-field { text-align: left; color: #b6c4a4; font-size: 9px; letter-spacing: .12em; }
+.welcome-screen .name-field input { margin-top: 6px; height: 40px; border: 1px solid #657659; border-radius: 4px; background: #0b1712; color: #eef0d8; font: 700 14px monospace; box-shadow: inset 0 2px 4px #0006; }
+.welcome-screen .primary-action { margin: 10px 0 0; min-height: 44px; background: #c5d697; color: #18271b; border: 1px solid #e0e8be; border-radius: 4px; box-shadow: 0 3px #61734b; font-size: 17px; animation: none; }
+.welcome-screen .secondary-action { margin: 9px 0 0; min-height: 36px; padding: 7px; border: 1px solid #657659; border-radius: 4px; color: #d4dfb9; background: #1a2b20; font-size: 12px; }
+.welcome-progress { margin-top: 14px; font: 700 9px/1.4 monospace; letter-spacing: .1em; color: #b9c7a3; }
+.welcome-screen .loading-line { margin-top: 7px; color: #95a689; font-size: 8px; }
+/* The studio card occupies exactly the LCD, not the device or controls. */
+#studioIntro { position: absolute; inset: auto; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); flex-direction: column; gap: 20px; background: #101b17; overflow: hidden; }
+#studioIntro img { width: 62%; max-height: 65%; object-fit: contain; filter: none; }
+#studioIntro > span { font: 700 10px monospace; letter-spacing: .32em; color: #b9c7a3; }

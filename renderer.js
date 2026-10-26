@@ -40,18 +40,50 @@
       this.images = {};
       this.bounds = {};
       this.variants = new Map();
+      this.autoDpr = 2;
+      this.pressure = { elapsed: 0, slow: 0, frames: 0, calm: 0, cooldown: 0 };
+      this.backdrop = null;
+      this.floorLayer = null;
+      this.enemyOrder = [];
       this.reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
       this.resize();
     }
     resize() {
-      const dpr = Math.min(3, devicePixelRatio || 1),
+      const dpr = Math.min(this.autoDpr, devicePixelRatio || 1),
         r = this.canvas.getBoundingClientRect(),
         scale = Math.max(0.5, r.width / W);
-      this.canvas.width = Math.max(1, Math.round(W * dpr * scale));
-      this.canvas.height = Math.max(1, Math.round(H * dpr * scale));
+      const width = Math.max(1, Math.round(W * dpr * scale)),
+        height = Math.max(1, Math.round(H * dpr * scale));
+      if (this.canvas.width === width && this.canvas.height === height && this.haze) return;
+      this.canvas.width = width;
+      this.canvas.height = height;
+      this.backdrop = this.floorLayer = null;
       this.c.setTransform(this.canvas.width / W, 0, 0, this.canvas.height / H, 0, 0);
       this.c.imageSmoothingEnabled = true;
       this.c.imageSmoothingQuality = 'high';
+      this.haze = this.c.createLinearGradient(0, 0, 0, 55);
+      this.haze.addColorStop(0, '#050908a0');
+      this.haze.addColorStop(1, '#05090800');
+    }
+    get light() { return this.autoDpr < 2; }
+    // Only observed gameplay frames count. Lower decoration quality without changing simulation or enemies.
+    observeFrame(ms, active) {
+      const p = this.pressure;
+      if (!active || ms <= 0 || ms > 250) { p.elapsed = p.slow = p.frames = p.calm = 0; return; }
+      p.elapsed += ms; p.frames++; p.slow += ms > 22 ? 1 : 0;
+      p.cooldown = Math.max(0, p.cooldown - ms);
+      if (p.elapsed < 1000) return;
+      const ratio = p.slow / p.frames;
+      p.calm = ratio < 0.05 ? p.calm + p.elapsed : 0;
+      let next = this.autoDpr;
+      if (ratio > 0.18 && !p.cooldown) next = Math.max(1.25, next - 0.25);
+      else if (p.calm > 12000 && !p.cooldown) next = Math.min(2, next + 0.25);
+      p.elapsed = p.slow = p.frames = 0;
+      if (next !== this.autoDpr) {
+        this.autoDpr = next; p.cooldown = 4000; p.calm = 0;
+        document.body.classList.toggle('render-lite', this.light);
+        this.resize();
+      }
     }
     async load(progress = () => {}) {
       try {
@@ -81,6 +113,21 @@
         ),
       );
       if (failed.length) throw Error('Missing artwork: ' + failed.slice(0, 3).join(', '));
+      // Warm flash/rim variants before PRESS START, in small batches so the loading screen stays responsive.
+      const jobs = [];
+      for (const e of Object.values(ENEMIES)) {
+        for (const rim of [false, true]) for (const bright of [false, true])
+          if (rim || bright) jobs.push([e.art, e.height * 0.82, e.height, rim, bright]);
+      }
+      for (const boss of BOSSES) boss.sprites.forEach((file, i) =>
+        jobs.push([file, 130, boss.id === 'drmantis' && i === 2 ? 139 : 113, false, true]));
+      for (let i = 0; i < jobs.length; i++) {
+        const [file, w, h, rim, bright] = jobs[i], im = this.images[file];
+        const b = this.bounds[file] || [0, 0, im.naturalWidth, im.naturalHeight];
+        const k = Math.min(w / b[2], h / b[3]);
+        this.variant(file, b[2] * k, b[3] * k, rim, bright);
+        if (i % 4 === 3) await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
     fit(file, x, y, w, h, { alpha = 1, flip = false, bright = false, rot = 0, rim = false } = {}) {
       const im = this.images[file];
@@ -98,11 +145,21 @@
       // The soft rim light and the hit flash (a canvas shadow and a filter) are expensive to compute live, so each
       // look is painted once per sprite size and reused. Plain sprites are drawn straight from their image: copying
       // every sprite into its own small canvas was measured and made busy screens slower.
+      const pad = rim ? 10 : 0, v = this.variant(file, dw, dh, rim, bright);
+      if (v) c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad, v.logicalW, v.logicalH);
+      else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
+      c.restore();
+    }
+    variant(file, dw, dh, rim, bright) {
+      if (!rim && !bright) return null;
+      const im = this.images[file];
+      if (!im?.naturalWidth) return null;
+      const b = this.bounds[file] || [0, 0, im.naturalWidth, im.naturalHeight];
       const pad = rim ? 10 : 0,
         key = file + '|' + Math.round(dw) + 'x' + Math.round(dh) + (rim ? 'r' : '') + (bright ? 'b' : '');
       let v = this.variants.get(key);
       if (!v && (rim || bright)) {
-        if (this.variants.size > 400) this.variants.clear();
+        if (this.variants.size >= 160) this.variants.delete(this.variants.keys().next().value);
         // Painted at double size and drawn back at half size, so the copy is as sharp as the original artwork.
         const K = 2;
         v = document.createElement('canvas');
@@ -120,9 +177,7 @@
         vc.drawImage(im, ...b, pad * K, pad * K, dw * K, dh * K);
         this.variants.set(key, v);
       }
-      if (v) c.drawImage(v, -dw / 2 - pad, -dh / 2 - pad, v.logicalW, v.logicalH);
-      else c.drawImage(im, ...b, -dw / 2, -dh / 2, dw, dh);
-      c.restore();
+      return v;
     }
     // Bullets of the special weapons are drawn from shapes, so they need no artwork.
     specialBullet(b, g) {
@@ -260,25 +315,10 @@
     draw(g) {
       const c = this.c;
       c.save();
-      c.clearRect(0, 0, W, H);
-      c.fillStyle = '#141b19';
-      c.fillRect(0, 0, W, H);
-      const map = MAPS[ZSData.mapIndex(g.wave)],
-        im = this.images[map.file];
-      if (im?.complete && im.naturalWidth) {
-        const k = Math.max(W / im.naturalWidth, H / im.naturalHeight);
-        c.drawImage(
-          im,
-          (W - im.naturalWidth * k) / 2,
-          (H - im.naturalHeight * k) / 2,
-          im.naturalWidth * k,
-          im.naturalHeight * k,
-        );
-      }
-      c.fillStyle = '#07110c08';
-      c.fillRect(0, 0, W, H);
+      const map = MAPS[ZSData.mapIndex(g.wave)];
+      this.drawBackdrop(map);
       const opens = g.openings || [];
-      if (ZSData.mapIndex(g.wave) === 4 && map.tileGrid) this.discoFloor(g, map, opens);
+      if (ZSData.mapIndex(g.wave) === 4 && map.tileGrid) this.drawDiscoFloor(g, map, opens);
       this.arenaAtmosphere(g, map);
       // Floor access hatches sit entirely on open ground, away from the scenery. The Neon Palace uses its dance-floor tiles instead.
       if (map.entryStyle !== 'tile' && map.entryStyle !== 'portal' && map.entryStyle !== 'edge') for(const [x,y] of map.entries) {
@@ -305,10 +345,7 @@
       }
       if (g.shake && !this.reduced)
         c.translate(Math.sin(g.t * 93) * g.shake, Math.cos(g.t * 111) * g.shake * 0.55);
-      const haze = c.createLinearGradient(0, 0, 0, 55);
-      haze.addColorStop(0, '#050908a0');
-      haze.addColorStop(1, '#05090800');
-      c.fillStyle = haze;
+      c.fillStyle = this.haze;
       c.fillRect(0, 0, W, 55);
       c.strokeStyle = '#89baa52b';
       c.setLineDash([4, 5]);
@@ -340,8 +377,12 @@
         this.fit(art, x - 12, y - 12, 24, 24);
       }
       for (const barrel of g.barrels || []) this.barrel(barrel);
-      for (const z of [...g.enemies, ...(g.boss ? [g.boss] : [])].sort((a, b) => a.y - b.y))
-        this.enemy(z, g);
+      const order = this.enemyOrder;
+      order.length = 0;
+      for (const z of g.enemies) order.push(z);
+      if (g.boss) order.push(g.boss);
+      order.sort((a, b) => a.y - b.y);
+      for (const z of order) this.enemy(z, g);
       for (const b of g.bullets) {
         if (b.sp) {
           this.specialBullet(b, g);
@@ -425,8 +466,9 @@
       }
       for (const grenade of g.grenades)
         this.fit('pickup-bomb.webp', grenade.x - 10, grenade.y - 10, 20, 20);
+      let sparkIndex = 0;
       for (const f of g.effects) {
-        c.save();
+        if (this.light && f.kind === 'spark' && ++sparkIndex % 2 === 0) continue;
         c.globalAlpha = clamp(f.life / f.total, 0, 1);
         if (f.kind === 'ring' || f.kind === 'barrelBlast') {
           const q = 1 - f.life / f.total;
@@ -447,8 +489,8 @@
           c.fillStyle = f.color;
           c.fillRect(f.x, f.y, f.r * 1.7, f.r * 1.7);
         }
-        c.restore();
       }
+      c.globalAlpha = 1;
       for (const pop of g.pops)
         this.text(
           pop.text,
@@ -465,8 +507,25 @@
         this.text(b.name + '  /  ' + b.stage + ' OF ' + b.stages, W / 2, 16, 10, def.accent);
         c.fillStyle = '#333';
         c.fillRect(17, 22, W - 34, 4);
+        const hp = Math.max(0, b.hp / b.maxHp);
+        if (!this.bossHealth || this.bossHealth.id !== b.id || hp > this.bossHealth.hp)
+          this.bossHealth = {id: b.id, hp, trail: hp, at: g.t, time: g.t};
+        const health = this.bossHealth;
+        if (hp < health.hp) { health.hp = hp; health.at = g.t; }
+        if (g.t - health.at > 0.18 || this.reduced)
+          health.trail = this.reduced ? hp : hp + (health.trail - hp) * Math.exp(-Math.max(0, g.t - health.time) * 8);
+        health.time = g.t;
+        c.fillStyle = '#fff0bd';
+        c.fillRect(17, 22, (W - 34) * health.trail, 4);
         c.fillStyle = def.accent;
-        c.fillRect(17, 22, (W - 34) * Math.max(0, b.hp / b.maxHp), 4);
+        c.fillRect(17, 22, (W - 34) * hp, 4);
+      }
+      if (g.active && !g.over && !g.scene && (p.lives <= 1 || g.breaches >= 8)) {
+        c.strokeStyle = p.lives <= 1 ? '#ff6666' : '#ffbf68';
+        c.globalAlpha = this.reduced ? 0.5 : 0.38 + Math.sin(g.t * 3) * 0.12;
+        c.lineWidth = 2;
+        c.strokeRect(1, 1, W - 2, H - 2);
+        c.globalAlpha = 1;
       }
       if (g.bannerLeft > 0 && !g.scene) {
         c.fillStyle = '#08100dcc';
@@ -474,6 +533,44 @@
         this.text(g.banner, W / 2, 66, 16, '#f5da98');
       }
       c.restore();
+    }
+
+    drawBackdrop(map) {
+      const im = this.images[map.file];
+      if (!im?.complete || !im.naturalWidth) {
+        this.c.fillStyle = '#141b19'; this.c.fillRect(0, 0, W, H); return;
+      }
+      if (!this.backdrop || this.backdrop.file !== map.file) {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width; canvas.height = this.canvas.height;
+        const c = canvas.getContext('2d', {alpha: false});
+        c.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+        c.imageSmoothingQuality = 'high';
+        const k = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+        c.drawImage(im, (W - im.naturalWidth * k) / 2, (H - im.naturalHeight * k) / 2,
+          im.naturalWidth * k, im.naturalHeight * k);
+        c.fillStyle = '#07110c08'; c.fillRect(0, 0, W, H);
+        this.backdrop = {file: map.file, canvas};
+      }
+      this.c.drawImage(this.backdrop.canvas, 0, 0, W, H);
+    }
+    drawDiscoFloor(g, map, opens) {
+      const tick = Math.floor(g.t * (this.light ? 15 : 30));
+      if (!this.floorLayer) {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width; canvas.height = this.canvas.height;
+        this.floorLayer = {canvas, tick: -1};
+      }
+      const layer = this.floorLayer;
+      if (layer.tick !== tick) {
+        const main = this.c, c = layer.canvas.getContext('2d');
+        c.setTransform(layer.canvas.width / W, 0, 0, layer.canvas.height / H, 0, 0);
+        c.clearRect(0, 0, W, H);
+        this.c = c;
+        try { this.discoFloor(g, map, opens); } finally { this.c = main; }
+        layer.tick = tick;
+      }
+      this.c.drawImage(layer.canvas, 0, 0, W, H);
     }
 
     // Vector gold heart: the artwork only has a red one, and canvas filters are not reliable on iPhone.
