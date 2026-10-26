@@ -456,11 +456,6 @@
       this.effects = this.effects.filter((f) => (f.life -= dt) > 0);
       this.beams = (this.beams || []).filter((b) => (b.life -= dt) > 0);
       this.arcs = (this.arcs || []).filter((a) => (a.life -= dt) > 0);
-      if (this.player.special && (this.player.special.left -= dt) <= 0) {
-        this.player.special = null;
-        this.banner = 'WEAPON SPENT';
-        this.bannerLeft = 1;
-      }
       this.pops = this.pops.filter((p) => (p.life -= dt) > 0);
       for (const f of this.effects) {
         f.x += (f.vx || 0) * dt;
@@ -470,6 +465,11 @@
         this.scene.time += dt;
         if (!this.scene.mediaControlled && this.scene.time >= this.scene.duration) this.advanceScene();
         return;
+      }
+      if (this.player.special && (this.player.special.left -= dt) <= 0) {
+        this.player.special = null;
+        this.banner = 'WEAPON SPENT';
+        this.bannerLeft = 1;
       }
       const p = this.player;
       p.inv = Math.max(0, p.inv - dt);
@@ -1649,9 +1649,27 @@
       return copy;
     }
     restore(saved) {
-      if (!saved || typeof saved.t !== 'number' || !saved.player) return false;
+      // Reject incomplete saves before touching the running game. Old saves may omit newer fields.
+      if (!saved || !Number.isFinite(saved.t) || saved.t < 0 ||
+          !Number.isInteger(saved.wave) || saved.wave < 1 ||
+          !Number.isFinite(saved.score) || saved.score < 0 ||
+          !saved.active || saved.over || !saved.player ||
+          !Object.hasOwn(GUNS, saved.player.gun) ||
+          !Number.isFinite(saved.player.x) || !Number.isFinite(saved.player.lives) ||
+          !['enemies', 'bullets', 'shots', 'pickups', 'grenades', 'effects', 'pops', 'bossesDown']
+            .every(key => Array.isArray(saved[key]) && saved[key].every(item => item != null)) ||
+          saved.enemies.some(z => !Object.hasOwn(ENEMIES, z.type)) ||
+          (saved.boss && !BOSSES.some(b => b.id === saved.boss.bossId)) ||
+          (saved.scene && (!['arrival', 'mutation', 'down', 'loss'].includes(saved.scene.kind) ||
+            (saved.scene.bossId && !BOSSES.some(b => b.id === saved.scene.bossId))))) return false;
+      let copy;
+      try { copy = JSON.parse(JSON.stringify(saved)); } catch { return false; }
       const fn = this.onEvent;
-      Object.assign(this, saved);
+      this.reset();
+      // Only restore state fields, never instance methods or the event callback.
+      for (const key of Object.keys(this)) {
+        if (key !== 'onEvent' && Object.hasOwn(copy, key)) this[key] = copy[key];
+      }
       if (this.scene) { this.scene.mediaControlled = false; this.scene.time = 0; }
       this.onEvent = fn;
       this.player.ammo = this.player.ammo ?? GUNS[this.player.gun].ammo;
@@ -1674,7 +1692,7 @@
         z.hp = z.maxHp * hpRatio;
       }
       if (!Array.isArray(saved.barrels)) this.spawnBarrels();
-      else this.barrels = saved.barrels;
+      else this.barrels = copy.barrels;
       this.resetInput();
       return true;
     }

@@ -1682,11 +1682,17 @@
       case 'continue':
         {
           const saved = read('zs7-run', null);
-          if (ready && saved && game.restore(saved.engine)) {
+          if (!ready) return;
+          if (saved?.run && typeof saved.run.name === 'string' &&
+              typeof saved.run.id === 'string' && game.restore(saved.engine)) {
             run = saved.run;
             bot = !!run.bot;
             sceneKey = '';
             closePanel();
+          } else {
+            try { localStorage.removeItem('zs7-run'); } catch {}
+            showStart();
+            toast('That saved run could not be restored. Start a new game; your best scores are kept.');
           }
         }
         break;
