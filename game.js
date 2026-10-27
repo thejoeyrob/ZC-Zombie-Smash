@@ -295,53 +295,9 @@
     showPanel(
       'start',
       '',
-      `<div class="welcome-screen"><div class="welcome-score">HIGH SCORE <b>${Number(hi[1]).toLocaleString()}</b></div><div class="welcome-hero"><span class="welcome-edition">POCKET ARCADE</span><h1>ZOMBIE<br><strong>SMASH</strong></h1><span class="welcome-tag">HOLD THE LINE</span></div><div class="welcome-actions"><form id="startForm"><label class="name-field" for="username">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action" data-action="continue">CONTINUE · WAVE ${saved.engine.wave}</button>` : ''}<div class="welcome-progress">${beaten.size} / ${BOSSES.length} BOSSES DEFEATED</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div>`,
+      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>HI <b>${Number(hi[1]).toLocaleString()}</b></span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
-  }
-  // Embers drifting up the title art. Runs only while the title screen is on show.
-  function titleEmbers() {
-    const cv = $('titleFx');
-    if (!cv || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-    const rect = cv.getBoundingClientRect(),
-      dpr = Math.min(2, devicePixelRatio || 1),
-      w = (cv.width = Math.max(1, Math.round(rect.width * dpr))),
-      h = (cv.height = Math.max(1, Math.round(rect.height * dpr))),
-      c = cv.getContext('2d'),
-      mk = (fresh) => ({
-        x: Math.random() * w,
-        y: fresh ? h + Math.random() * 40 : Math.random() * h,
-        r: (0.8 + Math.random() * 1.8) * dpr,
-        v: (14 + Math.random() * 38) * dpr,
-        a: Math.random() * 6.28,
-        s: 0.6 + Math.random() * 1.6,
-        hue: 18 + Math.random() * 28,
-      }),
-      sparks = Array.from({ length: 46 }, () => mk(false));
-    let last = performance.now();
-    const loop = (now) => {
-      if (!cv.isConnected) return;
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      c.clearRect(0, 0, w, h);
-      c.globalCompositeOperation = 'lighter';
-      for (const p of sparks) {
-        p.y -= p.v * dt;
-        p.a += p.s * dt;
-        p.x += Math.sin(p.a) * 12 * dpr * dt;
-        if (p.y < -10) Object.assign(p, mk(true));
-        const fade = Math.min(1, p.y / (h * 0.5)),
-          g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
-        g.addColorStop(0, `hsla(${p.hue},100%,70%,${0.85 * fade})`);
-        g.addColorStop(1, `hsla(${p.hue},100%,50%,0)`);
-        c.fillStyle = g;
-        c.beginPath();
-        c.arc(p.x, p.y, p.r * 4, 0, 6.28);
-        c.fill();
-      }
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
   }
   // Retro attract mode: a low-resolution canvas scaled up with hard pixels. Joey shoots zombies down a street under a red moon.
   let titleBounds = null;
@@ -1196,10 +1152,7 @@
         const el = hel('baseValue');
         el.dataset.n = n;
         el.setAttribute('aria-label', n + ' of 10 zombies through');
-        el.innerHTML = Array.from(
-          { length: 10 },
-          (_, i) => `<svg class="zface${i < n ? ' lit' : ''}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>`,
-        ).join('');
+        el.innerHTML = `<span class="bn">${n}</span><span class="bm">/10</span><i class="bp">${Array.from({ length: 10 }, (_, i) => `<u${i < n ? ' class="on"' : ''}></u>`).join('')}</i>`;
       });
     }
     hudSet('grenades', p.grenades, (v) => {

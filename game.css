@@ -2045,51 +2045,6 @@ body {
     filter: none;
   }
 }
-.title-fire,
-.title-glow,
-.title-shine {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-}
-.title-fire {
-  inset: 0 0 45% 0;
-  background: radial-gradient(ellipse at 50% 20%, #ff8a2a99, #ff4a0000 70%);
-  mix-blend-mode: screen;
-  animation: fireFlicker 2.3s steps(1) infinite;
-}
-@keyframes fireFlicker {
-  0% {
-    opacity: 0.5;
-  }
-  12% {
-    opacity: 0.9;
-  }
-  25% {
-    opacity: 0.6;
-  }
-  41% {
-    opacity: 1;
-  }
-  58% {
-    opacity: 0.55;
-  }
-  76% {
-    opacity: 0.85;
-  }
-  90% {
-    opacity: 0.6;
-  }
-}
-.title-glow {
-  left: 22%;
-  right: 22%;
-  top: 14%;
-  height: 40%;
-  background: radial-gradient(ellipse at 50% 50%, #7dff2a88, #7dff2a00 68%);
-  mix-blend-mode: screen;
-  animation: slimePulse 2.8s ease-in-out infinite;
-}
 @keyframes slimePulse {
   0%,
   100% {
@@ -2100,74 +2055,6 @@ body {
     opacity: 0.95;
     transform: scale(1.06);
   }
-}
-#titleFx {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-}
-.title-shine {
-  left: 8%;
-  right: 8%;
-  top: 46%;
-  height: 12%;
-  overflow: hidden;
-  -webkit-mask: linear-gradient(90deg, #0000, #000 20%, #000 80%, #0000);
-  mask: linear-gradient(90deg, #0000, #000 20%, #000 80%, #0000);
-}
-.title-shine:after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 26%;
-  left: -40%;
-  background: linear-gradient(105deg, #fff0, #ffffffa6, #fff0);
-  mix-blend-mode: overlay;
-  animation: shineSweep 5s ease-in-out 2s infinite;
-}
-@keyframes shineSweep {
-  0% {
-    left: -40%;
-  }
-  35%,
-  100% {
-    left: 130%;
-  }
-}
-.title-bosses {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  margin: 4px 2px 0;
-}
-.title-bosses .tb {
-  flex: 1;
-  height: 36px;
-  border-radius: 6px;
-  background: #00000088;
-  border: 1px solid #ffffff22;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-.title-bosses .tb img {
-  height: 32px;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  filter: brightness(0) opacity(0.55);
-}
-.title-bosses .tb.down {
-  border-color: var(--c);
-  box-shadow: 0 0 8px var(--c);
-  background: #000000aa;
-}
-.title-bosses .tb.down img {
-  filter: none;
 }
 .title-count {
   margin-top: 4px;
@@ -2189,16 +2076,6 @@ body {
 .title-art {
   inset: 0 0 30px 0;
 }
-.title-bosses .tb {
-  height: 32px;
-}
-.title-bosses .tb img {
-  height: 28px;
-  filter: brightness(0) invert(0.32);
-}
-.title-bosses .tb.down img {
-  filter: none;
-}
 
 /* 7.18: clear animated logo, art underneath, and the coffee screen. */
 .title-art {
@@ -2215,15 +2092,6 @@ body {
 .title-screen {
   background:
     radial-gradient(ellipse at 50% 0%, #ff6a1f55, #0000 55%), linear-gradient(#1b0b06, #0a0504 65%);
-}
-.title-fire {
-  inset: 0 0 60% 0;
-}
-.title-glow {
-  top: 32%;
-}
-.title-shine {
-  display: none;
 }
 .title-logo {
   margin: 4px 0 0;
@@ -2610,7 +2478,6 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 .title-screen {background: #101b1a url('./story-joey.webp') 44% 38% / cover no-repeat;}
 .title-screen:before {background:linear-gradient(180deg,#07131188 0%,#07131108 35%,#071311bb 66%,#071311f2 100%);z-index:1;animation:none;}
 .title-ui {z-index:4;}
-.titleFx{display:none;}
 .title-logo {animation:none;filter:drop-shadow(0 3px 3px #000);}
 
 /* Gentle movement preserves the original illustration and avoids body warping. */
@@ -2796,15 +2663,6 @@ body.deck3d .map-tag { display: block; }
 .base-status { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .base-status small { font: 800 6px Inter, sans-serif; letter-spacing: 0.1em; color: #b9c3b9; }
 .base-status b { display: grid; grid-template-columns: repeat(5, 11px); gap: 1px 2px; font-size: 0; }
-.zface { width: 11px; height: 11px; overflow: visible; }
-.zface circle:first-child { fill: #26322b; stroke: #55655a; stroke-width: 1; }
-.zface .zeye { stroke: #55655a; stroke-width: 1.4; fill: none; }
-.zface .zeye2 { fill: #55655a; }
-.zface .zmouth { stroke: #55655a; stroke-width: 1.4; fill: none; }
-.zface.lit circle:first-child { fill: #9bff4a; stroke: #e8ffb0; filter: drop-shadow(0 0 3px #ff3b3b) drop-shadow(0 0 5px #ff3b3b99); }
-.zface.lit .zeye { stroke: #5a0b0b; }
-.zface.lit .zeye2 { fill: #5a0b0b; }
-.zface.lit .zmouth { stroke: #5a0b0b; }
 .base-status.hit b { animation: zcount-shake 0.5s; }
 @keyframes zcount-shake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-2px, 1px) rotate(-3deg); } 30% { transform: translate(2px, -1px) rotate(3deg); } 45% { transform: translate(-2px, 0) rotate(-2deg); } 60% { transform: translate(2px, 1px) rotate(2deg); } 80% { transform: translate(-1px, 0); } }
 .zpop { position: absolute; left: 50%; bottom: 100%; width: 34px; height: 34px; margin-left: -17px; z-index: 6; pointer-events: none; animation: zpop-up 1s ease-out forwards; }
@@ -2828,19 +2686,10 @@ body.deck3d .map-tag { display: block; }
 }
 @keyframes screen-sheen { 0% { background-position: 160% 0; } 28%, 100% { background-position: -60% 0; } }
 @media (prefers-reduced-motion: reduce) { .screen-glass::after { animation: none; opacity: 0; } }
-.base-status small { display: none; }
-.base-status b { grid-template-columns: repeat(5, 9px); gap: 2px 3px; }
-.zface { width: 9px; height: 9px; }
 
 /* 7.33.2: the sweep belongs to the Home Screen (whole screen, replacing the narrow sweep over the title);
    the game screen glass no longer sweeps. */
 .screen-glass::after { display: none; }
-.title-shine { inset: 0; left: 0; right: 0; top: 0; height: auto; z-index: 3; -webkit-mask: none; mask: none; }
-.title-shine:after {
-  width: 55%; left: -70%; background: linear-gradient(105deg, #fff0 0, #ffffff00 20%, #ffffff40 50%, #ffffff00 80%, #fff0 100%);
-  mix-blend-mode: soft-light; animation: shineSweep 6s ease-in-out 1.5s infinite;
-}
-@keyframes shineSweep { 0% { left: -70%; } 38%, 100% { left: 130%; } }
 
 /* Smooth boss scenes: no blur, masks or blend modes. One big framed panel that slides in, with a clearly visible
    pan and zoom on the picture. The game canvas drops its colour filter while a scene is showing. */
@@ -2848,13 +2697,6 @@ body.in-scene #gameCanvas { filter: none; }
 
 /* 7.33.3: the logo's own sweep is removed; one sweep crosses the whole Home Screen, over the artwork and the title. */
 .title-logo:after { display: none; }
-.title-screen .title-shine { display: block; position: absolute; inset: 0; width: auto; height: auto; z-index: 6; overflow: hidden; pointer-events: none; -webkit-mask: none; mask: none; }
-.title-screen .title-shine:after {
-  content: ''; position: absolute; top: -10%; bottom: -10%; left: -70%; width: 55%;
-  background: linear-gradient(105deg, #fff0 0, #ffffff00 22%, #ffffff66 50%, #ffffff00 78%, #fff0 100%);
-  mix-blend-mode: overlay; animation: shineSweep 5s ease-in-out 1.2s infinite;
-}
-@media (prefers-reduced-motion: reduce) { .title-screen .title-shine:after { animation: none; opacity: 0; } }
 
 /* Preserve the authoritative cabinet and comic window geometry. */
 
@@ -2976,23 +2818,32 @@ body[data-release-skin="retro-handheld"] #menuButton::after { inset: -12.3% -17.
 body[data-release-skin="retro-handheld"] #cabinet[data-menu="1"] #menuButton::after { background-position: 100% 0; }
 body[data-release-skin="retro-handheld"] #menuButton:active::after,
 body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background-position: 50% 0 !important; }
-.start-panel:has(.welcome-screen) { padding: 0; overflow: auto; background: #111e1a; }
-.welcome-screen { min-height: 100%; display: flex; flex-direction: column; padding: 18px 22px 14px; color: #e8e9ca; background: radial-gradient(ellipse at 50% 25%,#314439 0,#15251d 60%,#101b17 100%); text-align: center; }
-.welcome-score { display: flex; justify-content: space-between; font: 700 9px/1.4 monospace; letter-spacing: .12em; color: #b6c4a4; }
-.welcome-score b { color: #e9edce; }
-.welcome-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 198px; padding: 16px 0; }
-.welcome-edition { font: 700 9px/1.5 monospace; letter-spacing: .24em; color: #b2c19a; }
-.start-panel .welcome-hero h1 { font: 900 66px/.8 Barlow,sans-serif; margin: 17px 0 15px; letter-spacing: -.02em; color: #e4e6bb; text-shadow: 0 3px #526846, 0 6px #09120f; }
-.welcome-hero h1 strong { color: #bfd48e; font-weight: 900; }
-.welcome-tag { font: 700 10px/1.4 monospace; letter-spacing: .24em; color: #cad4b6; }
-.welcome-actions { width: 100%; }
-.welcome-screen .name-field { text-align: left; color: #b6c4a4; font-size: 9px; letter-spacing: .12em; }
-.welcome-screen .name-field input { margin-top: 6px; height: 40px; border: 1px solid #657659; border-radius: 4px; background: #0b1712; color: #eef0d8; font: 700 14px monospace; box-shadow: inset 0 2px 4px #0006; }
-.welcome-screen .primary-action { margin: 10px 0 0; min-height: 44px; background: #c5d697; color: #18271b; border: 1px solid #e0e8be; border-radius: 4px; box-shadow: 0 3px #61734b; font-size: 17px; animation: none; }
-.welcome-screen .secondary-action { margin: 9px 0 0; min-height: 36px; padding: 7px; border: 1px solid #657659; border-radius: 4px; color: #d4dfb9; background: #1a2b20; font-size: 12px; }
-.welcome-progress { margin-top: 14px; font: 700 9px/1.4 monospace; letter-spacing: .1em; color: #b9c7a3; }
-.welcome-screen .loading-line { margin-top: 7px; color: #95a689; font-size: 8px; }
 /* The studio card occupies exactly the LCD, not the device or controls. */
 #studioIntro { position: absolute; inset: auto; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); flex-direction: column; gap: 20px; background: #101b17; overflow: hidden; }
 #studioIntro img { width: 62%; max-height: 65%; object-fit: contain; filter: none; }
 #studioIntro > span { font: 700 10px monospace; letter-spacing: .32em; color: #b9c7a3; }
+
+/* 7.51: bottom info bar. Same band as before; only the essentials, larger and grouped:
+   hearts over weapon and ammo, the four stored-weapon slots, and a plain LET THROUGH counter. */
+.hud-bottom { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 5px; }
+.hud-bottom .hud-left { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 1px; flex: 0 0 auto; min-width: 82px; }
+.hud-bottom #healthValue, .hud-bottom #healthValue:not(.tenhearts), #healthValue.tenhearts { display: flex; gap: 1px; min-width: 0; font-size: 12px; line-height: 12px; letter-spacing: 0; }
+#healthValue.tenhearts { font-size: 8px; line-height: 12px; gap: 0; }
+.hud-bottom .weapon-status { display: flex; align-items: baseline; gap: 4px !important; min-width: 0; line-height: 10px; }
+.hud-bottom .weapon-status b { font-size: 9.5px; letter-spacing: 0.02em; }
+.hud-bottom .weapon-status span { font-size: 9.5px; }
+.hud-bottom .weapon-rack { min-width: 0; gap: 3px !important; flex: 0 0 auto; }
+.hud-bottom .weapon-rack button { width: 31px; min-width: 31px; height: 24px; font-size: 8px; letter-spacing: 0; opacity: 0.5; }
+.hud-bottom .weapon-rack button small { font-size: 8.5px; line-height: 9px; }
+.hud-bottom .weapon-rack button.ready, .hud-bottom .weapon-rack button.equipped { opacity: 1; }
+.base-status { flex: 0 0 auto; min-width: 62px; gap: 0 !important; margin-right: 2px; align-items: stretch; text-align: center; }
+.base-status small { display: block; font: 800 5.5px/6px Inter, sans-serif; letter-spacing: 0.1em; color: #c4cdc0; }
+.base-status b { display: block; font-size: 0; line-height: 1; }
+.base-status .bn { font: 900 13px/11px Barlow, sans-serif; color: #eef0d6; }
+.base-status .bm { font: 800 8px/11px Barlow, sans-serif; color: #98a591; margin-left: 1px; }
+.base-status .bp { display: flex; gap: 1px; height: 3px; margin-top: 0; }
+.base-status .bp u { flex: 1; background: #34413a; border-radius: 1px; }
+.base-status .bp u.on { background: #ffcf3a; }
+.base-status b[data-n="6"] .bn, .base-status b[data-n="7"] .bn { color: #ffcf3a; }
+.base-status b[data-n="8"] .bn, .base-status b[data-n="9"] .bn, .base-status b[data-n="10"] .bn { color: #ff5a4a; }
+.base-status b[data-n="8"] .bp u.on, .base-status b[data-n="9"] .bp u.on, .base-status b[data-n="10"] .bp u.on { background: #ff5a4a; }

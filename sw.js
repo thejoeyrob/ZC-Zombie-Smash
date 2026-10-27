@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.50.0';
+const CACHE = 'zombie-smash-v7.51.0';
 const ASSETS = [
   './console-retro-handheld.webp',
   './retro-stick.png',
@@ -67,9 +67,6 @@ const ASSETS = [
   './logo-flat.png',
 
   './map-concrete.jpg',
-  './music-boss.mp3',
-  './music-disco.mp3',
-  './music-entrance.mp3',
   './music-main.mp3',
   './arc-boss.mp3',
   './arc-disco.mp3',
@@ -77,14 +74,7 @@ const ASSETS = [
   './arc-victory-d.mp3',
   './arc-defeat.mp3',
   './arc-defeat-d.mp3',
-  './new-main.mp3',
   './new-pickup.mp3',
-  './new-boost.mp3',
-  './new-victory.mp3',
-  './new-loss.mp3',
-  './new-pistol.mp3',
-  './new-hit.mp3',
-  './new-whoosh.mp3',
   './pickup-bomb.webp',
   './pickup-clock.webp',
   './pickup-dmr.webp',
@@ -110,7 +100,6 @@ const ASSETS = [
   './sfx-hit.mp3',
   './sfx-hurt.mp3',
   './sfx-loss.mp3',
-  './sfx-pickup.mp3',
   './sfx-pistol.mp3',
   './sfx-ricochet.mp3',
   './sfx-shotgun.mp3',
