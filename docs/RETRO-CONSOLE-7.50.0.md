@@ -7,3 +7,6 @@
 - Lamps are driven by `ZSConsole.leds()` (pure, unit-tested) and three data attributes on `#cabinet`, updated through the existing HUD cache. Paused or hidden pages freeze blinking; timers are cleared on game over and restart.
 
 Not done here: physical iPhone testing. Gamepad and keyboard movement leave the joystick sprite centred (the knob did not follow them before either).
+
+## 7.52.0 — NES-inspired shell
+The shell is now the charcoal-inset design from the NES-inspired pack (dot-matrix ZOMBIE SMASH plate, glass-lip screen bezel, JW EDS with four dots, no side stripes). The supplied art follows the original unwarped geometry, so it was re-fitted to the layout (screen window exact; each socket, and the lower lamp, lifted whole to the real control centres over a re-filled charcoal panel). The pack's separate sprites were not used: their frames differ in size from state to state (the joystick grows to the right, grenade/fire/menu vary) and the lamp sprites are cut in half; the existing sprite set is kept, resized to the new sockets, with the menu key widened to the new 2:1 slot. The map-name label under the deck is hidden on this skin because the new shell prints its own brand there.

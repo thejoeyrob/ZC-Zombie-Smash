@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.51.0';
+const CACHE = 'zombie-smash-v7.52.0';
 const ASSETS = [
   './console-retro-handheld.webp',
   './retro-stick.png',

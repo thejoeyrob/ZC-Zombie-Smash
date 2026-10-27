@@ -2784,7 +2784,7 @@ body:not([data-release-skin="retro-handheld"]) #powerLed::after { content: 'ON';
 /* 7.50: retro console. Plain grey moulded shell; the controls are the supplied sprites drawn over the unchanged
    hit areas (all sized in % of each control, so the deck scaling and tap targets stay exactly as before). */
 body[data-release-skin="retro-handheld"] #powerLed { left: 349.7px; top: 20.9px; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; }
-body[data-release-skin="retro-handheld"] #weaponLed { display: block; left: 331.6px; top: 628.1px; width: 22.3px; height: 22.3px; margin: -11.15px 0 0 -11.15px; border-radius: 50%; background-image: url('./retro-led-weapon.png'); background-size: 200% 100%; background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #weaponLed { display: block; left: 342.5px; top: 620.8px; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background-image: url('./retro-led-weapon.png'); background-size: 200% 100%; background-position: 0 0; }
 body[data-release-skin="retro-handheld"] #weaponLed::after { content: ''; position: absolute; inset: 0; background: inherit; background-position: 100% 0; opacity: 0; filter: drop-shadow(0 0 3px #ff2a1a); }
 body[data-release-skin="retro-handheld"] #cabinet[data-weapon="active"] #weaponLed::after { opacity: 1; }
 body[data-release-skin="retro-handheld"] #cabinet[data-weapon="ready"]:not([data-paused="1"]) #weaponLed::after { animation: weapon-flash 4s step-end infinite; }
@@ -2795,26 +2795,26 @@ body[data-release-skin="retro-handheld"] .shell-art { background: var(--skin-art
 body[data-release-skin="retro-handheld"] .shell-slice { display: none; }
 body[data-release-skin="retro-handheld"] .console-header,
 body[data-release-skin="retro-handheld"] .engraving { visibility: hidden; }
-body[data-release-skin="retro-handheld"] .deck-label { color: #474b52; text-shadow: none; }
+body[data-release-skin="retro-handheld"] .deck-label { display: none; }
 body[data-release-skin="retro-handheld"] :is(#joystick, #grenadeButton, #fireButton, #menuButton) { background: none !important; border: 0 !important; box-shadow: none !important; filter: none !important; }
 body[data-release-skin="retro-handheld"] :is(#joystick, #grenadeButton, #fireButton, #menuButton)::after { content: ''; position: absolute; pointer-events: none; background-repeat: no-repeat; background-size: 300% 100%; }
 body[data-release-skin="retro-handheld"] :is(.stick-track, .stick-knob, .fire-inner, .m3) { visibility: hidden; }
 body[data-release-skin="retro-handheld"] .grenade-button .g3 { display: none !important; }
-body[data-release-skin="retro-handheld"] #joystick::after { inset: -12.65%; background-image: url('./retro-stick.png'); background-position: 50% 0; }
+body[data-release-skin="retro-handheld"] #joystick::after { inset: -7.65%; background-image: url('./retro-stick.png'); background-position: 50% 0; }
 body[data-release-skin="retro-handheld"] #joystick[data-dir="-1"]::after { background-position: 0 0; }
 body[data-release-skin="retro-handheld"] #joystick[data-dir="1"]::after { background-position: 100% 0; }
 body[data-release-skin="retro-handheld"] #joystick.sped::after { filter: drop-shadow(0 0 6px var(--accent)); }
-body[data-release-skin="retro-handheld"] #fireButton::after { inset: -12.65%; background-image: url('./retro-fire.png'); background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #fireButton::after { inset: -7.65%; background-image: url('./retro-fire.png'); background-position: 0 0; }
 body[data-release-skin="retro-handheld"] #fireButton.story-hint::after { animation: fire-hint 1.1s step-end infinite; }
 body[data-release-skin="retro-handheld"] #fireButton.pressed::after { animation: none; background-position: 50% 0; }
 @keyframes fire-hint { 0% { background-position: 0 0; } 50% { background-position: 100% 0; } }
 body[data-release-skin="retro-handheld"] #grenadeButton { opacity: 1; }
-body[data-release-skin="retro-handheld"] #grenadeButton::after { inset: -22.4%; background-image: url('./retro-grenade.png'); background-position: 100% 0; }
+body[data-release-skin="retro-handheld"] #grenadeButton::after { inset: -19%; background-image: url('./retro-grenade.png'); background-position: 100% 0; }
 body[data-release-skin="retro-handheld"] #grenadeButton:active:not(.empty)::after,
 body[data-release-skin="retro-handheld"] #grenadeButton.pressed:not(.empty)::after { background-position: 50% 0; }
 body[data-release-skin="retro-handheld"] #grenadeButton.empty::after { background-position: 0 0; filter: saturate(0.3) brightness(0.6); }
 body[data-release-skin="retro-handheld"] #grenadeButton b { z-index: 2; right: -9%; bottom: -9%; min-width: 15px; padding: 1px 2px; background: #11161c; color: #f4f1e6; border: 1px solid #8e91a2; border-radius: 5px; font: 900 10px Barlow, sans-serif; text-align: center; }
-body[data-release-skin="retro-handheld"] #menuButton::after { inset: -12.3% -17.5% -23.9%; background-image: url('./retro-menu.png'); background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #menuButton::after { inset: -28.1% -17.5%; background-image: url('./retro-menu.png'); background-position: 0 0; }
 body[data-release-skin="retro-handheld"] #cabinet[data-menu="1"] #menuButton::after { background-position: 100% 0; }
 body[data-release-skin="retro-handheld"] #menuButton:active::after,
 body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background-position: 50% 0 !important; }
