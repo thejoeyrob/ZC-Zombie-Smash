@@ -205,6 +205,7 @@
     $('joystick').style.setProperty('--lean', '0deg');
     $('fireButton').classList.remove('pressed');
     $('joystick').setAttribute('aria-valuenow', '0');
+    stickLamp(0);
   }
   let pendingSave = null;
   function queueSave() {
@@ -864,6 +865,7 @@
         break;
       case 'breach':
         zombiePop();
+        ledBreach(true);
         haptics.notify('WARNING', 'breach', 0);
         break;
       case 'explosion':
@@ -1140,8 +1142,31 @@
     return nameCache;
   }
   const weaponButtons = {};
+  // The retro console's joystick art shows one of three positions; the other skins ignore this.
+  function stickLamp(dir) {
+    hudSet('stickDir', dir, (v) => (hel('joystick').dataset.dir = v));
+  }
+  // Indicator lamps (cosmetic only). data-led / data-weapon / data-menu on the cabinet are the whole interface:
+  // the lamps are drawn in CSS and nothing here touches the simulation, timing, saves or input.
+  let breachTimer = 0;
+  function ledBreach(on) {
+    clearTimeout(breachTimer);
+    hel('cabinet').classList.toggle('led-breach', on);
+    if (on) breachTimer = setTimeout(() => ledBreach(false), 1700);
+  }
+  function leds() {
+    const lamps = ZSConsole.leds(game, !awaitStart);
+    hudSet('led:power', lamps.power, (v) => {
+      hel('cabinet').dataset.led = v;
+      if (v === 'off') ledBreach(false);
+    });
+    hudSet('led:weapon', lamps.weapon, (v) => (hel('cabinet').dataset.weapon = v));
+    hudSet('led:paused', paused || document.hidden, (v) => (hel('cabinet').dataset.paused = v ? '1' : ''));
+    hudSet('led:menu', paused && !!panel && game.active && !awaitStart, (v) => (hel('cabinet').dataset.menu = v ? '1' : ''));
+  }
   function hud() {
     const p = game.player;
+    leds();
     hudSet('sped', (p.speedUp || 0) > 0, (v) => hel('joystick').classList.toggle('sped', v));
     hudText('waveValue', game.wave);
     hudText('leftValue', game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved));
@@ -1352,6 +1377,7 @@
     }
     $('stickKnob').style.transform = `translateX(${stickVal * 25}px)`;
     stick.style.setProperty('--lean', stickVal.toFixed(2));
+    stickLamp(stickVal < -0.3 ? -1 : stickVal > 0.3 ? 1 : 0);
     stick.setAttribute('aria-valuenow', Math.round(touchAxis * 100));
   }
   stick.addEventListener('pointerdown', (e) => {
@@ -1381,6 +1407,7 @@
     $('stickKnob').style.transform = 'translateX(0)';
     stick.style.setProperty('--lean', '0');
     stick.setAttribute('aria-valuenow', '0');
+    stickLamp(0);
   }
   function releaseFire() {
     touchFire = false;

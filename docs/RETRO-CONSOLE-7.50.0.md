@@ -1,0 +1,9 @@
+# 7.50.0 — retro console and indicator lamps
+
+- New Retro Handheld shell (`console-retro-handheld.webp`) replaces the superseded vector shell, which is deleted. The supplied art was re-fitted to the immutable 375 × 667 layout (screen window `win: [72,98,828,1165]`, socket centres on the real control centres); no other skin or shared asset was touched. Skin id is unchanged, so installs on the old retro skin pick up the new one and anyone who chose another skin keeps it.
+- Controls are the supplied sprites (`retro-stick/fire/grenade/menu.png`, three frames each) drawn over the unchanged hit areas, sized in % of each control. Joystick: left / centre / right (±30 % of travel). Fire: normal, pressed, lit (tutorial hint). Grenade: lit while grenades remain, pressed on tap, dim at zero; the count badge is kept. Menu: normal, pressed, lit while the menu is open. The supplied sheets have no separate "disabled" frame, so disabled is the normal frame dimmed. The menu keycap was widened (face stretched, icon untouched) to fit the console's slot.
+- Top-right power lamp, every skin: dormant (menu / game over), steady red (play), blinking red (exactly one heart), red/green alternation for 1.7 s on a camp breach (takes priority). Reduced motion: low health is a steady red with a halo, a breach is steady green for the same time.
+- Lower red lamp, retro skin only: dark, one brief flash every 4 s when a stored special weapon is available, steady red while a non-pistol or arena weapon is equipped; dormant at game over. Reduced motion: steady half-lit instead of flashing.
+- Lamps are driven by `ZSConsole.leds()` (pure, unit-tested) and three data attributes on `#cabinet`, updated through the existing HUD cache. Paused or hidden pages freeze blinking; timers are cleared on game over and restart.
+
+Not done here: physical iPhone testing. Gamepad and keyboard movement leave the joystick sprite centred (the knob did not follow them before either).

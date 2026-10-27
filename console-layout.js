@@ -63,5 +63,14 @@
     for (const [key, value] of Object.entries(variables()))
       document.body.style.setProperty(key, value + (['--ss', '--sd'].includes(key) ? '' : 'px'));
   }
-  window.ZSConsole = Object.freeze({ layout, variables, slices, markup, apply });
+  // Cosmetic indicator lamps. power: the lamp beside ON (every skin). weapon: the lower lamp (retro skin only).
+  // Pure function of existing game state; it never touches the simulation.
+  function leds(game, started = true) {
+    if (!started || !game.active || game.over) return { power: 'off', weapon: 'off' };
+    const p = game.player;
+    const equipped = !!p.special || (!!p.gun && p.gun !== 'pistol');
+    const stored = Object.values(p.inventory || {}).some((n) => n > 0);
+    return { power: p.lives === 1 ? 'low' : 'on', weapon: equipped ? 'active' : stored ? 'ready' : 'off' };
+  }
+  window.ZSConsole = Object.freeze({ layout, variables, slices, markup, apply, leds });
 })();
