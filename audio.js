@@ -905,6 +905,7 @@
     constructor() {
       this.ctx = null;
       this.buffers = new Map();
+      this.problems = []; // what went wrong loading sound files, shown to BOT_ testers on the CHEATS page
       this.loading = new Map();
       this.music = null;
       this.track = null;
@@ -1041,7 +1042,10 @@
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
             for (const name of FILES) this.buffer(this.sfxFile(name));
-          if (this.settings.set === 'arcade') for (const f of ARC_FILES) this.buffer(f);
+          // The long score files are decoded one after another (a phone can refuse many large decodes at once).
+          (async () => {
+            for (const f of ARC_FILES) await this.buffer(f);
+          })();
         }
         if (this.ctx.state !== 'running') await this.ctx.resume();
         if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
@@ -1064,7 +1068,7 @@
       const decodeContext = this.ctx;
       const task = fetch('./' + file)
         .then((r) => {
-          if (!r.ok) throw Error(file);
+          if (!r.ok) throw Error('HTTP ' + r.status);
           return r.arrayBuffer();
         })
         .then((b) => decodeContext.decodeAudioData(b))
@@ -1072,7 +1076,10 @@
           this.buffers.set(file, b);
           return b;
         })
-        .catch(() => null)
+        .catch((e) => {
+          this.problems.push(file + ': ' + (e?.message || e?.name || 'could not load or decode'));
+          return null;
+        })
         .finally(() => {
           if (this.loading.get(file) === task) this.loading.delete(file);
         });
@@ -1159,6 +1166,12 @@
       if (seq !== this.musicSeq) return;
       if (epoch !== this.musicEpoch) {
         if (this.track === track && !this.music && !this.seq) this.track = null;
+        return;
+      }
+      if (!buffer && this.wantTrack === track && !this.paused && this.tracks[track]) {
+        // The score file would not load or decode on this device: play the built-in synthesised version instead of silence.
+        this.stopMusic();
+        this.startSequencer(track);
         return;
       }
       if (!buffer || this.wantTrack !== track || this.paused) {
