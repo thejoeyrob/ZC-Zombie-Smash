@@ -307,10 +307,11 @@
       c.font = `800 ${size}px Barlow, sans-serif`;
       c.textAlign = align;
       c.fillStyle = color;
-      c.shadowColor = '#000';
-      c.shadowBlur = 3;
+      // A one-pixel dark offset instead of a blurred canvas shadow: the shadow is costly to draw every frame on a phone.
+      c.fillStyle = '#000c';
+      c.fillText(str, x + 0.8, y + 0.8);
+      c.fillStyle = color;
       c.fillText(str, x, y);
-      c.shadowBlur = 0;
     }
     draw(g) {
       const c = this.c;

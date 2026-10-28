@@ -760,10 +760,27 @@
       `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. Nothing is shown: cheats are now armed.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
           `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b></div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
-      ).join('')}<p class="menu-note"><strong>SLOW FRAMES</strong> (over 70 ms)<br>${slowFrames.length ? slowFrames.slice(-15).map(esc).join('<br>') : 'none yet'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      ).join('')}<p class="menu-note"><strong>FRAME LOG</strong> (per second: fps, longest gap ms, script ms avg/max per frame)<br>${prof.lines.length ? prof.lines.slice(-20).map(esc).join('<br>') : 'none yet'}</p><p class="menu-note"><strong>SLOW FRAMES</strong> (over 70 ms)<br>${slowFrames.length ? slowFrames.slice(-12).map(esc).join('<br>') : 'none yet'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   const slowFrames = [];
+  // BOT_ testers only: where each second of play went (milliseconds of script work per frame against the gap between frames).
+  const prof = (() => {
+    const lines = [], acc = { n: 0, gap: 0, maxGap: 0, step: [0, 0], draw: [0, 0], hud: [0, 0], t: performance.now() };
+    const rec = (k, ms) => { acc[k][0] += ms; acc[k][1] = Math.max(acc[k][1], ms); };
+    return {
+      lines,
+      add: rec,
+      frame(gap) {
+        acc.n++; acc.gap += gap; acc.maxGap = Math.max(acc.maxGap, gap);
+        if (performance.now() - acc.t < 1000) return;
+        const f = (k) => (acc[k][0] / Math.max(1, acc.n)).toFixed(1) + '/' + acc[k][1].toFixed(0);
+        lines.push(`w${game.wave}${game.boss ? ' boss' : ''} ${acc.n}fps gap max ${Math.round(acc.maxGap)} · step ${f('step')} draw ${f('draw')} hud ${f('hud')}`);
+        if (lines.length > 40) lines.shift();
+        acc.n = acc.gap = acc.maxGap = 0; acc.step = [0, 0]; acc.draw = [0, 0]; acc.hud = [0, 0]; acc.t = performance.now();
+      },
+    };
+  })();
   let coffeeShownFor = null;
   function results(reason, afterCoffee = false) {
     // The coffee screen also appears when a run ends (web version only); the score is saved first.
@@ -1303,6 +1320,7 @@
     if (bot && elapsed > 70 && elapsed < 2000 && !paused && game.active)
       slowFrames.push(Math.round(elapsed) + 'ms · wave ' + game.wave + (game.scene ? ' · ' + game.scene.kind + ' scene' : game.boss ? ' · boss' : '') + ' · ' + game.enemies.length + ' zombies');
     if (slowFrames.length > 40) slowFrames.shift();
+    if (bot && !paused && game.active) prof.frame(elapsed);
     const dt = Math.min(0.1, elapsed / 1000 || 0);
     renderer.observeFrame(elapsed, !paused && !landscape && !document.hidden && ready && !game.scene);
     lastTime = now;
@@ -1310,10 +1328,12 @@
       inputs();
       accumulator += dt;
       let steps = 0;
+      const tStep = bot ? performance.now() : 0;
       while (accumulator >= 1 / 60 && steps++ < 6) {
         game.step(1 / 60);
         accumulator -= 1 / 60;
       }
+      if (bot) prof.add('step', performance.now() - tStep);
       saveClock += dt;
       if (saveClock > 5) {
         saveClock = 0;
@@ -1324,11 +1344,18 @@
       // Keep controls and simulation at full rate; avoid drawing a static menu or the same 60 Hz pose at 120 Hz.
       const interval = paused || game.scene ? 1000 / 15 : 1000 / 60;
       if (now - lastDraw >= interval - 0.5) {
+        const tDraw = bot ? performance.now() : 0;
         renderer.draw(game);
+        if (bot) prof.add('draw', performance.now() - tDraw);
         lastDraw = now - ((now - (Number.isFinite(lastDraw) ? lastDraw : now)) % interval);
       }
       cinematic();
-      if (now - lastHud >= 1000 / 30) { hud(); lastHud = now; }
+      if (now - lastHud >= 1000 / 30) {
+        const tHud = bot ? performance.now() : 0;
+        hud();
+        if (bot) prof.add('hud', performance.now() - tHud);
+        lastHud = now;
+      }
     }
     requestAnimationFrame(frame);
   }
