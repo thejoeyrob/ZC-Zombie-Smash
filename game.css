@@ -2853,3 +2853,30 @@ body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background
 @keyframes studio-block { from { opacity: 0; } to { opacity: 1; } }
 @keyframes studio-out { to { opacity: 0; visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) { #studioIntro .jw { animation: none; opacity: 1; } #studioIntro .jw i { animation: none; opacity: 1; } }
+
+/* 7.54: home screen (PRESS FIRE, boss silhouettes) and the retro player-entry screen. */
+.press-fire { display: block; width: 100%; padding: 0; background: none !important; border: 0 !important; box-shadow: none !important; color: #fff3b0; text-align: center; animation: blink 1s steps(2, jump-none) infinite; }
+.press-fire .press-start { animation: none !important; padding: 2px 0 0; }
+.press-fire small { display: block; margin-top: 1px; font: 800 calc(var(--ww, 322px) * 0.032) Barlow, sans-serif; letter-spacing: 0.34em; color: #fff3b0; text-shadow: 0 0 8px #ffb000, 1px 1px #000; }
+.title-bosses { display: flex; justify-content: space-between; gap: 4px; margin: 6px 2px 0; }
+.title-bosses .tb { flex: 1; height: 32px; border-radius: 6px; background: #00000088; border: 1px solid #ffffff22; display: grid; place-items: center; overflow: hidden; }
+.title-bosses .tb img { height: 28px; width: auto; max-width: 100%; object-fit: contain; filter: brightness(0) invert(0.32); }
+.title-bosses .tb.down { border-color: var(--c); box-shadow: 0 0 8px var(--c); background: #000000aa; }
+.title-bosses .tb.down img { filter: none; }
+.title-count { margin-top: 4px; font: 800 8px Inter, sans-serif; letter-spacing: 0.16em; color: #ffd9a0; text-align: center; text-shadow: 0 0 4px #000; }
+.player-screen { position: relative; margin: -18px -20px; width: calc(100% + 40px); height: var(--wh, 445px); box-sizing: border-box; padding: 26px 22px 18px; overflow: auto; background: #000; color: #3dff6e; font-family: 'Courier New', Menlo, Consolas, monospace; text-transform: uppercase; text-shadow: 0 0 5px #3dff6e66; display: flex; flex-direction: column; }
+.player-screen .pl-title { font-size: 20px; font-weight: 700; letter-spacing: 0.22em; }
+.player-screen .pl-sub { margin: 4px 0 22px; padding-bottom: 8px; border-bottom: 2px solid #3dff6e; font-size: 11px; letter-spacing: 0.2em; }
+.player-screen form { display: flex; flex-direction: column; gap: 10px; }
+.player-screen .pl-label { font-size: 12px; letter-spacing: 0.14em; }
+.player-screen input { box-sizing: border-box; width: 100%; height: 44px; padding: 0 12px; background: #000; color: #3dff6e; border: 2px solid #3dff6e; border-radius: 0; font: 700 18px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.1em; text-transform: uppercase; caret-color: #3dff6e; outline: none; text-shadow: 0 0 5px #3dff6e66; box-shadow: inset 0 0 8px #3dff6e22; }
+.player-screen input::placeholder { color: #1e7a38; }
+.player-screen input:read-only { border-style: dashed; }
+.player-screen input:focus { box-shadow: 0 0 0 2px #000, 0 0 0 4px #3dff6e88; }
+.player-screen .pl-btn { box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 12px; background: #000; color: #3dff6e; border: 2px solid #3dff6e; border-radius: 0; font: 700 15px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.2em; text-transform: uppercase; text-shadow: 0 0 5px #3dff6e66; cursor: pointer; }
+.player-screen .pl-btn:active:not(:disabled), .player-screen .pl-btn:focus-visible { background: #3dff6e; color: #000; text-shadow: none; outline: none; }
+.player-screen .pl-btn:disabled { color: #2a5a37; border-color: #1c3d26; text-shadow: none; cursor: default; }
+.player-screen .pl-rule { margin: 8px 0 2px; border-top: 2px dashed #1f7f3a; }
+.player-screen .pl-main { min-height: 50px; font-size: 17px; }
+.player-screen .pl-back { margin-top: auto; align-self: flex-start; padding: 8px 2px; background: none; border: 0; color: #2fb556; font: 700 12px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.2em; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .press-fire { animation: none; } }

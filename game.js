@@ -288,14 +288,28 @@
     $('fireButton')?.classList.remove('story-hint');
     awaitStart = false;
     $('startPrompt').hidden = true;
-    const name = read('zs7-name', ''),
-      saved = read('zs7-run', null),
-      hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
+    const hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
       beaten = beatenBosses();
     showPanel(
       'start',
       '',
-      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>HI <b>${Number(hi[1]).toLocaleString()}</b></span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+`<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>HI <b>${Number(hi[1]).toLocaleString()}</b></span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><button class="press-fire" data-action="player" aria-label="Press fire to start the game"><b class="press-start">PRESS FIRE</b><small>TO START GAME</small></button><div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+      { start: true, closable: false },
+    );
+    $('fireButton').classList.add('story-hint');
+  }
+  // Player entry: its own screen. A name that was already entered is shown locked, with CHANGE to edit it;
+  // without one the box is open and CHANGE is greyed out. CONTINUE appears only when a run was left half played.
+  function showPlayer() {
+    $('fireButton')?.classList.remove('story-hint');
+    const raw = String(read('zs7-name', '') || ''),
+      named = !!raw && scores.validName(parseName(raw).name),
+      saved = read('zs7-run', null),
+      half = !!(saved?.engine?.active && saved?.run?.name);
+    showPanel(
+      'player',
+      '',
+      `<div class="player-screen"><div class="pl-title">ZOMBIE SMASH</div><div class="pl-sub">PLAYER REGISTRATION</div><form id="playerForm" autocomplete="off"><label class="pl-label" for="username">&gt; ENTER PLAYER NAME</label><input name="username" id="username" value="${esc(named ? raw : '')}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="NAME_" required ${named ? 'readonly' : ''}><button type="button" class="pl-btn" id="nameChange" data-action="name-change" ${named ? '' : 'disabled'}>CHANGE</button><div class="pl-rule"></div><button type="submit" class="pl-btn pl-main" id="newGameBtn" ${ready ? '' : 'disabled'}>NEW GAME</button>${half ? `<button type="button" class="pl-btn pl-main" data-action="continue">CONTINUE · WAVE ${Number(saved.engine.wave) || 1}</button>` : ''}</form><button type="button" class="pl-back" data-action="home">&lt; BACK</button></div>`,
       { start: true, closable: false },
     );
   }
@@ -480,6 +494,7 @@
         if (storyActive) {
           if (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed) storySkip();
         } else if (awaitStart) startNow();
+        else if (panel === 'start' && (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed)) showPlayer();
       }
       padHeld = any;
     } catch {}
@@ -1280,7 +1295,7 @@
       fitDirty = false;
       fit();
     }
-    if (storyActive || awaitStart) padWatch();
+    if (storyActive || awaitStart || panel === 'start') padWatch();
     const elapsed = now - lastTime;
     const dt = Math.min(0.1, elapsed / 1000 || 0);
     renderer.observeFrame(elapsed, !paused && !landscape && !document.hidden && ready && !game.scene);
@@ -1408,6 +1423,11 @@
   });
   $('fireButton').addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || fireId !== null) return;
+    if (panel === 'start') {
+      e.preventDefault();
+      showPlayer();
+      return;
+    }
     if (storyActive) {
       e.preventDefault();
       storySkip();
@@ -1509,6 +1529,13 @@
   });
   addEventListener('keydown', (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (panel === 'start') {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) showPlayer();
+      }
+      return;
+    }
     if (storyActive) {
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
@@ -1563,7 +1590,7 @@
   });
   $('overlay').addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (e.target.id === 'startForm') {
+    if (e.target.id === 'playerForm') {
       if (ready) start($('username').value);
     }
   });
@@ -1606,6 +1633,22 @@
       return;
     }
     switch (button.dataset.action) {
+      case 'player':
+        showPlayer();
+        break;
+      case 'home':
+        showStart();
+        break;
+      case 'name-change': {
+        const box = $('username');
+        if (box) {
+          box.readOnly = false;
+          box.focus();
+          box.select();
+        }
+        button.disabled = true;
+        break;
+      }
       case 'close':
         closePanel();
         break;
@@ -1808,12 +1851,8 @@
     })
     .then(() => {
       ready = true;
-      if (panel === 'start') {
-        const b = $('startButton');
-        b.disabled = false;
-        b.textContent = '▶ PRESS START ◀';
-        $('loadingLine').textContent = 'NO LOGIN · NO ADS · V' + APP_VER;
-      }
+      if (panel === 'start') $('loadingLine').textContent = 'NO LOGIN · NO ADS · V' + APP_VER;
+      if (panel === 'player' && $('newGameBtn')) $('newGameBtn').disabled = false;
       renderer.draw(game);
     })
     .catch((error) => {
