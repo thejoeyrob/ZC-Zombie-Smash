@@ -293,7 +293,7 @@
     showPanel(
       'start',
       '',
-`<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>HI <b>${Number(hi[1]).toLocaleString()}</b></span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><button class="press-fire" data-action="player" aria-label="Press fire to start the game"><b class="press-start">PRESS FIRE</b><small>TO START GAME</small></button><div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+`<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>HI <b>${Number(hi[1]).toLocaleString()}</b></span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><button class="press-fire" data-action="player" aria-label="Press fire to start the game"><b class="press-start">PRESS FIRE</b><small>TO START GAME</small></button><div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? '' : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
     $('fireButton').classList.add('story-hint');
@@ -1852,7 +1852,7 @@
     })
     .then(() => {
       ready = true;
-      if (panel === 'start') $('loadingLine').textContent = 'NO LOGIN · NO ADS · V' + APP_VER;
+      if (panel === 'start') $('loadingLine').textContent = '';
       if (panel === 'player' && $('newGameBtn')) $('newGameBtn').disabled = false;
       renderer.draw(game);
     })
