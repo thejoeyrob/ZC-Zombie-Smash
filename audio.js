@@ -1038,6 +1038,8 @@
           this.buildReverb();
           if (!this.synthMode || this.settings.set === 'arcade')
             for (const name of FILES) this.buffer(this.sfxFile(name));
+          this.buffer('sfx-click.mp3');
+          this.buffer('sfx-chime.mp3');
         }
         if (this.ctx.state !== 'running') await this.ctx.resume();
         if (this.wantTrack && !this.paused) this.playMusic(this.wantTrack);
@@ -1282,6 +1284,27 @@
         el.onended = el.onerror = done;
         el.play().catch(done);
       } catch {}
+    }
+    // Menu and button sounds outside play. They bypass the game's paused master volume.
+    async ui(name) {
+      if (this.settings.effects === 0) return;
+      if (!this.ctx) await this.unlock();
+      if (this.ctx && this.ctx.state !== 'running')
+        await Promise.race([this.ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 500))]);
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      const t = performance.now();
+      if (t - (this.last['ui' + name] ?? -Infinity) < 60) return;
+      this.last['ui' + name] = t;
+      const file = 'sfx-' + name + '.mp3', ctx = this.ctx;
+      const buffer = this.buffers.get(file) || (await this.buffer(file));
+      if (!buffer || ctx !== this.ctx) return;
+      const source = ctx.createBufferSource(), gain = ctx.createGain();
+      source.buffer = buffer;
+      gain.gain.value = Math.min(1, this.settings.effects * (name === 'chime' ? 0.9 : 0.7));
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.onended = () => { source.disconnect(); gain.disconnect(); };
+      try { source.start(); } catch {}
     }
     stopEffects() {
       for (const voice of this.effectSources) {

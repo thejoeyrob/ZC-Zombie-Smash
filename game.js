@@ -1482,6 +1482,7 @@
     if (e.button !== 0 || fireId !== null) return;
     if (panel === 'start') {
       e.preventDefault();
+      audio.ui('chime');
       showPlayer();
       return;
     }
@@ -1589,7 +1590,10 @@
     if (panel === 'start') {
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
-        if (!e.repeat) showPlayer();
+        if (!e.repeat) {
+          audio.ui('chime');
+          showPlayer();
+        }
       }
       return;
     }
@@ -1654,7 +1658,10 @@
   // Every menu button, skin tile and switch gives a light tap.
   $('overlay').addEventListener('pointerdown', (e) => {
     const b = e.target.closest('button:not(:disabled)');
-    if (b) haptics.impact('LIGHT', 'ui', 0, true);
+    if (b) {
+      haptics.impact('LIGHT', 'ui', 0, true);
+      audio.ui(b.id === 'newGameBtn' || b.dataset.action === 'continue' || b.dataset.action === 'player' ? 'chime' : 'click');
+    }
     if (storyActive && storyVideo?.paused) storyVideo.play().catch(() => {});
   });
   $('overlay').addEventListener('change', (e) => {
@@ -1952,14 +1959,16 @@
   }
   {
     const intro = $('studioIntro');
+    if (!intro) document.body.classList.add('intro-done');
     if (intro) {
       $('cabinet').dataset.boot = '1';
       const done = () => {
         intro.remove();
         delete $('cabinet').dataset.boot;
+        document.body.classList.add('intro-done');
       };
       intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(); });
-      setTimeout(done, 3800);
+      setTimeout(done, 5400);
     }
   }
   window.ZSLedBar?.init();

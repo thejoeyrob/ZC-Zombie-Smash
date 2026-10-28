@@ -2475,7 +2475,7 @@ body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; 
 .segmented button:last-child { grid-column: 1 / -1; }
 
 /* 7.24 illustrated campaign: fixed cabinet geometry, readable comic captions. */
-.title-screen {background: #101b1a url('./story-joey.webp') 44% 38% / cover no-repeat;}
+.title-screen {background: #050807;}
 .title-screen:before {background:linear-gradient(180deg,#07131188 0%,#07131108 35%,#071311bb 66%,#071311f2 100%);z-index:1;animation:none;}
 .title-ui {z-index:4;}
 .title-logo {animation:none;filter:drop-shadow(0 3px 3px #000);}
@@ -2852,23 +2852,30 @@ body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background
 .zface.lit .zmouth { stroke: #5a0b0b; }
 .hud-bottom .weapon-rack button { width: 29px; min-width: 29px; }
 
-/* 7.58: power-on. The cabinet fades in and its lamp blinks red; a bright line flashes across the middle of the screen,
-   opens out to the full height like a CRT warming up, and the flat white JW EDS mark appears on black. */
-#cabinet { animation: cab-in 0.45s ease-out both; }
+/* 7.61: power-on. 0-0.9 s the console fades in on a black screen; the lamp blinks red then holds steady; a bright line
+   flashes across the middle of the screen and opens to the full screen like a CRT warming up; the flat white JW EDS mark
+   fades in, its four colour blocks arrive one by one, and it fades out to the Home Screen, which builds up in stages. */
+#cabinet { animation: cab-in 0.9s ease-out both; }
 @keyframes cab-in { from { opacity: 0; } to { opacity: 1; } }
-#studioIntro { position: absolute; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); z-index: 100; display: flex; align-items: center; justify-content: center; background: #000; animation: crt-on 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.35s both, studio-out 0.6s ease 3.3s forwards; }
-#studioIntro::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px; background: #fff; box-shadow: 0 0 14px 3px #9fffd0, 0 0 40px 8px #35ff9a66; opacity: 0; animation: crt-line 0.5s ease-out 0.35s both; }
-#studioIntro .jw { position: relative; width: 64%; aspect-ratio: 834 / 351; opacity: 0; animation: studio-in 0.8s ease 0.95s forwards; }
+#studioIntro { position: absolute; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); z-index: 100; display: flex; align-items: center; justify-content: center; background: #000; overflow: hidden; animation: studio-out 0.6s ease 4.6s forwards; }
+#studioIntro::before { content: ''; position: absolute; inset: 0; background: #e8fff3; box-shadow: 0 0 30px 8px #9fffd0; opacity: 0; transform: scale(0.02, 0.012); animation: crt-flash 0.6s ease-out 1.9s forwards; }
+#studioIntro .jw { position: relative; width: 64%; aspect-ratio: 834 / 351; opacity: 0; animation: studio-in 0.8s ease 2.5s forwards; }
 #studioIntro .jw img { display: block; width: 100%; height: 100%; }
 #studioIntro .jw i { position: absolute; border-radius: 1.5px; opacity: 0; animation: studio-block 0.3s ease forwards; }
-@keyframes crt-on { 0% { clip-path: inset(49.5% 50% 49.5% 50%); } 35% { clip-path: inset(49.5% 0 49.5% 0); } 100% { clip-path: inset(0); } }
-@keyframes crt-line { 0% { opacity: 1; transform: scaleX(0.02); } 35% { opacity: 1; transform: scaleX(1); } 70% { opacity: 0.8; } 100% { opacity: 0; transform: scaleX(1); } }
+@keyframes crt-flash { 0% { opacity: 1; transform: scale(0.02, 0.012); } 30% { opacity: 1; transform: scale(1, 0.012); } 70% { opacity: 0.95; transform: scale(1, 1); } 100% { opacity: 0; transform: scale(1, 1); } }
 @keyframes studio-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 @keyframes studio-block { from { opacity: 0; } to { opacity: 1; } }
 @keyframes studio-out { to { opacity: 0; visibility: hidden; } }
-#cabinet[data-boot="1"] #powerLed { background-position: 100% 0 !important; animation: led-boot 0.5s step-end infinite !important; }
-@keyframes led-boot { 0% { background-position: 100% 0; } 50% { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) { #cabinet { animation: none; } #studioIntro, #studioIntro::before { animation: studio-out 0.6s ease 2.4s forwards; } #studioIntro::before { display: none; } #studioIntro .jw { animation: none; opacity: 1; } #studioIntro .jw i { animation: none; opacity: 1; } #cabinet[data-boot="1"] #powerLed { animation: none !important; background-position: 100% 0 !important; } }
+#cabinet[data-boot="1"] #powerLed { background-position: 0 0 !important; animation: led-boot 1.4s step-end 0.9s both !important; }
+@keyframes led-boot { 0%, 33% { background-position: 0 0; } 17%, 50% { background-position: 100% 0; } 66% { background-position: 0 0; } 83%, 100% { background-position: 100% 0; } }
+/* Home Screen: background first, then the title, then everything else. */
+body:not(.intro-done) .title-art, body:not(.intro-done) .title-top, body:not(.intro-done) .title-bottom { opacity: 0; }
+body.intro-done .title-art { animation: home-in 0.7s ease-out both; }
+body.intro-done .title-top { animation: home-in-up 0.7s ease-out 0.55s both; }
+body.intro-done .title-bottom { animation: home-in-up 0.7s ease-out 1.2s both; }
+@keyframes home-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes home-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body.intro-done .title-art, body.intro-done .title-top, body.intro-done .title-bottom { animation: none; } }
 
 /* 7.54: home screen (PRESS FIRE, boss silhouettes) and the retro player-entry screen. */
 .press-fire { display: block; width: 100%; padding: 0; background: none !important; border: 0 !important; box-shadow: none !important; color: #fff3b0; text-align: center; animation: blink 1s steps(2, jump-none) infinite; }
@@ -2903,3 +2910,4 @@ body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background
 /* 7.59: on the retro console the blue ring is nine separate LEDs; one lights, clockwise from the top, for each grenade in hand. */
 #grenadeRing { display: none; }
 body[data-release-skin="retro-handheld"] #grenadeRing { display: block; position: absolute; left: -21.6%; top: -21.6%; width: 143.2%; height: 143.2%; z-index: 1; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #cabinet { animation: none; } #studioIntro { animation: studio-out 0.6s ease 2.4s forwards; } #studioIntro::before { display: none; } #studioIntro .jw, #studioIntro .jw i { animation: none; opacity: 1; } #cabinet[data-boot="1"] #powerLed { animation: none !important; background-position: 100% 0 !important; } }

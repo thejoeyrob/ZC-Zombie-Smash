@@ -1,4 +1,4 @@
-const CACHE = 'zombie-smash-v7.60.2';
+const CACHE = 'zombie-smash-v7.61.0';
 const ASSETS = [
   './console-retro-handheld.webp',
   './retro-stick.png',
@@ -62,7 +62,6 @@ const ASSETS = [
   './joey-reaction-close.webp',
   './manifest.webmanifest',
   './title-bg.webp',
-  './story-joey.webp',
   './story-army.webp',
   './intro-jw.png',
   './led-display.js',
@@ -91,6 +90,8 @@ const ASSETS = [
   './sfx-boost.mp3',
   './sfx-boss-attack.mp3',
   './sfx-burst.mp3',
+  './sfx-chime.mp3',
+  './sfx-click.mp3',
   './sfx-dmr.mp3',
   './sfx-grenade.mp3',
   './sfx-hit.mp3',
