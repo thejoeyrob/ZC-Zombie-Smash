@@ -115,5 +115,26 @@
     pause(on) { paused = !!on; if (!paused) api.wake(); },
     wake() { if (!cv) return; stop(); if (live()) next(); else if (cur) draw(cur, Math.max(0, (COLS - cur.bits.length) >> 1), 0); },
   };
+  // Grenade counter: two dot-matrix digits in the small window beside the blue ring.
+  let gc = null, gg = null, gn = -1;
+  api.grenades = (n) => {
+    if (!gc) {
+      const box = document.getElementById('grenadeLed');
+      gc = box && box.querySelector('canvas');
+      if (!gc) return;
+      gc.width = 11 * CELL; gc.height = ROWS * CELL; gg = gc.getContext('2d');
+    }
+    if (n === gn) return;
+    gn = n;
+    const t = String(Math.max(0, Math.min(99, n | 0))), bits = bitmap(t), color = n <= 0 ? COLORS.red : n <= 2 ? COLORS.amber : COLORS.green;
+    gg.clearRect(0, 0, gc.width, gc.height);
+    const ox = Math.floor((11 - bits.length) / 2);
+    for (let x = 0; x < 11; x++)
+      for (let y = 0; y < ROWS; y++) {
+        const on = (((bits[x - ox] || 0) >> y) & 1) === 1;
+        gg.fillStyle = on ? color : 'rgba(255,255,255,0.06)';
+        gg.beginPath(); gg.arc(x * CELL + CELL / 2, y * CELL + CELL / 2, CELL / 2 - (on ? 0.2 : GAP), 0, 6.2832); gg.fill();
+      }
+  };
   window.ZSLedBar = api;
 })();

@@ -1170,6 +1170,7 @@
     }
     hudSet('grenades', p.grenades, (v) => {
       hel('grenadeValue').textContent = v;
+      window.ZSLedBar?.grenades(v);
       hel('grenadeButton').classList.toggle('empty', v === 0);
       hel('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + v + ' remaining');
     });
