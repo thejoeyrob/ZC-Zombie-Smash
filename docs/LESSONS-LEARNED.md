@@ -52,3 +52,9 @@ Zombie Smash is an HTML5 canvas game wrapped with Capacitor for iPhone and shipp
 - Listing screenshots must match the app: retake any shot whose screen has changed.
 - Tests run before packaging (`npm test` in the TestFlight workflow) so a broken build never reaches Apple.
 - Time-sensitive launches: submit early and use Apple's "Request an Expedited App Review" form only for genuine deadlines.
+
+## 8. Hunting jank: what actually found it (7.56–7.57)
+- Count what the page does per second before touching art: `setTimeout/rAF` counts, a `MutationObserver` over the document, `Storage` reads/writes, audio nodes created, and a CDP `Profiler` run. A per-frame function that rewrote the same attributes cost ~190 DOM mutations a second and made the browser re-style the whole game screen every frame; a one-line "already tidy" guard cut it to 6.
+- Guard every per-frame DOM writer with "did anything change?". Setting an attribute to its current value still queues a mutation and can invalidate style.
+- Ship sprites at the resolution the canvas can show (backing scale x ~1.25), not at the size the art was generated. Bosses and zombies were 6-10 source pixels per game unit for a canvas that shows 2; shrinking them cut decoded sprite memory from 118 MB to about 22 MB with no visible change (compare old/new screenshots at 3x).
+- Give testers a hidden per-second frame log (fps, longest gap, script ms) so a phone recording can be matched with numbers.
