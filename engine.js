@@ -330,9 +330,9 @@
     // The introductory round remains readable; pressure builds after it and continues in survival.
     enemyPace() {
       return (
-        (1 + Math.min(0.78, (this.wave - 1) * 0.045)) *
+        (1 + Math.min(1.1, (this.wave - 1) * 0.06)) *
         Math.min(1, 0.9 + (this.wave - 1) * 0.04) *
-        (1 + Math.min(0.5, Math.max(0, this.wave - 14) * 0.018))
+        (1 + Math.min(0.6, Math.max(0, this.wave - 12) * 0.025))
       );
     }
     spawnInterval() {
