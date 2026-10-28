@@ -2798,6 +2798,14 @@ body[data-release-skin="retro-handheld"] :is(.console-header, .engraving, .deck-
 body[data-release-skin="retro-handheld"] :is(#joystick, #grenadeButton, #fireButton, #menuButton) { background: none !important; border: 0 !important; box-shadow: none !important; filter: none !important; }
 body[data-release-skin="retro-handheld"] :is(#joystick, #grenadeButton, #fireButton, #menuButton)::after { content: ''; position: absolute; pointer-events: none; background-repeat: no-repeat; background-size: 300% 100%; }
 body[data-release-skin="retro-handheld"] :is(.stick-track, .stick-knob, .fire-inner, .m3) { visibility: hidden; }
+/* Tap areas on this skin are the drawn controls: the element itself ignores touches and a ::before shaped like the
+   artwork takes them (the element's own size is untouched, so the stick travel and everything else is unchanged). */
+body[data-release-skin="retro-handheld"] :is(#joystick, #fireButton, #grenadeButton, #menuButton) { pointer-events: none; }
+body[data-release-skin="retro-handheld"] :is(#joystick, #fireButton, #grenadeButton, #menuButton)::before { content: ''; position: absolute; pointer-events: auto; background: none; border-radius: 50%; }
+body[data-release-skin="retro-handheld"] #joystick::before { inset: -14.65% -2.17% 10.35% -2.17%; }
+body[data-release-skin="retro-handheld"] #fireButton::before { inset: -9.1% 3.4% 15.9% 3.4%; }
+body[data-release-skin="retro-handheld"] #grenadeButton::before { inset: -7.2%; }
+body[data-release-skin="retro-handheld"] #menuButton::before { inset: -10.5% -13.2%; border-radius: 999px; }
 body[data-release-skin="retro-handheld"] .grenade-button .g3 { display: none !important; }
 body[data-release-skin="retro-handheld"] #joystick::after { inset: -0.1%; background-image: url('./retro-stick.png'); background-position: 50% 0; transform: scale(1.25); transform-origin: 50% 100%; }
 body[data-release-skin="retro-handheld"] #joystick[data-dir="-1"]::after { background-position: 0 0; }
