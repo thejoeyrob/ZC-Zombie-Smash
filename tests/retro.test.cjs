@@ -47,10 +47,18 @@ test('weapon lamp: pistol is not special; stored, equipped and arena weapons are
 test('retro skin ships every sprite, each is cached for offline play, the superseded svg is gone', () => {
   const skin = context.ZSData.SKINS.find(s => s.id === 'retro-handheld');
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  for (const file of [skin.file, 'retro-stick.png', 'retro-fire.png', 'retro-grenade.png', 'retro-menu.png', 'retro-led-power.png', 'retro-led-weapon.png']) {
+  for (const file of [skin.file, 'retro-stick.png', 'retro-fire.png', 'retro-grenade.png', 'retro-menu.png', 'retro-led-power.png', 'retro-led-weapon.png', 'intro-jw.png', 'led-display.js']) {
     assert.ok(fs.existsSync(path.join(root, file)), file);
     assert.ok(sw.includes(`'./${file}'`), file + ' in sw.js');
   }
   assert.ok(!fs.existsSync(path.join(root, 'console-retro-handheld.svg')));
   assert.ok(!sw.includes('console-retro-handheld.svg'));
+});
+
+test('marquee font covers the printable range and the page loads the script', () => {
+  const src = fs.readFileSync(path.join(root, 'led-display.js'), 'utf8');
+  const raw = src.match(/const RAW = '([^']+)'/)[1].split('|');
+  assert.equal(raw.length, 59); // ASCII 32..90
+  for (const g of raw) assert.equal(g.split(' ').length, 5);
+  assert.ok(fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('led-display.js'));
 });

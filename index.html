@@ -3,12 +3,12 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#111416"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zombie Smash">
 <meta name="description" content="Joey Rob versus Dr Mantis and the fallen heroes. A portrait arcade game. Pick a name. Hold the line.">
-<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.52.0"><link rel="icon" href="./icon-192.png?v=7.52.0"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.52.0"><link rel="stylesheet" href="./game.css?v=7.52.0">
+<title>Zombie Smash</title><link rel="manifest" href="./manifest.webmanifest?v=7.53.0"><link rel="icon" href="./icon-192.png?v=7.53.0"><link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7.53.0"><link rel="stylesheet" href="./game.css?v=7.53.0">
 </head><body>
 <div id="bleed" aria-hidden="true"></div>
 <main id="cabinet" aria-label="Zombie Smash portrait console">
  <div class="shell-art" aria-hidden="true"></div>
- <i id="powerLed" aria-hidden="true"></i><i id="weaponLed" aria-hidden="true"></i>
+ <i id="powerLed" aria-hidden="true"></i><i id="weaponLed" aria-hidden="true"></i><canvas id="ledBar" aria-hidden="true"></canvas><span id="moveLabel" aria-hidden="true">◀ MOVE ▶</span>
  <header class="console-header"><div class="wordmark">ZOMBIE <b>SMASH</b><small id="headerName">JOEY ROB VS DR MANTIS</small></div></header>
  <section class="screen" aria-label="Game screen">
   <div class="hud-top"><div><small>WAVE</small><b id="waveValue">1</b></div><div><small>LEFT</small><b id="leftValue">10</b></div><div class="score-cell"><small>SCORE</small><b id="scoreValue">0</b></div><div><small>BEST</small><b id="bestValue">0</b></div></div>
@@ -26,9 +26,9 @@
  <div class="screen-glass" aria-hidden="true"></div>
  <div id="startPrompt" hidden aria-live="polite"><div><h3>HOW TO PLAY</h3><ul><li><i>◂ ▸</i><span><b>SLIDE THE STICK</b> left or right to move</span></li><li><i>FIRE</i><span><b>HOLD</b> to shoot straight up your lane</span></li><li><i>BOMB</i><span><b>TAP</b> the grenade button to throw a grenade</span></li></ul><p class="goal"><b>DON’T LET 10 ZOMBIES THROUGH</b>Every zombie that gets past your line counts. At 10 the camp falls.</p><b class="go">PRESS ANY BUTTON</b><small>TO START</small></div></div>
  <div id="overlay" class="overlay" hidden></div><div id="toast" role="status" hidden></div>
-<div id="studioIntro" aria-hidden="true"><img src="./logo-flat.png" alt=""><span>PRESENTS</span></div>
+<div id="studioIntro" aria-hidden="true"><div class="jw"><img src="./intro-jw.png" alt=""><i style="left:50%;top:53.8%;width:9.71%;height:13.7%;background:#cb1412;animation-delay:1.25s"></i><i style="left:61.5%;top:53.8%;width:9.71%;height:13.7%;background:#0e5cf7;animation-delay:1.6s"></i><i style="left:72.7%;top:53%;width:9.35%;height:14.5%;background:#ebce21;animation-delay:1.95s"></i><i style="left:83.8%;top:53.8%;width:9.71%;height:13.7%;background:#10bb3d;animation-delay:2.3s"></i></div></div>
 </main>
 <div id="rotateGate" hidden><img src="./icon-192.png" alt=""><h1>TURN TO PORTRAIT</h1><p>Your game is paused.<br>The whole console stays in proportion.</p><svg viewBox="0 0 60 72" aria-hidden="true"><rect x="16" y="7" width="28" height="54" rx="4"/><path d="M27 54h6"/></svg></div>
 <noscript>Enable JavaScript to play Zombie Smash.</noscript>
-<script src="./game-data.js?v=7.52.0"></script><script src="./console-layout.js?v=7.52.0"></script><script src="./engine.js?v=7.52.0"></script><script src="./renderer.js?v=7.52.0"></script><script src="./audio.js?v=7.52.0"></script><script src="./haptics.js?v=7.52.0"></script><script src="./scores.js?v=7.52.0"></script><script src="./game.js?v=7.52.0"></script>
+<script src="./game-data.js?v=7.53.0"></script><script src="./console-layout.js?v=7.53.0"></script><script src="./engine.js?v=7.53.0"></script><script src="./renderer.js?v=7.53.0"></script><script src="./audio.js?v=7.53.0"></script><script src="./haptics.js?v=7.53.0"></script><script src="./scores.js?v=7.53.0"></script><script src="./led-display.js?v=7.53.0"></script><script src="./game.js?v=7.53.0"></script>
 </body></html>

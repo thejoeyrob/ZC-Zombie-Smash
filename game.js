@@ -519,6 +519,7 @@
     }))
       document.body.style.setProperty(k, v);
     document.querySelector('.shell-art').innerHTML = ZSConsole.markup(skin);
+    window.ZSLedBar?.wake();
   }
   function applySkin(id) {
     // An extra skin is still loading at start-up, so the saved choice is only overwritten by a real match.
@@ -1108,6 +1109,7 @@
   function ledBreach(on) {
     clearTimeout(breachTimer);
     hel('cabinet').classList.toggle('led-breach', on);
+    if (on) window.ZSLedBar?.alert('BREACH ' + Math.min(10, game.breaches) + '/10', 'red');
     if (on) breachTimer = setTimeout(() => ledBreach(false), 1700);
   }
   function leds() {
@@ -1119,6 +1121,17 @@
     hudSet('led:weapon', lamps.weapon, (v) => (hel('cabinet').dataset.weapon = v));
     hudSet('led:paused', paused || document.hidden, (v) => (hel('cabinet').dataset.paused = v ? '1' : ''));
     hudSet('led:menu', paused && !!panel && game.active && !awaitStart, (v) => (hel('cabinet').dataset.menu = v ? '1' : ''));
+    {
+      const started = game.active && !awaitStart && !game.over,
+        boss = game.boss ? ZSData.BOSSES.find((b) => b.id === game.boss.bossId)?.name || '' : '',
+        map = started ? MAPS[ZSData.mapIndex(game.wave)].name : '';
+      hudSet('bar', [started, game.over, game.wave, map, boss, run?.name || '', started && paused && !!panel].join('|'), () =>
+        window.ZSLedBar?.set({ started, over: !!game.over, wave: game.wave, map, boss, name: run?.name || '', paused: started && paused && !!panel }),
+      );
+      hudSet('lowhp', started && game.player.lives === 1, (v) => v && window.ZSLedBar?.alert('LOW HEALTH', 'red'));
+      const sp = started && game.player.special && ZSEngine.SPECIALS.find((s) => s.id === game.player.special.id);
+      hudSet('spec', sp ? sp.id : '', (v) => v && window.ZSLedBar?.alert(sp.name, 'green'));
+    }
   }
   function hud() {
     const p = game.player;
@@ -1842,9 +1855,10 @@
     if (intro) {
       const done = () => intro.remove();
       intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(); });
-      setTimeout(done, 2900);
+      setTimeout(done, 3800);
     }
   }
+  window.ZSLedBar?.init();
   window.ZSInspect = () => ({
     world: { width: ZSData.W, height: ZSData.H },
     player: { x: game.player.x, y: game.player.y },

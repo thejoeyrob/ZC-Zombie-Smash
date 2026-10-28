@@ -147,7 +147,7 @@ window.ZSData = {
   SKINS: [
     { id: 'retro-handheld', name: 'Retro Handheld', file: 'console-retro-handheld.webp',
       win: [72, 98, 828, 1165], accent: '#c7d99a', bleed: '#282d2b',
-      fire: '#1f9a3a', grenade: '#1f6fd0', stick: '#d02a2a' },
+      fire: '#d92b29', grenade: '#1269dc', stick: '#edb91b' },
     {
       id: 'toxic',
       win: [63, 98, 836, 1165],
