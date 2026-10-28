@@ -2852,15 +2852,23 @@ body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background
 .zface.lit .zmouth { stroke: #5a0b0b; }
 .hud-bottom .weapon-rack button { width: 29px; min-width: 29px; }
 
-/* 7.53: studio intro. Flat white JW EDS mark on black eases in, the four colour blocks arrive one by one, then it fades. */
-#studioIntro { position: absolute; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); z-index: 100; display: flex; align-items: center; justify-content: center; background: #000; animation: studio-out 0.6s ease 3.1s forwards; }
-#studioIntro .jw { position: relative; width: 64%; aspect-ratio: 834 / 351; opacity: 0; animation: studio-in 1s ease 0.15s forwards; }
+/* 7.58: power-on. The cabinet fades in and its lamp blinks red; a bright line flashes across the middle of the screen,
+   opens out to the full height like a CRT warming up, and the flat white JW EDS mark appears on black. */
+#cabinet { animation: cab-in 0.45s ease-out both; }
+@keyframes cab-in { from { opacity: 0; } to { opacity: 1; } }
+#studioIntro { position: absolute; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); z-index: 100; display: flex; align-items: center; justify-content: center; background: #000; animation: crt-on 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.35s both, studio-out 0.6s ease 3.3s forwards; }
+#studioIntro::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px; background: #fff; box-shadow: 0 0 14px 3px #9fffd0, 0 0 40px 8px #35ff9a66; opacity: 0; animation: crt-line 0.5s ease-out 0.35s both; }
+#studioIntro .jw { position: relative; width: 64%; aspect-ratio: 834 / 351; opacity: 0; animation: studio-in 0.8s ease 0.95s forwards; }
 #studioIntro .jw img { display: block; width: 100%; height: 100%; }
 #studioIntro .jw i { position: absolute; border-radius: 1.5px; opacity: 0; animation: studio-block 0.3s ease forwards; }
+@keyframes crt-on { 0% { clip-path: inset(49.5% 50% 49.5% 50%); } 35% { clip-path: inset(49.5% 0 49.5% 0); } 100% { clip-path: inset(0); } }
+@keyframes crt-line { 0% { opacity: 1; transform: scaleX(0.02); } 35% { opacity: 1; transform: scaleX(1); } 70% { opacity: 0.8; } 100% { opacity: 0; transform: scaleX(1); } }
 @keyframes studio-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 @keyframes studio-block { from { opacity: 0; } to { opacity: 1; } }
 @keyframes studio-out { to { opacity: 0; visibility: hidden; } }
-@media (prefers-reduced-motion: reduce) { #studioIntro .jw { animation: none; opacity: 1; } #studioIntro .jw i { animation: none; opacity: 1; } }
+#cabinet[data-boot="1"] #powerLed { background-position: 100% 0 !important; animation: led-boot 0.5s step-end infinite !important; }
+@keyframes led-boot { 0% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { #cabinet { animation: none; } #studioIntro, #studioIntro::before { animation: studio-out 0.6s ease 2.4s forwards; } #studioIntro::before { display: none; } #studioIntro .jw { animation: none; opacity: 1; } #studioIntro .jw i { animation: none; opacity: 1; } #cabinet[data-boot="1"] #powerLed { animation: none !important; background-position: 100% 0 !important; } }
 
 /* 7.54: home screen (PRESS FIRE, boss silhouettes) and the retro player-entry screen. */
 .press-fire { display: block; width: 100%; padding: 0; background: none !important; border: 0 !important; box-shadow: none !important; color: #fff3b0; text-align: center; animation: blink 1s steps(2, jump-none) infinite; }
@@ -2872,19 +2880,22 @@ body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background
 .title-bosses .tb.down { border-color: var(--c); box-shadow: 0 0 8px var(--c); background: #000000aa; }
 .title-bosses .tb.down img { filter: none; }
 .title-count { margin-top: 4px; font: 800 8px Inter, sans-serif; letter-spacing: 0.16em; color: #ffd9a0; text-align: center; text-shadow: 0 0 4px #000; }
-.player-screen { position: relative; margin: -18px -20px; width: calc(100% + 40px); height: var(--wh, 445px); box-sizing: border-box; padding: 26px 22px 18px; overflow: auto; background: #000; color: #3dff6e; font-family: 'Courier New', Menlo, Consolas, monospace; text-transform: uppercase; text-shadow: 0 0 5px #3dff6e66; display: flex; flex-direction: column; }
-.player-screen .pl-title { font-size: 20px; font-weight: 700; letter-spacing: 0.22em; }
-.player-screen .pl-sub { margin: 4px 0 22px; padding-bottom: 8px; border-bottom: 2px solid #3dff6e; font-size: 11px; letter-spacing: 0.2em; }
-.player-screen form { display: flex; flex-direction: column; gap: 10px; }
-.player-screen .pl-label { font-size: 12px; letter-spacing: 0.14em; }
-.player-screen input { box-sizing: border-box; width: 100%; height: 44px; padding: 0 12px; background: #000; color: #3dff6e; border: 2px solid #3dff6e; border-radius: 0; font: 700 18px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.1em; text-transform: uppercase; caret-color: #3dff6e; outline: none; text-shadow: 0 0 5px #3dff6e66; box-shadow: inset 0 0 8px #3dff6e22; }
+.player-screen { position: relative; margin: -18px -20px; width: calc(100% + 40px); height: var(--wh, 445px); box-sizing: border-box; padding: 34px 30px 22px; overflow: auto; background: #000 radial-gradient(ellipse at 50% 40%, #07200f 0%, #000 70%); color: #3dff6e; font-family: 'Courier New', Menlo, Consolas, monospace; text-transform: uppercase; text-shadow: 0 0 4px #3dff6e55; display: flex; flex-direction: column; }
+.player-screen::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #0000 0 2px, #00000038 2px 3px); }
+.player-screen .pl-title { font-size: 15px; font-weight: 700; letter-spacing: 0.3em; }
+.player-screen .pl-sub { margin: 6px 0 30px; padding-bottom: 12px; border-bottom: 1px solid #3dff6e88; font-size: 9px; letter-spacing: 0.26em; color: #2fb556; }
+.player-screen form { display: flex; flex-direction: column; gap: 14px; }
+.player-screen .pl-label { font-size: 10px; letter-spacing: 0.2em; }
+.player-screen .pl-label::after { content: '\2588'; margin-left: 6px; animation: pl-cursor 1s steps(2, jump-none) infinite; }
+@keyframes pl-cursor { 50% { opacity: 0; } }
+.player-screen input { box-sizing: border-box; width: 100%; height: 34px; padding: 0 10px; background: #000; color: #3dff6e; border: 1px solid #3dff6e; border-radius: 0; font: 700 14px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.14em; text-transform: uppercase; caret-color: #3dff6e; outline: none; text-shadow: 0 0 4px #3dff6e55; }
 .player-screen input::placeholder { color: #1e7a38; }
 .player-screen input:read-only { border-style: dashed; }
-.player-screen input:focus { box-shadow: 0 0 0 2px #000, 0 0 0 4px #3dff6e88; }
-.player-screen .pl-btn { box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 12px; background: #000; color: #3dff6e; border: 2px solid #3dff6e; border-radius: 0; font: 700 15px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.2em; text-transform: uppercase; text-shadow: 0 0 5px #3dff6e66; cursor: pointer; }
+.player-screen input:focus { box-shadow: 0 0 0 3px #000, 0 0 0 4px #3dff6e66; }
+.player-screen .pl-btn { box-sizing: border-box; width: 100%; min-height: 34px; padding: 0 10px; background: #000; color: #3dff6e; border: 1px solid #3dff6e; border-radius: 0; font: 700 12px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.26em; text-transform: uppercase; text-shadow: 0 0 4px #3dff6e55; cursor: pointer; }
 .player-screen .pl-btn:active:not(:disabled), .player-screen .pl-btn:focus-visible { background: #3dff6e; color: #000; text-shadow: none; outline: none; }
 .player-screen .pl-btn:disabled { color: #2a5a37; border-color: #1c3d26; text-shadow: none; cursor: default; }
-.player-screen .pl-rule { margin: 8px 0 2px; border-top: 2px dashed #1f7f3a; }
-.player-screen .pl-main { min-height: 50px; font-size: 17px; }
-.player-screen .pl-back { margin-top: auto; align-self: flex-start; padding: 8px 2px; background: none; border: 0; color: #2fb556; font: 700 12px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.2em; cursor: pointer; }
-@media (prefers-reduced-motion: reduce) { .press-fire { animation: none; } }
+.player-screen .pl-rule { margin: 12px 0 6px; border-top: 1px dashed #1f7f3a; }
+.player-screen .pl-main { min-height: 38px; font-size: 13px; }
+.player-screen .pl-back { margin-top: auto; align-self: flex-start; padding: 8px 2px; background: none; border: 0; color: #2fb556; font: 700 10px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.24em; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .press-fire { animation: none; } .player-screen .pl-label::after { animation: none; } }

@@ -283,6 +283,13 @@
         ? `<div class="panel-head"><h2>${esc(title)}</h2>${closable ? '<button data-action="close" aria-label="Close panel">×</button>' : ''}</div>`
         : '') + `<div class="panel-content ${start ? 'start-panel' : ''}">${html}</div>`;
   }
+  // The Home Screen and player entry play their own looping tune. The sound engine starts on the first touch or key.
+  function menuMusic() {
+    audio.resume();
+    audio.playMusic('menu');
+  }
+  for (const type of ['pointerdown', 'keydown'])
+    addEventListener(type, () => audio.ctx?.state !== 'running' && audio.unlock(), { capture: true });
   function showStart() {
     storyActive = false;
     $('fireButton')?.classList.remove('story-hint');
@@ -293,10 +300,11 @@
     showPanel(
       'start',
       '',
-`<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top"><div class="title-hi"><span>HI <b>${Number(hi[1]).toLocaleString()}</b></span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><button class="press-fire" data-action="player" aria-label="Press fire to start the game"><b class="press-start">PRESS FIRE</b><small>TO START GAME</small></button><div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? '' : 'Loading game artwork…'}</div></div></div></div>`,
+`<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top">${hi[1] > 0 ? `<div class="title-hi"><span>HIGH SCORE <b>${Number(hi[1]).toLocaleString()}</b></span></div>` : ''}<h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><button class="press-fire" data-action="player" aria-label="Press fire to start the game"><b class="press-start">PRESS FIRE</b><small>TO START GAME</small></button><div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? '' : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
     $('fireButton').classList.add('story-hint');
+    menuMusic();
   }
   // Player entry: its own screen. A name that was already entered is shown locked, with CHANGE to edit it;
   // without one the box is open and CHANGE is greyed out. CONTINUE appears only when a run was left half played.
@@ -312,6 +320,7 @@
       `<div class="player-screen"><div class="pl-title">ZOMBIE SMASH</div><div class="pl-sub">PLAYER REGISTRATION</div><form id="playerForm" autocomplete="off"><label class="pl-label" for="username">&gt; ENTER PLAYER NAME</label><input name="username" id="username" value="${esc(named ? raw : '')}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="NAME_" required ${named ? 'readonly' : ''}><button type="button" class="pl-btn" id="nameChange" data-action="name-change" ${named ? '' : 'disabled'}>CHANGE</button><div class="pl-rule"></div><button type="submit" class="pl-btn pl-main" id="newGameBtn" ${ready ? '' : 'disabled'}>NEW GAME</button>${half ? `<button type="button" class="pl-btn pl-main" data-action="continue">CONTINUE · WAVE ${Number(saved.engine.wave) || 1}</button>` : ''}</form><button type="button" class="pl-back" data-action="home">&lt; BACK</button></div>`,
       { start: true, closable: false },
     );
+    menuMusic();
   }
   // Retro attract mode: a low-resolution canvas scaled up with hard pixels. Joey shoots zombies down a street under a red moon.
   let titleBounds = null;
@@ -1935,7 +1944,11 @@
   {
     const intro = $('studioIntro');
     if (intro) {
-      const done = () => intro.remove();
+      $('cabinet').dataset.boot = '1';
+      const done = () => {
+        intro.remove();
+        delete $('cabinet').dataset.boot;
+      };
       intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(); });
       setTimeout(done, 3800);
     }
