@@ -3,7 +3,7 @@ Hello,
 Thank you for your message. Here is the information you asked for about Zombie Smash (version 1.0, build 107). A screen recording from a physical iPhone, starting from launching the app, is attached.
 
 1. Screen recording
-The recording shows: launching the app, entering a player name, pressing PRESS START, the opening story, playing a wave (move, fire, throw a grenade), a boss scene, and the MENU (Music & Sound, Privacy Policy, High Scores). The app has no account registration, login or account deletion because it has no accounts. It has no paid content and no in-app purchases. The only user-generated content is the player name described in item 4.
+The recording shows: launching the app, pressing FIRE, entering a player name, pressing NEW GAME, the opening story, playing a wave (move, fire, throw a grenade), a boss scene, and the MENU (Music & Sound, Privacy Policy, High Scores). The app has no account registration, login or account deletion because it has no accounts. It has no paid content and no in-app purchases. The only user-generated content is the player name described in item 4.
 
 2. Purpose and target audience
 Zombie Smash is a free, single-player, retro-style arcade shooter for iPhone. The player defends a line at the bottom of the screen, shoots incoming zombies, fights seven boss characters across seven arenas and tries to set a high score. It is entertainment for casual players aged 12 and over who enjoy short arcade sessions. It has cartoon-style zombie violence only, no ads and no sign-in.
