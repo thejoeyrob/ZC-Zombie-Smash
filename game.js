@@ -1044,11 +1044,16 @@
       if (current() && !paused && !document.hidden) restore();
     });
   }
+  let sceneIdle = false;
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
     document.body.classList.toggle('in-scene', !!s);
     if (!s) {
+      // Nothing to tidy once the box is already clean: writing the same attributes every frame made the browser
+      // re-style the whole game screen 60 times a second.
+      if (sceneIdle) return;
+      sceneIdle = true;
       box.hidden = true;
       sceneKey = '';
       box.classList.remove('clip-mode', 'clip-ready');
@@ -1057,6 +1062,7 @@
       removeSceneClip(box);
       return;
     }
+    sceneIdle = false;
     const clip = sceneClipFor(s);
     const playing = box.querySelector('video.scene-clip');
     if (playing) {
@@ -1279,7 +1285,7 @@
       keyboard = focused && vv && vv.height < innerHeight * 0.78,
       newLandscape = w > h * 1.04;
     landscape = newLandscape;
-    $('rotateGate').hidden = !landscape;
+    if ($('rotateGate').hidden === landscape) $('rotateGate').hidden = !landscape;
     if (landscape) {
       if (game.active && !paused) {
         pause();
