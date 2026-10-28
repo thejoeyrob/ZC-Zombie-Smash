@@ -885,6 +885,7 @@
         if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
       }
     }
+    if (type === 'panel' && data.phase === 2 && game.scene?.bossId) audio.playMusic(bossTrack(game.scene.bossId));
     if (type === 'music') {
       audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : data.track);
       return;
@@ -1057,7 +1058,8 @@
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
     let content = '';
-    if (s.kind === 'arrival'  && s.phase === 0)
+    if (clip) content = '';
+    else if (s.kind === 'arrival'  && s.phase === 0)
       content = '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
     else if (s.kind === 'mutation') {
       const reaction = s.stage === 3;
@@ -1069,10 +1071,8 @@
       content = `<div class="scene-name ${b.name.length > 14 ? 'long' : ''}">${s.kind === 'down' ? 'BOSS DOWN' : esc(b.name)}<span>${esc(b.title)}</span></div><div class="scene-figures"><img class="scene-art" src="./${b.sprites[(s.stage || s.startStage || 1) - 1]}" alt="${esc(b.name)}"></div><div class="scene-copy"><small>${esc(b.name)}</small><p>${esc(line)}</p></div>`;
     } else
       content = '<div class="scene-alert">LINE BROKEN<small>THE HORDE GOT THROUGH</small></div>';
-    box.innerHTML =
-      '<div class="scene-backdrop"></div><div class="scene-lines"></div>' +
-      content +
-      '';
+    // While a finished film is mounted the box stays empty: the built-in cards below are only the fallback for a film that fails.
+    box.innerHTML = clip ? '' : '<div class="scene-backdrop"></div><div class="scene-lines"></div>' + content;
     box.onclick = (e) => {
       if (!paused && e.target.closest('.scene-next')) sceneAdvance();
     };
