@@ -285,10 +285,18 @@
   }
   // The Home Screen and player entry play their own looping tune. The sound engine starts on the first touch or key.
   function menuMusic() {
-    audio.resume();
-    audio.playMusic('menu');
+    // Nothing touches the sound engine before the first tap (an iPhone only lets it start from a touch). The tune is
+    // simply wanted; the first tap starts the engine, which then plays whatever is wanted.
+    audio.paused = false;
+    audio.wantTrack = 'menu';
+    if (audio.ctx) {
+      // Opening a screen pauses the game's sound (master volume to zero): bring it back up for the tune.
+      audio.master.gain.cancelScheduledValues(audio.ctx.currentTime);
+      audio.master.gain.setTargetAtTime(1, audio.ctx.currentTime, 0.025);
+      if (audio.ctx.state === 'running') audio.playMusic('menu');
+    }
   }
-  for (const type of ['pointerdown', 'keydown'])
+  for (const type of ['pointerdown', 'touchend', 'click', 'keydown'])
     addEventListener(type, () => audio.ctx?.state !== 'running' && audio.unlock(), { capture: true });
   function showStart() {
     storyActive = false;
