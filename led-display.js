@@ -158,5 +158,37 @@
         gg.beginPath(); gg.arc(x * CELL + CELL / 2, y * CELL + CELL / 2, CELL / 2 - (on ? 0.2 : GAP), 0, 6.2832); gg.fill();
       }
   };
+  // The blue ring round the grenade button: nine LEDs, one per grenade, lit clockwise from the top.
+  let rc = null, rg = null, rn = -1;
+  api.ring = (n) => {
+    if (!rc) {
+      rc = document.getElementById('grenadeRing');
+      if (!rc) return;
+      rg = rc.getContext('2d');
+    }
+    n = Math.max(0, Math.min(9, n | 0));
+    if (n === rn) return;
+    rn = n;
+    const R = 109, step = (Math.PI * 2) / 9, gap = 0.13;
+    rg.clearRect(0, 0, 380, 380);
+    rg.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
+      const a0 = -Math.PI / 2 + i * step + gap / 2, a1 = a0 + step - gap, on = i < n;
+      rg.beginPath();
+      rg.arc(190, 190, R, a0, a1);
+      if (on) {
+        rg.shadowColor = '#2fb4ff';
+        rg.shadowBlur = 14;
+        rg.strokeStyle = '#8fe3ff';
+        rg.lineWidth = 8;
+      } else {
+        rg.shadowBlur = 0;
+        rg.strokeStyle = '#0c2447';
+        rg.lineWidth = 8;
+      }
+      rg.stroke();
+    }
+    rg.shadowBlur = 0;
+  };
   window.ZSLedBar = api;
 })();
