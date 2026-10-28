@@ -760,9 +760,10 @@
       `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. Nothing is shown: cheats are now armed.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
           `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b></div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
-      ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      ).join('')}<p class="menu-note"><strong>SLOW FRAMES</strong> (over 70 ms)<br>${slowFrames.length ? slowFrames.slice(-15).map(esc).join('<br>') : 'none yet'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
+  const slowFrames = [];
   let coffeeShownFor = null;
   function results(reason, afterCoffee = false) {
     // The coffee screen also appears when a run ends (web version only); the score is saved first.
@@ -1298,6 +1299,10 @@
     }
     if (storyActive || awaitStart || panel === 'start') padWatch();
     const elapsed = now - lastTime;
+    // BOT_ testers: remember the last slow frames (over 70 ms) and what was happening, shown in the CHEATS page.
+    if (bot && elapsed > 70 && elapsed < 2000 && !paused && game.active)
+      slowFrames.push(Math.round(elapsed) + 'ms · wave ' + game.wave + (game.scene ? ' · ' + game.scene.kind + ' scene' : game.boss ? ' · boss' : '') + ' · ' + game.enemies.length + ' zombies');
+    if (slowFrames.length > 40) slowFrames.shift();
     const dt = Math.min(0.1, elapsed / 1000 || 0);
     renderer.observeFrame(elapsed, !paused && !landscape && !document.hidden && ready && !game.scene);
     lastTime = now;

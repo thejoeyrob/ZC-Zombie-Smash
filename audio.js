@@ -876,7 +876,7 @@
   const CAP = { pistol: 3, smg: 3, shotgun: 3, dmr: 3, burst: 3, hit: 3, ricochet: 2, hurt: 2, throw: 2, 'boss-attack': 2 };
   // The ARCADE boss and Disco Man music and the victory/defeat stingers are rendered to short files, because
   // building them live (hundreds of synthesized notes a second) made the phone stutter in boss fights.
-  const ARC_FILES = ['arc-boss.mp3', 'arc-disco.mp3', 'arc-victory.mp3', 'arc-victory-d.mp3', 'arc-defeat.mp3', 'arc-defeat-d.mp3'];
+  const ARC_FILES = ['arc-main.mp3', 'arc-entrance.mp3', 'arc-boss.mp3', 'arc-disco.mp3', 'arc-victory.mp3', 'arc-victory-d.mp3', 'arc-defeat.mp3', 'arc-defeat-d.mp3'];
   const STINGER_LENGTH = { victory: 10, defeat: 12.2 };
   // Reserve four effect voices for information the player needs to hear over gunfire.
   const IMPORTANT = new Set(['hurt', 'grenade', 'pickup', 'boost', 'doom', 'alarm', 'whoosh', 'victory', 'loss', 'boss-attack']);
@@ -1053,8 +1053,10 @@
       return (base === 'pickup' ? 'new-' : 'sfx-') + base + '.mp3';
     }
     musicFile(track) {
-      if (this.settings.set === 'arcade' && (track === 'boss' || track === 'disco')) return 'arc-' + track + '.mp3';
-      return 'music-' + track + '.mp3';
+      // Every ARCADE track is a pre-rendered loop (nothing is synthesised while playing); after the first boss the
+      // wave music is the recorded score.
+      if (track === 'main' && this.afterBoss) return 'music-main.mp3';
+      return 'arc-' + track + '.mp3';
     }
     async buffer(file) {
       if (this.buffers.has(file)) return this.buffers.get(file);
@@ -1144,10 +1146,9 @@
       if (this.holdTrack && this.holdUntil > performance.now()) return;
       this.track = track;
       const seq = ++this.musicSeq;
-      const recordedMain = track === 'main' && this.afterBoss && this.settings.set === 'arcade';
-      const rendered = this.settings.set === 'arcade' && (track === 'boss' || track === 'disco');
+      const rendered = ['main', 'entrance', 'boss', 'disco'].includes(track);
       this.keyOffset = track === 'disco' ? -5 : 0;
-      if (this.synthMode && !recordedMain && !rendered) {
+      if (this.synthMode && !rendered) {
         this.stopMusic();
         this.startSequencer(track);
         return;
@@ -1164,13 +1165,13 @@
         if (this.track === track) this.track = null;
         return;
       }
-      if (track !== 'entrance') softEdges(buffer);
+      softEdges(buffer);
       this.stopMusic();
       const now = this.ctx.currentTime,
         source = this.ctx.createBufferSource(),
         gain = this.ctx.createGain();
       source.buffer = buffer;
-      source.loop = track !== 'entrance';
+      source.loop = true;
       source.connect(gain);
       gain.connect(this.musicBus);
       gain.gain.setValueAtTime(0, now);
