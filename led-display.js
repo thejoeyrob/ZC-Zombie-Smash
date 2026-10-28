@@ -158,7 +158,8 @@
         gg.beginPath(); gg.arc(x * CELL + CELL / 2, y * CELL + CELL / 2, CELL / 2 - (on ? 0.2 : GAP), 0, 6.2832); gg.fill();
       }
   };
-  // The blue ring round the grenade button: nine LEDs, one per grenade, lit clockwise from the top.
+  // The blue ring round the grenade button stays lit while grenades remain. Nine marks divide it into nine equal sections;
+  // one mark lights green, clockwise from the top, for each grenade in hand (all nine lit = a full set).
   let rc = null, rg = null, rn = -1;
   api.ring = (n) => {
     if (!rc) {
@@ -169,22 +170,23 @@
     n = Math.max(0, Math.min(9, n | 0));
     if (n === rn) return;
     rn = n;
-    const R = 109, step = (Math.PI * 2) / 9, gap = 0.13;
+    const cx = 190, r0 = 99, r1 = 119, step = (Math.PI * 2) / 9;
     rg.clearRect(0, 0, 380, 380);
-    rg.lineCap = 'round';
+    rg.lineCap = 'butt';
     for (let i = 0; i < 9; i++) {
-      const a0 = -Math.PI / 2 + i * step + gap / 2, a1 = a0 + step - gap, on = i < n;
+      const a = -Math.PI / 2 + i * step, on = i < n;
       rg.beginPath();
-      rg.arc(190, 190, R, a0, a1);
+      rg.moveTo(cx + Math.cos(a) * r0, cx + Math.sin(a) * r0);
+      rg.lineTo(cx + Math.cos(a) * r1, cx + Math.sin(a) * r1);
       if (on) {
-        rg.shadowColor = '#2fb4ff';
-        rg.shadowBlur = 14;
-        rg.strokeStyle = '#8fe3ff';
-        rg.lineWidth = 8;
+        rg.shadowColor = '#3dff6e';
+        rg.shadowBlur = 12;
+        rg.strokeStyle = '#8dffa6';
+        rg.lineWidth = 9;
       } else {
         rg.shadowBlur = 0;
-        rg.strokeStyle = '#0c2447';
-        rg.lineWidth = 8;
+        rg.strokeStyle = n ? '#0a2a3d' : '#05070a';
+        rg.lineWidth = 9;
       }
       rg.stroke();
     }
