@@ -1,6 +1,6 @@
 Hello,
 
-Thank you for your message. Here is the information you asked for about Zombie Smash (version 1.0, build 106). A screen recording from a physical iPhone, starting from launching the app, is attached.
+Thank you for your message. Here is the information you asked for about Zombie Smash (version 1.0, build 107). A screen recording from a physical iPhone, starting from launching the app, is attached.
 
 1. Screen recording
 The recording shows: launching the app, entering a player name, pressing PRESS START, the opening story, playing a wave (move, fire, throw a grenade), a boss scene, and the MENU (Music & Sound, Privacy Policy, High Scores). The app has no account registration, login or account deletion because it has no accounts. It has no paid content and no in-app purchases. The only user-generated content is the player name described in item 4.
@@ -9,7 +9,7 @@ The recording shows: launching the app, entering a player name, pressing PRESS S
 Zombie Smash is a free, single-player, retro-style arcade shooter for iPhone. The player defends a line at the bottom of the screen, shoots incoming zombies, fights seven boss characters across seven arenas and tries to set a high score. It is entertainment for casual players aged 12 and over who enjoy short arcade sessions. It has cartoon-style zombie violence only, no ads and no sign-in.
 
 3. How to use the app
-No login or sample files are needed. Type any player name (2 to 24 letters or numbers) and press PRESS START. Watch or skip the opening story (tap FIRE to bring in the next comic panel). Slide the joystick left and right to move, hold FIRE to shoot and tap the blue button to throw a grenade. Waves of zombies arrive from the top and a boss arrives every second wave. Letting 10 zombies through ends the run. MENU pauses the game and opens settings, console skins, high scores, how to play and the privacy policy.
+No login or sample files are needed. Press FIRE on the home screen, type any player name (2 to 24 letters or numbers) and press NEW GAME. Watch or skip the opening story (tap FIRE to bring in the next comic panel). Slide the joystick left and right to move, hold FIRE to shoot and tap the blue button to throw a grenade. Waves of zombies arrive from the top and a boss arrives every second wave. Letting 10 zombies through ends the run. MENU pauses the game and opens settings, console skins, high scores, how to play and the privacy policy.
 For testing, a name beginning with BOT_ (for example BOT_Reviewer) turns on a cheat mode. MENU then shows a CHEATS page listing the codes, which are entered on the console after pressing MENU twice. Runs in this mode never reach the public leaderboard.
 
 4. External services
