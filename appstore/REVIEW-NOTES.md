@@ -1,6 +1,6 @@
 Hello,
 
-Thank you for your message. Here is the information you asked for about Zombie Smash (version 1.0, build 109). A screen recording from a physical iPhone, starting from launching the app, is attached.
+Thank you for your message. Here is the information you asked for about Zombie Smash (version 1.0, build 110). A screen recording from a physical iPhone, starting from launching the app, is attached.
 
 1. Screen recording
 The recording shows: launching the app, pressing FIRE, entering a player name, pressing NEW GAME, the opening story, playing a wave (move, fire, throw a grenade), a boss scene, and the MENU (Music & Sound, Privacy Policy, High Scores). The app has no account registration, login or account deletion because it has no accounts. It has no paid content and no in-app purchases. The only user-generated content is the player name described in item 4.
