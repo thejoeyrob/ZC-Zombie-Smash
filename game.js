@@ -1140,8 +1140,9 @@
       const started = game.active && !awaitStart && !game.over,
         boss = game.boss ? ZSData.BOSSES.find((b) => b.id === game.boss.bossId)?.name || '' : '',
         map = started ? MAPS[ZSData.mapIndex(game.wave)].name : '';
-      hudSet('bar', [started, game.over, game.wave, map, boss, run?.name || '', started && paused && !!panel].join('|'), () =>
-        window.ZSLedBar?.set({ started, over: !!game.over, wave: game.wave, map, boss, name: run?.name || '', paused: started && paused && !!panel }),
+      const page = storyActive ? 'story' : panel || (awaitStart ? 'ready' : game.scene ? 'scene' : game.over ? 'over' : started ? 'play' : 'start');
+      hudSet('bar', [page, started, game.over, game.wave, map, boss, run?.name || '', page === 'results' ? game.score : '', bot].join('|'), () =>
+        window.ZSLedBar?.set({ page, started, over: !!game.over, wave: game.wave, map, boss, name: run?.name || '', score: game.score, bot }),
       );
       hudSet('lowhp', started && game.player.lives === 1, (v) => v && window.ZSLedBar?.alert('LOW HEALTH', 'red'));
       const sp = started && game.player.special && ZSEngine.SPECIALS.find((s) => s.id === game.player.special.id);

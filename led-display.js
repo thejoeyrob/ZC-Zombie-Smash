@@ -44,18 +44,40 @@
     }
   }
   const mk = (text, color) => { const t = clean(text); return t ? { text: t, color, bits: bitmap(t) } : null; };
+  // What each screen tells the player. Lines wider than the bar scroll; the rest roll up and off.
+  const PAGES = {
+    start: [['PRESS FIRE', 'yellow'], ['TO START GAME', 'green']],
+    player: [['ENTER YOUR NAME', 'green'], ['NEW GAME OR CONTINUE', 'amber']],
+    story: [['THE STORY', 'amber'], ['TAP FIRE FOR NEXT PANEL', 'green']],
+    coffee: [['THANK YOU', 'amber'], ['TAP TO CONTINUE', 'green']],
+    menu: [['GAME MENU', 'yellow'], ['PICK AN OPTION', 'green'], ['PLAY ZOMBIE SMASH TO RESUME', 'amber']],
+    skins: [['CHOOSE YOUR CONSOLE', 'yellow'], ['TAP A SKIN TO WEAR IT', 'green'], ['BEAT BOSSES TO UNLOCK MORE', 'amber']],
+    sound: [['MUSIC AND SOUND', 'yellow'], ['SLIDE TO SET YOUR MIX', 'green']],
+    help: [['HOW TO PLAY', 'yellow'], ['SLIDE STICK TO MOVE', 'green'], ['HOLD FIRE TO SHOOT', 'green'], ['BLUE BUTTON THROWS A GRENADE', 'amber']],
+    privacy: [['PRIVACY POLICY', 'yellow'], ['SCROLL TO READ', 'green']],
+    board: [['HIGH SCORES', 'yellow'], ['THE TOP PLAYERS', 'green']],
+    install: [['TAKE THE HORDE WITH YOU', 'amber']],
+    cheats: [['CHEAT CODES', 'red'], ['ARM WITH MENU TWICE', 'amber']],
+    restart: [['START A NEW RUN?', 'red'], ['THE CURRENT RUN ENDS', 'amber']],
+    ready: [['PRESS ANY BUTTON', 'yellow'], ['TO PLAY', 'green'], ['SLIDE TO MOVE', 'amber'], ['HOLD FIRE TO SHOOT', 'amber']],
+  };
   function playlist() {
-    const L = [];
-    if (ctx.over) L.push(mk('GAME OVER', 'red'));
-    else if (ctx.paused) L.push(mk('PAUSED', 'amber'));
-    else if (!ctx.started) { L.push(mk('ZOMBIE SMASH', 'yellow')); L.push(mk('PRESS START', 'green')); }
-    else {
-      L.push(mk('ZOMBIE SMASH', 'yellow'));
-      L.push(mk('WAVE ' + ctx.wave, 'green'));
+    let L = [];
+    const rows = PAGES[ctx.page];
+    if (ctx.page === 'results') {
+      L.push(mk('RUN COMPLETE', 'yellow'), mk('SCORE ' + Number(ctx.score || 0).toLocaleString('en-US'), 'green'), mk('TAP PLAY AGAIN', 'amber'));
+    } else if (ctx.page === 'over' || ctx.over) L.push(mk('GAME OVER', 'red'));
+    else if (ctx.page === 'scene') {
+      if (ctx.boss) L.push(mk('BOSS ' + ctx.boss, 'red'));
+      L.push(mk('TAP FIRE TO SKIP', 'green'));
+    } else if (ctx.page === 'play') {
+      L.push(mk('ZOMBIE SMASH', 'yellow'), mk('WAVE ' + ctx.wave, 'green'));
       if (ctx.map) L.push(mk(ctx.map, 'amber'));
       if (ctx.boss) L.push(mk('BOSS ' + ctx.boss, 'red'));
       if (ctx.name) L.push(mk(ctx.name, 'green'));
-    }
+      if (ctx.wave <= 2) L.push(mk('SLIDE STICK TO MOVE', 'amber'), mk('HOLD FIRE TO SHOOT', 'amber'), mk('BLUE BUTTON: GRENADE', 'amber'));
+    } else if (rows) L = rows.map(([t, c]) => mk(t, c));
+    else L.push(mk('ZOMBIE SMASH', 'yellow'));
     return L.filter(Boolean);
   }
   function stop() { clearTimeout(timer); timer = 0; }
@@ -103,9 +125,9 @@
       document.addEventListener('visibilitychange', () => (document.hidden ? stop() : api.wake()));
     },
     set(next_) {
-      const was = ctx.started + '|' + ctx.over;
+      const was = ctx.page + '|' + ctx.over;
       ctx = { ...ctx, ...next_, dirty: true };
-      if (was !== ctx.started + '|' + ctx.over) { list = playlist(); idx = -1; ctx.dirty = false; if (cv) next(); }
+      if (was !== ctx.page + '|' + ctx.over) { list = playlist(); idx = -1; ctx.dirty = false; if (cv) next(); }
     },
     alert(text, color = 'red') {
       const item = mk(text, color);
