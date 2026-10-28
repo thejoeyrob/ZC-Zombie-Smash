@@ -2779,7 +2779,7 @@ body.in-scene #gameCanvas { filter: none; }
 
 /* 7.53: retro console (JW grey handheld). The shell has no controls baked in; the sprites sit over the unchanged
    hit areas, sized in % of each control so the deck scaling and tap targets stay exactly as before. */
-body[data-release-skin="retro-handheld"] #powerLed { left: 326.6px; top: 19.5px; }
+body[data-release-skin="retro-handheld"] #powerLed { left: 326.6px; top: 14px; }
 body[data-release-skin="retro-handheld"] #powerLed::after { content: none; }
 body[data-release-skin="retro-handheld"] #weaponLed { display: block; left: 322px; top: 619.5px; width: 17.5px; height: 17.5px; margin: -8.75px 0 0 -8.75px; border-radius: 50%; background-image: url('./retro-led-weapon.png'); background-size: 300% 100%; background-position: 0 0; }
 body[data-release-skin="retro-handheld"] #weaponLed::after { content: ''; position: absolute; inset: 0; background: inherit; background-position: 100% 0; opacity: 0; filter: drop-shadow(0 0 3px #ff2a1a); }
@@ -2789,7 +2789,7 @@ body[data-release-skin="retro-handheld"] #cabinet[data-weapon="ready"]:not([data
   body[data-release-skin="retro-handheld"] #cabinet[data-weapon="ready"] #weaponLed::after { animation: none !important; opacity: 1; background-position: 50% 0; filter: none; }
 }
 #grenadeLed, #ledBar { display: none; position: absolute; pointer-events: none; z-index: 4; }
-body[data-release-skin="retro-handheld"] #ledBar { display: block; left: 86.6px; top: 9.6px; width: 201.7px; height: 13.9px; filter: drop-shadow(0 0 1.5px #ffb21c66); }
+body[data-release-skin="retro-handheld"] #ledBar { display: block; left: 101px; top: 6.2px; width: 173px; height: 11.8px; filter: drop-shadow(0 0 1.5px #ffb21c66); }
 body[data-release-skin="retro-handheld"] #grenadeLed { display: block; left: 218px; top: 534px; width: 28px; height: 18px; box-sizing: border-box; padding: 2.5px 3.5px; border-radius: 3px; background: #030405; border: 1.5px solid #74777c; box-shadow: inset 0 1px 3px #000, inset 0 0 0 1px #000, 0 1px 0 #ffffff26, 0 0 0 1px #0c0d0f; }
 body[data-release-skin="retro-handheld"] #grenadeLed canvas { display: block; width: 100%; height: 100%; filter: drop-shadow(0 0 1.5px #52ff7e55); }
 body[data-release-skin="retro-handheld"] .shell-art { background: var(--skin-art) 0 0 / 375px 667px no-repeat; }
@@ -2830,17 +2830,19 @@ body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background
 .hud-bottom .weapon-rack button { width: 31px; min-width: 31px; height: 24px; font-size: 8px; letter-spacing: 0; opacity: 0.5; }
 .hud-bottom .weapon-rack button small { font-size: 8.5px; line-height: 9px; }
 .hud-bottom .weapon-rack button.ready, .hud-bottom .weapon-rack button.equipped { opacity: 1; }
-.base-status { flex: 0 0 auto; min-width: 62px; gap: 0 !important; margin-right: 2px; align-items: stretch; text-align: center; }
-.base-status small { display: block; font: 800 5.5px/6px Inter, sans-serif; letter-spacing: 0.1em; color: #c4cdc0; }
-.base-status b { display: block; font-size: 0; line-height: 1; }
-.base-status .bn { font: 900 13px/11px Barlow, sans-serif; color: #eef0d6; }
-.base-status .bm { font: 800 8px/11px Barlow, sans-serif; color: #98a591; margin-left: 1px; }
-.base-status .bp { display: flex; gap: 1px; height: 3px; margin-top: 0; }
-.base-status .bp u { flex: 1; background: #34413a; border-radius: 1px; }
-.base-status .bp u.on { background: #ffcf3a; }
-.base-status b[data-n="6"] .bn, .base-status b[data-n="7"] .bn { color: #ffcf3a; }
-.base-status b[data-n="8"] .bn, .base-status b[data-n="9"] .bn, .base-status b[data-n="10"] .bn { color: #ff5a4a; }
-.base-status b[data-n="8"] .bp u.on, .base-status b[data-n="9"] .bp u.on, .base-status b[data-n="10"] .bp u.on { background: #ff5a4a; }
+.base-status { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0 !important; min-width: 0; margin-right: 1px; }
+.base-status small { display: none; }
+.base-status b { display: grid; grid-template-columns: repeat(5, 12px); gap: 1px 1.5px; font-size: 0; }
+.zface { width: 12px; height: 12px; overflow: visible; }
+.zface circle:first-child { fill: #26322b; stroke: #55655a; stroke-width: 1; }
+.zface .zeye { stroke: #55655a; stroke-width: 1.4; fill: none; }
+.zface .zeye2 { fill: #55655a; }
+.zface .zmouth { stroke: #55655a; stroke-width: 1.4; fill: none; }
+.zface.lit circle:first-child { fill: #9bff4a; stroke: #e8ffb0; filter: drop-shadow(0 0 3px #ff3b3b) drop-shadow(0 0 5px #ff3b3b99); }
+.zface.lit .zeye { stroke: #5a0b0b; }
+.zface.lit .zeye2 { fill: #5a0b0b; }
+.zface.lit .zmouth { stroke: #5a0b0b; }
+.hud-bottom .weapon-rack button { width: 29px; min-width: 29px; }
 
 /* 7.53: studio intro. Flat white JW EDS mark on black eases in, the four colour blocks arrive one by one, then it fades. */
 #studioIntro { position: absolute; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); z-index: 100; display: flex; align-items: center; justify-content: center; background: #000; animation: studio-out 0.6s ease 3.1s forwards; }

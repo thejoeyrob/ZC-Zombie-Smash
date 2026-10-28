@@ -1165,7 +1165,10 @@
         const el = hel('baseValue');
         el.dataset.n = n;
         el.setAttribute('aria-label', n + ' of 10 zombies through');
-        el.innerHTML = `<span class="bn">${n}</span><span class="bm">/10</span><i class="bp">${Array.from({ length: 10 }, (_, i) => `<u${i < n ? ' class="on"' : ''}></u>`).join('')}</i>`;
+        el.innerHTML = Array.from(
+          { length: 10 },
+          (_, i) => `<svg class="zface${i < n ? ' lit' : ''}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>`,
+        ).join('');
       });
     }
     hudSet('grenades', p.grenades, (v) => {
