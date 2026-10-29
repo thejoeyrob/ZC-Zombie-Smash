@@ -920,7 +920,7 @@
         if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
       }
     }
-    if (type === 'panel' && data.phase === 2 && game.scene?.bossId) audio.playMusic(bossTrack(game.scene.bossId));
+    // The boss warning score plays through the whole arrival comic; the fight music starts when the fight does.
     if (type === 'music') {
       audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : data.track);
       return;
