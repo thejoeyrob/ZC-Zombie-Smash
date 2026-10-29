@@ -32,6 +32,7 @@
       this.mode = 'web'; // 'web' (Web Audio) or 'html' (plain audio elements, only if Web Audio will not run)
       this.buffers = new Map(); // decoded sound files
       this.loading = new Map();
+      this.failedAt = {};
       this.problems = []; // what went wrong loading or starting sound, shown on the BOT_ tester CHEATS page
       this.paused = false;
       this.wave = 1;
@@ -110,6 +111,7 @@
         else if (!document.hidden) setTimeout(() => this.revive(), 300);
       };
     }
+    problem(msg) { if (!this.problems.includes(msg)) this.problems.push(msg); if (this.problems.length > 30) this.problems.shift(); }
     note(s) { this.recent.push(((performance.now() / 1000) | 0) + 's ' + s); if (this.recent.length > 12) this.recent.shift(); }
     // Called at start-up and from every touch/key: makes sure a context exists and is running.
     async unlock() {
@@ -123,7 +125,7 @@
         if (this.ctx.state !== 'running') await Promise.race([this.ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 600))]);
         if (this.ctx.state === 'running') this.afterWake();
         else if (++this.wakes > 6 && this.mode === 'web') this.useHtml('audio context would not start');
-      } catch (e) { this.problems.push('unlock: ' + (e?.message || e)); }
+      } catch (e) { this.problem('unlock: ' + (e?.message || e)); }
     }
     // The engine is awake: start whatever music was asked for while it slept.
     afterWake() {
@@ -160,7 +162,7 @@
     // ---- plain <audio> fallback -----------------------------------------------------------------
     useHtml(why) {
       this.mode = 'html';
-      this.problems.push('fallback to plain audio: ' + why);
+      this.problem('fallback to plain audio: ' + why);
       this.htmlTrack(this.wantTrack);
     }
     htmlTrack(id) {
@@ -183,16 +185,38 @@
       const file = this.file(name);
       if (this.buffers.has(file)) { const b = this.buffers.get(file); this.buffers.delete(file); this.buffers.set(file, b); return b; }
       if (this.loading.has(file)) return this.loading.get(file);
+      // A file that just failed is not retried for a while (a failing file must never be fetched again on every gunshot).
+      if (this.failedAt[file] && performance.now() - this.failedAt[file] < 20000) return null;
       const ctx = this.ctx, epoch = this.epoch;
       if (!ctx) return null;
-      const task = fetch('./' + file)
-        .then((r) => { if (!r.ok) throw Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      const task = this.bytes(file)
         .then((b) => new Promise((ok, no) => { const p = ctx.decodeAudioData(b, ok, no); p?.then?.(ok, no); }))
         .then((b) => { if (epoch === this.epoch) { this.buffers.set(file, b); this.trim(); } return b; })
-        .catch((e) => { this.problems.push(file + ': ' + (e?.message || e?.name || 'could not load or decode')); return null; })
+        .catch((e) => { this.failedAt[file] = performance.now(); this.problem(file + ': ' + (e?.message || e?.name || 'could not load or decode')); return null; })
         .finally(() => { if (this.loading.get(file) === task) this.loading.delete(file); });
       this.loading.set(file, task);
       return task;
+    }
+    // Read a bundled file. The native app's web view reports status 0 for some local files, so the status is not trusted:
+    // the bytes are checked instead (a WAV file starts with "RIFF"), and a second method is tried before giving up.
+    async bytes(file) {
+      const url = './' + file, why = [];
+      const isWav = (b) => b && b.byteLength > 44 && String.fromCharCode(...new Uint8Array(b, 0, 4)) === 'RIFF';
+      try {
+        const f = window.CapacitorWebFetch || window.fetch, r = await f(url), b = await r.arrayBuffer();
+        if (isWav(b)) { this.how = 'fetch'; return b; }
+        why.push('fetch ' + r.status + ' ' + b.byteLength + ' bytes');
+      } catch (e) { why.push('fetch ' + (e?.message || e)); }
+      try {
+        const X = window.CapacitorWebXMLHttpRequest || XMLHttpRequest;
+        const b = await new Promise((ok, no) => {
+          const x = new X(); x.open('GET', url); x.responseType = 'arraybuffer';
+          x.onload = () => ok(x.response); x.onerror = () => no(Error('network')); x.send();
+        });
+        if (isWav(b)) { this.how = 'xhr'; return b; }
+        why.push('xhr ' + (b?.byteLength ?? 0) + ' bytes');
+      } catch (e) { why.push('xhr ' + (e?.message || e)); }
+      throw Error(why.join('; '));
     }
     // Keep memory sane: all effects stay; only the most recently used music files stay decoded.
     trim() {
@@ -244,12 +268,25 @@
       if (this.cur?.id === track) return;
       const epoch = this.epoch, mine = ++this.musicSeq;
       const buf = await this.buffer(track);
-      if (!buf || mine !== this.musicSeq || epoch !== this.epoch || this.resolve(this.wantTrack) !== track || this.holding()) {
-        if (!buf && this.resolve(this.wantTrack) === track) this.problems.push('no music buffer for ' + track);
-        return;
-      }
+      if (mine !== this.musicSeq || epoch !== this.epoch || this.resolve(this.wantTrack) !== track || this.holding()) return;
+      if (!buf) { this.playElement(track); return; }
       if (this.cur?.id === track) return;
       this.startTrack(track, buf, opt.fade ?? (this.cur ? 0.9 : 0.6));
+    }
+    // Safety net: if a music file cannot be decoded, play it through a plain <audio> element instead of silence.
+    playElement(track) {
+      if (this.cur?.id === track) return;
+      this.stopMusic(0.3, true);
+      try {
+        this.fbEl?.pause();
+        const el = new Audio('./mus-' + track + '.wav');
+        el.loop = true; el.volume = this.settings.music * (this.paused && GAME_TRACKS.has(track) ? 0.35 : 1);
+        this.fbEl = el;
+        this.cur = { id: track, source: { stop() { el.pause(); } }, gain: { gain: { value: 0, cancelScheduledValues() {}, setValueAtTime() {}, linearRampToValueAtTime() { el.pause(); } } }, element: true };
+        this.track = track;
+        el.play().catch((e) => this.problem('element ' + track + ': ' + (e?.message || e)));
+        this.note('music(element) ' + track);
+      } catch (e) { this.problem('element ' + track + ': ' + (e?.message || e)); }
     }
     startTrack(track, buf, fade) {
       const ctx = this.ctx, now = ctx.currentTime;
@@ -259,7 +296,7 @@
       source.connect(gain); gain.connect(this.duckGain);
       gain.gain.setValueAtTime(0, now);
       gain.gain.linearRampToValueAtTime(1, now + Math.max(0.05, fade));
-      try { source.start(now); } catch (e) { this.problems.push('start ' + track + ': ' + (e?.message || e)); return; }
+      try { source.start(now); } catch (e) { this.problem('start ' + track + ': ' + (e?.message || e)); return; }
       this.cur = { id: track, source, gain };
       this.track = track;
       this.applyPause();
@@ -388,7 +425,10 @@
     }
     play(name, volume, rate, ui) {
       const cfg = CFG[name] || {}, buf = this.buffers.get(this.file(name));
-      if (!buf) { this.buffer(name); return; }
+      if (!buf) {
+        if (this.failedAt[this.file(name)]) this.elementSfx(name, volume, cfg); else this.buffer(name);
+        return;
+      }
       const t = performance.now();
       if (t - (this.lastPlay[name] ?? -1e9) < (cfg.gap ?? 25)) return;
       const live = this.live[name] || 0;
@@ -426,6 +466,21 @@
       try { source.start(); } catch { voice.done(); }
     }
 
+    // Safety net for effects whose file will not decode: a plain <audio> element (limited, but better than silence).
+    elementSfx(name, volume, cfg) {
+      const t = performance.now();
+      if (t - (this.lastPlay[name] ?? -1e9) < Math.max(60, cfg.gap ?? 25) || (this.elCount = this.elCount || 0) >= 4) return;
+      this.lastPlay[name] = t;
+      try {
+        const el = new Audio('./snd-' + name + '.wav');
+        el.volume = Math.min(1, volume * this.settings.effects);
+        this.elCount++;
+        const done = () => { this.elCount = Math.max(0, this.elCount - 1); el.onended = el.onerror = null; };
+        el.onended = el.onerror = done;
+        el.play().catch(done);
+      } catch {}
+    }
+
     // ---- settings -------------------------------------------------------------------------------
     save() { try { localStorage.setItem('zs7-audio', JSON.stringify(this.settings)); } catch {} }
     set(kind, value) {
@@ -452,7 +507,7 @@
       const c = this.ctx;
       return [
         'mode ' + this.mode, 'engine ' + (c ? c.state + ' ' + c.sampleRate + 'Hz' : 'not started'), 'playing ' + (this.track || 'nothing'),
-        'wanted ' + (this.wantTrack || 'nothing'), 'decoded ' + this.buffers.size + ' files', 'voices ' + this.voices.size,
+        'wanted ' + (this.wantTrack || 'nothing'), 'decoded ' + this.buffers.size + ' files' + (this.how ? ' via ' + this.how : ''), 'voices ' + this.voices.size,
         'volume music ' + Math.round(this.settings.music * 100) + ' effects ' + Math.round(this.settings.effects * 100),
         this.problems.length ? 'PROBLEMS: ' + this.problems.slice(-4).join(' | ') : 'no problems',
         'recent: ' + this.recent.slice(-5).join(', '),
