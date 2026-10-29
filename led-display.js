@@ -185,6 +185,19 @@
     // glassy highlight along the outer edge
     rg.beginPath(); rg.arc(cx, cx, ro - 4, Math.PI * 1.05, Math.PI * 1.7);
     rg.strokeStyle = n ? 'rgba(220,240,255,.55)' : 'rgba(180,200,230,.12)'; rg.lineWidth = 3; rg.lineCap = 'round'; rg.stroke();
+    // nine thin dividers; one lights green per grenade, clockwise from the top
+    rg.lineCap = 'butt';
+    for (let i = 0; i < 9; i++) {
+      const a = -Math.PI / 2 + i * step, on = i < n;
+      rg.beginPath();
+      rg.moveTo(cx + Math.cos(a) * (ri - 1), cx + Math.sin(a) * (ri - 1));
+      rg.lineTo(cx + Math.cos(a) * (ro + 1), cx + Math.sin(a) * (ro + 1));
+      if (on) { rg.shadowColor = '#3dff6e'; rg.shadowBlur = 8; rg.strokeStyle = '#8dffa6'; }
+      else { rg.shadowBlur = 0; rg.strokeStyle = n ? '#06122e' : '#03050a'; }
+      rg.lineWidth = 4;
+      rg.stroke();
+      rg.shadowBlur = 0;
+    }
   };
   window.ZSLedBar = api;
 })();
