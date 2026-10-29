@@ -58,3 +58,14 @@ Zombie Smash is an HTML5 canvas game wrapped with Capacitor for iPhone and shipp
 - Guard every per-frame DOM writer with "did anything change?". Setting an attribute to its current value still queues a mutation and can invalidate style.
 - Ship sprites at the resolution the canvas can show (backing scale x ~1.25), not at the size the art was generated. Bosses and zombies were 6-10 source pixels per game unit for a canvas that shows 2; shrinking them cut decoded sprite memory from 118 MB to about 22 MB with no visible change (compare old/new screenshots at 3x).
 - Give testers a hidden per-second frame log (fps, longest gap, script ms) so a phone recording can be matched with numbers.
+
+
+## 9. Audio: render it, do not synthesise it live (7.62)
+* A live synthesiser driven by `setInterval` is only as steady as the page: any busy frame is an audible stutter, and a
+  throttled timer is silence. Pre-render music and effects offline and play buffers; the runtime cost drops to nearly zero.
+* Keep one answer to "what should be playing?" (`wantTrack`) and let everything else (wake-up, stingers, intros, watchdog)
+  re-ask that one question. Several code paths deciding for themselves is what produced the "music missing again" bugs.
+* Capacitor's WebView allows audio to start without a tap, so the power-on sound can play at launch. On the web it still needs
+  a tap, so the music is simply wanted until the engine wakes.
+* Start intro audio from the animation's own clock (`Animation.currentTime`), not from a guess; decoding time then does not matter.
+* WAV loops are exact. MP3 padding can leave a gap at the loop point on some devices.

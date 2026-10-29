@@ -238,17 +238,16 @@
     save();
     reloadWhenSafe();
   }
-  // The music for a boss fight: Disco Man has his own theme, every other boss uses the boss music.
-  const bossTrack = (id) => (id === 'discoman' ? 'disco' : 'boss');
   function resume() {
     if (!game.active || game.over || landscape) return;
     paused = false;
     accumulator = 0;
     lastTime = performance.now();
     audio.resume();
-    audio.playMusic(
-      game.scene?.kind === 'arrival' ? 'entrance' : game.boss ? bossTrack(game.boss.bossId) : 'main',
-    );
+    const bossId = game.boss?.bossId || game.scene?.bossId;
+    if (bossId) audio.setBoss(bossId);
+    audio.setWave(game.wave);
+    audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : game.boss ? 'boss' : 'main');
   }
   function closePanel() {
     soundPreview++;
@@ -283,18 +282,11 @@
         ? `<div class="panel-head"><h2>${esc(title)}</h2>${closable ? '<button data-action="close" aria-label="Close panel">×</button>' : ''}</div>`
         : '') + `<div class="panel-content ${start ? 'start-panel' : ''}">${html}</div>`;
   }
-  // The Home Screen and player entry play their own looping tune. The sound engine starts on the first touch or key.
+  // The Home Screen and player entry play their own looping tune. It is only wanted here; the engine starts it as soon as
+  // it is awake (and once the power-on sequence has finished).
   function menuMusic() {
-    // Nothing touches the sound engine before the first tap (an iPhone only lets it start from a touch). The tune is
-    // simply wanted; the first tap starts the engine, which then plays whatever is wanted.
     audio.paused = false;
-    audio.wantTrack = 'menu';
-    if (audio.ctx) {
-      // Opening a screen pauses the game's sound (master volume to zero): bring it back up for the tune.
-      audio.master.gain.cancelScheduledValues(audio.ctx.currentTime);
-      audio.master.gain.setTargetAtTime(1, audio.ctx.currentTime, 0.025);
-      if (audio.ctx.state === 'running') audio.playMusic('menu');
-    }
+    audio.playMusic('home');
   }
   for (const type of ['pointerdown', 'touchend', 'click', 'keydown'])
     addEventListener(type, () => audio.ctx?.state !== 'running' && audio.unlock(), { capture: true });
@@ -432,7 +424,7 @@
       v.src = `./story-${index + 1}.mp4`;
       v.currentTime = 0;
       v.play().catch(() => {});
-      audio.sfx('whoosh', 0.7);
+      audio.sfx('page', 0.7);
       if (index < 2) {
         storyPreload = document.createElement('video');
         storyPreload.preload = 'auto';
@@ -553,6 +545,20 @@
     document.querySelector('.shell-art').innerHTML = ZSConsole.markup(skin);
     window.ZSLedBar?.wake();
   }
+  // Joystick topper: five plain colours and six funky designs. The retro console has a drawn picture of each; other consoles
+  // take the colour (a funky design gives its main colour there).
+  const TOPPERS = [
+    { id: 'yellow', name: 'YELLOW', c: '#f5b800' }, { id: 'red', name: 'RED', c: '#e5251d' }, { id: 'blue', name: 'BLUE', c: '#2377e6' },
+    { id: 'green', name: 'GREEN', c: '#1fcf45' }, { id: 'grey', name: 'GREY', c: '#b4b8ba' },
+    { id: 'camo', name: 'CAMO', c: '#6b7a3a', funky: 1 }, { id: 'candy', name: 'CANDY CANE', c: '#e82833', funky: 1 },
+    { id: 'checker', name: 'CHEQUERED', c: '#d8dadc', funky: 1 }, { id: 'rainbow', name: 'RAINBOW', c: '#35c8f0', funky: 1 },
+    { id: 'galaxy', name: 'GALAXY', c: '#6a35c9', funky: 1 }, { id: 'lava', name: 'LAVA', c: '#e8620a', funky: 1 },
+  ];
+  function applyTopper(id) {
+    const t = TOPPERS.find((x) => x.id === id) || TOPPERS[0];
+    document.body.dataset.topper = t.id;
+    document.body.style.setProperty('--topper', t.c);
+  }
   function applySkin(id) {
     // An extra skin is still loading at start-up, so the saved choice is only overwritten by a real match.
     const wanted = SKINS.find((s) => s.id === id && !skinLocked(s)),
@@ -594,8 +600,18 @@
       return showPanel(
         'skins',
         'CHOOSE YOUR CONSOLE',
-        `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p><button class="skin-group-card" data-action="skins-char"><b>SPECIAL CHARACTER SKINS</b><span>${count(characters)} unlocked</span><i aria-hidden="true">›</i></button><button class="skin-group-card" data-action="skins-custom"><b>CUSTOM SKINS</b><span>${count(customs)} unlocked</span><i aria-hidden="true">›</i></button><button class="secondary-action" data-action="menu">‹ BACK TO MENU</button>`,
+        `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p><button class="skin-group-card" data-action="skins-char"><b>SPECIAL CHARACTER SKINS</b><span>${count(characters)} unlocked</span><i aria-hidden="true">›</i></button><button class="skin-group-card" data-action="skins-custom"><b>CUSTOM SKINS</b><span>${count(customs)} unlocked</span><i aria-hidden="true">›</i></button><button class="skin-group-card" data-action="skins-topper"><b>JOYSTICK TOPPER</b><span>${TOPPERS.length} colours</span><i aria-hidden="true">›</i></button><button class="secondary-action" data-action="menu">‹ BACK TO MENU</button>`,
       );
+    if (group === 'topper') {
+      const now = read('zs7-topper', 'yellow'),
+        ball = (t) => `<span class="topper-ball" style="background-image:url('./${t.id === 'yellow' ? 'retro-stick' : 'retro-stick-' + t.id}.png')"></span>`,
+        tile = (t) => `<button class="topper-choice ${now === t.id ? 'selected' : ''}" data-topper="${t.id}" aria-pressed="${now === t.id}">${ball(t)}<b>${t.name}</b></button>`;
+      return showPanel(
+        'skins',
+        'JOYSTICK TOPPER',
+        `<button class="back-link" data-action="skins">‹ BACK</button><p class="menu-note">Pick the colour of the joystick ball. The funky designs are drawn on the retro console; other consoles use the closest colour.</p><div class="topper-label">COLOURS</div><div class="topper-options">${TOPPERS.filter((t) => !t.funky).map(tile).join('')}</div><div class="topper-label">FUNKY</div><div class="topper-options">${TOPPERS.filter((t) => t.funky).map(tile).join('')}</div><button class="secondary-action" data-action="skins">‹ BACK TO SKIN TYPES</button>`,
+      );
+    }
     const list = group === 'char' ? characters : customs;
     showPanel(
       'skins',
@@ -760,7 +776,7 @@
     // Some cheats flag the engine as practice-only; outside BOT mode the run still counts (it is marked instead).
     game.practice = bot ? true : wasPractice;
     save();
-    audio.sfx('boost');
+    audio.sfx('power');
     haptics.notify('SUCCESS', 'cheat', 0);
   }
   function trackStick(axis) {
@@ -777,7 +793,7 @@
       `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. Nothing is shown: cheats are now armed.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
           `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b></div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
-      ).join('')}<p class="menu-note"><strong>FRAME LOG</strong> (per second: fps, longest gap ms, script ms avg/max per frame)<br>${prof.lines.length ? prof.lines.slice(-20).map(esc).join('<br>') : 'none yet'}</p><p class="menu-note"><strong>AUDIO</strong> ${esc(audio.ctx ? audio.ctx.state : 'no context')} · track ${esc(audio.track || 'none')} · ${audio.music ? 'file playing' : audio.seq ? 'synth playing' : 'silent'} · ${audio.buffers.size} files loaded${audio.problems.length ? '<br>' + audio.problems.slice(-6).map(esc).join('<br>') : ''}</p><p class="menu-note"><strong>SLOW FRAMES</strong> (over 70 ms)<br>${slowFrames.length ? slowFrames.slice(-12).map(esc).join('<br>') : 'none yet'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      ).join('')}<p class="menu-note"><strong>FRAME LOG</strong> (per second: fps, longest gap ms, script ms avg/max per frame)<br>${prof.lines.length ? prof.lines.slice(-20).map(esc).join('<br>') : 'none yet'}</p><p class="menu-note"><strong>AUDIO</strong><br>${audio.status().map(esc).join('<br>')}</p><p class="menu-note"><strong>SLOW FRAMES</strong> (over 70 ms)<br>${slowFrames.length ? slowFrames.slice(-12).map(esc).join('<br>') : 'none yet'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   const slowFrames = [];
@@ -808,6 +824,9 @@
       showCoffee(() => results(reason, true), false, 'NOT NOW · SEE MY SCORE ▶');
       return;
     }
+    const prevBest = Object.values(scores.best || {}).reduce((m, v) => Math.max(m, Number(v) || 0), 0);
+    audio.playMusic('over');
+    if (!game.practice && game.score > prevBest && !audio.holding()) audio.stinger('highscore');
     showPanel(
       'results',
       game.practice ? 'PRACTICE COMPLETE' : 'RUN COMPLETE',
@@ -909,6 +928,7 @@
         break;
     }
   }
+  const SPECIAL_SOUND = new Set(['hose', 'rainbow', 'bass', 'beans', 'laser', 'remover', 'purge']);
   function event(type, data) {
     if (type === 'bossDown' && game.scene?.bossId && !game.practice) {
       const id = game.scene.bossId,
@@ -920,43 +940,39 @@
         if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
       }
     }
+    if (type === 'entrance' || type === 'fight') audio.setBoss(data.id);
+    if (type === 'wave') audio.setWave(data.wave);
     // The boss warning score plays through the whole arrival comic; the fight music starts when the fight does.
     if (type === 'music') {
       audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : data.track);
       return;
     }
-    const sounds = {
-      shot: data.gun,
-      kill: 'hit',
-      ricochet: 'ricochet',
-      boost: 'boost',
-      breach: 'hurt',
-      clear: 'pickup',
-      hurt: 'hurt',
-      pickup: 'pickup',
-      throw: 'throw',
-      explosion: 'grenade',
-      entrance: 'alarm',
-      panel: 'whoosh',
-      mutation: 'alarm',
-      bossAttack: 'boss-attack',
-      bossDown: 'victory',
-      death: 'loss',
+    const pick = {
+      shot: () => (data.id && SPECIAL_SOUND.has(data.id) ? data.id : data.gun),
+      kill: () => 'kill',
+      hit: () => (data.boss ? 'bosshit' : 'hit'),
+      ricochet: () => 'ricochet',
+      target: () => 'target',
+      boost: () => (data?.multiplier ? (data.multiplier >= 10 ? 'boost3' : data.multiplier >= 4 ? 'boost2' : 'boost1') : 'power'),
+      breach: () => 'breach',
+      clear: () => 'clear',
+      hurt: () => 'hurt',
+      pickup: () => (data.type === 'heart' ? 'heart' : data.type === 'goldheart' ? 'goldheart' : 'pickup'),
+      throw: () => 'throw',
+      explosion: () => 'explosion',
+      entrance: () => 'alarm',
+      panel: () => 'page',
+      mutation: () => 'mutation',
+      bossAttack: () => 'warn',
+      weaponUse: () => 'switch',
     };
-    // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
-    if (type === 'bossDown') audio.afterBoss = true; // later waves use the recorded wave music, not the orchestral synth
-    if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
-    else if (audio.synthMode && type === 'death') audio.stinger('defeat');
-    else if (sounds[type])
-      audio.sfx(
-        sounds[type],
-        type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : type === 'pickup' ? 0.75 : type === 'clear' ? 0.6 : 1,
-      );
+    const vol = { kill: 0.9, hit: 0.7, shot: 0.85, ricochet: 0.8, entrance: 0.8, clear: 0.9 };
+    if (type === 'bossDown') audio.stinger('victory');
+    else if (type === 'death') audio.stinger('defeat');
+    else if (type === 'wave' && data.wave > 1) audio.sting('wavestart');
+    else if (pick[type]) audio.sfx(pick[type](), vol[type] ?? 1);
     buzz(type, data);
-    if (type === 'fight') {
-      audio.playMusic(data.id === 'discoman' ? 'disco' : 'boss');
-      audio.sfx('doom');
-    }
+    if (type === 'fight') audio.sfx('doom');
     if (type === 'over') results(data.reason);
     if (type === 'wave') queueSave();
   }
@@ -1394,7 +1410,7 @@
   // Past full deflection the centre follows the thumb so reversing is instant, and a quick flick gives a short full-speed burst.
   function moveStick(e) {
     if (e.pointerId !== stickId || stickOrigin === null) return;
-    const range = stick.getBoundingClientRect().width * 0.16,
+    const range = stick.getBoundingClientRect().width * 0.13,
       list = e.getCoalescedEvents?.().length ? e.getCoalescedEvents() : [e];
     for (const ev of list) {
       let dx = ev.clientX - stickOrigin;
@@ -1410,11 +1426,11 @@
       while (stickHist.length > 1 && now - stickHist[0][0] > 150) stickHist.shift();
       stickVal = dx / range;
       const a = Math.abs(stickVal);
-      touchAxis = a < 0.1 ? 0 : Math.sign(stickVal) * Math.pow((a - 0.1) / 0.9, 0.8);
+      touchAxis = a < 0.04 ? 0 : Math.sign(stickVal) * Math.pow((a - 0.04) / 0.96, 0.7);
       const moved = ev.clientX - stickHist[0][1];
-      if (Math.abs(moved) > range * 0.4) {
+      if (Math.abs(moved) > range * 0.3) {
         flickDir = Math.sign(moved);
-        flickUntil = now + 170;
+        flickUntil = now + 200;
       }
     }
     $('stickKnob').style.transform = `translateX(${stickVal * 25}px)`;
@@ -1539,7 +1555,7 @@
   // is held on the joystick, which made guns selectable only after letting go.
   function equipStored(weapon) {
     if (paused || !game.useStored(weapon)) return;
-    audio.sfx('pickup');
+    audio.sfx('switch');
     haptics.impact('MEDIUM', 'weapon', 0, true);
     toast(ZSEngine.GUNS[weapon].name + ' equipped');
   }
@@ -1660,7 +1676,8 @@
     const b = e.target.closest('button:not(:disabled)');
     if (b) {
       haptics.impact('LIGHT', 'ui', 0, true);
-      audio.ui(b.id === 'newGameBtn' || b.dataset.action === 'continue' || b.dataset.action === 'player' ? 'chime' : 'click');
+      const act = b.dataset.action;
+      audio.ui(b.id === 'newGameBtn' || act === 'continue' || act === 'player' || act === 'retry' || act === 'newgame-go' ? 'chime' : act === 'menu' || act === 'home' || act === 'close' ? 'back' : act === 'sound' || b.closest('.setting') ? 'toggle' : 'click');
     }
     if (storyActive && storyVideo?.paused) storyVideo.play().catch(() => {});
   });
@@ -1684,6 +1701,16 @@
       previewSkin(button.dataset.preview);
       document.querySelectorAll('.skin-choice').forEach((b) => {
         b.classList.toggle('previewing', b.dataset.preview === button.dataset.preview);
+      });
+      return;
+    }
+    if (button.dataset.topper) {
+      applyTopper(button.dataset.topper);
+      write('zs7-topper', button.dataset.topper);
+      document.querySelectorAll('[data-topper]').forEach((b) => {
+        const on = b.dataset.topper === button.dataset.topper;
+        b.classList.toggle('selected', on);
+        b.setAttribute('aria-pressed', on);
       });
       return;
     }
@@ -1730,6 +1757,9 @@
         break;
       case 'skins-custom':
         skins('custom');
+        break;
+      case 'skins-topper':
+        skins('topper');
         break;
       case 'coffee':
         showCoffee(menu, true);
@@ -1803,7 +1833,7 @@
         const preview = ++soundPreview;
         audio.resume();
         audio.playMusic('main');
-        ['pistol', 'hit', 'shotgun', 'grenade', 'pickup'].forEach((n, i) =>
+        ['pistol', 'kill', 'shotgun', 'explosion', 'pickup'].forEach((n, i) =>
           setTimeout(
             () => {
               if (preview === soundPreview && panel === 'sound') audio.sfx(n);
@@ -1859,15 +1889,8 @@
     }
   });
   for (const ev of ['pageshow', 'focus']) addEventListener(ev, () => audio.revive());
-  // iOS can silently interrupt audio mid-game (calls, alerts, Siri): check often and bring it back.
-  setInterval(() => {
-    if (!document.hidden && audio.ctx && audio.ctx.state !== 'running') audio.revive();
-    // Music watchdog: while the game is running, the music must be playing. Restart it if it somehow is not.
-    else if (!document.hidden && game.active && !game.over && !paused && !awaitStart && !panel && audio.ctx && !audio.paused && audio.wantTrack && audio.wantTrack !== 'entrance' && !audio.seq && !audio.music && !audio.holdTrack) {
-      audio.track = null;
-      audio.playMusic(audio.wantTrack);
-    }
-  }, 2500);
+  // iOS can silently interrupt audio mid-game (calls, alerts, Siri): the engine checks itself and restarts what is missing.
+  setInterval(() => audio.watchdog(), 2500);
   for (const ev of ['pointerdown', 'touchend'])
     document.addEventListener(ev, () => audio.revive(true), { capture: true, passive: true });
   addEventListener('pagehide', save);
@@ -1891,6 +1914,7 @@
     write('zs7-retro-default', true);
   }
   ZSConsole.apply();
+  applyTopper(read('zs7-topper', 'yellow'));
   applySkin(read('zs7-skin', 'retro-handheld'));
   fetch('./skins-extra.json')
     .then((r) => r.json())
@@ -1969,12 +1993,24 @@
     if (!intro) document.body.classList.add('intro-done');
     if (intro) {
       $('cabinet').dataset.boot = '1';
-      const done = () => {
+      audio.gated = true;
+      // Power-on sound: started in step with the CSS animation (its elapsed time is read from the animation itself).
+      audio.unlock().then(() =>
+        audio.boot(() => {
+          const a = intro.getAnimations?.({ subtree: true })?.[0];
+          return a ? (Number(a.currentTime) || 0) / 1000 : 0;
+        }),
+      );
+      const done = (skipped) => {
+        if (!intro.isConnected) return;
+        if (skipped === true) audio.stopBoot(0.35);
         intro.remove();
         delete $('cabinet').dataset.boot;
         document.body.classList.add('intro-done');
+        audio.gated = false;
+        audio.playMusic(audio.wantTrack || 'home');
       };
-      intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(); });
+      intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(true); });
       setTimeout(done, 5400);
     }
   }

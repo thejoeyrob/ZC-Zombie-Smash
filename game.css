@@ -2931,3 +2931,22 @@ html, body {
   touch-action: manipulation;
   overscroll-behavior: none;
 }
+
+/* 7.62: joystick topper colours and designs. */
+body[data-release-skin="retro-handheld"][data-topper="red"] #joystick::after { background-image: url('./retro-stick-red.png'); }
+body[data-release-skin="retro-handheld"][data-topper="blue"] #joystick::after { background-image: url('./retro-stick-blue.png'); }
+body[data-release-skin="retro-handheld"][data-topper="green"] #joystick::after { background-image: url('./retro-stick-green.png'); }
+body[data-release-skin="retro-handheld"][data-topper="grey"] #joystick::after { background-image: url('./retro-stick-grey.png'); }
+body[data-release-skin="retro-handheld"][data-topper="camo"] #joystick::after { background-image: url('./retro-stick-camo.png'); }
+body[data-release-skin="retro-handheld"][data-topper="candy"] #joystick::after { background-image: url('./retro-stick-candy.png'); }
+body[data-release-skin="retro-handheld"][data-topper="checker"] #joystick::after { background-image: url('./retro-stick-checker.png'); }
+body[data-release-skin="retro-handheld"][data-topper="rainbow"] #joystick::after { background-image: url('./retro-stick-rainbow.png'); }
+body[data-release-skin="retro-handheld"][data-topper="galaxy"] #joystick::after { background-image: url('./retro-stick-galaxy.png'); }
+body[data-release-skin="retro-handheld"][data-topper="lava"] #joystick::after { background-image: url('./retro-stick-lava.png'); }
+body[data-topper]:not([data-topper="yellow"]) .stick-knob { --ball: var(--topper); --stick: var(--topper); }
+.topper-label { margin: 14px 0 6px; font: 800 11px Barlow, sans-serif; letter-spacing: 0.12em; color: #8fa397; }
+.topper-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.topper-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; background: #15201d; border: 2px solid transparent; border-radius: 10px; color: #e2e6d9; min-width: 0; }
+.topper-choice.selected { border-color: #f5d18b; background: #1b2824; }
+.topper-choice b { font: 700 11px Barlow, sans-serif; letter-spacing: 0.04em; }
+.topper-ball { width: 56px; height: 56px; border-radius: 50%; background-repeat: no-repeat; background-size: 318px 106px; background-position: -130.6px -25px; box-shadow: 0 3px 6px #0009; }

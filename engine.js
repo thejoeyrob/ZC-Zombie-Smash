@@ -680,7 +680,7 @@
     hitArenaTarget(target) {
       const a = this.arena;
       if (!a || a.cool || target.lit || this.scene || this.over) return;
-      target.lit = true; this.emit('ricochet');
+      target.lit = true; this.emit('target', { n: a.targets.filter((t) => t.lit).length });
       if (!a.targets.every(t => t.lit)) return;
       a.cool=12; a.pulse=1.2;
       this.grantSpecial(a.index);
@@ -737,7 +737,7 @@
           });
         }
       }
-      this.emit('shot', { gun: sp.sound });
+      this.emit('shot', { gun: sp.sound, id: sp.id });
       return true;
     }
     // What a special bullet does to what it hits, besides damage.
