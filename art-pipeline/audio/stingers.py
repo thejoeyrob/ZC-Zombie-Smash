@@ -9,8 +9,8 @@ def _once(s, rev_amt=0.3, rev_time=1.6, target=-19.0, tail_fade=0.15, length=Non
     f = sec(tail_fade); out[:, -f:] *= np.linspace(1, 0, f)
     return out
 
-BR = lambda m, d: note_pulse(m, d, 0.25, True, 0.01, 0.1, 0.8, 0.08)
-HORN = lambda m, d: lp(note_pulse(m, d, 0.5, True, 0.012, 0.12, 0.85, 0.1) + 0.5 * note_pulse(m, d, 0.25, False, 0.012, 0.12, 0.85, 0.1), 3000, 1)
+BR = lambda m, d: lp(note_pulse(m, d, 0.25, True, 0.01, 0.1, 0.8, 0.08), 2600, 2)
+HORN = lambda m, d: lp(note_pulse(m, d, 0.5, True, 0.012, 0.12, 0.85, 0.1) + 0.5 * note_pulse(m, d, 0.25, False, 0.012, 0.12, 0.85, 0.1), 2400, 2)
 
 def victory():   # boss down: C major fanfare
     s = Song('victory', 150, ['C', 'G', 'C'], 'C', 'major', tail=2.2)

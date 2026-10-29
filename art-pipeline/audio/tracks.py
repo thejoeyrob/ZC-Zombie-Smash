@@ -1,7 +1,7 @@
 """The Zombie Smash soundtrack: one function per looping track."""
 from music_lib import *
 
-P = lambda duty, **k: (lambda m, d: note_pulse(m, d, duty, True, 0.006, 0.1, 0.75, 0.05, **k))
+P = lambda duty, **k: (lambda m, d: note_lead(m, d, duty, **k))
 BELL = lambda t60=0.7: (lambda m, d: note_bell(m, max(d, 0.2), 0.8, t60))
 ORG = lambda m, d: note_organ(m, d)
 PLK = lambda m, d: note_pluck(m, d)
@@ -60,7 +60,7 @@ def wave2():
            'D5:.5 F5:.5 A5:1 D6:1 E6:.5 F6:.5', 'A5:1 D6:1 F6:2', 'D6:1 F6:1 Bb5:1 D6:1', 'C#6!:1 E6:1 A5:1 C#6!:1',
            'D6:1 Bb5:1 G5:1 Bb5:1', 'D6:.5 C6:.5 Bb5:1 G5:2', 'F5:1 A5:1 D6:1 F6:1', 'D6:1 E6:1 A5:2',
            'Bb5:1 D6:1 F6:1 Bb6:1', 'C6:.5 E6:.5 G6:1 E6:1 C6:1', 'A5:.5 C#6!:.5 E6:1 A6:1 G6:1', 'E6:1 C#6!:1 A5:1 E5:1']
-    lead = lambda m, d: note_pulse(m, d, 0.5, True, 0.004, 0.08, 0.7, 0.04)
+    lead = lambda m, d: note_lead(m, d, 0.5, 0.005, 0.1, 0.7, 0.05)
     s.melody(mel, lead, 0.5, -0.05, 0.2, 0.25)
     s.melody(mel, P(0.125), 0.16, 0.25, 0.15, 0.2, octave=12)
     s.bass('drive16', BARS(1, 16), 0.5)
@@ -92,7 +92,7 @@ def wave3():
 def warning():
     s = Song('warning', 100, ['Dm', 'Dm', 'Bb', 'Bb', 'Gm', 'Ab', 'Dm', 'A'], 'D', 'minor')
     mel = ['D5:1 D5:1 Ab5!:2', 'D5:1 D5:1 A5:2', 'F5:1 F5:1 B5!:2', 'F5:1 F5:1 Bb5:2', 'G5:1 G5:1 Db6!:2', 'Eb5:1 Eb5:1 Ab5:2', 'F5:.5 A5:.5 D6:1 A5:1 F5:1', 'E5:.5 G5:.5 C#6!:1 E6:2']
-    s.melody(mel, lambda m, d: lp(note_pulse(m, d, 0.25, True, 0.01, 0.1, 0.8, 0.1), 3200, 1), 0.45, 0.0, 0.4, 0.3, check=False)
+    s.melody(mel, lambda m, d: lp(note_pulse(m, d, 0.25, True, 0.01, 0.1, 0.8, 0.1), 2200, 2), 0.45, 0.0, 0.4, 0.3, check=False)
     s.pad(BARS(1, 8), 50, 0.22, 900)
     s.bass('pedal', BARS(1, 8), 0.6)
     s.drums('heart', BARS(1, 8), 0.9, kick_g=1.0)

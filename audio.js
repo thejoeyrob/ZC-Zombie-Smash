@@ -24,6 +24,7 @@
   const MUSIC = ['home', 'story', 'wave1', 'wave2', 'wave3', 'warning', 'boss', 'finale', 'disco', 'over'];
   const GAME_TRACKS = new Set(['wave1', 'wave2', 'wave3', 'warning', 'boss', 'finale', 'disco']);
   const STINGS = { victory: 6.0, defeat: 6.6, highscore: 7.0, wavestart: 1.9 };
+  const MUSIC_TRIM = 0.8; // music sits a little under the effects
   const MAX_VOICES = 16, MINOR_LIMIT = 11, CACHE_TRACKS = 6;
 
   class AudioSystem {
@@ -100,7 +101,7 @@
       this.uiBus = ctx.createGain(); this.uiBus.gain.value = this.settings.effects; this.uiBus.connect(limiter);
       this.fx = ctx.createGain(); this.fx.gain.value = this.settings.effects; this.fx.connect(this.gameBus);
       // music chain: track -> duck (under big effects) -> pause (quieter when paused) -> muffle -> user volume -> game bus
-      this.musicVol = ctx.createGain(); this.musicVol.gain.value = this.settings.music; this.musicVol.connect(this.gameBus);
+      this.musicVol = ctx.createGain(); this.musicVol.gain.value = this.settings.music * MUSIC_TRIM; this.musicVol.connect(this.gameBus);
       this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = 20000; this.muffle.Q.value = 0.4; this.muffle.connect(this.musicVol);
       this.pauseGain = ctx.createGain(); this.pauseGain.connect(this.muffle);
       this.duckGain = ctx.createGain(); this.duckGain.connect(this.pauseGain);
@@ -491,7 +492,7 @@
       if (!this.ctx) return;
       const now = this.ctx.currentTime;
       if (kind === 'effects') { this.fx.gain.setTargetAtTime(this.settings.effects, now, 0.03); this.uiBus.gain.setTargetAtTime(this.settings.effects, now, 0.03); }
-      else this.musicVol.gain.setTargetAtTime(this.settings.music, now, 0.05);
+      else this.musicVol.gain.setTargetAtTime(this.settings.music * MUSIC_TRIM, now, 0.05);
     }
 
     // ---- watchdog and status --------------------------------------------------------------------

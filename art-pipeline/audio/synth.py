@@ -196,6 +196,13 @@ def note_pulse(m, dur, duty=0.25, vibrato=True, a=0.004, d=0.08, s=0.7, r=0.06, 
     x = pulse(f, n, duty) * adsr(n, a, d, s, r)
     return x * 0.5 * bright
 
+def note_lead(m, dur, duty=0.25, a=0.008, d=0.12, s=0.72, r=0.07, cutoff=2200):
+    """Soft 16-bit lead: a pulse wave with a triangle underneath, rounded off above ~2 kHz, with a slow-in vibrato."""
+    n = sec(dur + r)
+    f = vib(n, hz(m), 5.2, 0.005, 0.18) if dur > 0.3 else np.full(n, float(hz(m)))
+    x = pulse(f, n, max(duty, 0.25)) * 0.55 + tri(f, n) * 0.55
+    return lp(x, cutoff, 2) * adsr(n, a, d, s, r) * 0.6
+
 def note_tri(m, dur, a=0.004, d=0.12, s=0.8, r=0.05):
     n = sec(dur + r); return tri(np.full(n, float(hz(m))), n) * adsr(n, a, d, s, r) * 0.9
 
