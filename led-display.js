@@ -170,7 +170,7 @@
     n = Math.max(0, Math.min(9, n | 0));
     if (n === rn) return;
     rn = n;
-    const cx = 190, r0 = 99, r1 = 119, step = (Math.PI * 2) / 9;
+    const cx = 190, r0 = 91, r1 = 127, step = (Math.PI * 2) / 9;
     rg.clearRect(0, 0, 380, 380);
     rg.lineCap = 'butt';
     for (let i = 0; i < 9; i++) {
@@ -180,13 +180,13 @@
       rg.lineTo(cx + Math.cos(a) * r1, cx + Math.sin(a) * r1);
       if (on) {
         rg.shadowColor = '#3dff6e';
-        rg.shadowBlur = 12;
-        rg.strokeStyle = '#8dffa6';
-        rg.lineWidth = 9;
+        rg.shadowBlur = 14;
+        rg.strokeStyle = '#7dff9a';
+        rg.lineWidth = 15;
       } else {
         rg.shadowBlur = 0;
-        rg.strokeStyle = n ? '#0a2a3d' : '#05070a';
-        rg.lineWidth = 9;
+        rg.strokeStyle = n ? '#0b2a52' : '#05070a';
+        rg.lineWidth = 15;
       }
       rg.stroke();
     }
