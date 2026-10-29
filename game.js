@@ -1871,6 +1871,13 @@
   for (const ev of ['pointerdown', 'touchend'])
     document.addEventListener(ev, () => audio.revive(true), { capture: true, passive: true });
   addEventListener('pagehide', save);
+  // No loupe, selection, double-tap zoom or pinch zoom anywhere in the app (text fields stay usable).
+  const editable = (e) => e.target?.closest?.('input,textarea');
+  for (const ev of ['selectstart', 'dblclick', 'dragstart'])
+    document.addEventListener(ev, (e) => { if (!editable(e)) e.preventDefault(); }, { capture: true });
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend'])
+    document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchend', () => getSelection()?.removeAllRanges?.(), { passive: true, capture: true });
   document.addEventListener('contextmenu', (e) => {
     if (!e.target.closest?.('input,textarea')) e.preventDefault();
   });
