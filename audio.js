@@ -24,7 +24,8 @@
   const MUSIC = ['home', 'story', 'wave1', 'wave2', 'wave3', 'warning', 'boss', 'finale', 'disco', 'over'];
   const GAME_TRACKS = new Set(['wave1', 'wave2', 'wave3', 'warning', 'boss', 'finale', 'disco']);
   const STINGS = { victory: 6.0, defeat: 6.6, highscore: 7.0, wavestart: 1.9 };
-  const MUSIC_TRIM = 0.8; // music sits a little under the effects
+  const MUSIC_TRIM = 0.74;
+  const OPEN_CUTOFF = 6000; // music is gently rounded off above this; a menu over the game pulls it down to 700 Hz // music sits a little under the effects
   const MAX_VOICES = 16, MINOR_LIMIT = 11, CACHE_TRACKS = 6;
 
   class AudioSystem {
@@ -63,6 +64,9 @@
         this.settings[key] = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : defaults[key];
       }
       this.playbackSession();
+      document.addEventListener('visibilitychange', () => (document.hidden ? this.sleep() : this.wake()));
+      addEventListener('pagehide', () => this.sleep());
+      addEventListener('pageshow', () => { if (!document.hidden) this.wake(); });
     }
 
     // ---- session / context ----------------------------------------------------------------------
@@ -97,12 +101,13 @@
       limiter.threshold.value = -8; limiter.knee.value = 8; limiter.ratio.value = 10; limiter.attack.value = 0.002; limiter.release.value = 0.12;
       limiter.connect(ctx.destination);
       this.out = limiter;
-      this.gameBus = ctx.createGain(); this.gameBus.connect(limiter);
-      this.uiBus = ctx.createGain(); this.uiBus.gain.value = this.settings.effects; this.uiBus.connect(limiter);
+      this.master = ctx.createGain(); this.master.gain.value = this.sleeping ? 0 : 1; this.master.connect(limiter); // faded to nothing when the app goes to the background
+      this.gameBus = ctx.createGain(); this.gameBus.connect(this.master);
+      this.uiBus = ctx.createGain(); this.uiBus.gain.value = this.settings.effects; this.uiBus.connect(this.master);
       this.fx = ctx.createGain(); this.fx.gain.value = this.settings.effects; this.fx.connect(this.gameBus);
       // music chain: track -> duck (under big effects) -> pause (quieter when paused) -> muffle -> user volume -> game bus
       this.musicVol = ctx.createGain(); this.musicVol.gain.value = this.settings.music * MUSIC_TRIM; this.musicVol.connect(this.gameBus);
-      this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = 20000; this.muffle.Q.value = 0.4; this.muffle.connect(this.musicVol);
+      this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = OPEN_CUTOFF; this.muffle.Q.value = 0.5; this.muffle.connect(this.musicVol);
       this.pauseGain = ctx.createGain(); this.pauseGain.connect(this.muffle);
       this.duckGain = ctx.createGain(); this.duckGain.connect(this.pauseGain);
       ctx.onstatechange = () => {
@@ -137,6 +142,7 @@
     // Wake the engine after the app was in the background, a call or an alert (iOS suspends or interrupts the context).
     // `gesture` is true inside a real tap, the only moment a closed context may be replaced.
     async revive(gesture = false) {
+      if (this.sleeping && document.hidden) return;
       this.playbackSession();
       if (this.keepAlive?.paused) this.keepAlive.play().catch(() => {});
       if (!this.ctx) return gesture ? this.unlock() : undefined;
@@ -159,6 +165,29 @@
       return this.unlock();
     }
     reset() { this.paused = false; this.mode = 'web'; return this.rebuild(); }
+
+    // ---- leaving and returning to the app --------------------------------------------------------
+    // Sound must stop when the app is not on screen: fade out quickly, then suspend the engine. Coming back resumes it.
+    sleep() {
+      if (this.sleeping) return;
+      this.sleeping = true;
+      try { this.htmlEl?.pause(); this.fbEl?.pause(); } catch {}
+      if (!this.ctx) return;
+      const ctx = this.ctx;
+      try { this.master.gain.cancelScheduledValues(ctx.currentTime); this.master.gain.setTargetAtTime(0, ctx.currentTime, 0.05); } catch {}
+      clearTimeout(this.sleepTimer);
+      this.sleepTimer = setTimeout(() => { if (this.sleeping && this.ctx === ctx) ctx.suspend().catch(() => {}); }, 350);
+    }
+    async wake() {
+      if (!this.sleeping) return;
+      this.sleeping = false;
+      clearTimeout(this.sleepTimer);
+      try { if (this.htmlEl && this.mode === 'html') this.htmlEl.play().catch(() => {}); if (this.fbEl) this.fbEl.play().catch(() => {}); } catch {}
+      if (!this.ctx) return;
+      try { await Promise.race([this.ctx.resume(), new Promise((r) => setTimeout(r, 700))]); } catch {}
+      try { this.master.gain.cancelScheduledValues(this.ctx.currentTime); this.master.gain.setTargetAtTime(1, this.ctx.currentTime, 0.08); } catch {}
+      this.afterWake();
+    }
 
     // ---- plain <audio> fallback -----------------------------------------------------------------
     useHtml(why) {
@@ -395,7 +424,7 @@
       if (!this.ctx) return;
       const game = this.cur && GAME_TRACKS.has(this.cur.id), on = this.paused && game, now = this.ctx.currentTime;
       this.pauseGain.gain.setTargetAtTime(on ? 0.35 : 1, now, 0.08);
-      this.muffle.frequency.setTargetAtTime(on ? 700 : 20000, now, 0.08);
+      this.muffle.frequency.setTargetAtTime(on ? 700 : OPEN_CUTOFF, now, 0.08);
     }
     pause() {
       this.paused = true;
@@ -498,7 +527,7 @@
     // ---- watchdog and status --------------------------------------------------------------------
     // Called every couple of seconds by the game: wakes a sleeping engine and restarts music that should be playing.
     watchdog() {
-      if (document.hidden) return;
+      if (document.hidden || this.sleeping) return;
       if (this.mode === 'html') { if (this.htmlEl?.paused && this.wantTrack) this.htmlEl.play().catch(() => {}); return; }
       if (!this.ctx) return;
       if (this.ctx.state !== 'running') { this.revive(); return; }
