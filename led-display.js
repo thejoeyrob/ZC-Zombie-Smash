@@ -170,27 +170,34 @@
     n = Math.max(0, Math.min(9, n | 0));
     if (n === rn) return;
     rn = n;
-    const cx = 190, r0 = 91, r1 = 127, step = (Math.PI * 2) / 9;
+    const cx = 190, ri = 117, ro = 147, step = (Math.PI * 2) / 9, TAU = Math.PI * 2;
     rg.clearRect(0, 0, 380, 380);
+    // The clear outer ring glows blue while grenades remain.
+    rg.save();
+    rg.beginPath(); rg.arc(cx, cx, ro, 0, TAU); rg.arc(cx, cx, ri, 0, TAU, true);
+    rg.clip('evenodd');
+    const gr = rg.createRadialGradient(cx, cx, ri, cx, cx, ro);
+    if (n) { gr.addColorStop(0, '#1a6dff'); gr.addColorStop(0.45, '#4fa6ff'); gr.addColorStop(1, '#0d4fe0'); rg.shadowColor = '#2f8cff'; rg.shadowBlur = 16; }
+    else { gr.addColorStop(0, '#0a1020'); gr.addColorStop(0.5, '#141c30'); gr.addColorStop(1, '#080c16'); }
+    rg.fillStyle = gr; rg.globalAlpha = n ? 0.92 : 0.7;
+    rg.fillRect(0, 0, 380, 380);
+    rg.restore();
+    // glassy highlight along the outer edge
+    rg.beginPath(); rg.arc(cx, cx, ro - 4, Math.PI * 1.05, Math.PI * 1.7);
+    rg.strokeStyle = n ? 'rgba(220,240,255,.55)' : 'rgba(180,200,230,.12)'; rg.lineWidth = 3; rg.lineCap = 'round'; rg.stroke();
+    // nine thin dividers; one lights green per grenade, clockwise from the top
     rg.lineCap = 'butt';
     for (let i = 0; i < 9; i++) {
       const a = -Math.PI / 2 + i * step, on = i < n;
       rg.beginPath();
-      rg.moveTo(cx + Math.cos(a) * r0, cx + Math.sin(a) * r0);
-      rg.lineTo(cx + Math.cos(a) * r1, cx + Math.sin(a) * r1);
-      if (on) {
-        rg.shadowColor = '#3dff6e';
-        rg.shadowBlur = 14;
-        rg.strokeStyle = '#7dff9a';
-        rg.lineWidth = 15;
-      } else {
-        rg.shadowBlur = 0;
-        rg.strokeStyle = n ? '#0b2a52' : '#05070a';
-        rg.lineWidth = 15;
-      }
+      rg.moveTo(cx + Math.cos(a) * (ri - 1), cx + Math.sin(a) * (ri - 1));
+      rg.lineTo(cx + Math.cos(a) * (ro + 1), cx + Math.sin(a) * (ro + 1));
+      if (on) { rg.shadowColor = '#3dff6e'; rg.shadowBlur = 8; rg.strokeStyle = '#8dffa6'; }
+      else { rg.shadowBlur = 0; rg.strokeStyle = n ? '#06122e' : '#03050a'; }
+      rg.lineWidth = 4;
       rg.stroke();
+      rg.shadowBlur = 0;
     }
-    rg.shadowBlur = 0;
   };
   window.ZSLedBar = api;
 })();
