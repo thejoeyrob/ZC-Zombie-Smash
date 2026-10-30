@@ -410,5 +410,5 @@ func _run_shots() -> void:
 		await get_tree().create_timer(0.3).timeout
 		var img := get_viewport().get_texture().get_image()
 		img.save_png("%s/%s.png" % [shot_dir, v])
-		print("shot ", v)
+		print("shot ", v, " draw calls ", Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), " objects ", Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), " tris ", Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
 	get_tree().quit()

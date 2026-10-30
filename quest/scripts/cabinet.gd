@@ -25,7 +25,8 @@ var neon: Array = []
 var theme_color := Color(0.1, 0.85, 0.35)
 
 
-func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, trim_color: Color, interactive: bool, marquee_text := "", marquee_color := Color(0.1, 0.1, 0.3)) -> void:
+func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, trim_color: Color, interactive: bool, marquee_text := "", marquee_color := Color(0.1, 0.1, 0.3), detail := true) -> void:
+	detail = detail or interactive
 	theme_color = trim_color
 	var body := VRBuild.mat(body_color, 0.55, 0.1)
 	var dark := VRBuild.mat(Color(0.015, 0.015, 0.02), 0.6)
@@ -38,16 +39,21 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.side_panel(self, profile, -0.335, 0.04, body)
 	VRBuild.side_panel(self, profile, 0.335, 0.04, body)
 	# edge neon (t-molding) along the front of both sides
-	for sx in [-0.357, 0.357]:
-		VRBuild.box(self, Vector3(0.012, 0.012, 0.28), Vector3(sx, 1.02, 0.16), trim, Vector3(-PANEL_TILT * 0.4, 0, 0))
-		VRBuild.box(self, Vector3(0.012, 0.95, 0.012), Vector3(sx, 0.485, 0.02), trim)
-		VRBuild.box(self, Vector3(0.012, 0.012, 0.8), Vector3(sx, 1.945, -0.38), trim)
+	if detail:
+		for sx in [-0.357, 0.357]:
+			VRBuild.box(self, Vector3(0.012, 0.012, 0.28), Vector3(sx, 1.02, 0.16), trim, Vector3(-PANEL_TILT * 0.4, 0, 0))
+			VRBuild.box(self, Vector3(0.012, 0.95, 0.012), Vector3(sx, 0.485, 0.02), trim)
+			VRBuild.box(self, Vector3(0.012, 0.012, 0.8), Vector3(sx, 1.945, -0.38), trim)
+	else:
+		for sx in [-0.357, 0.357]:
+			VRBuild.box(self, Vector3(0.012, 0.95, 0.012), Vector3(sx, 0.485, 0.02), trim)
 	# lower body: front, back, bottom kick plate, coin door
 	VRBuild.box(self, Vector3(0.63, 0.95, 0.03), Vector3(0, 0.475, 0.005), body)
 	VRBuild.box(self, Vector3(0.63, 0.16, 0.034), Vector3(0, 0.1, 0.012), dark)
-	VRBuild.box(self, Vector3(0.28, 0.2, 0.034), Vector3(0, 0.62, 0.015), dark)
-	VRBuild.box(self, Vector3(0.05, 0.012, 0.01), Vector3(-0.06, 0.66, 0.034), VRBuild.mat(Color(1, 0.8, 0.2), 0.4, 0.0, 1.5))
-	VRBuild.box(self, Vector3(0.05, 0.012, 0.01), Vector3(0.06, 0.66, 0.034), VRBuild.mat(Color(1, 0.3, 0.2), 0.4, 0.0, 1.5))
+	if detail:
+		VRBuild.box(self, Vector3(0.28, 0.2, 0.034), Vector3(0, 0.62, 0.015), dark)
+		VRBuild.box(self, Vector3(0.05, 0.012, 0.01), Vector3(-0.06, 0.66, 0.034), VRBuild.mat(Color(1, 0.8, 0.2), 0.4, 0.0, 1.5))
+		VRBuild.box(self, Vector3(0.05, 0.012, 0.01), Vector3(0.06, 0.66, 0.034), VRBuild.mat(Color(1, 0.3, 0.2), 0.4, 0.0, 1.5))
 	VRBuild.box(self, Vector3(0.63, 1.9, 0.03), Vector3(0, 0.95, -0.795), body)
 	VRBuild.box(self, Vector3(0.63, 0.03, 0.78), Vector3(0, 0.015, -0.4), dark)
 	# control panel
@@ -58,9 +64,10 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.box(panel, Vector3(0.66, 0.04, 0.34), Vector3(0, -0.02, 0), VRBuild.mat(Color(0.07, 0.07, 0.1), 0.35, 0.2))
 	var deco := VRBuild.mat(trim_color, 0.5, 0.0, 1.2)
 	VRBuild.box(panel, Vector3(0.64, 0.004, 0.01), Vector3(0, 0.001, 0.15), deco)
-	VRBuild.box(panel, Vector3(0.64, 0.004, 0.01), Vector3(0, 0.001, -0.15), deco)
-	VRBuild.box(panel, Vector3(0.012, 0.004, 0.3), Vector3(-0.31, 0.001, 0), deco)
-	VRBuild.box(panel, Vector3(0.012, 0.004, 0.3), Vector3(0.31, 0.001, 0), deco)
+	if detail:
+		VRBuild.box(panel, Vector3(0.64, 0.004, 0.01), Vector3(0, 0.001, -0.15), deco)
+		VRBuild.box(panel, Vector3(0.012, 0.004, 0.3), Vector3(-0.31, 0.001, 0), deco)
+		VRBuild.box(panel, Vector3(0.012, 0.004, 0.3), Vector3(0.31, 0.001, 0), deco)
 	# monitor: bezel, glass, marquee
 	var mon := Node3D.new()
 	mon.position = Vector3(0, 1.41, -0.30)
@@ -74,18 +81,19 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	screen_mat = sm
 	var screen_quad := VRBuild.quad(mon, Vector2(0.55, 0.66), Vector3(0, 0.0, 0.1005), sm)
 	screen_quad.name = "ScreenQuad"
-	var glass := StandardMaterial3D.new()
-	glass.albedo_texture = VRBuild.scanline_texture()
-	glass.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glass.uv1_scale = Vector3(1, 220, 1)
-	glass.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
-	VRBuild.quad(mon, Vector2(0.55, 0.66), Vector3(0, 0.0, 0.1015), glass)
-	# frame lip so the glass reads as a recessed tube
-	for off in [Vector3(0, 0.345, 0.099), Vector3(0, -0.345, 0.099)]:
-		VRBuild.box(mon, Vector3(0.6, 0.03, 0.02), off, dark)
-	for off in [Vector3(-0.29, 0, 0.099), Vector3(0.29, 0, 0.099)]:
-		VRBuild.box(mon, Vector3(0.03, 0.7, 0.02), off, dark)
+	if detail:
+		var glass := StandardMaterial3D.new()
+		glass.albedo_texture = VRBuild.scanline_texture()
+		glass.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		glass.uv1_scale = Vector3(1, 220, 1)
+		glass.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+		VRBuild.quad(mon, Vector2(0.55, 0.66), Vector3(0, 0.0, 0.1015), glass)
+		# frame lip so the glass reads as a recessed tube
+		for off in [Vector3(0, 0.345, 0.099), Vector3(0, -0.345, 0.099)]:
+			VRBuild.box(mon, Vector3(0.6, 0.03, 0.02), off, dark)
+		for off in [Vector3(-0.29, 0, 0.099), Vector3(0.29, 0, 0.099)]:
+			VRBuild.box(mon, Vector3(0.03, 0.7, 0.02), off, dark)
 	var marq := Node3D.new()
 	marq.position = Vector3(0, 1.855, -0.36)
 	marq.rotation = Vector3(-0.1, 0, 0)
@@ -97,10 +105,11 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		VRBuild.quad(marq, Vector2(0.6, 0.17), Vector3(0, 0, 0.0505), VRBuild.unshaded(marquee_color))
 		VRBuild.label(marq, marquee_text, 0.075, Vector3(0, 0, 0.052), Color(1, 1, 1), Vector3.ZERO, 6)
 	# speakers under the marquee
-	for sx in [-0.26, 0.26]:
-		VRBuild.box(self, Vector3(0.08, 0.1, 0.03), Vector3(sx, 1.66, -0.11), dark, Vector3(-0.1, 0, 0))
-	# glow under the panel and a soft light on the player's side
-	VRBuild.box(self, Vector3(0.6, 0.012, 0.012), Vector3(0, 0.98, 0.28), trim)
+	if detail:
+		for sx in [-0.26, 0.26]:
+			VRBuild.box(self, Vector3(0.08, 0.1, 0.03), Vector3(sx, 1.66, -0.11), dark, Vector3(-0.1, 0, 0))
+		# glow under the panel
+		VRBuild.box(self, Vector3(0.6, 0.012, 0.012), Vector3(0, 0.98, 0.28), trim)
 	if interactive:
 		_build_controls()
 		var l := OmniLight3D.new()
