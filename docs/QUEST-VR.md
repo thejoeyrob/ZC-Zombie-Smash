@@ -23,6 +23,12 @@ FIRE button, press the blue GRENADE button and MENU. Everything else is the same
 `xvfb-run godot --path quest --rendering-driver opengl3 --rendering-method gl_compatibility -- --shots=/tmp/out --play`
 renders screenshots from a flat camera with simulated hands; `-- --autoplay --quit_after=25` (headless) plays by itself.
 
+## What the build proves
+CI exports a debug APK with the Meta OpenXR vendors plugin (a GDExtension; enabled in the export preset with
+`xr_features/enable_meta_plugin`). The run prints the APK's manifest: `android.hardware.vr.headtracking`,
+`com.oculus.supportedDevices`, `com.oculus.intent.category.VR`, the Khronos OpenXR loader and `libgodotopenxrvendors.so`.
+It has not been run on a headset yet; the first session will need tuning (grab distance, button feel, cabinet height).
+
 ## Building the APK
 Actions -> "Quest VR build" (needs nothing but the repository). The APK is an artifact of the run; install it with Meta Quest
 Developer Hub or `adb install`. Putting it on the Meta Horizon Store needs the developer account's app id and a release channel
