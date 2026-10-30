@@ -133,8 +133,9 @@ jobs:
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           AAPT2="$(ls "$SDK"/build-tools/*/aapt2 | tail -1)"
           echo "using $AAPT2"
-          "$AAPT2" dump badging quest/build/zombie-smash-vr.apk | head -70 || true
-          "$AAPT2" dump xmltree --file AndroidManifest.xml quest/build/zombie-smash-vr.apk | grep -iE "oculus|vr|headtracking|openxr|supportedDevices" | head -20 || true
+          "$AAPT2" dump badging quest/build/zombie-smash-vr.apk | grep -vE "application-label|application-icon|densities|locales|supports-" | head -60 || true
+          echo "--- manifest lines about VR / Quest ---"
+          "$AAPT2" dump xmltree --file AndroidManifest.xml quest/build/zombie-smash-vr.apk | grep -iE "oculus|headtracking|openxr|supportedDevices|vr\.|category|intent" | head -30 || true
           unzip -l quest/build/zombie-smash-vr.apk | grep -E "libopenxr|libgodot|\.pck" | head || true
 
       - uses: actions/upload-artifact@v4
