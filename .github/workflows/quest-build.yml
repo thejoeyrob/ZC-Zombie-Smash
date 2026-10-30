@@ -4,6 +4,9 @@ name: Quest VR build
 
 on:
   workflow_dispatch:
+  # A new workflow can only be started by hand once it is on the default branch, so pushing to this branch also runs it.
+  push:
+    branches: [quest-build]
 
 concurrency:
   group: quest-build
