@@ -35,6 +35,14 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 
 
+var _base := Transform2D.IDENTITY
+
+
+func set_xf(pos: Vector2, rot: float) -> void:
+	_base = Transform2D(rot, pos)
+	draw_set_transform_matrix(_base)
+
+
 func tex(file: String) -> Texture2D:
 	if not _tex.has(file):
 		var t = load(ART + file)
@@ -76,9 +84,9 @@ func fit(file: String, x: float, y: float, w: float, h: float, alpha := 1.0, fli
 	var dw: float = b[2] * scale
 	var dh: float = b[3] * scale
 	var col := Color(1.7, 1.7, 1.7, alpha) if bright else Color(1, 1, 1, alpha)
-	draw_set_transform(Vector2(x + w / 2.0, y + h / 2.0), rot, Vector2(-1.0 if flip else 1.0, 1.0))
+	draw_set_transform_matrix(_base * Transform2D(rot, Vector2(-1.0 if flip else 1.0, 1.0), 0.0, Vector2(x + w / 2.0, y + h / 2.0)))
 	draw_texture_rect_region(t, Rect2(-dw / 2.0, -dh / 2.0, dw, dh), Rect2(b[0], b[1], b[2], b[3]), col)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_set_transform_matrix(_base)
 
 
 func text(s: String, x: float, y: float, size := 11, color := Color.WHITE, align := HORIZONTAL_ALIGNMENT_CENTER) -> void:
@@ -118,6 +126,7 @@ func hc(s: String) -> Color:
 
 # ---- the whole frame ----------------------------------------------------------------------------
 func _draw() -> void:
+	_base = Transform2D.IDENTITY
 	if W == 0.0:
 		return
 	if mode == "title":
@@ -205,7 +214,7 @@ func draw_world() -> void:
 	var off := Vector2.ZERO
 	if g.shake > 0.0:
 		off = Vector2(sin(g.t * 93.0) * g.shake, cos(g.t * 111.0) * g.shake * 0.55)
-		draw_set_transform(off, 0.0, Vector2.ONE)
+		set_xf(off, 0.0)
 	draw_rect(Rect2(0, 0, W, 55), Color(0.02, 0.035, 0.03, 0.55))
 	for x in range(0, int(W), 9):
 		draw_line(Vector2(x, H - 38.0), Vector2(x + 4.0, H - 38.0), hc("#89baa52b"), 1.0)
@@ -240,9 +249,9 @@ func draw_world() -> void:
 		if b.sp != "":
 			special_bullet(b)
 			continue
-		draw_set_transform(Vector2(b.x, b.y) + off, atan2(b.vy, b.vx) + PI / 6.0, Vector2.ONE)
+		set_xf(Vector2(b.x, b.y) + off, atan2(b.vy, b.vx) + PI / 6.0)
 		fit(gun_art(b.gun), -11.0, -7.5, 22.0, 15.0)
-		draw_set_transform(off, 0.0, Vector2.ONE)
+		set_xf(off, 0.0)
 	special_effects()
 	for s in g.shots:
 		shot(s)
@@ -293,7 +302,7 @@ func draw_world() -> void:
 			draw_rect(Rect2(f.x, f.y, f.r * 1.7, f.r * 1.7), col2)
 	for pop in g.pops:
 		text(pop.text, pop.x, pop.y - (1.0 - pop.life) * 22.0, 13, hc("#ffe467") if g.multiplier > 1 else Color.WHITE)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	set_xf(Vector2.ZERO, 0.0)
 	if g.boss != null:
 		var b = g.boss
 		var def := g.boss_def(b.bossId)
@@ -373,9 +382,9 @@ func barrel(b: Dictionary) -> void:
 		ellipse_line(Vector2(b.tx, b.ty), ZSEngine.BARREL.throwBlast, 12.0, hc("#ffb36ba8"), 1.4)
 		draw_line(Vector2(b.tx - 5.0, b.ty - 5.0), Vector2(b.tx + 5.0, b.ty + 5.0), hc("#ffb36ba8"), 1.4)
 		draw_line(Vector2(b.tx + 5.0, b.ty - 5.0), Vector2(b.tx - 5.0, b.ty + 5.0), hc("#ffb36ba8"), 1.4)
-		draw_set_transform(Vector2(b.x, b.y), b.rot, Vector2.ONE)
+		set_xf(Vector2(b.x, b.y), b.rot)
 		fit("prop-barrel.webp", -w / 2.0, -h / 2.0, w, h)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		set_xf(Vector2.ZERO, 0.0)
 	else:
 		ellipse(Vector2(b.x, b.y + h * 0.4), w * 0.42, 5.0, hc("#0007"))
 		fit("prop-barrel.webp", b.x - w / 2.0, b.y - h / 2.0, w, h)
@@ -394,10 +403,10 @@ func enemy(z: Dictionary) -> void:
 		h = float(z.height)
 		w = h * 0.82
 	var alpha := 1.0
-	if not z.get("boss", false) and z.emerge > 0.0:
-		alpha = 1.0 - z.emerge / 0.45
+	if not z.get("boss", false) and z.get("emerge", 0.0) > 0.0:
+		alpha = 1.0 - z.get("emerge", 0.0) / 0.45
 	ellipse(Vector2(z.x, z.y + h * 0.34), w * 0.29, 5.0, hc("#0006"))
-	if z.charge == 1:
+	if z.get("charge", 0) == 1:
 		circle_line(Vector2(z.x, z.y), w * 0.5, hc("#fa994d"), 1.5)
 	if z.get("boss", false) and z.wind != 0:
 		text("ATTACK!", z.x, z.y - h * 0.62 - 5.0, 9, hc("#ffb04c"))
@@ -419,7 +428,7 @@ func enemy(z: Dictionary) -> void:
 		lean = clampf(float(z.vx) / 1100.0, -0.13, 0.13)
 		if not str(z.get("mode", "")).begins_with("c"):
 			hover = sin(z.age * 2.4) * 2.4
-	fit(art, z.x - w / 2.0 + jx, z.y - h * 0.55 + wobble + hover, w, h, alpha, false, z.flash > 0.0, lean)
+	fit(art, z.x - w / 2.0 + jx, z.y - h * 0.55 + wobble + hover, w, h, alpha, false, z.get("flash", 0.0) > 0.0, lean)
 	if z.get("type", "") == "bulwark" and fmod(z.age, 3.5) < 2.0:
 		circle_line(Vector2(z.x, z.y + 2.0), 23.0, hc("#82dffeaa"), 2.0, 0.1, PI - 0.1)
 	if not z.get("boss", false) and z.maxHp > 2.0 and z.hp < z.maxHp:
@@ -467,9 +476,9 @@ func shot(s: Dictionary) -> void:
 	var f: String = "weapon-" + s.kind + ".webp"
 	if s.kind == "glowstick":
 		f = "weapon-glowstick-" + (s.color if s.color != "" else "green") + ".webp"
-	draw_set_transform(Vector2(s.x, s.y), rot, Vector2.ONE)
+	set_xf(Vector2(s.x, s.y), rot)
 	fit(f, -s.r * 1.4 * k, -s.r * 1.4 * k, s.r * 2.8 * k, s.r * 2.8 * k)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	set_xf(Vector2.ZERO, 0.0)
 
 
 func special_bullet(b: Dictionary) -> void:
@@ -477,7 +486,7 @@ func special_bullet(b: Dictionary) -> void:
 	var ang := atan2(b.vy, b.vx)
 	match b.sp:
 		"hose":
-			draw_set_transform(pos, ang, Vector2.ONE)
+			set_xf(pos, ang)
 			ellipse(Vector2(-3, 0), 17.0, 7.0, Color(0.16, 0.66, 1.0, 0.45))
 			ellipse(Vector2.ZERO, 11.0, 4.0, hc("#d6f3ff"))
 		"rainbow":
@@ -489,7 +498,7 @@ func special_bullet(b: Dictionary) -> void:
 			circle_line(pos, 6.5 * k, hc("#fff2c4"), 1.6)
 			draw_circle(pos, 3.0, hc("#fff6d6"))
 		"beans":
-			draw_set_transform(pos, ang, Vector2.ONE)
+			set_xf(pos, ang)
 			ellipse(Vector2.ZERO, 4.4, 2.8, hc("#7a4a1f"))
 			draw_line(Vector2(-3.4, 0), Vector2(3.4, 0), hc("#d9a566"), 0.9)
 		"remover":
@@ -500,7 +509,7 @@ func special_bullet(b: Dictionary) -> void:
 		"purge":
 			draw_circle(pos, 10.0, Color(0.49, 1.0, 0.16, 0.4))
 			draw_circle(pos, 5.0, hc("#d4ff9a"))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	set_xf(Vector2.ZERO, 0.0)
 
 
 func special_effects() -> void:

@@ -34,6 +34,7 @@ var _live := {}
 var _last := {}
 var _decks: Array[AudioStreamPlayer] = []
 var _deck := 0
+var _resume := {}
 var _sting_player: AudioStreamPlayer
 var _speaker: Node3D
 var _time := 0.0
@@ -115,27 +116,44 @@ func play_music(id: String, fade := 0.9) -> void:
 	var s := music_stream(track)
 	if s == null:
 		return
+	_remember()
 	var old := _decks[_deck]
 	_deck = 1 - _deck
 	var nxt := _decks[_deck]
 	nxt.stream = s
 	nxt.volume_db = -80.0
-	nxt.play()
-	var target := _db(music_volume * MUSIC_TRIM)
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(nxt, "volume_db", target, maxf(0.05, fade))
-	tw.tween_property(old, "volume_db", -80.0, maxf(0.05, fade))
-	tw.chain().tween_callback(func(): if old != nxt: old.stop())
+	# pick the loop up where it was left (after a fanfare or a scene) so the opening bars do not keep coming back
+	nxt.play(float(_resume.get(track, 0.0)))
 	current = track
+	_fade(nxt, 0.0, music_volume * MUSIC_TRIM, fade, false)
+	_fade(old, -1.0, 0.0, fade, true)
+
+
+func _remember() -> void:
+	if current == "":
+		return
+	var d := _decks[_deck]
+	if d.playing and d.stream != null:
+		_resume[current] = d.get_playback_position()
+
+
+## Fades in linear gain (a straight dB fade swells late, which makes the start of a track jump out).
+func _fade(deck: AudioStreamPlayer, from_lin: float, to_lin: float, dur: float, stop_after: bool) -> void:
+	if from_lin < 0.0:
+		from_lin = db_to_linear(deck.volume_db) if deck.volume_db > -79.0 else 0.0
+	var tw := create_tween()
+	tw.tween_method(func(v: float): deck.volume_db = _db(v) if v > 0.0005 else -80.0, from_lin, to_lin, maxf(0.05, dur))
+	if stop_after:
+		tw.tween_callback(func(): if deck != _decks[_deck]: deck.stop())
 
 
 func stop_music(fade := 0.5) -> void:
 	want = ""
+	_remember()
 	current = ""
 	for d in _decks:
-		var tw := create_tween()
-		tw.tween_property(d, "volume_db", -80.0, fade)
-		tw.tween_callback(d.stop)
+		_fade(d, -1.0, 0.0, fade, false)
+		get_tree().create_timer(fade + 0.05).timeout.connect(func(): if current == "": d.stop())
 
 
 ## A fanfare that owns the music until it is over (victory, defeat, high score).
@@ -143,9 +161,9 @@ func stinger(name: String) -> void:
 	var s: AudioStreamWAV = music_stream(name)
 	if s == null:
 		return
+	_remember()
 	for d in _decks:
-		var tw := create_tween()
-		tw.tween_property(d, "volume_db", -80.0, 0.25)
+		_fade(d, -1.0, 0.0, 0.25, false)
 	current = ""
 	_sting_player.stream = s
 	_sting_player.volume_db = _db(music_volume * 1.1)
