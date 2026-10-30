@@ -3,3 +3,9 @@ www/
 ios/
 build/
 __pycache__/
+quest/.godot/
+quest/assets/
+quest/build/
+quest/android/
+quest/addons/
+quest/tests/golden.json

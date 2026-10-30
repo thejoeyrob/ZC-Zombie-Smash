@@ -1,0 +1,130 @@
+# Builds the Zombie Smash VR app for Meta Quest (Godot 4, OpenXR) and uploads the APK as an artifact.
+# Run manually: Actions -> "Quest VR build" -> Run workflow. The engine port is checked tick-for-tick against engine.js first.
+name: Quest VR build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: quest-build
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.4.1"
+  GODOT_BUILDS: "https://github.com/godotengine/godot-builds/releases/download"
+  VENDORS_TAG: "4.0.0-stable"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Godot and its export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/godot" && cd "$HOME/godot"
+          curl -fsSL -o godot.zip "$GODOT_BUILDS/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
+          curl -fsSL -o templates.tpz "$GODOT_BUILDS/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          T="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$T" && unzip -q templates.tpz -d tpl && cp -r tpl/templates/* "$T/"
+          ls "$T" | head -30
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+
+      - name: Prepare game data and art
+        shell: bash
+        run: |
+          set -euo pipefail
+          quest/tools/sync-assets.sh
+          node quest/tools/golden.mjs | tail -3
+
+      - name: Import the project
+        shell: bash
+        run: |
+          cd quest
+          godot --headless --import || true
+          godot --headless --import
+
+      - name: Check the engine port against the JavaScript engine
+        shell: bash
+        run: |
+          cd quest
+          godot --headless -s tests/trace.gd
+
+      - name: Get the Meta Quest (OpenXR vendors) plugin
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          gh release download "$VENDORS_TAG" --repo GodotVR/godot_openxr_vendors --pattern '*.zip' --dir vendors || \
+            gh release download --repo GodotVR/godot_openxr_vendors --pattern '*.zip' --dir vendors
+          ls vendors
+          mkdir -p x && unzip -q vendors/*.zip -d x
+          find x -maxdepth 3 -type d | head -20
+          mkdir -p "$GITHUB_WORKSPACE/quest/addons"
+          cp -r x/asset/addons/godotopenxrvendors "$GITHUB_WORKSPACE/quest/addons/" 2>/dev/null || cp -r x/addons/godotopenxrvendors "$GITHUB_WORKSPACE/quest/addons/"
+          ls "$GITHUB_WORKSPACE/quest/addons/godotopenxrvendors"
+
+      - name: Android SDK, build template and debug key
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "build-tools;35.0.1" "platforms;android-35" "cmake;3.10.2.4988404" "ndk;28.1.13356709" >/dev/null
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/debug.keystore" -alias androiddebugkey -storepass android -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" >/dev/null
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$SDK"
+          export/android/debug_keystore = "$RUNNER_TEMP/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          sed -i 's/^          //' "$HOME/.config/godot/editor_settings-4.4.tres"
+          # the Android build template (what the editor's "Install Android Build Template" does)
+          cd quest
+          mkdir -p android/build
+          unzip -q "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/android_source.zip" -d android/build
+          printf '%s' "${GODOT_VERSION}.stable" > android/.build_version
+          touch android/build/.gdignore
+
+      - name: Turn the plugin on and export the APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd quest
+          cat >> project.godot <<'EOF'
+
+          [editor_plugins]
+
+          enabled=PackedStringArray("res://addons/godotopenxrvendors/plugin.cfg")
+          EOF
+          sed -i 's/^          //' project.godot
+          mkdir -p build
+          godot --headless --import || true
+          godot --headless --export-debug "Meta Quest" build/zombie-smash-vr.apk
+          ls -la build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zombie-smash-vr-apk
+          path: quest/build/zombie-smash-vr.apk
+          if-no-files-found: error
