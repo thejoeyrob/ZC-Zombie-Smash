@@ -109,21 +109,14 @@ jobs:
           printf '%s' "${GODOT_VERSION}.stable" > android/.build_version
           touch android/build/.gdignore
 
-      - name: Turn the plugin on and export the APK
+      - name: Export the APK
         shell: bash
         run: |
           set -euo pipefail
           cd quest
-          cat >> project.godot <<'EOF'
-
-          [editor_plugins]
-
-          enabled=PackedStringArray("res://addons/godotopenxrvendors/plugin.cfg")
-          EOF
-          sed -i 's/^          //' project.godot
           mkdir -p build
           godot --headless --import || true
-          godot --headless --export-debug "Meta Quest" build/zombie-smash-vr.apk
+          godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
           ls -la build
 
       - name: Show what the APK declares (headset support, permissions)
