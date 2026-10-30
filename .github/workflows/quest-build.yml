@@ -73,13 +73,13 @@ jobs:
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP"
-          gh release download "$VENDORS_TAG" --repo GodotVR/godot_openxr_vendors --pattern '*.zip' --dir vendors || \
-            gh release download --repo GodotVR/godot_openxr_vendors --pattern '*.zip' --dir vendors
-          ls vendors
-          mkdir -p x && unzip -q vendors/*.zip -d x
-          find x -maxdepth 3 -type d | head -20
+          gh release download "$VENDORS_TAG" --repo GodotVR/godot_openxr_vendors --pattern 'godotopenxrvendorsaddon.zip' --dir vendors
+          mkdir -p x && unzip -q vendors/godotopenxrvendorsaddon.zip -d x
+          SRC="$(find x -type d -name godotopenxrvendors | head -1)"
+          echo "plugin folder: $SRC"
           mkdir -p "$GITHUB_WORKSPACE/quest/addons"
-          cp -r x/asset/addons/godotopenxrvendors "$GITHUB_WORKSPACE/quest/addons/" 2>/dev/null || cp -r x/addons/godotopenxrvendors "$GITHUB_WORKSPACE/quest/addons/"
+          cp -r "$SRC" "$GITHUB_WORKSPACE/quest/addons/"
+          cat "$GITHUB_WORKSPACE/quest/addons/godotopenxrvendors/plugin.cfg"
           ls "$GITHUB_WORKSPACE/quest/addons/godotopenxrvendors"
 
       - name: Android SDK, build template and debug key
