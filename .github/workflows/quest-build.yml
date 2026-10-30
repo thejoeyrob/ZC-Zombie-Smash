@@ -127,12 +127,15 @@ jobs:
           ls -la build
 
       - name: Show what the APK declares (headset support, permissions)
+        continue-on-error: true
         shell: bash
         run: |
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-          AAPT="$(ls "$SDK"/build-tools/*/aapt | tail -1)"
-          "$AAPT" dump badging quest/build/zombie-smash-vr.apk | grep -E "package:|sdkVersion|uses-feature|uses-permission|launchable|meta-data|native-code|application-label:" | head -40
-          unzip -l quest/build/zombie-smash-vr.apk | grep -E "libopenxr|libgodot|\.pck|assets/" | head
+          AAPT2="$(ls "$SDK"/build-tools/*/aapt2 | tail -1)"
+          echo "using $AAPT2"
+          "$AAPT2" dump badging quest/build/zombie-smash-vr.apk | head -70 || true
+          "$AAPT2" dump xmltree --file AndroidManifest.xml quest/build/zombie-smash-vr.apk | grep -iE "oculus|vr|headtracking|openxr|supportedDevices" | head -20 || true
+          unzip -l quest/build/zombie-smash-vr.apk | grep -E "libopenxr|libgodot|\.pck" | head || true
 
       - uses: actions/upload-artifact@v4
         with:
