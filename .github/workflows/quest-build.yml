@@ -79,8 +79,8 @@ jobs:
           echo "plugin folder: $SRC"
           mkdir -p "$GITHUB_WORKSPACE/quest/addons"
           cp -r "$SRC" "$GITHUB_WORKSPACE/quest/addons/"
-          cat "$GITHUB_WORKSPACE/quest/addons/godotopenxrvendors/plugin.cfg"
-          ls "$GITHUB_WORKSPACE/quest/addons/godotopenxrvendors"
+          find "$GITHUB_WORKSPACE/quest/addons/godotopenxrvendors" -maxdepth 3 | head -60
+          find "$GITHUB_WORKSPACE/quest/addons" -name 'plugin.cfg' -o -name 'export_plugin*' | head
 
       - name: Android SDK, build template and debug key
         shell: bash
