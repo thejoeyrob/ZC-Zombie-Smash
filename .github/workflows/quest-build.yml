@@ -126,6 +126,14 @@ jobs:
           godot --headless --export-debug "Meta Quest" build/zombie-smash-vr.apk
           ls -la build
 
+      - name: Show what the APK declares (headset support, permissions)
+        shell: bash
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          AAPT="$(ls "$SDK"/build-tools/*/aapt | tail -1)"
+          "$AAPT" dump badging quest/build/zombie-smash-vr.apk | grep -E "package:|sdkVersion|uses-feature|uses-permission|launchable|meta-data|native-code|application-label:" | head -40
+          unzip -l quest/build/zombie-smash-vr.apk | grep -E "libopenxr|libgodot|\.pck|assets/" | head
+
       - uses: actions/upload-artifact@v4
         with:
           name: zombie-smash-vr-apk
