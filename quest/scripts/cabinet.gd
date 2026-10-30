@@ -12,6 +12,7 @@ const BUTTONS := {
 	"fire": {"pos": Vector3(0.20, 0.0, 0.035), "radius": 0.036},
 	"grenade": {"pos": Vector3(0.065, 0.0, -0.03), "radius": 0.031},
 	"menu": {"pos": Vector3(0.0, 0.0, 0.115), "radius": 0.019},
+	"lock": {"pos": Vector3(-0.285, 0.0, -0.115), "radius": 0.02},
 }
 
 var panel: Node3D
@@ -23,6 +24,9 @@ var caps := {}            # name -> MeshInstance3D
 var pressed := {}         # name -> bool
 var neon: Array = []
 var theme_color := Color(0.1, 0.85, 0.35)
+var lamp_red: StandardMaterial3D
+var lamp_green: StandardMaterial3D
+var lock_cap_mat: StandardMaterial3D
 
 
 func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, trim_color: Color, interactive: bool, marquee_text := "", marquee_color := Color(0.1, 0.1, 0.3), detail := true) -> void:
@@ -118,6 +122,8 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		l.light_energy = 0.9
 		l.omni_range = 2.2
 		add_child(l)
+		_build_traffic_light()
+		VRBuild.label(panel, "LOCK", 0.026, Vector3(-0.285, 0.003, -0.07), Color(1, 1, 1, 0.8), Vector3(-PI / 2, 0, 0), 4)
 		VRBuild.label(panel, "MENU", 0.035, Vector3(0.0, 0.003, 0.155), Color(1, 1, 1, 0.8), Vector3(-PI / 2, 0, 0), 4)
 		VRBuild.label(panel, "FIRE", 0.05, Vector3(0.20, 0.003, 0.108), Color(1, 0.85, 0.85), Vector3(-PI / 2, 0, 0), 4)
 		VRBuild.label(panel, "GRENADE", 0.032, Vector3(0.065, 0.003, 0.03), Color(0.8, 0.9, 1), Vector3(-PI / 2, 0, 0), 4)
@@ -140,15 +146,103 @@ func _build_controls() -> void:
 		"fire": [Color("#e3262a"), 0.022],
 		"grenade": [Color("#1d6fe0"), 0.02],
 		"menu": [Color("#d8d8d8"), 0.014],
+		"lock": [Color("#e3262a"), 0.016],
 	}
 	for k in BUTTONS:
 		var b: Dictionary = BUTTONS[k]
 		var r: float = b.radius
 		VRBuild.cylinder(panel, r + 0.007, 0.012, b.pos + Vector3(0, 0.004, 0), VRBuild.mat(Color(0.015, 0.015, 0.02), 0.5), -1.0, Vector3.ZERO, 32)
 		var col: Color = cfg[k][0]
-		var cap := VRBuild.cylinder(panel, r, cfg[k][1], b.pos + Vector3(0, 0.012 + cfg[k][1] / 2.0, 0), VRBuild.mat(col, 0.22, 0.0, 0.25), r * 0.93, Vector3.ZERO, 32)
+		var cap_mat := VRBuild.mat(col, 0.22, 0.0, 0.25)
+		var cap := VRBuild.cylinder(panel, r, cfg[k][1], b.pos + Vector3(0, 0.012 + cfg[k][1] / 2.0, 0), cap_mat, r * 0.93, Vector3.ZERO, 32)
+		if k == "lock":
+			lock_cap_mat = cap_mat
 		caps[k] = cap
 		pressed[k] = false
+
+
+## Traffic light: red = locked to the machine (in play), green = free to move about the room.
+func _build_traffic_light() -> void:
+	var housing := VRBuild.mat(Color(0.03, 0.03, 0.04), 0.5, 0.3)
+	# on the left of the monitor so it is always in view while playing
+	var holder := Node3D.new()
+	holder.position = Vector3(-0.395, 1.42, -0.06)
+	add_child(holder)
+	VRBuild.box(holder, Vector3(0.07, 0.19, 0.05), Vector3.ZERO, housing)
+	VRBuild.box(holder, Vector3(0.012, 0.06, 0.012), Vector3(0, -0.12, -0.005), housing)
+	lamp_red = VRBuild.mat(Color(0.35, 0.02, 0.02), 0.3, 0.0, 0.0)
+	lamp_green = VRBuild.mat(Color(0.02, 0.3, 0.05), 0.3, 0.0, 0.0)
+	VRBuild.cylinder(holder, 0.026, 0.012, Vector3(0, 0.048, 0.027), lamp_red, -1.0, Vector3(PI / 2, 0, 0), 24)
+	VRBuild.cylinder(holder, 0.026, 0.012, Vector3(0, -0.048, 0.027), lamp_green, -1.0, Vector3(PI / 2, 0, 0), 24)
+	VRBuild.label(holder, "LOCK", 0.022, Vector3(0, 0.0, 0.0275), Color(1, 1, 1, 0.8), Vector3.ZERO, 3)
+	var l := OmniLight3D.new()
+	l.position = Vector3(0, 0, 0.12)
+	l.omni_range = 0.9
+	l.light_energy = 0.6
+	holder.add_child(l)
+	set_lock_light(true)
+	_light = l
+
+
+var _light: OmniLight3D
+
+
+func set_lock_light(locked: bool) -> void:
+	if lamp_red == null:
+		return
+	for pair in [[lamp_red, locked, Color(1.0, 0.1, 0.08)], [lamp_green, not locked, Color(0.15, 1.0, 0.3)]]:
+		var m: StandardMaterial3D = pair[0]
+		m.emission_enabled = pair[1]
+		m.emission = pair[2]
+		m.emission_energy_multiplier = 3.0
+		m.albedo_color = pair[2] if pair[1] else pair[2].darkened(0.85)
+	if lock_cap_mat != null:
+		lock_cap_mat.albedo_color = Color("#e3262a") if locked else Color("#22c24a")
+		lock_cap_mat.emission_enabled = true
+		lock_cap_mat.emission = lock_cap_mat.albedo_color
+	if _light != null:
+		_light.light_color = Color(1.0, 0.2, 0.15) if locked else Color(0.2, 1.0, 0.35)
+
+
+# ---- solid parts, so hands cannot pass through the machine --------------------------------------
+## Pushes a sphere (world position, radius) out of the cabinet's solid volumes; returns the corrected world position.
+func constrain(world: Vector3, radius: float) -> Vector3:
+	var p := to_local(world)
+	# boxes in cabinet space: [centre, half size]
+	var boxes := [
+		[Vector3(0, 0.50, -0.39), Vector3(0.32, 0.50, 0.41)],        # lower body below the panel
+		[Vector3(0, 1.38, -0.50), Vector3(0.32, 0.44, 0.30)],        # monitor block
+		[Vector3(-0.335, 0.52, -0.38), Vector3(0.022, 0.52, 0.42)],  # left side
+		[Vector3(0.335, 0.52, -0.38), Vector3(0.022, 0.52, 0.42)],   # right side
+		[Vector3(0, 1.88, -0.40), Vector3(0.34, 0.12, 0.40)],        # marquee and top
+	]
+	for b in boxes:
+		p = _push_box(p, b[0], b[1] + Vector3.ONE * radius)
+	# the control panel slab is tilted: test in its own space
+	var q := panel.transform.affine_inverse() * p
+	var inside := absf(q.x) < 0.33 + radius and absf(q.z) < 0.17 + radius and q.y < radius and q.y > -0.05 - radius
+	if inside:
+		q.y = radius
+		p = panel.transform * q
+	return to_global(p)
+
+
+func _push_box(p: Vector3, c: Vector3, half: Vector3) -> Vector3:
+	var d := p - c
+	if absf(d.x) >= half.x or absf(d.y) >= half.y or absf(d.z) >= half.z:
+		return p
+	var pen := Vector3(half.x - absf(d.x), half.y - absf(d.y), half.z - absf(d.z))
+	# only the faces a hand can reach from the front or above (the player side)
+	var out := p
+	if pen.z <= pen.x and pen.z <= pen.y and d.z > 0.0:
+		out.z = c.z + half.z
+	elif pen.y <= pen.x and pen.y <= pen.z and d.y > 0.0:
+		out.y = c.y + half.y
+	elif pen.x <= pen.y and pen.x <= pen.z:
+		out.x = c.x + half.x * signf(d.x)
+	else:
+		out.z = c.z + half.z
+	return out
 
 
 func set_topper_color(c: Color) -> void:
