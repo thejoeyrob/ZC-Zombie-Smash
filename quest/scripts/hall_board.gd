@@ -99,6 +99,17 @@ func _rect(parent: Control, r: Rect2, color: Color) -> void:
 	parent.add_child(c)
 
 
+func _picture(parent: Control, tex: Texture2D, r: Rect2) -> TextureRect:
+	var t := TextureRect.new()
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_SCALE
+	t.texture = tex
+	t.position = r.position
+	t.size = r.size
+	parent.add_child(t)
+	return t
+
+
 func refresh() -> void:
 	_draw()
 
@@ -111,8 +122,12 @@ func _draw() -> void:
 	viewport.add_child(root)
 	_rect(root, Rect2(Vector2.ZERO, Vector2(VIEW)), Color(0.03, 0.02, 0.08))
 	_rect(root, Rect2(0, 0, VIEW.x, 6), Color(0.2, 0.9, 1.0))
-	_label(root, "HALL OF FAME", 112, Color(1.0, 0.82, 0.25), Vector2(0, 14), VIEW.x * 0.64, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(root, status, 30, Color(0.6, 0.7, 0.9) if online else Color(1.0, 0.7, 0.4), Vector2(0, 138), VIEW.x * 0.64, HORIZONTAL_ALIGNMENT_CENTER)
+	var hh = load("res://assets/art/hall-header.jpg")
+	if hh != null:
+		_picture(root, hh, Rect2((VIEW.x * 0.64 - 920.0) / 2.0, 6, 920, 230))
+	else:
+		_label(root, "HALL OF FAME", 112, Color(1.0, 0.82, 0.25), Vector2(0, 14), VIEW.x * 0.64, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(root, status, 30, Color(0.6, 0.7, 0.9) if online else Color(1.0, 0.7, 0.4), Vector2(0, 238), VIEW.x * 0.64, HORIZONTAL_ALIGNMENT_CENTER)
 	# league table: one row per player
 	var shown: Array = []
 	for r in rows:
@@ -129,8 +144,8 @@ func _draw() -> void:
 			continue
 		seen[k] = true
 		top.append(e)
-	var y := 190.0
-	for i in range(mini(10, top.size())):
+	var y := 285.0
+	for i in range(mini(9, top.size())):
 		var gold := i < 3
 		var col: Color = [Color(1.0, 0.85, 0.2), Color(0.85, 0.88, 0.95), Color(0.95, 0.6, 0.3)][i] if gold else Color(0.8, 0.88, 1.0)
 		_rect(root, Rect2(50, y, VIEW.x * 0.64 - 100, 68), Color(1, 1, 1, 0.07 if i % 2 == 0 else 0.03))
@@ -139,26 +154,34 @@ func _draw() -> void:
 		_label(root, ZSEngine.commas(top[i][1]), 52, col, Vector2(0, y + 4), VIEW.x * 0.64 - 80, HORIZONTAL_ALIGNMENT_RIGHT)
 		y += 74.0
 	if top.is_empty():
-		_label(root, "No scores yet. Be the first!", 54, Color(0.7, 0.8, 1.0), Vector2(0, 420), VIEW.x * 0.64, HORIZONTAL_ALIGNMENT_CENTER)
+		_label(root, "No scores yet. Be the first!", 54, Color(0.7, 0.8, 1.0), Vector2(0, 520), VIEW.x * 0.64, HORIZONTAL_ALIGNMENT_CENTER)
 	# the player's own section
 	var x0 := VIEW.x * 0.66
 	_rect(root, Rect2(x0 - 24, 30, 6, VIEW.y - 60), Color(0.2, 0.9, 1.0, 0.6))
 	var w := VIEW.x - x0 - 40.0
-	_label(root, "YOUR RECORD", 76, Color(0.4, 1.0, 0.7), Vector2(x0, 24), w, HORIZONTAL_ALIGNMENT_CENTER)
+	var rh = load("res://assets/art/record-header.jpg")
+	if rh != null:
+		_picture(root, rh, Rect2(x0, 12, w, w / 4.0))
+	else:
+		_label(root, "YOUR RECORD", 76, Color(0.4, 1.0, 0.7), Vector2(x0, 24), w, HORIZONTAL_ALIGNMENT_CENTER)
 	var last: Dictionary = progress.last
 	if last.is_empty():
-		_label(root, "Play a game and your\nlast run shows here.", 40, Color(0.8, 0.88, 1.0), Vector2(x0, 150), w, HORIZONTAL_ALIGNMENT_CENTER)
+		_label(root, "Play a game and your\nlast run shows here.", 40, Color(0.8, 0.88, 1.0), Vector2(x0, 190), w, HORIZONTAL_ALIGNMENT_CENTER)
 	else:
-		_label(root, "LAST RUN", 34, Color(0.6, 0.7, 0.9), Vector2(x0, 120), w, HORIZONTAL_ALIGNMENT_CENTER)
-		_label(root, ZSEngine.commas(int(last.score)), 90, Color.WHITE, Vector2(x0, 150), w, HORIZONTAL_ALIGNMENT_CENTER)
-		_label(root, "Wave %d   Kills %d   Bosses %d" % [int(last.wave), int(last.kills), int(last.bosses)], 34, Color(0.8, 0.88, 1.0), Vector2(x0, 262), w, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(root, "YOUR BEST", 34, Color(0.6, 0.7, 0.9), Vector2(x0, 330), w, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(root, ZSEngine.commas(progress.best), 64, Color(1.0, 0.82, 0.25), Vector2(x0, 362), w, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(root, "BADGES  %d / %d" % [progress.badges.size(), VRProgress.BADGES.size()], 40, Color(0.4, 1.0, 0.7), Vector2(x0, 470), w, HORIZONTAL_ALIGNMENT_CENTER)
-	var by := 535.0
-	for b in VRProgress.BADGES:
-		var got: bool = progress.badges.has(b[0])
-		_rect(root, Rect2(x0, by, w, 48), Color(0.2, 0.85, 0.4, 0.22) if got else Color(1, 1, 1, 0.05))
-		_label(root, ("★ " if got else "· ") + b[1], 32, Color(1.0, 0.9, 0.5) if got else Color(0.5, 0.55, 0.7), Vector2(x0 + 14, by + 4))
-		by += 54.0
+		_label(root, "LAST RUN", 34, Color(0.6, 0.7, 0.9), Vector2(x0, 168), w, HORIZONTAL_ALIGNMENT_CENTER)
+		_label(root, ZSEngine.commas(int(last.score)), 90, Color.WHITE, Vector2(x0, 198), w, HORIZONTAL_ALIGNMENT_CENTER)
+		_label(root, "Wave %d   Kills %d   Bosses %d" % [int(last.wave), int(last.kills), int(last.bosses)], 34, Color(0.8, 0.88, 1.0), Vector2(x0, 308), w, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(root, "YOUR BEST", 34, Color(0.6, 0.7, 0.9), Vector2(x0, 372), w, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(root, ZSEngine.commas(progress.best), 64, Color(1.0, 0.82, 0.25), Vector2(x0, 404), w, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(root, "BADGES  %d / %d" % [progress.badges.size(), VRProgress.BADGES.size()], 40, Color(0.4, 1.0, 0.7), Vector2(x0, 500), w, HORIZONTAL_ALIGNMENT_CENTER)
+	var size := 124.0
+	var gap := (w - 4.0 * size) / 3.0
+	for i in range(VRProgress.BADGES.size()):
+		var got: bool = progress.badges.has(VRProgress.BADGES[i][0])
+		var icon = load("res://assets/art/badge-%d.png" % (i + 1))
+		var pos := Vector2(x0 + (i % 4) * (size + gap), 560.0 + (i / 4) * (size + 70.0))
+		if icon != null:
+			var tr := _picture(root, icon, Rect2(pos, Vector2(size, size)))
+			tr.modulate = Color(1, 1, 1, 1) if got else Color(0.18, 0.18, 0.22, 0.85)
+		_label(root, VRProgress.BADGES[i][1], 22, Color(1.0, 0.9, 0.5) if got else Color(0.5, 0.55, 0.7), Vector2(pos.x - gap / 2.0, pos.y + size + 2.0), size + gap, HORIZONTAL_ALIGNMENT_CENTER)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
