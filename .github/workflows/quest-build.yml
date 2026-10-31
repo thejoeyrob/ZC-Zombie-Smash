@@ -115,8 +115,12 @@ jobs:
           set -euo pipefail
           cd quest
           mkdir -p build
+          # every build gets its own number, so a new install is never mistaken for an old one
+          sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"0.${GITHUB_RUN_NUMBER}.0\"/" export_presets.cfg
+          echo "{\"build\": ${GITHUB_RUN_NUMBER}}" > build.json
           godot --headless --import || true
           godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
+          cp build/zombie-smash-vr.apk "build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk"
           ls -la build
 
       - name: Show what the APK declares (headset support, permissions)
@@ -134,5 +138,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: zombie-smash-vr-apk
-          path: quest/build/zombie-smash-vr.apk
+          path: quest/build/ZombieSmashVR-build*.apk
           if-no-files-found: error

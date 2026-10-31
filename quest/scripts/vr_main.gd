@@ -91,7 +91,9 @@ func _ready() -> void:
 	_build_fade()
 	_load_settings()
 	menu = VRMenu.new()
-	menu.build(self, font, settings)
+	menu.build(self, font, settings, build_number())
+	# a small build number on the machine's panel and on the floor sign, so a new install is easy to recognise
+	VRBuild.label(cab.panel, "BUILD %d" % build_number(), 0.03, Vector3(0.27, 0.003, 0.105), Color(1, 1, 1, 0.55), Vector3(-PI / 2, 0, 0), 3)
 	menu.changed.connect(_on_setting)
 	menu.action.connect(_on_menu_action)
 	if args.has("die"):
@@ -208,6 +210,14 @@ func _build_fade() -> void:
 	fade_quad.position = Vector3(0, 0, -0.15)
 	fade_quad.visible = false
 	cam.add_child(fade_quad)
+
+
+func build_number() -> int:
+	if FileAccess.file_exists("res://build.json"):
+		var d = JSON.parse_string(FileAccess.open("res://build.json", FileAccess.READ).get_as_text())
+		if d is Dictionary:
+			return int(d.get("build", 0))
+	return 0
 
 
 func _load_settings() -> void:

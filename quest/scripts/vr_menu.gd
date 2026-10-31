@@ -11,6 +11,7 @@ const SIZE := Vector2(1.1, 0.72)
 const TOPPERS := {"grey": Color("#9aa3ad"), "red": Color("#e3262a"), "yellow": Color("#f5b800"), "blue": Color("#2f7bff"), "green": Color("#2fcf55")}
 
 var open := false
+var build_number := 0
 var viewport: SubViewport
 var quad: MeshInstance3D
 var beam: MeshInstance3D
@@ -23,7 +24,8 @@ var _pressed := false
 var _tex_mat: StandardMaterial3D
 
 
-func build(root: Node3D, ui_font: Font, initial: Dictionary) -> void:
+func build(root: Node3D, ui_font: Font, initial: Dictionary, build_no := 0) -> void:
+	build_number = build_no
 	font = ui_font
 	values = initial.duplicate()
 	root.add_child(self)
@@ -192,7 +194,7 @@ func _build_ui() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 10)
 	back.add_child(root)
-	var title := _label("OPTIONS", 60, Color(1.0, 0.85, 0.3))
+	var title := _label("OPTIONS      build %d" % build_number if build_number > 0 else "OPTIONS", 60, Color(1.0, 0.85, 0.3))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(title)
 	var cols := HBoxContainer.new()
