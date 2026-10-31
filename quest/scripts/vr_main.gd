@@ -44,7 +44,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "height": 1.0, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "trigger fires", "hud": "on"}
+var settings := {"music": 0.55, "effects": 0.8, "height": 1.0, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "trigger fires", "hud": "on", "battle": "JORDAN"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -255,6 +255,13 @@ func _on_menu_action(name: String) -> void:
 		"recentre":
 			_close_menu()
 			recenter()
+		"fight":
+			_close_menu()
+			start_game()
+			for b in ZSEngine.BOSSES:
+				if str(b.name) == str(settings.battle):
+					game.skip_boss(str(b.id), 1)
+					break
 		"end":
 			_close_menu()
 			if state != "title":
@@ -347,6 +354,10 @@ func _finish(_d: Dictionary) -> void:
 	screen.final_score = game.score
 	screen.final_wave = game.wave
 	screen.final_kills = game.kills
+	if game.practice:       # boss practice never counts toward scores, prizes or badges
+		screen.mode = "over"
+		audio.play_music("over", 1.0)
+		return
 	if game.score > best:
 		best = game.score
 		_save_best()

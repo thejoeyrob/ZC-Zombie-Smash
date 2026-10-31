@@ -230,6 +230,14 @@ func _build_ui() -> void:
 	_stepper(right, "pointer", "Pointer hand", ["right", "left"], "")
 	_stepper(right, "assist", "Fire assist", ["trigger fires", "buttons only"], "")
 	_stepper(right, "hud", "Screen shake", ["on", "off"], "")
+	right.add_child(_label("BOSS BATTLE", 30, Color(0.4, 1.0, 0.7)))
+	var names: Array = []
+	for b in ZSEngine.BOSSES:
+		names.append(str(b.name))
+	_stepper(right, "battle", "Boss", names, "")
+	var fight := _button("FIGHT THIS BOSS (PRACTICE)", Color("#7a2a8f"), 32)
+	fight.pressed.connect(func(): action.emit("fight"))
+	right.add_child(fight)
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(sp)
