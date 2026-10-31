@@ -89,8 +89,8 @@ jobs:
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "$SDK/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "build-tools;35.0.1" "platforms;android-35" "cmake;3.10.2.4988404" "ndk;28.1.13356709" >/dev/null
-          keytool -genkeypair -v -keystore "$RUNNER_TEMP/debug.keystore" -alias androiddebugkey -storepass android -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" >/dev/null
+          # one fixed signing key for every build, so each new install updates the old one in place (a debug key, nothing secret)
+          cp quest/tools/vr-debug.keystore "$RUNNER_TEMP/debug.keystore"
           mkdir -p "$HOME/.config/godot"
           cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]

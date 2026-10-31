@@ -1,6 +1,6 @@
 f55f514fd4999a7c0ec6d751eb773bec96736df171e38a6e5fadda623fd88d1e  .github/workflows/app-store-listing.yml
 93c614a2c8448a6fecbd7ef567bb51b5fa50ed05372d9aff3a3e79a77d287f71  .github/workflows/ios-testflight.yml
-195ea8fb972a114a6982d8231702a9fe99b4c7f8fc754980ed43228496bda454  .github/workflows/quest-build.yml
+2303b3a0bf02e4a2ef962a2ccb95f1e4b0f461ca25a2e3a842b7affdc68682af  .github/workflows/quest-build.yml
 f1479179aa9c93e275c99376272c3b2e08237e56efb7393399ca4999320ff35b  .github/workflows/supabase-setup.yml
 9c242215103fae15601251e17d5c5b0deb885ef9806955f571c130c000b862c6  .gitignore
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  .nojekyll
@@ -321,6 +321,7 @@ b379562dbedc7e44434822f0b8e1231e1741ae209893169c315ea00b6c2c19f9  quest/vr-art/s
 e271e0f9ef4f03115693987cb39f89aa9730cdc4e0d222e4742878dc86443fb1  quest/vr-art/side-mantis.png.import
 5c1be7cc2563071915af09a6edd5bb651a9924dc24199c838922b923a058f452  quest/vr-art/side-pinball.png
 6e9a4b3e2dc99943a953048a011d254026c5d02908e33a62851914b379bc7231  quest/vr-art/side-pinball.png.import
+12838a791b05bfa8e5c264974884a94f40ca503f6243c44e81462bcadc2936f7  quest/vr-art/wainscot.jpg
 73f86d15b87fbe8113aeee5249f4baede4818c7dd0e23218316af259412276d5  quest/vr-art/wallpaper.jpg
 1b1359a8c36774f05bdc9052de71c4493f5adffbb6691f3c338ad4116a158d40  quest/vr-art/wallpaper.jpg.import
 c1fc04a5c2574b1badece09b63a6f57e43bc2594baadc2121de3190c6c08d263  quest/vr-art/wood-trim.jpg
