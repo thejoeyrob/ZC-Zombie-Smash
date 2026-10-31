@@ -24,6 +24,7 @@ var caps := {}            # name -> MeshInstance3D
 var pressed := {}         # name -> bool
 var neon: Array = []
 var theme_color := Color(0.1, 0.85, 0.35)
+var side_art: Texture2D        # optional full-height art for the outside of both sides
 var lamp_red: StandardMaterial3D
 var lamp_green: StandardMaterial3D
 var lock_cap_mat: StandardMaterial3D
@@ -42,6 +43,16 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		Vector2(-0.02, 1.10), Vector2(-0.10, 1.60), Vector2(-0.04, 1.84), Vector2(-0.04, 1.96), Vector2(-0.70, 1.96), Vector2(-0.80, 1.84)])
 	VRBuild.side_panel(self, profile, -0.335, 0.04, body)
 	VRBuild.side_panel(self, profile, 0.335, 0.04, body)
+	if side_art != null:
+		for sx in [-1, 1]:
+			var sm := VRBuild.tex_mat(side_art, 0.15, 0.6)
+			sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			sm.alpha_scissor_threshold = 0.5
+			sm.cull_mode = BaseMaterial3D.CULL_DISABLED
+			if sx > 0:
+				sm.uv1_scale = Vector3(-1, 1, 1)
+				sm.uv1_offset = Vector3(1, 0, 0)
+			VRBuild.quad(self, Vector2(1.1, 1.96), Vector3(sx * 0.3585, 0.98, -0.25), sm, Vector3(0, sx * PI / 2.0, 0))
 	# edge neon (t-molding) along the front of both sides
 	if detail:
 		for sx in [-0.357, 0.357]:

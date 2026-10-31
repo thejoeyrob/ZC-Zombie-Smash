@@ -84,7 +84,9 @@ func _fill(p: Dictionary, open: bool) -> void:
 		VRBuild.label(p.root, "STAGE %d" % (p.index + 1), 0.045, Vector3(0, 0.012, 0.13), Color(1, 0.9, 0.6, 0.9), Vector3(-0.6, 0, 0), 3)
 	else:
 		# bobble head: a brass plinth, a spring and the boss on a springy neck
-		VRBuild.cylinder(p.root, 0.11, 0.025, Vector3(0, 0.0125, 0), gold, 0.1)
+		var base_tex = load("res://assets/art/bobble-base.png")
+		var base_mat: Material = VRBuild.tex_mat(base_tex, 0.1, 0.4) if base_tex != null else gold
+		VRBuild.cylinder(p.root, 0.11, 0.025, Vector3(0, 0.0125, 0), base_mat, 0.1)
 		VRBuild.cylinder(p.root, 0.014, 0.1, Vector3(0, 0.075, 0), VRBuild.mat(Color(0.8, 0.8, 0.85), 0.2, 0.9))
 		var head := Node3D.new()
 		head.position = Vector3(0, 0.125, 0)

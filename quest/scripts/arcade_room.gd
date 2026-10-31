@@ -107,6 +107,13 @@ func _front_row(root: Node3D, screen_tex: Texture2D, banner: Texture2D) -> void:
 	var bodies := [Color(0.14, 0.06, 0.28), Color(0.28, 0.05, 0.2), Color(0.05, 0.16, 0.28), Color(0.12, 0.12, 0.14), Color(0.28, 0.14, 0.04), Color(0.06, 0.24, 0.18), Color(0.25, 0.04, 0.06)]
 	var trims := [Color(0.2, 0.9, 1), Color(1, 0.3, 0.8), Color(1, 0.85, 0.2), Color(0.2, 1, 0.45), Color(1, 0.55, 0.1), Color(0.6, 0.4, 1), Color(1, 0.3, 0.3)]
 	var arts := ["arena-glowinghumanity.webp", "arena-discoman.webp", "arena-debo.webp", "", "arena-caffeinatedsloth.webp", "arena-fatamy.webp", "arena-drmantis.webp"]
+	# themed machines: slot -> [marquee, side art, screen art or ""]
+	var themed := {
+		1: ["marquee-disco.jpg", "side-disco.png", ""],
+		2: ["marquee-pinball.jpg", "side-pinball.png", "playfield-pinball.jpg"],
+		5: ["marquee-fatamy.jpg", "side-fatamy.png", ""],
+		6: ["marquee-mantis.jpg", "side-mantis.png", ""],
+	}
 	for i in range(7):
 		var x := (i - 3) * 0.86
 		var c := Cabinet.new()
@@ -118,7 +125,17 @@ func _front_row(root: Node3D, screen_tex: Texture2D, banner: Texture2D) -> void:
 		else:
 			var art: Texture2D = load("res://assets/art/" + arts[i])
 			var tex_for_screen := art
-			c.build(tex_for_screen, null, bodies[i], trims[i], false, names[i], bodies[i].lightened(0.15))
+			var marquee: Texture2D = null
+			if themed.has(i):
+				marquee = _art(themed[i][0], null)
+				c.side_art = _art(themed[i][1], null)
+				if themed[i][2] != "":
+					tex_for_screen = _art(themed[i][2], art)
+			c.build(tex_for_screen, marquee, bodies[i], trims[i], false, names[i], bodies[i].lightened(0.15))
+			if themed.has(i) and themed[i][2] != "":
+				var sq := c.find_child("ScreenQuad", true, false) as MeshInstance3D
+				if sq != null:
+					(sq.mesh as QuadMesh).size = Vector2(0.33, 0.66)
 			flickers.append([c.screen_mat, 1.0, 0.7 + i * 0.13, i * 1.7])
 	# a plain back wall behind the bank
 	VRBuild.box(root, Vector3(HALF_W * 2.0, HEIGHT, 0.05), Vector3(0, HEIGHT / 2.0, FRONT_Z - 0.03), VRBuild.mat(Color(0.05, 0.03, 0.09), 0.9))
@@ -158,7 +175,7 @@ func _decor(root: Node3D, font: Font) -> void:
 	hall = HallBoard.new()
 	hall.build(root, font, progress, Vector3(1.9, 1.85, BACK_Z - 0.08), PI)
 	# posters on the side walls
-	var posters := ["boss-jordan-stage1.webp", "boss-discoman-stage1.webp", "boss-fatamy-stage1.webp", "boss-debo-stage1.webp", "boss-drmantis-stage1.webp", "boss-caffeinatedsloth-stage1.webp"]
+	var posters := ["poster-1.jpg", "poster-2.jpg", "poster-3.jpg", "poster-4.jpg", "poster-5.jpg", "poster-6.jpg"]
 	var k := 0
 	for side in [-1, 1]:
 		for z in [0.0, 1.5, 3.0]:
@@ -166,9 +183,9 @@ func _decor(root: Node3D, font: Font) -> void:
 			holder.position = Vector3(side * (HALF_W - 0.03), 2.15, z + 0.4)
 			holder.rotation.y = -side * PI / 2.0
 			root.add_child(holder)
-			VRBuild.box(holder, Vector3(0.62, 0.8, 0.03), Vector3.ZERO, VRBuild.mat(Color(0.8, 0.65, 0.2), 0.3, 0.7))
+			VRBuild.box(holder, Vector3(0.68, 1.0, 0.03), Vector3.ZERO, VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5))
 			var t: Texture2D = load("res://assets/art/" + posters[k])
-			VRBuild.quad(holder, Vector2(0.56, 0.72), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.5, 0.6, false, Color(0.9, 0.9, 0.9)))
+			VRBuild.quad(holder, Vector2(0.66, 0.99), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6, false, Color(1, 1, 1)))
 			k += 1
 	# stools
 	var seat := VRBuild.mat(Color(0.7, 0.1, 0.15), 0.5)
