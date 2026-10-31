@@ -132,6 +132,8 @@ func _ready() -> void:
 	if args.has("shots"):
 		shot_dir = args.shots
 		_run_shots()
+	if args.has("tour"):
+		_run_tour()
 
 
 # ---- set-up -------------------------------------------------------------------------------------
@@ -799,6 +801,48 @@ func _press_lock() -> void:
 	_set_locked(true)
 
 
+# ---- a camera tour of the room, for a video ----------------------------------------------------------------
+func _run_tour() -> void:
+	room.prize_wall.set_unlocked(7, true)
+	progress.last = {"score": 48210, "wave": 7, "kills": 212, "bosses": 3, "seconds": 400}
+	progress.best = 61500
+	progress.badges = ["first_boss", "score_10k", "wave_10"]
+	room.hall.rows = [{"username": "SAMPLE ONE", "score": 912340}, {"username": "SAMPLE TWO", "score": 640200}, {"username": "SAMPLE THREE", "score": 233100}]
+	room.hall.refresh()
+	start_game()
+	demo = true
+	# [camera position, look-at point, seconds to get there, seconds to hold]
+	var stops := [
+		[Vector3(0, 1.68, 0.0), Vector3(0, 1.38, -0.6), 0.1, 4.0],
+		[Vector3(0.05, 1.55, 0.30), Vector3(0.0, 1.1, -0.3), 2.0, 3.0],
+		[Vector3(1.6, 1.9, 3.3), Vector3(0, 1.2, -0.8), 3.5, 1.5],
+		[Vector3(-1.4, 1.6, 1.3), Vector3(-1.3, 1.3, -0.4), 3.0, 2.5],
+		[Vector3(1.9, 1.6, 1.3), Vector3(2.1, 1.3, -0.4), 4.0, 2.5],
+		[Vector3(0.5, 1.7, 1.4), Vector3(-3.5, 2.0, 1.0), 3.0, 2.5],
+		[Vector3(-1.75, 1.65, 2.6), Vector3(-1.75, 1.5, 4.2), 3.5, 3.0],
+		[Vector3(-2.3, 1.5, 3.4), Vector3(-2.3, 1.4, 4.0), 2.5, 3.0],
+		[Vector3(-1.2, 1.5, 3.4), Vector3(-1.2, 1.4, 4.0), 2.5, 3.0],
+		[Vector3(-1.75, 1.95, 3.4), Vector3(-1.75, 1.9, 4.0), 2.0, 2.5],
+		[Vector3(1.9, 1.65, 2.5), Vector3(1.9, 1.85, 4.2), 3.5, 4.0],
+	]
+	var pos: Vector3 = stops[0][0]
+	var look: Vector3 = stops[0][1]
+	for st in stops:
+		var p0 := pos
+		var l0 := look
+		var t := 0.0
+		var dur: float = st[2]
+		while t < dur:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+			var k := smoothstep(0.0, 1.0, minf(t / dur, 1.0))
+			cam.look_at_from_position(p0.lerp(st[0], k), l0.lerp(st[1], k), Vector3.UP)
+		pos = st[0]
+		look = st[1]
+		await get_tree().create_timer(float(st[3])).timeout
+	get_tree().quit()
+
+
 # ---- screenshots for development --------------------------------------------------------------------------
 func _run_shots() -> void:
 	DirAccess.make_dir_recursive_absolute(shot_dir)
@@ -815,6 +859,10 @@ func _run_shots() -> void:
 		"menu": [Vector3(0, 1.62, 0.1), Vector3(0, 1.55, -0.7)],
 		"prizes": [Vector3(-1.75, 1.65, 2.7), Vector3(-1.75, 1.5, 4.2)],
 		"hall": [Vector3(1.9, 1.65, 2.5), Vector3(1.9, 1.85, 4.2)],
+		"bobbles": [Vector3(-1.75, 1.6, 3.0), Vector3(-1.75, 1.55, 4.0)],
+		"bobble_a": [Vector3(-2.3, 1.5, 3.45), Vector3(-2.3, 1.4, 4.0)],
+		"bobble_b": [Vector3(-1.2, 1.5, 3.45), Vector3(-1.2, 1.4, 4.0)],
+		"bobble_c": [Vector3(-1.75, 1.95, 3.45), Vector3(-1.75, 1.9, 4.0)],
 		"floor": [Vector3(0.0, 1.7, 0.0), Vector3(-0.3, 0.0, 1.8)],
 	}
 	var plan: Array = String(args.get("views", "head,panel,wide,left,back")).split(",")
