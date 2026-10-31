@@ -34,17 +34,23 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	# the wall either side of the door and above it
 	for side in [-1, 1]:
 		var cx: float = side * (door_w / 2.0 + wall_w / 2.0)
-		VRBuild.box(self, Vector3(wall_w, 1.1, 0.12), Vector3(cx, 0.55, 0), wood)
-		VRBuild.box(self, Vector3(wall_w, height - 1.1, 0.12), Vector3(cx, 1.1 + (height - 1.1) / 2.0, 0), paper)
+		var wmat: StandardMaterial3D = wood.duplicate()
+		wmat.uv1_scale = Vector3(wall_w / 2.5, 1, 1)
+		wmat.texture_repeat = true
+		var pmat: StandardMaterial3D = paper.duplicate()
+		pmat.uv1_scale = Vector3(wall_w / 2.4, (height - 1.25) / 2.4, 1)
+		pmat.texture_repeat = true
+		VRBuild.box(self, Vector3(wall_w, 1.25, 0.12), Vector3(cx, 0.625, 0), wmat)
+		VRBuild.box(self, Vector3(wall_w, height - 1.25, 0.12), Vector3(cx, 1.25 + (height - 1.25) / 2.0, 0), pmat)
 	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), paper)
 	# frame
-	var frame := VRBuild.mat(Color(0.93, 0.84, 0.78), 0.5)
+	var frame := VRBuild.mat(Color(0.26, 0.17, 0.33), 0.5)
 	for sx in [-1, 1]:
 		VRBuild.box(self, Vector3(0.12, door_h, 0.2), Vector3(sx * (door_w / 2.0 + 0.04), door_h / 2.0, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.24, 0.12, 0.2), Vector3(0, door_h + 0.04, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.2, 0.04, 0.4), Vector3(0, 0.01, 0.05), VRBuild.mat(Color(0.5, 0.45, 0.35), 0.4, 0.5, 0.2, Color(0.5, 0.45, 0.35)))   # brass threshold
 	# two leaves, each with a glass window
-	var leaf := VRBuild.mat(Color(0.82, 0.5, 0.6), 0.45)
+	var leaf := VRBuild.mat(Color(0.38, 0.14, 0.48), 0.45)
 	var brass := VRBuild.mat(Color(0.85, 0.65, 0.25), 0.25, 0.5, 0.2, Color(0.85, 0.65, 0.25))
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.5, 0.65, 0.9, 0.07)

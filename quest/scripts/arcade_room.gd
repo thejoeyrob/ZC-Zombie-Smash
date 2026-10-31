@@ -13,8 +13,9 @@ const ARC_RADIUS := 3.15
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 const SLOTS := [[-74.0, "jordan"], [-49.0, "discoman"], [-24.0, "debo"], [24.0, "fatamy"], [49.0, "glowinghumanity"], [74.0, "drmantis"]]
 const PLAYER_SLOT := 3
-const PINK := Color(0.97, 0.66, 0.75)      # soft pink for the wainscot and counters
-const CREAM := Color(0.95, 0.88, 0.82)
+const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
+const TRIM := Color(0.25, 0.17, 0.32)      # beams, posts and mouldings
+const WAIN_H := 1.25                       # height of the panelled lower wall
 
 var machines: Array = []        # Cabinet, in the order of SLOTS
 var player_index := PLAYER_SLOT
@@ -38,14 +39,14 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.34, 0.28, 0.5)
-	env.ambient_light_energy = 0.8
+	env.ambient_light_color = Color(0.5, 0.33, 0.68)
+	env.ambient_light_energy = 0.95
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
-	var wood := VRBuild.mat(PINK, 0.65)
-	var paper := VRBuild.tex_mat(_art("wallpaper.jpg", null), 0.35, 0.9, false, Color(1.15, 1.15, 1.15))
+	var wood := VRBuild.tex_mat(_art("wainscot.jpg", null), 0.9, 0.7)
+	var paper := VRBuild.tex_mat(_art("wallpaper.jpg", null), 0.7, 0.9)
 	wood.texture_repeat = true
 	paper.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -54,7 +55,8 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	var dw: StandardMaterial3D = wood.duplicate()
 	dw.uv1_scale = Vector3(1.0, 1, 1)
 	var dp: StandardMaterial3D = paper.duplicate()
-	dp.uv1_scale = Vector3(1.2, 2.0, 1)
+	dp.uv1_scale = Vector3(3.0, 1.4, 1)
+	dw.uv1_scale = Vector3(1.4, 1, 1)
 	door.build(root, FRONT_Z, HALF_W, HEIGHT, dw, dp, font)
 	_machines(root)
 	_back_wall(root, font)
@@ -77,7 +79,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling-tiles.jpg", null), 0.0, 0.9, false, Color(0.45, 0.4, 0.6))
+	var ceiling := VRBuild.tex_mat(_art("ceiling-tiles.jpg", null), 0.25, 0.9, false, Color(1.15, 1.05, 1.25))
 	ceiling.uv1_scale = Vector3(w / 1.5, d / 1.5, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -85,8 +87,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var walls := [[Vector3(0, 0, BACK_Z), PI, w], [Vector3(-HALF_W, 0, cz), PI / 2, d], [Vector3(HALF_W, 0, cz), -PI / 2, d]]
 	var neon_a := VRBuild.mat(Color(1.0, 0.2, 0.7), 0.4, 0.0, 2.2)
 	var neon_b := VRBuild.mat(Color(0.1, 0.9, 1.0), 0.4, 0.0, 2.2)
-	var trim := VRBuild.mat(CREAM, 0.55)
-	var groove := VRBuild.mat(PINK.darkened(0.22), 0.7)
+	var trim := VRBuild.mat(TRIM, 0.55)
 	var k := 0
 	for wall in walls:
 		var root_w := Node3D.new()
@@ -94,23 +95,16 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
+		wm.uv1_scale = Vector3(wall[2] / 2.5, 1, 1)
+		wm.texture_repeat = true
 		var pm: StandardMaterial3D = paper.duplicate()
-		pm.uv1_scale = Vector3(wall[2] / 1.4, (HEIGHT - 1.1) / 1.4, 1)
-		VRBuild.quad(root_w, Vector2(wall[2], 1.1), Vector3(0, 0.55, 0), wm)
-		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - 1.1), Vector3(0, 1.1 + (HEIGHT - 1.1) / 2.0, 0), pm)
-		# painted wainscot: raised panels between the skirting and the rail
-		var panels := int(wall[2] / 0.95)
-		for pi in range(panels):
-			var px0: float = -wall[2] / 2.0 + (pi + 0.5) * wall[2] / panels
-			var pw: float = wall[2] / panels - 0.16
-			VRBuild.box(root_w, Vector3(pw, 0.7, 0.012), Vector3(px0, 0.62, 0.006), groove)
-			VRBuild.box(root_w, Vector3(pw - 0.05, 0.65, 0.016), Vector3(px0, 0.62, 0.008), wood)
-		VRBuild.box(root_w, Vector3(wall[2], 0.07, 0.06), Vector3(0, 1.1, 0.03), trim)           # rail
-		VRBuild.box(root_w, Vector3(wall[2], 0.16, 0.05), Vector3(0, 0.08, 0.025), trim)          # skirting
+		pm.uv1_scale = Vector3(wall[2] / 2.4, (HEIGHT - WAIN_H) / 2.4, 1)
+		pm.texture_repeat = true
+		VRBuild.quad(root_w, Vector2(wall[2], WAIN_H), Vector3(0, WAIN_H / 2.0, 0), wm)
+		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - WAIN_H), Vector3(0, WAIN_H + (HEIGHT - WAIN_H) / 2.0, 0), pm)
 		VRBuild.box(root_w, Vector3(wall[2], 0.12, 0.1), Vector3(0, HEIGHT - 0.06, 0.05), trim)   # cornice
-		var n := neon_a if k % 2 == 0 else neon_b
-		VRBuild.box(root_w, Vector3(wall[2] - 0.3, 0.03, 0.03), Vector3(0, HEIGHT - 0.3, 0.03), n)
-		VRBuild.box(root_w, Vector3(wall[2] - 0.3, 0.03, 0.03), Vector3(0, HEIGHT - 0.4, 0.03), neon_b if k % 2 == 0 else neon_a)
+		var n := neon_b
+		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.14, 0.05), neon_a)      # glowing line under the cornice
 		# pilasters with a neon edge
 		var count := int(wall[2] / 2.4)
 		for i in range(1, count):
@@ -122,10 +116,12 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px + 0.1, HEIGHT / 2.0, 0.108), n)
 		k += 1
 	# ceiling beams and light panels
-	var beam := VRBuild.mat(Color(0.86, 0.72, 0.72), 0.7)
+	var beam := VRBuild.mat(TRIM.darkened(0.1), 0.7)
 	for z in [0.8, 3.3, 5.8]:
 		VRBuild.box(root, Vector3(w, 0.18, 0.28), Vector3(0, HEIGHT - 0.09, z), beam)
-	var panel_light := VRBuild.mat(Color(1, 0.9, 0.7), 0.5, 0.0, 1.5)
+		for dz in [-0.13, 0.13]:
+			VRBuild.box(root, Vector3(w, 0.022, 0.022), Vector3(0, HEIGHT - 0.19, z + dz), neon_a)       # neon along the beam
+	var panel_light := VRBuild.mat(Color(1, 0.82, 1.0), 0.5, 0.0, 1.8)
 	for x in [-2.8, 0.0, 2.8]:
 		for z in [2.05, 4.55, 7.0]:
 			VRBuild.box(root, Vector3(0.7, 0.04, 0.36), Vector3(x, HEIGHT - 0.04, z), panel_light)
@@ -218,8 +214,8 @@ func set_active(i: int) -> void:
 
 # ---- the back wall: prizes, pinball, hall of fame, vending ------------------------------------------------------
 func _back_wall(root: Node3D, font: Font) -> void:
-	var counter := VRBuild.mat(PINK.darkened(0.12), 0.6)
-	var top := VRBuild.mat(CREAM, 0.4)
+	var counter := VRBuild.mat(PURPLE, 0.55)
+	var top := VRBuild.mat(PURPLE.lightened(0.18), 0.4)
 	var gold := VRBuild.mat(Color(1.0, 0.8, 0.3), 0.3, 0.0, 1.0)
 	VRBuild.box(root, Vector3(3.4, 1.0, 0.6), Vector3(-2.65, 0.5, BACK_Z - 0.4), counter)
 	VRBuild.box(root, Vector3(3.5, 0.06, 0.7), Vector3(-2.65, 1.02, BACK_Z - 0.4), top)

@@ -20,7 +20,7 @@ func build(root: Node3D, pos: Vector3, yaw: float, font: Font) -> void:
 	position = pos
 	rotation.y = yaw
 	root.add_child(self)
-	var wood := VRBuild.mat(Color(0.9, 0.62, 0.69), 0.55)
+	var wood := VRBuild.mat(Color(0.26, 0.12, 0.36), 0.55)
 	var dark := VRBuild.mat(Color(0.05, 0.03, 0.09), 0.8)
 	var glow := VRBuild.mat(Color(1.0, 0.35, 0.75), 0.4, 0.0, 2.4)
 	# the cabinet: back board, side posts, two shelves, neon trim and a sign
