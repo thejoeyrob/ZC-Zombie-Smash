@@ -69,24 +69,30 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var depth := front_z - back_z
 	# lower body: the front is painted in the game's colour, with a chrome coin door and kick plate and glowing edge trim
 	var chrome := VRBuild.mat(Color(0.82, 0.84, 0.9), 0.18, 0.55, 0.16, Color(0.82, 0.84, 0.9))
-	var front_paint := VRBuild.mat(trim_color.darkened(0.62), 0.38, 0.15)
+	var black_tex := VRBuild.tex_mat(VRBuild.panel_texture(Color(0.045, 0.045, 0.05), 11), 0.0, 0.7)    # flat black with a subtle grain
+	black_tex.uv1_scale = Vector3(3, 6, 1)
+	black_tex.texture_repeat = true
+	var front_paint := black_tex
 	VRBuild.box(self, Vector3(0.67, 0.95, 0.03), Vector3(0, 0.475, front_z - 0.012), front_paint)
-	VRBuild.box(self, Vector3(0.65, 0.12, 0.036), Vector3(0, 0.07, front_z - 0.004), chrome)               # kick plate
+	VRBuild.box(self, Vector3(0.65, 0.12, 0.036), Vector3(0, 0.07, front_z - 0.004), black_tex)             # kick plate
 	VRBuild.box(self, Vector3(0.65, 0.02, 0.04), Vector3(0, 0.14, front_z - 0.002), dark)
 	if detail:
-		VRBuild.box(self, Vector3(0.16, 0.26, 0.012), Vector3(0, 0.6, front_z + 0.006), dark)            # recess for the coin door
-		VRBuild.box(self, Vector3(0.14, 0.24, 0.012), Vector3(0, 0.6, front_z + 0.014), chrome)           # coin door plate
-		var lit_a := VRBuild.mat(Color(1, 0.8, 0.2), 0.4, 0.0, 1.8)
-		var lit_b := VRBuild.mat(Color(1, 0.3, 0.2), 0.4, 0.0, 1.8)
-		VRBuild.label(self, "25c", 0.03, Vector3(0, 0.695, front_z + 0.0215), Color(0.1, 0.1, 0.12), Vector3.ZERO, 0)
-		VRBuild.box(self, Vector3(0.05, 0.1, 0.006), Vector3(0, 0.63, front_z + 0.021), VRBuild.mat(Color(0.35, 0.36, 0.4), 0.3, 0.5))          # one coin mech
-		VRBuild.box(self, Vector3(0.008, 0.055, 0.01), Vector3(0, 0.645, front_z + 0.026), dark)                                              # the slot
-		VRBuild.box(self, Vector3(0.032, 0.007, 0.01), Vector3(0, 0.6, front_z + 0.0255), lit_a)
-		VRBuild.cylinder(self, 0.013, 0.008, Vector3(0, 0.555, front_z + 0.023), VRBuild.mat(Color(0.85, 0.12, 0.12), 0.2, 0.0, 0.5), -1.0, Vector3(PI / 2, 0, 0), 18)
+		# the coin slot: a flat black door with an orange, lit coin insert
+		var orange := VRBuild.mat(Color(1.0, 0.5, 0.05), 0.3, 0.0, 3.2)
+		VRBuild.box(self, Vector3(0.12, 0.2, 0.01), Vector3(0, 0.6, front_z + 0.008), black_tex)
+		VRBuild.box(self, Vector3(0.062, 0.115, 0.006), Vector3(0, 0.625, front_z + 0.015), orange)         # glowing bezel
+		VRBuild.box(self, Vector3(0.012, 0.07, 0.008), Vector3(0, 0.63, front_z + 0.02), dark)             # the slot itself
+		VRBuild.box(self, Vector3(0.04, 0.012, 0.008), Vector3(0, 0.555, front_z + 0.016), orange)         # lit tab under it
+		var coin_light := OmniLight3D.new()
+		coin_light.position = Vector3(0, 0.62, front_z + 0.12)
+		coin_light.light_color = Color(1.0, 0.55, 0.15)
+		coin_light.light_energy = 0.25
+		coin_light.omni_range = 0.6
+		add_child(coin_light)
 		for sx in [-0.325, 0.325]:       # glowing trim down both front edges
 			VRBuild.box(self, Vector3(0.016, 0.95, 0.018), Vector3(sx, 0.475, front_z - 0.004), trim)
 		VRBuild.box(self, Vector3(0.6, 0.012, 0.012), Vector3(0, 0.98, front_z + 0.26), trim)
-	VRBuild.box(self, Vector3(0.67, 1.9, 0.03), Vector3(0, 0.95, back_z + 0.015), body)
+	VRBuild.box(self, Vector3(0.67, 1.9, 0.03), Vector3(0, 0.95, back_z + 0.015), black_tex)             # the back board: flat black
 	VRBuild.box(self, Vector3(0.67, 0.03, depth), Vector3(0, 0.015, mid_z), dark)
 	# control panel: one flat, textured painted surface in the theme colour, edged in chrome
 	panel = Node3D.new()
