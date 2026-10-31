@@ -147,6 +147,14 @@ func _fade(deck: AudioStreamPlayer, from_lin: float, to_lin: float, dur: float, 
 		tw.tween_callback(func(): if deck != _decks[_deck]: deck.stop())
 
 
+func set_volumes(music: float, effects: float) -> void:
+	music_volume = music
+	effects_volume = effects
+	var d := _decks[_deck]
+	if d.playing and current != "":
+		d.volume_db = _db(music_volume * MUSIC_TRIM) if music_volume > 0.001 else -80.0
+
+
 func stop_music(fade := 0.5) -> void:
 	want = ""
 	_remember()

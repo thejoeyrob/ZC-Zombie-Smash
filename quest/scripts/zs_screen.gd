@@ -36,6 +36,7 @@ func _ready() -> void:
 
 
 var _base := Transform2D.IDENTITY
+var no_shake := false
 
 
 func set_xf(pos: Vector2, rot: float) -> void:
@@ -212,7 +213,7 @@ func draw_world() -> void:
 				circle_line(Vector2(target.x, target.y), 16.0, hc(map.accent), 1.4, -PI / 2.0, -PI / 2.0 + TAU * g.arena.cool / 12.0)
 			idx += 1
 	var off := Vector2.ZERO
-	if g.shake > 0.0:
+	if g.shake > 0.0 and not no_shake:
 		off = Vector2(sin(g.t * 93.0) * g.shake, cos(g.t * 111.0) * g.shake * 0.55)
 		set_xf(off, 0.0)
 	draw_rect(Rect2(0, 0, W, 55), Color(0.02, 0.035, 0.03, 0.55))

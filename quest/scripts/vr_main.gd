@@ -43,6 +43,18 @@ var lock_prev := false
 var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
+const SETTINGS_PATH := "user://settings.json"
+var settings := {"music": 0.55, "effects": 0.8, "height": 1.0, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "trigger fires", "hud": "on"}
+var progress := VRProgress.new()
+var run_bosses := 0
+var run_grenades := 0
+var run_hurt_wave := false
+var run_clean_wave := false
+var run_start := 0.0
+var menu: VRMenu
+var menu_prev_btn := false
+var menu_resume_state := ""
+var base_scale := 1.0
 const HAND_ANCHOR := 0.032     # the stick ball sits this far into the palm
 
 # development / screenshot helpers (desktop only)
@@ -60,23 +72,49 @@ func _ready() -> void:
 		var kv := a.lstrip("-").split("=", true, 1)
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	_load_best()
+	progress.load_all()
 	font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
 	_setup_xr()
 	_build_screen()
 	room = ArcadeRoom.new()
 	var banner: Texture2D = load("res://assets/art/game-banner.webp")
-	room.build(self, viewport.get_texture(), banner, font)
+	room.build(self, viewport.get_texture(), banner, font, progress)
 	cab = room.main_cabinet
+	room.prize_wall.set_unlocked(progress.unlocked(), true)
+	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
+	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	cab.position.z = -0.52
 	_build_hands()
 	teleporter = Teleporter.new()
 	teleporter.build(self)
 	_build_fade()
+	_load_settings()
+	menu = VRMenu.new()
+	menu.build(self, font, settings)
+	menu.changed.connect(_on_setting)
+	menu.action.connect(_on_menu_action)
+	if args.has("die"):
+		get_tree().create_timer(7.0).timeout.connect(func():
+			game.end("test")
+			await get_tree().create_timer(5.0).timeout
+			print("DIE TEST: state ", state, " runs ", progress.runs, " best ", progress.best, " unlocked ", progress.unlocked()))
+	if args.has("prizes"):
+		room.prize_wall.set_unlocked(int(args.prizes), true)
+	if args.has("fakehall"):    # development only: sample rows so the board layout can be checked offline
+		progress.last = {"score": 48210, "wave": 7, "kills": 212, "bosses": 3, "seconds": 400}
+		progress.best = 61500
+		progress.badges = ["first_boss", "score_10k", "wave_10"]
+		room.hall.rows = [{"username": "SAMPLE ONE", "score": 912340}, {"username": "SAMPLE TWO", "score": 640200}, {"username": "SAMPLE THREE", "score": 233100}, {"username": "SAMPLE FOUR", "score": 98700}]
+		room.hall.refresh()
+	if args.has("menu"):
+		get_tree().create_timer(2.0).timeout.connect(_open_menu)
 	if args.has("unlocked"):
 		_set_locked(false)
 	audio = ZSAudio.new()
 	add_child(audio)
 	audio.setup(cab)
+	audio.set_volumes(float(settings.music), float(settings.effects))
+	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	audio.play_music("home", 0.01)
 	screen.best = best
 	if not xr_on:
@@ -171,6 +209,80 @@ func _build_fade() -> void:
 	cam.add_child(fade_quad)
 
 
+func _load_settings() -> void:
+	if FileAccess.file_exists(SETTINGS_PATH):
+		var f := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+		var d = JSON.parse_string(f.get_as_text())
+		if d is Dictionary:
+			for k in settings:
+				if d.has(k):
+					settings[k] = d[k]
+			settings.snap = int(settings.snap)
+
+
+func _save_settings() -> void:
+	var f := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(settings))
+
+
+func _on_setting(key: String, value) -> void:
+	settings[key] = value
+	match key:
+		"music", "effects":
+			audio.set_volumes(float(settings.music), float(settings.effects))
+		"height":
+			_apply_height()
+		"topper":
+			cab.set_topper_color(VRMenu.TOPPERS[value])
+		"snap":
+			settings.snap = int(value)
+		"hud":
+			screen.no_shake = value == "off"
+	if key != "music" and key != "effects" and key != "height" and key != "haptics":
+		audio.ui("click")
+	_save_settings()
+
+
+func _apply_height() -> void:
+	cab.scale = Vector3.ONE * clampf(base_scale * float(settings.height), 0.7, 1.4)
+
+
+func _on_menu_action(name: String) -> void:
+	match name:
+		"resume":
+			_close_menu()
+		"recentre":
+			_close_menu()
+			recenter()
+		"end":
+			_close_menu()
+			if state != "title":
+				state = "title"
+				game = null
+				screen.g = null
+				screen.mode = "title"
+				audio.play_music("home", 1.0)
+
+
+func _open_menu() -> void:
+	menu_resume_state = state
+	if state == "play":
+		state = "paused"
+		screen.mode = "paused"
+	menu.set_open(true)
+	menu.present(cam.global_position, -cam.global_transform.basis.z)
+	audio.ui("page")
+
+
+func _close_menu() -> void:
+	menu.set_open(false)
+	if menu_resume_state == "play" and state == "paused":
+		state = "play"
+		screen.mode = "play"
+	audio.ui("back")
+
+
 func _load_best() -> void:
 	if FileAccess.file_exists(BEST_PATH):
 		var f := FileAccess.open(BEST_PATH, FileAccess.READ)
@@ -193,6 +305,11 @@ func start_game() -> void:
 	screen.mode = "play"
 	state = "play"
 	acc = 0.0
+	run_bosses = 0
+	run_grenades = 0
+	run_hurt_wave = false
+	run_clean_wave = false
+	run_start = clock
 	audio.want = "main"
 	audio.wave = 1
 
@@ -201,12 +318,21 @@ func _on_event(type: String, data: Dictionary) -> void:
 	audio.on_event(type, data, game)
 	match type:
 		"shot": _haptic(grab_hand_other(), 0.18, 0.04)
-		"hurt": _haptic(-1, 0.9, 0.25)
+		"hurt":
+			run_hurt_wave = true
+			_haptic(-1, 0.9, 0.25)
+		"wave":
+			if int(data.get("wave", 1)) > 1 and not run_hurt_wave:
+				run_clean_wave = true
+			run_hurt_wave = false
+		"throw": run_grenades += 1
 		"explosion": _haptic(-1, 0.7, 0.2)
 		"bossAttack": _haptic(-1, 0.35, 0.12)
 		"pickup": _haptic(-1, 0.4, 0.08)
 		"mutation": _haptic(-1, 0.9, 0.5)
-		"bossDown": _haptic(-1, 1.0, 0.6)
+		"bossDown":
+			run_bosses += 1
+			_haptic(-1, 1.0, 0.6)
 		"over": _finish(data)
 		"death": _haptic(-1, 1.0, 0.6)
 
@@ -225,17 +351,22 @@ func _finish(_d: Dictionary) -> void:
 		best = game.score
 		_save_best()
 		audio.stinger("highscore")
+	var fresh := progress.record_run(game.score, game.wave, game.kills, run_bosses, run_grenades, run_clean_wave, clock - run_start)
+	room.prize_wall.set_unlocked(progress.unlocked())
+	room.hall.refresh()
+	if not fresh.is_empty():
+		audio.sfx("goldheart", 0.9)
 	screen.best = best
 	screen.mode = "over"
 	audio.play_music("over", 1.0)
 
 
 func _haptic(side: int, amp: float, dur: float) -> void:
-	if not xr_on:
+	if not xr_on or float(settings.haptics) <= 0.01:
 		return
 	for h in hands:
 		if side == -1 or h.side == side:
-			h.ctrl.trigger_haptic_pulse("haptic", 0.0, amp, dur, 0.0)
+			h.ctrl.trigger_haptic_pulse("haptic", 0.0, amp * float(settings.haptics), dur, 0.0)
 
 
 # ---- per-frame --------------------------------------------------------------------------------------
@@ -259,9 +390,15 @@ func _process(delta: float) -> void:
 	if xr_on and int(clock * 2.0) != int((clock - delta) * 2.0):
 		_fix_poses()
 	room.animate(clock)
+	room.prize_wall.animate(delta)
 	_calibrate(delta)
 	var hs := _read_hands(delta)
 	_pose_hands(hs)
+	_menu_input(hs)
+	var pg: Array = []
+	for i in range(2):
+		pg.append({"grab": hs[i].gripping and grab_hand != i and not menu.open, "xf": hs[i].vis_xf, "point": hs[i].palm})
+	room.prize_wall.update(pg)
 	_locomotion(hs, delta)
 	_stick(hs, delta)
 	_buttons(hs)
@@ -294,7 +431,8 @@ func recenter() -> void:
 	origin.position = -(Basis(Vector3.UP, origin.rotation.y) * head)
 	var h := cam.global_position.y
 	if h > 0.9:
-		cab.scale = Vector3.ONE * clampf(h / 1.70, 0.8, 1.2)
+		base_scale = clampf(h / 1.70, 0.8, 1.2)
+		_apply_height()
 
 
 ## Both hands as raw controller data (from the controllers in VR, simulated on the desktop).
@@ -376,6 +514,7 @@ func _pose_hands(hs: Array) -> void:
 		vis.global_transform = final_xf
 		vis.visible = xr_on or demo
 		h.palm = final_xf.origin
+		h.vis_xf = final_xf
 		h.tip = final_xf * Vector3(0, 0, -0.15 + 0.05 * idx_c)
 
 
@@ -394,7 +533,23 @@ func _head_floor() -> Vector3:
 	return Vector3(g.x, 0.0, g.z)
 
 
+func _menu_input(hs: Array) -> void:
+	var pressed: bool = hs[0].menu or hs[1].menu
+	if pressed and not menu_prev_btn:
+		if menu.open:
+			_close_menu()
+		else:
+			_open_menu()
+	menu_prev_btn = pressed
+	if menu.open:
+		var ph := 0 if settings.pointer == "left" else 1
+		menu.point(hs[ph].aim_origin, hs[ph].aim_dir, hs[ph].trigger)
+
+
 func _locomotion(hs: Array, delta: float) -> void:
+	if menu.open:
+		teleporter.aim(Vector3.ZERO, Vector3.UP)
+		return
 	if locked or not xr_on and not demo:
 		teleporter.aim(Vector3.ZERO, Vector3.UP)
 		return
@@ -417,7 +572,7 @@ func _locomotion(hs: Array, delta: float) -> void:
 		fwd.y = 0.0
 		fwd = fwd.normalized()
 		var right := fwd.cross(Vector3.UP)
-		var step := (fwd * mv.y + right * mv.x) * 1.7 * delta
+		var step := (fwd * mv.y + right * mv.x) * float(settings.walk) * delta
 		origin.position += step
 		var hp := _head_floor()
 		var clamped := Vector3(clampf(hp.x, -2.4, 2.4), 0.0, clampf(hp.z, 0.1, 3.5))
@@ -425,7 +580,7 @@ func _locomotion(hs: Array, delta: float) -> void:
 	var tx: float = hs[1].stick.x
 	if absf(tx) > 0.6 and turn_ready:
 		turn_ready = false
-		_turn(-signf(tx) * PI / 4.0)
+		_turn(-signf(tx) * deg_to_rad(float(settings.snap)))
 	elif absf(tx) < 0.3:
 		turn_ready = true
 
@@ -515,11 +670,11 @@ func _buttons(hs: Array) -> void:
 			var hit := cab.button_at(cab.to_panel(p), 0.032 if use_tip else 0.07)
 			if hit != "" and grab_hand != i and (hit != "lock" or use_tip):
 				down[hit] = true
-		if locked and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
+		if locked and not menu.open and settings.assist == "trigger fires" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
 			down["fire"] = true       # assist: any trigger fires
 		if h.get("a", false):
 			down["grenade"] = true
-		if h.get("b", false) or h.get("menu", false):
+		if h.get("b", false):
 			down["menu"] = true
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
@@ -584,6 +739,9 @@ func _run_shots() -> void:
 		"hands": [Vector3(0.05, 1.55, 0.30), Vector3(0.0, 1.1, -0.3)],
 		"hands2": [Vector3(-0.3, 1.45, 0.25), Vector3(-0.15, 1.12, -0.28)],
 		"light": [Vector3(-0.1, 1.62, 0.1), Vector3(-0.38, 1.38, -0.2)],
+		"menu": [Vector3(0, 1.62, 0.1), Vector3(0, 1.55, -0.7)],
+		"prizes": [Vector3(-1.75, 1.65, 2.7), Vector3(-1.75, 1.5, 4.2)],
+		"hall": [Vector3(1.9, 1.65, 2.5), Vector3(1.9, 1.85, 4.2)],
 		"floor": [Vector3(0.0, 1.7, 0.0), Vector3(-0.3, 0.0, 1.8)],
 	}
 	var plan: Array = String(args.get("views", "head,panel,wide,left,back")).split(",")

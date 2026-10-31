@@ -10,9 +10,13 @@ const HEIGHT := 2.9
 var main_cabinet: Cabinet
 var flickers: Array = []      # [material, base_energy, speed, phase]
 var sign_labels: Array = []
+var prize_wall: PrizeWall
+var hall: HallBoard
+var progress: VRProgress
 
 
-func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font) -> void:
+func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, prog: VRProgress) -> void:
+	progress = prog
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
@@ -130,28 +134,16 @@ func _decor(root: Node3D, font: Font) -> void:
 	var sign_back := VRBuild.box(root, Vector3(3.6, 0.62, 0.05), Vector3(0, 2.52, FRONT_Z + 0.04), VRBuild.mat(Color(0.02, 0.01, 0.04), 0.9))
 	var l1 := VRBuild.label(root, "ZOMBIE SMASH", 0.5, Vector3(0, 2.52, FRONT_Z + 0.075), Color(0.4, 1.0, 0.45), Vector3.ZERO, 14, font)
 	sign_labels.append(l1)
-	# back wall: prize counter with shelves
+	# back wall: prizes on the left, the hall of fame on the right
 	var counter := VRBuild.mat(Color(0.22, 0.1, 0.05), 0.6)
-	VRBuild.box(root, Vector3(3.4, 1.0, 0.6), Vector3(0, 0.5, BACK_Z - 0.4), counter)
-	VRBuild.box(root, Vector3(3.5, 0.06, 0.7), Vector3(0, 1.02, BACK_Z - 0.4), VRBuild.mat(Color(0.5, 0.3, 0.15), 0.4))
-	VRBuild.box(root, Vector3(3.4, 0.04, 0.4), Vector3(0, 1.0, BACK_Z - 0.18), VRBuild.mat(Color(1.0, 0.8, 0.3), 0.3, 0.0, 1.0))
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 21
-	for shelf in range(3):
-		var y := 1.35 + shelf * 0.42
-		VRBuild.box(root, Vector3(3.4, 0.04, 0.3), Vector3(0, y, BACK_Z - 0.17), VRBuild.mat(Color(0.35, 0.2, 0.1), 0.6))
-		for i in range(14):
-			var col := Color.from_hsv(rng.randf(), 0.7, 0.9)
-			var px := -1.55 + i * 0.238 + rng.randf() * 0.04
-			var kind := rng.randi() % 3
-			if kind == 0:
-				VRBuild.sphere(root, 0.09, Vector3(px, y + 0.13, BACK_Z - 0.17), VRBuild.mat(col, 0.7, 0.0, 0.35))
-			elif kind == 1:
-				VRBuild.box(root, Vector3(0.16, 0.2, 0.12), Vector3(px, y + 0.12, BACK_Z - 0.17), VRBuild.mat(col, 0.7, 0.0, 0.35))
-			else:
-				VRBuild.cylinder(root, 0.07, 0.22, Vector3(px, y + 0.13, BACK_Z - 0.17), VRBuild.mat(col, 0.7, 0.0, 0.35))
-	var prizes := VRBuild.label(root, "PRIZES", 0.34, Vector3(0, 2.62, BACK_Z - 0.08), Color(1.0, 0.35, 0.75), Vector3(0, PI, 0), 12, font)
-	sign_labels.append(prizes)
+	VRBuild.box(root, Vector3(3.4, 1.0, 0.6), Vector3(-1.75, 0.5, BACK_Z - 0.4), counter)
+	VRBuild.box(root, Vector3(3.5, 0.06, 0.7), Vector3(-1.75, 1.02, BACK_Z - 0.4), VRBuild.mat(Color(0.5, 0.3, 0.15), 0.4))
+	VRBuild.box(root, Vector3(3.4, 0.04, 0.4), Vector3(-1.75, 1.0, BACK_Z - 0.18), VRBuild.mat(Color(1.0, 0.8, 0.3), 0.3, 0.0, 1.0))
+	VRBuild.box(root, Vector3(3.2, 0.75, 0.3), Vector3(1.9, 0.375, BACK_Z - 0.2), counter)
+	prize_wall = PrizeWall.new()
+	prize_wall.build(root, Vector3(-1.75, 0.0, BACK_Z - 0.2), PI, font)
+	hall = HallBoard.new()
+	hall.build(root, font, progress, Vector3(1.9, 1.85, BACK_Z - 0.08), PI)
 	# posters on the side walls
 	var posters := ["boss-jordan-stage1.webp", "boss-discoman-stage1.webp", "boss-fatamy-stage1.webp", "boss-debo-stage1.webp", "boss-drmantis-stage1.webp", "boss-caffeinatedsloth-stage1.webp"]
 	var k := 0
