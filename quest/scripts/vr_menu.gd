@@ -246,7 +246,7 @@ func _build_ui() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	root.add_child(row)
-	for a in [["RESUME", "resume", Color("#1f8f4a")], ["RECENTRE", "recentre", Color("#2a5fa8")], ["END GAME", "end", Color("#a8302a")]]:
+	for a in [["RESUME", "resume", Color("#1f8f4a")], ["RECENTRE", "recentre", Color("#2a5fa8")], ["END GAME", "end", Color("#a8302a")], ["EXIT ARCADE", "quit", Color("#5a1a1a")]]:
 		var b := _button(a[0], a[2], 38)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func(): action.emit(a[1]))

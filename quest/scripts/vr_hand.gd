@@ -31,23 +31,32 @@ func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color :=
 		glove.texture_repeat = true
 	var stitch := VRBuild.mat(glove_color.darkened(0.35), 0.7)
 	var cuff := VRBuild.mat(cuff_color, 0.5)
-	# palm and back of the hand
-	var palm := MeshInstance3D.new()
+	# palm and back of the hand, built from soft overlapping masses so it reads as a hand, not a block
+	var core := MeshInstance3D.new()
 	var pm := BoxMesh.new()
-	pm.size = Vector3(0.028, 0.066, 0.082)
-	palm.mesh = pm
-	palm.material_override = glove
-	palm.position = Vector3(0, 0, -0.012)
-	add_child(palm)
-	var knuckle := VRBuild.cylinder(self, 0.0125, 0.068, Vector3(0, 0, -0.056), glove, -1.0, Vector3(0, 0, 0), 12)
-	knuckle.rotation = Vector3(0, 0, 0)
-	# a round heel so the hand reads as rounded, not blocky
-	VRBuild.sphere(self, 0.034, Vector3(-s * 0.002, 0, 0.012), glove, 14)
-	# wrist cuff
-	VRBuild.cylinder(self, 0.036, 0.04, Vector3(0, -0.004, 0.058), cuff, 0.033, Vector3(PI / 2, 0, 0), 16)
-	VRBuild.cylinder(self, 0.0375, 0.008, Vector3(0, -0.004, 0.038), VRBuild.mat(Color(0.97, 0.97, 0.97), 0.5), -1.0, Vector3(PI / 2, 0, 0), 16)
-	# a stitched line along the back of the hand
-	VRBuild.box(self, Vector3(0.002, 0.004, 0.07), Vector3(-s * 0.0155, 0, -0.01), stitch)
+	pm.size = Vector3(0.022, 0.058, 0.07)
+	core.mesh = pm
+	core.material_override = glove
+	core.position = Vector3(0, 0, -0.016)
+	add_child(core)
+	var dome := VRBuild.sphere(self, 0.034, Vector3(-s * 0.007, 0.0, -0.022), glove, 16)      # back of the hand
+	dome.scale = Vector3(0.62, 0.95, 1.18)
+	var pad := VRBuild.sphere(self, 0.032, Vector3(s * 0.007, 0.0, -0.02), glove, 16)         # palm pad
+	pad.scale = Vector3(0.55, 0.95, 1.2)
+	var mound := VRBuild.sphere(self, 0.024, Vector3(s * 0.006, 0.027, 0.002), glove, 14)     # thumb mound
+	mound.scale = Vector3(0.8, 1.0, 1.15)
+	VRBuild.sphere(self, 0.03, Vector3(-s * 0.002, -0.004, 0.018), glove, 14)                # heel of the hand
+	for f in FINGERS:
+		var kn := VRBuild.sphere(self, float(f[3]) * 1.12, Vector3(0, f[1], -0.054), glove, 10)   # knuckles
+		kn.scale = Vector3(1.0, 1.0, 1.0)
+	# wrist cuff: a ribbed band and a coloured stripe
+	VRBuild.cylinder(self, 0.034, 0.05, Vector3(0, -0.004, 0.066), glove, 0.032, Vector3(PI / 2, 0, 0), 20)
+	VRBuild.cylinder(self, 0.0365, 0.012, Vector3(0, -0.004, 0.052), cuff, -1.0, Vector3(PI / 2, 0, 0), 20)
+	for k in range(3):
+		VRBuild.cylinder(self, 0.0355, 0.004, Vector3(0, -0.004, 0.072 + k * 0.012), VRBuild.mat(Color(0.82, 0.82, 0.86), 0.7), -1.0, Vector3(PI / 2, 0, 0), 20)
+	# a stitched line along the back of the hand and a velcro tab
+	VRBuild.box(self, Vector3(0.002, 0.004, 0.07), Vector3(-s * 0.0235, 0, -0.012), stitch)
+	VRBuild.box(self, Vector3(0.006, 0.03, 0.02), Vector3(-s * 0.036, 0.0, 0.03), VRBuild.mat(Color(0.2, 0.2, 0.24), 0.7))
 	for f in FINGERS:
 		var root := Node3D.new()
 		root.position = Vector3(0, f[1], -0.056)
@@ -76,6 +85,16 @@ func _chain(parent: Node3D, lengths: Array, radius: float, mat: Material) -> Arr
 		seg.position = Vector3(0, 0, -len / 2.0)
 		j.add_child(seg)
 		out.append(j)
+		if i > 0:
+			var jb := MeshInstance3D.new()      # a small knuckle where this bone starts
+			var sm := SphereMesh.new()
+			sm.radius = r * 1.05
+			sm.height = r * 2.1
+			sm.radial_segments = 8
+			sm.rings = 4
+			jb.mesh = sm
+			jb.material_override = mat
+			j.add_child(jb)
 		var next := Node3D.new()
 		next.position = Vector3(0, 0, -len)
 		j.add_child(next)

@@ -13,6 +13,7 @@ var cam: Camera3D
 var hands: Array = []          # [{ctrl, aim, mesh, side}]
 var room: ArcadeRoom
 var cab: Cabinet
+var machines: Array = []
 var viewport: SubViewport
 var screen: ZSScreen
 var audio: ZSAudio
@@ -80,20 +81,23 @@ func _ready() -> void:
 	room = ArcadeRoom.new()
 	var banner: Texture2D = load("res://assets/art/game-banner.webp")
 	room.build(self, viewport.get_texture(), banner, font, progress)
-	cab = room.main_cabinet
+	machines = room.machines
+	cab = machines[room.player_index]
+	cab.set_live(viewport.get_texture())
+	room.set_active(room.player_index)
 	room.prize_wall.set_unlocked(progress.unlocked(), true)
 	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
-	cab.position.z = -0.52
 	_build_hands()
 	teleporter = Teleporter.new()
-	teleporter.build(self)
+	teleporter.build(self, room.spots)
 	_build_fade()
 	_load_settings()
 	menu = VRMenu.new()
 	menu.build(self, font, settings, build_number())
 	# a small build number on the machine's panel and on the floor sign, so a new install is easy to recognise
-	VRBuild.label(cab.panel, "BUILD %d" % build_number(), 0.03, Vector3(0.27, 0.003, 0.105), Color(1, 1, 1, 0.55), Vector3(-PI / 2, 0, 0), 3)
+	for m in machines:
+		VRBuild.label(m.panel, "BUILD %d" % build_number(), 0.03, Vector3(0.27, 0.003, 0.105), Color(1, 1, 1, 0.55), Vector3(-PI / 2, 0, 0), 3)
 	menu.changed.connect(_on_setting)
 	menu.action.connect(_on_menu_action)
 	if args.has("die"):
@@ -156,9 +160,8 @@ func _setup_xr() -> void:
 
 
 func _setup_desktop_camera() -> void:
-	cam.position = Vector3(0, 1.68, 0.0)
 	cam.fov = 70.0
-	cam.look_at_from_position(cam.position, Vector3(0, 1.38, -0.6), Vector3.UP)
+	cam.look_at_from_position(cab.stand_world() + Vector3(0, 1.68, 0), cab.look_world() - Vector3(0, 0.1, 0), Vector3.UP)
 
 
 func _build_screen() -> void:
@@ -258,7 +261,8 @@ func _on_setting(key: String, value) -> void:
 
 
 func _apply_height() -> void:
-	cab.scale = Vector3.ONE * clampf(base_scale * float(settings.height), 0.7, 1.4)
+	for m in machines:
+		m.scale = Vector3.ONE * clampf(base_scale * float(settings.height), 0.7, 1.4)
 
 
 func _on_menu_action(name: String) -> void:
@@ -268,6 +272,8 @@ func _on_menu_action(name: String) -> void:
 		"recentre":
 			_close_menu()
 			recenter()
+		"quit":
+			get_tree().quit()
 		"fight":
 			_close_menu()
 			start_game()
@@ -449,14 +455,11 @@ func recenter() -> void:
 	calibrated = true
 	if not xr_on:
 		return
-	var yaw := cam.rotation.y
-	origin.rotation.y = -yaw
-	var head := Vector3(cam.position.x, 0.0, cam.position.z)
-	origin.position = -(Basis(Vector3.UP, origin.rotation.y) * head)
 	var h := cam.global_position.y
 	if h > 0.9:
 		base_scale = clampf(h / 1.70, 0.8, 1.2)
 		_apply_height()
+	_place_player(cab.stand_world(), cab.look_world())
 
 
 ## Both hands as raw controller data (from the controllers in VR, simulated on the desktop).
@@ -551,6 +554,13 @@ func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
 	return d
 
 
+func _solid(p: Vector3, r: float) -> Vector3:
+	var out := p
+	for m in machines:
+		out = m.constrain(out, r)
+	return out
+
+
 ## Works out the hand the player sees (solid against the machine) and the points that touch the controls.
 func _pose_hands(hs: Array) -> void:
 	for i in range(hs.size()):
@@ -561,10 +571,10 @@ func _pose_hands(hs: Array) -> void:
 		h.grip = xf * Vector3(sgn * HAND_ANCHOR, 0.0, -0.012)      # where the stick ball is held
 		# keep palm and finger out of the cabinet
 		var pos := xf.origin
-		var palm := cab.constrain(pos, 0.04)
+		var palm := _solid(pos, 0.04)
 		var shift := palm - pos
 		var tipw: Vector3 = xf * Vector3(0, 0, -0.15) + shift
-		var tip2 := cab.constrain(tipw, 0.011)
+		var tip2 := _solid(tipw, 0.011)
 		var final_xf := xf
 		final_xf.origin = pos + shift + (tip2 - tipw)
 		var holding := grab_hand == i
@@ -582,7 +592,11 @@ func _pose_hands(hs: Array) -> void:
 # ---- moving about the room (green light) --------------------------------------------------------------
 func _set_locked(on: bool) -> void:
 	locked = on
-	cab.set_lock_light(on)
+	if on:
+		room.set_active(machines.find(cab))
+	else:
+		for m in machines:
+			m.set_lock_light(false)
 	teleporter.set_shown(not on)
 	if not on and state == "play":
 		state = "paused"
@@ -636,7 +650,7 @@ func _locomotion(hs: Array, delta: float) -> void:
 		var step := (fwd * mv.y + right * mv.x) * float(settings.walk) * delta
 		origin.position += step
 		var hp := _head_floor()
-		var clamped := Vector3(clampf(hp.x, -2.4, 2.4), 0.0, clampf(hp.z, 0.1, 3.5))
+		var clamped := room.collide(hp)
 		origin.position += clamped - hp
 	var tx: float = hs[1].stick.x
 	if absf(tx) > 0.6 and turn_ready:
@@ -661,11 +675,13 @@ func teleport_to(idx: int) -> void:
 	var m := fade_quad.material_override as StandardMaterial3D
 	var tw := create_tween()
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.12)
-	tw.tween_callback(func(): _place_player(Teleporter.SPOTS[idx][2], Teleporter.SPOTS[idx][3]))
+	tw.tween_callback(func(): _place_player(teleporter.spots[idx][2], teleporter.spots[idx][3]))
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
 	tw.tween_callback(func():
 		fade_quad.visible = false
-		tele_busy = false)
+		tele_busy = false
+		if str(teleporter.spots[idx][0]) == "exit":
+			_open_menu())
 
 
 func _place_player(pos: Vector3, look: Vector3) -> void:
@@ -731,6 +747,10 @@ func _buttons(hs: Array) -> void:
 			var hit := cab.button_at(cab.to_panel(p), 0.032 if use_tip else 0.07)
 			if hit != "" and grab_hand != i and (hit != "lock" or use_tip):
 				down[hit] = true
+			if not locked and use_tip:
+				for m in machines:
+					if m != cab and m.button_at(m.to_panel(p), 0.032) == "lock":
+						down["lock"] = true
 		if locked and not menu.open and settings.assist == "trigger fires" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
 			down["fire"] = true       # assist: any trigger fires
 		if h.get("a", false):
@@ -784,21 +804,48 @@ func _buttons(hs: Array) -> void:
 	lock_prev = down.lock
 
 
-## The machine's LOCK button: red keeps you at the machine, green lets you walk and teleport.
+## A machine's LOCK button: red keeps you at that machine, green lets you walk and teleport.
 func _press_lock() -> void:
 	_haptic(-1, 0.4, 0.06)
 	if locked:
 		audio.ui("toggle")
 		_set_locked(false)
 		return
-	# going back to red: you must be standing at the machine; the player is placed exactly in front of it
-	var spot: Array = Teleporter.SPOTS[0]
-	if _head_floor().distance_to(spot[2]) > 1.1:
+	# going back to red: you must be standing at a machine; the player is placed exactly in front of it
+	var best := -1
+	var best_d := 1.4
+	for i in range(machines.size()):
+		var d := _head_floor().distance_to(machines[i].stand_world())
+		if d < best_d:
+			best_d = d
+			best = i
+	if best < 0:
 		audio.ui("error")
 		return
 	audio.ui("toggle")
-	_place_player(spot[2], spot[3])
+	_select_machine(best)
+	_place_player(cab.stand_world(), cab.look_world())
 	_set_locked(true)
+
+
+## Makes a machine the one in play: the live screen, the sound and the controls move to it.
+func _select_machine(i: int) -> void:
+	var m: Cabinet = machines[i]
+	if m == cab:
+		return
+	grab_hand = -1
+	roll = 0.0
+	pitch = 0.0
+	cab.set_stick(0.0, 0.0)
+	cab.set_live(null)
+	for k in cab.caps:
+		cab.button_pressed_visual(k, false)
+	cab = m
+	cab.set_live(viewport.get_texture())
+	cab.screen_mat.albedo_color = Color.WHITE
+	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
+	room.set_active(i)
+	audio.move_to(cab)
 
 
 # ---- a camera tour of the room, for a video ----------------------------------------------------------------
@@ -812,34 +859,37 @@ func _run_tour() -> void:
 	start_game()
 	demo = true
 	# [camera position, look-at point, seconds to get there, seconds to hold]
+	var st := cab.stand_world()
 	var stops := [
-		[Vector3(0, 1.68, 0.0), Vector3(0, 1.38, -0.6), 0.1, 4.0],
-		[Vector3(0.05, 1.55, 0.30), Vector3(0.0, 1.1, -0.3), 2.0, 3.0],
-		[Vector3(1.6, 1.9, 3.3), Vector3(0, 1.2, -0.8), 3.5, 1.5],
-		[Vector3(-1.4, 1.6, 1.3), Vector3(-1.3, 1.3, -0.4), 3.0, 2.5],
-		[Vector3(1.9, 1.6, 1.3), Vector3(2.1, 1.3, -0.4), 4.0, 2.5],
-		[Vector3(0.5, 1.7, 1.4), Vector3(-3.5, 2.0, 1.0), 3.0, 2.5],
-		[Vector3(-1.75, 1.65, 2.6), Vector3(-1.75, 1.5, 4.2), 3.5, 3.0],
-		[Vector3(-2.3, 1.5, 3.4), Vector3(-2.3, 1.4, 4.0), 2.5, 3.0],
-		[Vector3(-1.2, 1.5, 3.4), Vector3(-1.2, 1.4, 4.0), 2.5, 3.0],
-		[Vector3(-1.75, 1.95, 3.4), Vector3(-1.75, 1.9, 4.0), 2.0, 2.5],
-		[Vector3(1.9, 1.65, 2.5), Vector3(1.9, 1.85, 4.2), 3.5, 4.0],
+		[st + Vector3(0, 1.68, 0), cab.look_world() - Vector3(0, 0.1, 0), 0.1, 4.0],
+		[st + Vector3(0.05, 1.55, 0.0), cab.panel.global_position + Vector3(0, 0.1, 0), 2.0, 3.0],
+		[Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5), 3.5, 2.5],
+		[Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0), 3.0, 2.5],
+		[Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0), 4.0, 2.5],
+		[Vector3(0, 1.7, 3.2), Vector3(0, 1.5, -0.55), 3.0, 3.0],
+		[Vector3(0, 1.7, 1.0), Vector3(0, 1.3, -5.0), 2.5, 5.0],
+		[Vector3(0, 1.7, 5.3), Vector3(0, 1.1, 7.2), 4.0, 3.0],
+		[Vector3(2.6, 1.7, 5.6), Vector3(3.9, 1.0, 7.5), 3.0, 3.0],
+		[Vector3(-2.65, 1.6, 6.5), Vector3(-2.65, 1.5, 8.0), 3.5, 2.5],
+		[Vector3(-3.35, 1.5, 7.3), Vector3(-3.35, 1.4, 8.0), 2.5, 2.5],
+		[Vector3(-2.0, 1.5, 7.3), Vector3(-2.0, 1.4, 8.0), 2.5, 2.5],
+		[Vector3(2.2, 1.65, 6.0), Vector3(2.2, 1.85, 8.1), 3.5, 4.0],
 	]
 	var pos: Vector3 = stops[0][0]
 	var look: Vector3 = stops[0][1]
-	for st in stops:
+	for stop in stops:
 		var p0 := pos
 		var l0 := look
 		var t := 0.0
-		var dur: float = st[2]
+		var dur: float = stop[2]
 		while t < dur:
 			await get_tree().process_frame
 			t += get_process_delta_time()
 			var k := smoothstep(0.0, 1.0, minf(t / dur, 1.0))
-			cam.look_at_from_position(p0.lerp(st[0], k), l0.lerp(st[1], k), Vector3.UP)
-		pos = st[0]
-		look = st[1]
-		await get_tree().create_timer(float(st[3])).timeout
+			cam.look_at_from_position(p0.lerp(stop[0], k), l0.lerp(stop[1], k), Vector3.UP)
+		pos = stop[0]
+		look = stop[1]
+		await get_tree().create_timer(float(stop[3])).timeout
 	get_tree().quit()
 
 
@@ -847,25 +897,29 @@ func _run_tour() -> void:
 func _run_shots() -> void:
 	DirAccess.make_dir_recursive_absolute(shot_dir)
 	await get_tree().create_timer(2.5).timeout
+	var st := cab.stand_world()
 	var views := {
-		"head": [Vector3(0, 1.68, 0.0), Vector3(0, 1.38, -0.6)],
-		"panel": [Vector3(0, 1.7, 0.0), Vector3(0, 1.0, -0.42)],
-		"wide": [Vector3(1.6, 1.9, 3.3), Vector3(0, 1.2, -0.8)],
-		"left": [Vector3(0.4, 1.7, 0.2), Vector3(-2.8, 1.3, 1.9)],
-		"back": [Vector3(0, 1.7, 0.0), Vector3(0, 1.6, 4.0)],
-		"hands": [Vector3(0.05, 1.55, 0.30), Vector3(0.0, 1.1, -0.3)],
-		"hands2": [Vector3(-0.3, 1.45, 0.25), Vector3(-0.15, 1.12, -0.28)],
-		"light": [Vector3(-0.1, 1.62, 0.1), Vector3(-0.38, 1.38, -0.2)],
-		"menu": [Vector3(0, 1.62, 0.1), Vector3(0, 1.55, -0.7)],
-		"prizes": [Vector3(-1.75, 1.65, 2.7), Vector3(-1.75, 1.5, 4.2)],
-		"hall": [Vector3(1.9, 1.65, 2.5), Vector3(1.9, 1.85, 4.2)],
-		"bobbles": [Vector3(-1.75, 1.6, 3.0), Vector3(-1.75, 1.55, 4.0)],
-		"bobble_a": [Vector3(-2.3, 1.5, 3.45), Vector3(-2.3, 1.4, 4.0)],
-		"bobble_b": [Vector3(-1.2, 1.5, 3.45), Vector3(-1.2, 1.4, 4.0)],
-		"bobble_c": [Vector3(-1.75, 1.95, 3.45), Vector3(-1.75, 1.9, 4.0)],
-		"floor": [Vector3(0.0, 1.7, 0.0), Vector3(-0.3, 0.0, 1.8)],
+		"head": [st + Vector3(0, 1.68, 0), cab.look_world() - Vector3(0, 0.1, 0)],
+		"panel": [st + Vector3(0, 1.7, 0), cab.panel.global_position],
+		"hands": [st + Vector3(0.05, 1.55, 0.0) + Vector3(0, 0, 0), cab.panel.global_position + Vector3(0, 0.1, 0)],
+		"overview": [Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5)],
+		"door": [Vector3(0, 1.7, 3.2), Vector3(0, 1.5, -0.55)],
+		"outside": [Vector3(0, 1.7, 1.0), Vector3(0, 1.3, -5.0)],
+		"arc_l": [Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0)],
+		"arc_r": [Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0)],
+		"pinball": [Vector3(0, 1.7, 5.3), Vector3(0, 1.1, 7.2)],
+		"vending": [Vector3(2.6, 1.7, 5.6), Vector3(3.9, 1.0, 7.5)],
+		"prizes": [Vector3(-2.65, 1.65, 6.5), Vector3(-2.65, 1.5, 8.0)],
+		"hall": [Vector3(2.2, 1.65, 6.0), Vector3(2.2, 1.85, 8.1)],
+		"bobbles": [Vector3(-2.65, 1.6, 6.9), Vector3(-2.65, 1.55, 8.0)],
+		"bobble_a": [Vector3(-3.35, 1.5, 7.3), Vector3(-3.35, 1.4, 8.0)],
+		"bobble_b": [Vector3(-2.0, 1.5, 7.3), Vector3(-2.0, 1.4, 8.0)],
+		"bobble_c": [Vector3(-2.65, 1.95, 7.3), Vector3(-2.65, 1.9, 8.0)],
+		"menu": [st + Vector3(0, 1.62, 0.0), cab.look_world()],
+		"themed": [Vector3(-2.2, 1.6, 2.3), Vector3(-2.7, 1.1, 0.9)],
+		"themed2": [Vector3(2.2, 1.6, 2.3), Vector3(2.7, 1.1, 0.9)],
 	}
-	var plan: Array = String(args.get("views", "head,panel,wide,left,back")).split(",")
+	var plan: Array = String(args.get("views", "head,panel,overview,door,pinball")).split(",")
 	if args.has("play") or args.has("demo"):
 		if args.has("play"):
 			start_game()

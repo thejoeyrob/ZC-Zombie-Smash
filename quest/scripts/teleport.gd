@@ -4,26 +4,8 @@ extends Node3D
 
 const RADIUS := 0.34
 
-# name, label, floor position, point to face, colour
-const SPOTS := [
-	["machine", "PLAY", Vector3(0, 0, 0), Vector3(0, 1.4, -0.9), Color(0.2, 1.0, 0.4)],
-	["prizes", "PRIZES", Vector3(-1.75, 0, 3.05), Vector3(-1.75, 1.5, 4.2), Color(1.0, 0.35, 0.75)],
-	["prizes_left", "PRIZES", Vector3(-2.6, 0, 3.05), Vector3(-2.6, 1.5, 4.2), Color(1.0, 0.35, 0.75)],
-	["prizes_right", "PRIZES", Vector3(-0.9, 0, 3.05), Vector3(-0.9, 1.5, 4.2), Color(1.0, 0.35, 0.75)],
-	["hall", "HALL OF FAME", Vector3(1.9, 0, 2.7), Vector3(1.9, 1.8, 4.2), Color(1.0, 0.82, 0.25)],
-	["bank_1", "WATCH", Vector3(-2.58, 0, 0.12), Vector3(-2.58, 1.4, -0.4), Color(0.2, 0.9, 1.0)],
-	["bank_2", "WATCH", Vector3(-1.72, 0, 0.12), Vector3(-1.72, 1.4, -0.4), Color(1.0, 0.3, 0.8)],
-	["bank_3", "WATCH", Vector3(-0.86, 0, 0.12), Vector3(-0.86, 1.4, -0.4), Color(1.0, 0.85, 0.2)],
-	["bank_5", "WATCH", Vector3(0.86, 0, 0.12), Vector3(0.86, 1.4, -0.4), Color(1.0, 0.55, 0.1)],
-	["bank_6", "WATCH", Vector3(1.72, 0, 0.12), Vector3(1.72, 1.4, -0.4), Color(0.6, 0.4, 1.0)],
-	["bank_7", "WATCH", Vector3(2.58, 0, 0.12), Vector3(2.58, 1.4, -0.4), Color(1.0, 0.3, 0.3)],
-	["left_1", "WATCH", Vector3(-2.35, 0, 0.9), Vector3(-3.1, 1.3, 0.9), Color(1.0, 0.3, 0.9)],
-	["left_2", "WATCH", Vector3(-2.35, 0, 1.9), Vector3(-3.1, 1.3, 1.9), Color(0.3, 0.9, 1.0)],
-	["left_3", "WATCH", Vector3(-2.35, 0, 2.9), Vector3(-3.1, 1.3, 2.9), Color(1.0, 0.7, 0.2)],
-	["right_1", "WATCH", Vector3(2.35, 0, 0.9), Vector3(3.1, 1.3, 0.9), Color(0.8, 0.4, 1.0)],
-	["right_2", "WATCH", Vector3(2.35, 0, 1.9), Vector3(3.1, 1.3, 1.9), Color(0.4, 1.0, 0.5)],
-	["right_3", "WATCH", Vector3(2.35, 0, 2.9), Vector3(3.1, 1.3, 2.9), Color(1.0, 0.4, 0.3)],
-]
+# each spot is [id, label, floor position, point to face, colour]; the room supplies them
+var spots: Array = []
 
 var markers: Array = []      # [{node, ring_mat, spot}]
 var ray_mesh: MeshInstance3D
@@ -33,9 +15,10 @@ var shown := false
 var t := 0.0
 
 
-func build(root: Node3D) -> void:
+func build(root: Node3D, spot_list: Array) -> void:
+	spots = spot_list
 	root.add_child(self)
-	for spot in SPOTS:
+	for spot in spots:
 		var n := Node3D.new()
 		n.position = spot[2] + Vector3(0, 0.012, 0)
 		add_child(n)

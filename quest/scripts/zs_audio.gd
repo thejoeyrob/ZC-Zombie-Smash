@@ -63,6 +63,15 @@ func setup(speaker: Node3D) -> void:
 	add_child(_sting_player)
 
 
+## Moves the sound-effect speakers to another machine.
+func move_to(speaker: Node3D) -> void:
+	for pl in _players:
+		if pl.get_parent() != null:
+			pl.get_parent().remove_child(pl)
+		speaker.add_child(pl)
+	_speaker = speaker
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	if holding_until > 0.0 and _time >= holding_until:

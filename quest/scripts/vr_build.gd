@@ -148,6 +148,51 @@ static func side_panel(parent: Node, profile: PackedVector2Array, x: float, thic
 	return mi
 
 
+## A flat shape (points as (z, y) in metres) turned into a slab, picture-mapped on its outer face. `uvs` are the picture coordinates of each point.
+static func picture_slab(parent: Node, pts: PackedVector2Array, uvs: PackedVector2Array, x_centre: float, thickness: float, outward: float, picture: Material, plain: Material, flip_u := false) -> void:
+	var idx := Geometry2D.triangulate_polygon(pts)
+	if idx.is_empty():
+		return
+	var x_out := x_centre + outward * thickness / 2.0
+	var x_in := x_centre - outward * thickness / 2.0
+	var outer := SurfaceTool.new()
+	outer.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rest := SurfaceTool.new()
+	rest.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(0, idx.size(), 3):
+		var tri := [idx[i], idx[i + 1], idx[i + 2]]
+		var a: Vector2 = pts[tri[0]]
+		var b: Vector2 = pts[tri[1]]
+		var c: Vector2 = pts[tri[2]]
+		# make the face point the way `outward` says
+		var cr := (Vector3(x_out, b.y, b.x) - Vector3(x_out, a.y, a.x)).cross(Vector3(x_out, c.y, c.x) - Vector3(x_out, a.y, a.x))
+		if cr.x * outward < 0.0:
+			tri = [idx[i], idx[i + 2], idx[i + 1]]
+		for k in tri:
+			var p: Vector2 = pts[k]
+			var uv: Vector2 = uvs[k]
+			outer.set_normal(Vector3(outward, 0, 0))
+			outer.set_uv(Vector2(1.0 - uv.x if flip_u else uv.x, uv.y))
+			outer.add_vertex(Vector3(x_out, p.y, p.x))
+		for k in [tri[0], tri[2], tri[1]]:
+			var p2: Vector2 = pts[k]
+			rest.set_normal(Vector3(-outward, 0, 0))
+			rest.add_vertex(Vector3(x_in, p2.y, p2.x))
+	for i in range(pts.size()):
+		var a2: Vector2 = pts[i]
+		var b2: Vector2 = pts[(i + 1) % pts.size()]
+		for v in [Vector3(x_in, a2.y, a2.x), Vector3(x_out, a2.y, a2.x), Vector3(x_out, b2.y, b2.x), Vector3(x_in, a2.y, a2.x), Vector3(x_out, b2.y, b2.x), Vector3(x_in, b2.y, b2.x)]:
+			rest.add_vertex(v)
+	var m1 := MeshInstance3D.new()
+	m1.mesh = outer.commit()
+	m1.material_override = picture
+	parent.add_child(m1)
+	var m2 := MeshInstance3D.new()
+	m2.mesh = rest.commit()
+	m2.material_override = plain
+	parent.add_child(m2)
+
+
 ## A seamless-ish arcade carpet: dark ground with neon confetti.
 static func carpet_texture(seed_in := 4) -> ImageTexture:
 	var s := 256

@@ -83,39 +83,94 @@ func _fill(p: Dictionary, open: bool) -> void:
 		VRBuild.box(box, Vector3(0.25, 0.01, 0.25), Vector3(0, 0.02, 0), top)
 		VRBuild.label(p.root, "STAGE %d" % (p.index + 1), 0.045, Vector3(0, 0.012, 0.13), Color(1, 0.9, 0.6, 0.9), Vector3(-0.6, 0, 0), 3)
 	else:
-		# bobble head: a brass plinth, a spring and the boss on a springy neck
-		var base_tex = load("res://assets/art/bobble-base.png")
-		var base_mat: Material = VRBuild.tex_mat(base_tex, 0.1, 0.4) if base_tex != null else gold
-		VRBuild.cylinder(p.root, 0.11, 0.025, Vector3(0, 0.0125, 0), base_mat, 0.1)
-		VRBuild.cylinder(p.root, 0.014, 0.1, Vector3(0, 0.075, 0), VRBuild.mat(Color(0.8, 0.8, 0.85), 0.2, 0.9))
-		var head := Node3D.new()
-		head.position = Vector3(0, 0.125, 0)
-		p.root.add_child(head)
-		p.head = head
-		# the figure: its front and back views on two cards back to back, so it can be turned in the hand
-		var fig_h := 0.36
-		for view in ["front", "back"]:
-			var tex = load("res://assets/art/bobble-%s-%s.png" % [boss.id, view])
-			if tex == null and view == "front":
-				tex = load("res://assets/art/" + boss.sprites[0])
-			if tex == null:
-				continue
-			var m := VRBuild.tex_mat(tex, 0.2, 0.7)
-			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-			m.alpha_scissor_threshold = 0.5
-			var w: float = fig_h * float(tex.get_width()) / float(tex.get_height())
-			var rot := Vector3(0, PI if view == "back" else 0.0, 0)
-			var z := -0.004 if view == "back" else 0.004
-			VRBuild.quad(head, Vector2(w, fig_h), Vector3(0, fig_h / 2.0, z), m, rot)
+		# a solid figure standing on its own feet; its head and shoulders wobble like a bobble head
+		var mesh = load("res://assets/art/bobble-%s.obj" % boss.id)
+		var atlas = load("res://assets/art/bobble-%s-atlas.jpg" % boss.id)
+		if mesh != null and atlas != null:
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.material_override = _bobble_material(atlas, _widths(str(boss.id)))
+			var fig := Node3D.new()
+			p.root.add_child(fig)
+			fig.add_child(mi)
+			p.head = fig
+			p.mat = mi.material_override
+		else:
+			VRBuild.label(p.root, "?", 0.1, Vector3(0, 0.15, 0), Color.WHITE)
 		VRBuild.label(p.root, str(boss.name), 0.05, Vector3(0, 0.012, 0.13), Color(1, 0.95, 0.8), Vector3(-0.6, 0, 0), 3)
+
+
+static var _shader: Shader
+
+
+## The figure is textured by blending its front, side and back pictures by the direction each bit of surface faces.
+func _bobble_material(atlas: Texture2D, widths: Vector3) -> ShaderMaterial:
+	if _shader == null:
+		_shader = Shader.new()
+		_shader.code = """
+shader_type spatial;
+uniform sampler2D atlas : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform vec3 widths;        // widths in pixels of the front, side and back pictures
+uniform float picture_h = 480.0;
+uniform float figure_h = 0.357;
+uniform float amp = 0.0;
+uniform float swing = 0.0;
+varying vec3 mpos;
+varying vec3 mnrm;
+void vertex() {
+	mpos = VERTEX;
+	mnrm = NORMAL;
+	float h = clamp((VERTEX.y - 0.12) / 0.24, 0.0, 1.0);
+	VERTEX.x += swing * h * h * amp;
+	VERTEX.z += swing * 0.6 * h * h * amp;
+}
+void fragment() {
+	float aw = widths.x + widths.y + widths.z;
+	float k = picture_h / figure_h;
+	float v = 1.0 - clamp(mpos.y / figure_h, 0.0, 1.0);
+	vec2 uf = vec2((widths.x * 0.5 + mpos.x * k) / aw, v);
+	vec2 ub = vec2((widths.x + widths.y + widths.z * 0.5 - mpos.x * k) / aw, v);
+	float sz = mpos.z * k;
+	vec2 us = vec2((widths.x + widths.y * 0.5 + (mnrm.x < 0.0 ? sz : -sz)) / aw, v);
+	uf.x = clamp(uf.x, 0.001, widths.x / aw - 0.001);
+	ub.x = clamp(ub.x, (widths.x + widths.y) / aw + 0.001, 0.999);
+	us.x = clamp(us.x, widths.x / aw + 0.001, (widths.x + widths.y) / aw - 0.001);
+	vec3 n = normalize(mnrm);
+	float wf = pow(max(n.z, 0.0), 3.0);
+	float wb = pow(max(-n.z, 0.0), 3.0);
+	float ws = pow(abs(n.x), 3.0);
+	float sum = wf + wb + ws + 0.0001;
+	vec3 col = (texture(atlas, uf).rgb * wf + texture(atlas, ub).rgb * wb + texture(atlas, us).rgb * ws) / sum;
+	ALBEDO = col;
+	ROUGHNESS = 0.6;
+	EMISSION = col * 0.12;
+}
+"""
+	var m := ShaderMaterial.new()
+	m.shader = _shader
+	m.set_shader_parameter("atlas", atlas)
+	m.set_shader_parameter("widths", widths)
+	return m
+
+
+func _widths(id: String) -> Vector3:
+	var f := FileAccess.open("res://assets/art/bobble-%s-atlas.json" % id, FileAccess.READ)
+	if f != null:
+		var d = JSON.parse_string(f.get_as_text())
+		if d is Dictionary:
+			var w: Array = d.widths
+			return Vector3(float(w[0]), float(w[1]), float(w[2]))
+	return Vector3(265, 260, 240)
 
 
 func animate(delta: float) -> void:
 	_t += delta
 	for p in prizes:
-		if p.head != null:
-			var amp: float = 0.35 if p.held else 0.07
-			p.head.rotation = Vector3(sin(_t * 2.1 + p.index) * amp * 0.5, 0.0, sin(_t * 2.7 + p.index * 1.3) * amp)
+		if p.head != null and p.get("mat") != null:
+			var held: bool = p.held
+			var amp := 0.035 if held else 0.012
+			p.mat.set_shader_parameter("amp", amp)
+			p.mat.set_shader_parameter("swing", sin(_t * (6.0 if held else 2.3) + p.index) )
 
 
 ## hs: per hand {grab: bool, xf: Transform3D (the hand as drawn), point: Vector3 (palm position)}
