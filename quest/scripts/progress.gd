@@ -19,6 +19,8 @@ var best := 0
 var last := {}                   # {score, wave, kills, bosses, seconds}
 var badges: Array = []
 var runs := 0
+var codes: Array = []            # codes keyed in at the snack machine (e.g. "pinball")
+var pinball_best := 0
 
 
 func load_all() -> void:
@@ -32,12 +34,14 @@ func load_all() -> void:
 		last = d.get("last", {})
 		badges = d.get("badges", [])
 		runs = int(d.get("runs", 0))
+		codes = d.get("codes", [])
+		pinball_best = int(d.get("pinball_best", 0))
 
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"bosses_beaten": bosses_beaten, "best": best, "last": last, "badges": badges, "runs": runs}))
+		f.store_string(JSON.stringify({"bosses_beaten": bosses_beaten, "best": best, "last": last, "badges": badges, "runs": runs, "codes": codes, "pinball_best": pinball_best}))
 
 
 ## How many bobble heads are unlocked (they open in stage order).

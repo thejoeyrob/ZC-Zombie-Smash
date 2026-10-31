@@ -148,6 +148,38 @@ static func side_panel(parent: Node, profile: PackedVector2Array, x: float, thic
 	return mi
 
 
+## Bakes a node's plain mesh children into as few meshes as possible (one per distinct look), which keeps the draw-call count low
+## on the headset. Children that must stay separate (moving parts, live screens) are marked with set_meta("dynamic", true).
+static func merge_static(parent: Node) -> void:
+	var groups := {}
+	var doomed: Array = []
+	for c in parent.get_children():
+		if not (c is MeshInstance3D):
+			continue
+		var mi := c as MeshInstance3D
+		if mi.mesh == null or mi.has_meta("dynamic") or mi.name == "ScreenQuad" or mi.mesh.get_surface_count() != 1:
+			continue
+		var m := mi.material_override as StandardMaterial3D
+		if m == null:
+			continue
+		var sig := str([m.albedo_color, m.albedo_texture.get_instance_id() if m.albedo_texture != null else 0, m.roughness, m.metallic, m.emission_enabled, m.emission, m.emission_energy_multiplier,
+			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat])
+		if not groups.has(sig):
+			var st := SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
+			groups[sig] = {"mat": m, "st": st}
+		(groups[sig].st as SurfaceTool).append_from(mi.mesh, 0, mi.transform)
+		doomed.append(mi)
+	for d in doomed:
+		parent.remove_child(d)
+		d.queue_free()
+	for sig in groups:
+		var merged := MeshInstance3D.new()
+		merged.mesh = (groups[sig].st as SurfaceTool).commit()
+		merged.material_override = groups[sig].mat
+		parent.add_child(merged)
+
+
 ## A flat shape (points as (z, y) in metres) turned into a slab, picture-mapped on its outer face. `uvs` are the picture coordinates of each point.
 static func picture_slab(parent: Node, pts: PackedVector2Array, uvs: PackedVector2Array, x_centre: float, thickness: float, outward: float, picture: Material, plain: Material, flip_u := false) -> void:
 	var idx := Geometry2D.triangulate_polygon(pts)
@@ -229,6 +261,27 @@ static func grid_texture(c1: Color, c2: Color, cells := 8) -> ImageTexture:
 	for x in range(s):
 		for y in range(s):
 			img.set_pixel(x, y, c1 if ((x / 8) + (y / 8)) % 2 == 0 else c2)
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
+
+
+## A flat, speckled, slightly embossed paint finish for a control panel (no pictures): fine grain plus a soft diamond-plate pattern.
+static func panel_texture(base: Color, seed_in := 3) -> ImageTexture:
+	var n := 128
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_in
+	for y in range(n):
+		for x in range(n):
+			var g := (rng.randf() - 0.5) * 0.07                  # fine grain
+			# a diamond pattern repeating every 16 px, very low contrast
+			var u := float(x % 16) / 16.0
+			var v := float(y % 16) / 16.0
+			var d := absf(u - 0.5) + absf(v - 0.5)
+			var emboss := 0.035 * (1.0 - smoothstep(0.18, 0.34, d)) - 0.012
+			var c := base
+			var k := 1.0 + g + emboss
+			img.set_pixel(x, y, Color(clampf(c.r * k, 0, 1), clampf(c.g * k, 0, 1), clampf(c.b * k, 0, 1), 1.0))
 	img.generate_mipmaps()
 	return ImageTexture.create_from_image(img)
 

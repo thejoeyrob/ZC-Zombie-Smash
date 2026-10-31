@@ -86,6 +86,12 @@ func _ready() -> void:
 	cab.set_live(viewport.get_texture())
 	room.set_active(room.player_index)
 	room.prize_wall.set_unlocked(progress.unlocked(), true)
+	room.pinball.set_enabled(progress.codes.has("pinball"))
+	room.pinball.table.best = progress.pinball_best
+	room.vending.code_entered.connect(_on_code)
+	room.vending.key_pressed.connect(func(k, ok): audio.sfx("key" if ok else "error", 0.7, 0.0, room.vending.global_position + Vector3(0, 1.3, 0.5)); _haptic(-1, 0.2, 0.03))
+	room.pinball.sound.connect(_on_pinball_sound)
+	room.door.scare.connect(func(kind): audio.sfx("doom" if kind != "stare" else "warn", 0.45, 0.0, Vector3(0, 1.4, -0.6)))
 	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	_build_hands()
@@ -100,6 +106,11 @@ func _ready() -> void:
 		VRBuild.label(m.panel, "BUILD %d" % build_number(), 0.03, Vector3(0.27, 0.003, 0.105), Color(1, 1, 1, 0.55), Vector3(-PI / 2, 0, 0), 3)
 	menu.changed.connect(_on_setting)
 	menu.action.connect(_on_menu_action)
+	if args.has("scare"):
+		room.door.debug_show(str(args.scare) if str(args.scare).ends_with(".webp") else "zombie-brute.webp", 0.3)
+	if args.has("pinplay"):
+		room.pinball.set_enabled(true)
+		_pinplay()
 	if args.has("die"):
 		get_tree().create_timer(7.0).timeout.connect(func():
 			game.end("test")
@@ -195,7 +206,11 @@ func _build_hands() -> void:
 		var vis := VRHand.new()
 		vis.build(side)
 		origin.add_child(vis)
-		hands.append({"ctrl": grip, "aim": aim, "side": side, "vis": vis})
+		var arm := VRArm.new()
+		arm.build(side)
+		add_child(arm)
+		arm.visible = false
+		hands.append({"ctrl": grip, "aim": aim, "side": side, "vis": vis, "arm": arm})
 		if not xr_on:
 			vis.visible = false
 
@@ -215,6 +230,28 @@ func _build_fade() -> void:
 	fade_quad.position = Vector3(0, 0, -0.15)
 	fade_quad.visible = false
 	cam.add_child(fade_quad)
+
+
+## Development: plays the pinball table by itself for a while and reports how it went.
+func _pinplay() -> void:
+	var t: PinTable = room.pinball.table
+	await get_tree().create_timer(1.5).timeout
+	t.launch()
+	var end := clock + float(args.get("pinplay", "20"))
+	var flips := 0
+	while clock < end:
+		await get_tree().process_frame
+		# flip whenever the ball is down near a flipper
+		var l := t.in_play and t.ball.y > 640.0 and t.ball.x < 200.0
+		var r := t.in_play and t.ball.y > 640.0 and t.ball.x >= 200.0
+		if l != t.left_up or r != t.right_up:
+			flips += 1
+		t.flippers(l, r)
+		if not t.in_play and not t.game_over:
+			t.launch()
+		if t.game_over:
+			t.launch()
+	print("PINPLAY: score ", t.score, " best ", t.best, " balls left ", t.balls_left, " flips ", flips)
 
 
 func build_number() -> int:
@@ -263,6 +300,30 @@ func _on_setting(key: String, value) -> void:
 func _apply_height() -> void:
 	for m in machines:
 		m.scale = Vector3.ONE * clampf(base_scale * float(settings.height), 0.7, 1.4)
+
+
+func _on_code(action: String) -> void:
+	if action == "pinball":
+		if not progress.codes.has("pinball"):
+			progress.codes.append("pinball")
+			progress.save()
+		room.pinball.set_enabled(true)
+		audio.sfx("clear", 0.9)
+		audio.sfx("chime", 0.8, 0.0, room.pinball.global_position + Vector3(0, 1.0, 0))
+
+
+func _on_pinball_sound(n: String, pos: Vector3) -> void:
+	var map := {"flip": ["click", 0.8], "flipper_hit": ["hit", 0.5], "launch": ["throw", 0.8], "bump": ["target", 0.8], "sling": ["hit", 0.6], "target": ["pickup", 0.7], "clear": ["clear", 0.9], "drain": ["hurt", 0.7], "over": ["doom", 0.8], "wall": ["ricochet", 0.25]}
+	if map.has(n):
+		audio.sfx(map[n][0], map[n][1], 0.04, pos)
+	if n == "flip":
+		_haptic(-1, 0.25, 0.03)
+	elif n == "bump":
+		_haptic(-1, 0.4, 0.05)
+	elif n == "over":
+		progress.pinball_best = maxi(progress.pinball_best, room.pinball.table.best)
+		progress.save()
+		room.hall.refresh()
 
 
 func _on_menu_action(name: String) -> void:
@@ -425,6 +486,7 @@ func _process(delta: float) -> void:
 	var hs := _read_hands(delta)
 	_pose_hands(hs)
 	_menu_input(hs)
+	_world_inputs(hs)
 	var pg: Array = []
 	for i in range(2):
 		pg.append({"grab": hs[i].gripping and grab_hand != i and not menu.open, "xf": hs[i].vis_xf, "point": hs[i].palm})
@@ -554,11 +616,29 @@ func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
 	return d
 
 
+var _key_last := ["", ""]
+
+
+## Hands pressing the snack machine's keypad, and working the pinball machine's buttons and plunger.
+func _world_inputs(hs: Array) -> void:
+	var tips: Array = []
+	var palms: Array = []
+	for i in range(hs.size()):
+		tips.append(hs[i].tip)
+		palms.append(hs[i].palm)
+		var k: String = room.vending.key_at(hs[i].tip)
+		if k != "" and k != _key_last[i] and not menu.open:
+			room.vending.press(k)
+		_key_last[i] = k
+	var near := _head_floor().distance_to(room.pinball.stand_world()) < 1.5 and not menu.open
+	room.pinball.interact(tips, palms, hs[0].trigger and near, hs[1].trigger and near, (hs[0].a or hs[1].a), near)
+
+
 func _solid(p: Vector3, r: float) -> Vector3:
 	var out := p
 	for m in machines:
 		out = m.constrain(out, r)
-	return out
+	return room.pinball.constrain(out, r)
 
 
 ## Works out the hand the player sees (solid against the machine) and the points that touch the controls.
@@ -584,6 +664,16 @@ func _pose_hands(hs: Array) -> void:
 		vis.set_pose(idx_c, grip_c, 0.9 if holding else thumb_c)
 		vis.global_transform = final_xf
 		vis.visible = (xr_on and h.active) or demo
+		var arm: VRArm = hands[i].arm
+		arm.visible = vis.visible
+		if arm.visible:
+			var cg := cam.global_transform
+			var fwd := -cg.basis.z
+			fwd.y = 0.0
+			fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+			var heading := Basis(Vector3.UP, atan2(-fwd.x, -fwd.z))
+			var shoulder := cg.origin + heading * Vector3(sgn * 0.0 + (-0.19 if i == 0 else 0.19), -0.24, 0.02)
+			arm.update(shoulder, final_xf * Vector3(0, 0, 0.078), heading)
 		h.palm = final_xf.origin
 		h.vis_xf = final_xf
 		h.tip = final_xf * Vector3(0, 0, -0.15 + 0.05 * idx_c)
@@ -905,9 +995,15 @@ func _run_shots() -> void:
 		"overview": [Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5)],
 		"door": [Vector3(0, 1.7, 3.2), Vector3(0, 1.5, -0.55)],
 		"outside": [Vector3(0, 1.7, 1.0), Vector3(0, 1.3, -5.0)],
+		"scare": [Vector3(0.6, 1.65, 2.2), Vector3(0, 1.1, -0.55)],
 		"arc_l": [Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0)],
 		"arc_r": [Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0)],
 		"pinball": [Vector3(0, 1.7, 5.3), Vector3(0, 1.1, 7.2)],
+		"pin_top": [Vector3(0, 1.55, 6.15), Vector3(0, 0.85, 7.3)],
+		"pin_side": [Vector3(1.9, 1.3, 6.1), Vector3(0, 0.95, 7.3)],
+		"keypad": [Vector3(3.4, 1.55, 6.6), Vector3(3.95, 1.35, 7.55)],
+		"vend_front": [Vector3(3.0, 1.5, 5.2), Vector3(3.9, 1.1, 7.5)],
+		"arms": [Vector3(0, 1.7, 5.4), Vector3(0, 1.4, 7.0)],
 		"vending": [Vector3(2.6, 1.7, 5.6), Vector3(3.9, 1.0, 7.5)],
 		"prizes": [Vector3(-2.65, 1.65, 6.5), Vector3(-2.65, 1.5, 8.0)],
 		"hall": [Vector3(2.2, 1.65, 6.0), Vector3(2.2, 1.85, 8.1)],
@@ -925,6 +1021,8 @@ func _run_shots() -> void:
 			start_game()
 		demo = true
 		await get_tree().create_timer(float(args.get("wait", "6"))).timeout
+	if args.has("pinplay"):
+		room.pinball.viewport.get_texture().get_image().save_png("%s/pin_viewport.png" % shot_dir)
 	for v in plan:
 		cam.look_at_from_position(views[v][0], views[v][1], Vector3.UP)
 		await get_tree().process_frame

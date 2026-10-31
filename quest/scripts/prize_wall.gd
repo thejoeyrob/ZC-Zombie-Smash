@@ -20,7 +20,7 @@ func build(root: Node3D, pos: Vector3, yaw: float, font: Font) -> void:
 	position = pos
 	rotation.y = yaw
 	root.add_child(self)
-	var wood := VRBuild.mat(Color(0.30, 0.16, 0.08), 0.55)
+	var wood := VRBuild.mat(Color(0.9, 0.62, 0.69), 0.55)
 	var dark := VRBuild.mat(Color(0.05, 0.03, 0.09), 0.8)
 	var glow := VRBuild.mat(Color(1.0, 0.35, 0.75), 0.4, 0.0, 2.4)
 	# the cabinet: back board, side posts, two shelves, neon trim and a sign
@@ -65,7 +65,7 @@ func _fill(p: Dictionary, open: bool) -> void:
 	p.unlocked = open
 	p.head = null
 	var boss: Dictionary = ZSEngine.BOSSES[p.index]
-	var gold := VRBuild.mat(Color(0.85, 0.65, 0.2), 0.25, 0.9)
+	var gold := VRBuild.mat(Color(0.85, 0.65, 0.2), 0.25, 0.5, 0.2, Color(0.85, 0.65, 0.2))
 	if not open:
 		var box := Node3D.new()
 		p.root.add_child(box)

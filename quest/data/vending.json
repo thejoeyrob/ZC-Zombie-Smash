@@ -1,11 +1,145 @@
 {
-  "title": "SNACKS & SODA",
-  "note": "Edit the names below to rename what is in the machine. kind is chips, candy or can; color is any web colour.",
-  "rows": [
-    [{"name": "Salty Brains", "kind": "chips", "color": "#e8b923"}, {"name": "Cheesy Claws", "kind": "chips", "color": "#f07b1d"}, {"name": "BBQ Bones", "kind": "chips", "color": "#a8321e"}, {"name": "Sour Cream & Rot", "kind": "chips", "color": "#3fa34d"}, {"name": "Vinegar Vengeance", "kind": "chips", "color": "#3a7bd5"}],
-    [{"name": "Choc Rot", "kind": "candy", "color": "#6b3a1e"}, {"name": "Gummy Fingers", "kind": "candy", "color": "#e04f9a"}, {"name": "Eyeball Gobstoppers", "kind": "candy", "color": "#f5f5f0"}, {"name": "Caramel Crawler", "kind": "candy", "color": "#c98a2b"}, {"name": "Mint Maggots", "kind": "candy", "color": "#2fcf9a"}],
-    [{"name": "Peanut Pus", "kind": "candy", "color": "#d1a24a"}, {"name": "Fudge Fang", "kind": "candy", "color": "#4a2a1a"}, {"name": "Toffee Tombstone", "kind": "candy", "color": "#8a5a2a"}, {"name": "Cherry Cranium", "kind": "candy", "color": "#c1272d"}, {"name": "Lemon Lurker", "kind": "candy", "color": "#f2e03a"}],
-    [{"name": "Cola Corpse", "kind": "can", "color": "#b01e24"}, {"name": "Lime Lurch", "kind": "can", "color": "#4cc24a"}, {"name": "Grape Grave", "kind": "can", "color": "#7a3fb0"}, {"name": "Orange Ooze", "kind": "can", "color": "#f28c1e"}, {"name": "Zombie Zero", "kind": "can", "color": "#2a2a30"}],
-    [{"name": "Blue Bite", "kind": "can", "color": "#2f7bff"}, {"name": "Cream Creeper", "kind": "can", "color": "#f0d8a8"}, {"name": "Root Rotter", "kind": "can", "color": "#5a3a22"}, {"name": "Berry Banshee", "kind": "can", "color": "#c0307a"}, {"name": "Ginger Ghoul", "kind": "can", "color": "#c9a02a"}]
+ "title": "SNACKS & SODA",
+ "note": "Edit the names below to rename what is in the machine. kind is chips, candy or can; color is any web colour.",
+ "rows": [
+  [
+   {
+    "name": "Salty Brains",
+    "kind": "chips",
+    "color": "#e8b923"
+   },
+   {
+    "name": "Cheesy Claws",
+    "kind": "chips",
+    "color": "#f07b1d"
+   },
+   {
+    "name": "BBQ Bones",
+    "kind": "chips",
+    "color": "#a8321e"
+   },
+   {
+    "name": "Sour Cream & Rot",
+    "kind": "chips",
+    "color": "#3fa34d"
+   },
+   {
+    "name": "Vinegar Vengeance",
+    "kind": "chips",
+    "color": "#3a7bd5"
+   }
+  ],
+  [
+   {
+    "name": "Choc Rot",
+    "kind": "candy",
+    "color": "#6b3a1e"
+   },
+   {
+    "name": "Gummy Fingers",
+    "kind": "candy",
+    "color": "#e04f9a"
+   },
+   {
+    "name": "Eyeball Gobstoppers",
+    "kind": "candy",
+    "color": "#f5f5f0"
+   },
+   {
+    "name": "Caramel Crawler",
+    "kind": "candy",
+    "color": "#c98a2b"
+   },
+   {
+    "name": "Mint Maggots",
+    "kind": "candy",
+    "color": "#2fcf9a"
+   }
+  ],
+  [
+   {
+    "name": "Peanut Pus",
+    "kind": "candy",
+    "color": "#d1a24a"
+   },
+   {
+    "name": "Fudge Fang",
+    "kind": "candy",
+    "color": "#4a2a1a"
+   },
+   {
+    "name": "Toffee Tombstone",
+    "kind": "candy",
+    "color": "#8a5a2a"
+   },
+   {
+    "name": "Cherry Cranium",
+    "kind": "candy",
+    "color": "#c1272d"
+   },
+   {
+    "name": "Lemon Lurker",
+    "kind": "candy",
+    "color": "#f2e03a"
+   }
+  ],
+  [
+   {
+    "name": "Cola Corpse",
+    "kind": "can",
+    "color": "#b01e24"
+   },
+   {
+    "name": "Lime Lurch",
+    "kind": "can",
+    "color": "#4cc24a"
+   },
+   {
+    "name": "Grape Grave",
+    "kind": "can",
+    "color": "#7a3fb0"
+   },
+   {
+    "name": "Orange Ooze",
+    "kind": "can",
+    "color": "#f28c1e"
+   },
+   {
+    "name": "Zombie Zero",
+    "kind": "can",
+    "color": "#2a2a30"
+   }
+  ],
+  [
+   {
+    "name": "Blue Bite",
+    "kind": "can",
+    "color": "#2f7bff"
+   },
+   {
+    "name": "Cream Creeper",
+    "kind": "can",
+    "color": "#f0d8a8"
+   },
+   {
+    "name": "Root Rotter",
+    "kind": "can",
+    "color": "#5a3a22"
+   },
+   {
+    "name": "Berry Banshee",
+    "kind": "can",
+    "color": "#c0307a"
+   },
+   {
+    "name": "Ginger Ghoul",
+    "kind": "can",
+    "color": "#c9a02a"
+   }
   ]
+ ],
+ "codes": {
+  "1985": "pinball"
+ },
+ "codes_note": "Key a code on the snack machine's keypad, then press #. * clears. Each code maps to an action; 'pinball' switches the pinball machine on. Add more codes later for little surprises."
 }

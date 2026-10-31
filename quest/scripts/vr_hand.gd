@@ -17,19 +17,24 @@ var s := 1.0                       # +1 left (palm +X), -1 right (palm -X)
 var joints := {}                   # finger name -> [Node3D, Node3D, Node3D]
 var thumb: Array = []
 var curl := {"index": 0.0, "grip": 0.0, "thumb": 0.0}
+var nail_mat: StandardMaterial3D
 var shown := {"index": 0.0, "grip": 0.0, "thumb": 0.0}
 
 
 func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color := Color(0.8, 0.1, 0.15)) -> void:
 	side = hand_side
 	s = 1.0 if side == 0 else -1.0
-	var glove := VRBuild.mat(glove_color, 0.55)
-	var gt = load("res://assets/art/hand-glove.jpg")
-	if gt != null:
-		glove = VRBuild.tex_mat(gt, 0.0, 0.7, false, Color(0.97, 0.97, 1.0))
-		glove.uv1_scale = Vector3(1.5, 1.5, 1)
+	var skin_tex = load("res://assets/art/hand-skin.jpg")
+	var glove := VRBuild.mat(Color(0.93, 0.74, 0.62), 0.55)
+	if skin_tex != null:
+		glove = VRBuild.tex_mat(skin_tex, 0.0, 0.55, false, Color(1.0, 0.8, 0.68))
+		glove.uv1_scale = Vector3(1.2, 1.2, 1)
 		glove.texture_repeat = true
-	var stitch := VRBuild.mat(glove_color.darkened(0.35), 0.7)
+	glove.rim_enabled = true
+	glove.rim = 0.2
+	glove.rim_tint = 0.4
+	nail_mat = VRBuild.mat(Color(0.96, 0.82, 0.78), 0.2)
+	var stitch := VRBuild.mat(Color(0.8, 0.6, 0.5), 0.7)
 	var cuff := VRBuild.mat(cuff_color, 0.5)
 	# palm and back of the hand, built from soft overlapping masses so it reads as a hand, not a block
 	var core := MeshInstance3D.new()
@@ -46,6 +51,11 @@ func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color :=
 	var mound := VRBuild.sphere(self, 0.024, Vector3(s * 0.006, 0.027, 0.002), glove, 14)     # thumb mound
 	mound.scale = Vector3(0.8, 1.0, 1.15)
 	VRBuild.sphere(self, 0.03, Vector3(-s * 0.002, -0.004, 0.018), glove, 14)                # heel of the hand
+	for f in FINGERS:
+		var kn := VRBuild.sphere(self, float(f[3]) * 1.12, Vector3(0, f[1], -0.054), glove, 10)   # knuckles
+		kn.scale = Vector3(1.0, 1.0, 1.0)
+	# the wrist: a short bare section that disappears into the sleeve of the arm
+	VRBuild.cylinder(self, 0.029, 0.05, Vector3(0, -0.002, 0.075), glove, 0.03, Vector3(PI / 2, 0, 0), 20)
 	for f in FINGERS:
 		var kn := VRBuild.sphere(self, float(f[3]) * 1.12, Vector3(0, f[1], -0.054), glove, 10)   # knuckles
 		kn.scale = Vector3(1.0, 1.0, 1.0)
@@ -98,6 +108,18 @@ func _chain(parent: Node3D, lengths: Array, radius: float, mat: Material) -> Arr
 		var next := Node3D.new()
 		next.position = Vector3(0, 0, -len)
 		j.add_child(next)
+		if i == 2 and nail_mat != null:
+			var nl := MeshInstance3D.new()          # a fingernail
+			var nm := SphereMesh.new()
+			nm.radius = r * 0.7
+			nm.height = r * 1.4
+			nm.radial_segments = 8
+			nm.rings = 4
+			nl.mesh = nm
+			nl.material_override = nail_mat
+			nl.scale = Vector3(1.0, 0.35, 1.5)
+			nl.position = Vector3(0, r * 0.62, -len * 0.45)
+			j.add_child(nl)
 		node = next
 	return out
 

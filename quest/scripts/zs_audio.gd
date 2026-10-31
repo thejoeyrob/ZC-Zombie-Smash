@@ -199,7 +199,7 @@ func sting(name: String) -> void:
 
 
 # ---- effects -----------------------------------------------------------------------------------
-func sfx(name: String, volume := 1.0, rate_spread := 0.0) -> void:
+func sfx(name: String, volume := 1.0, rate_spread := 0.0, at := Vector3.INF) -> void:
 	if not _sfx.has(name):
 		return
 	var now := _time * 1000.0
@@ -212,6 +212,10 @@ func sfx(name: String, volume := 1.0, rate_spread := 0.0) -> void:
 		if not p.playing:
 			_last[name] = now
 			p.stream = _sfx[name]
+			if at != Vector3.INF:
+				p.global_position = at
+			else:
+				p.position = Vector3.ZERO
 			p.volume_db = _db(volume * effects_volume)
 			p.pitch_scale = 1.0 + (randf() * 2.0 - 1.0) * rate_spread
 			_live[name] = int(_live.get(name, 0)) + 1
