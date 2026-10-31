@@ -92,12 +92,21 @@ func _fill(p: Dictionary, open: bool) -> void:
 		head.position = Vector3(0, 0.125, 0)
 		p.root.add_child(head)
 		p.head = head
-		var tex: Texture2D = load("res://assets/art/" + boss.sprites[0])
-		var mat := VRBuild.tex_mat(tex, 0.25, 0.7)
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-		mat.alpha_scissor_threshold = 0.4
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		VRBuild.quad(head, Vector2(0.4, 0.4), Vector3(0, 0.2, 0), mat)
+		# the figure: its front and back views on two cards back to back, so it can be turned in the hand
+		var fig_h := 0.36
+		for view in ["front", "back"]:
+			var tex = load("res://assets/art/bobble-%s-%s.png" % [boss.id, view])
+			if tex == null and view == "front":
+				tex = load("res://assets/art/" + boss.sprites[0])
+			if tex == null:
+				continue
+			var m := VRBuild.tex_mat(tex, 0.2, 0.7)
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			m.alpha_scissor_threshold = 0.5
+			var w: float = fig_h * float(tex.get_width()) / float(tex.get_height())
+			var rot := Vector3(0, PI if view == "back" else 0.0, 0)
+			var z := -0.004 if view == "back" else 0.004
+			VRBuild.quad(head, Vector2(w, fig_h), Vector3(0, fig_h / 2.0, z), m, rot)
 		VRBuild.label(p.root, str(boss.name), 0.05, Vector3(0, 0.012, 0.13), Color(1, 0.95, 0.8), Vector3(-0.6, 0, 0), 3)
 
 

@@ -9,3 +9,4 @@ quest/build/
 quest/android/
 quest/addons/
 quest/tests/golden.json
+quest/vr-art/*.import

@@ -40,6 +40,7 @@ var locked := true             # red light: held at the machine; green: free to 
 var teleporter: Teleporter
 var fade_quad: MeshInstance3D
 var lock_prev := false
+var pause_prev := false
 var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
@@ -170,7 +171,7 @@ func _build_screen() -> void:
 
 static func _blank_hand() -> Dictionary:
 	return {"xf": Transform3D.IDENTITY, "grip": Vector3.ZERO, "gripping": false, "trigger": false, "grip_val": 0.0, "trig_val": 0.0,
-		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD}
+		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0}
 
 
 func _build_hands() -> void:
@@ -453,6 +454,16 @@ func _read_hands(delta: float) -> Array:
 		for h in hands:
 			var c: XRController3D = h.ctrl
 			var a: XRController3D = h.aim
+			if not (c.get_is_active() and c.get_has_tracking_data()):
+				var ht := XRServer.get_tracker("/user/hand_tracking/" + ("left" if h.side == 0 else "right")) as XRHandTracker
+				if ht != null and ht.has_tracking_data:
+					out.append(_tracked_hand(ht, h.side))
+				else:
+					var gone := _blank_hand()
+					gone.active = false
+					gone.xf = c.global_transform
+					out.append(gone)
+				continue
 			var grip_val := c.get_float("grip")
 			var trig_val := c.get_float("trigger")
 			var d := _blank_hand()
@@ -502,6 +513,32 @@ func _simulate_hands(delta: float) -> void:
 	sim_hands[1] = r
 
 
+## Bare hands (no controllers): the pose and finger curls come from the headset's hand tracking.
+func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
+	var o := origin.global_transform
+	var j := func(i: int) -> Vector3: return o * ht.get_hand_joint_transform(i).origin
+	# joint numbers: 0 palm, 1 wrist, 5 thumb tip, 7 index knuckle, 10 index tip, 12 middle knuckle, 15 / 20 / 25 middle, ring, little tips, 22 little knuckle
+	var palm: Vector3 = j.call(0)
+	var wrist: Vector3 = j.call(1)
+	var f: Vector3 = (j.call(12) - wrist).normalized()
+	var t: Vector3 = j.call(7) - j.call(22)
+	t = (t - f * t.dot(f)).normalized()
+	var d := _blank_hand()
+	d.xf = Transform3D(Basis(f.cross(t), t, -f), palm)
+	var curl := func(tip: int) -> float: return 1.0 - clampf((palm.distance_to(j.call(tip)) - 0.055) / 0.115, 0.0, 1.0)
+	var idx: float = curl.call(10)
+	var grip := (float(curl.call(15)) + float(curl.call(20)) + float(curl.call(25))) / 3.0
+	d.trig_val = idx
+	d.grip_val = grip
+	d.gripping = grip > 0.6
+	d.trigger = (j.call(5) as Vector3).distance_to(j.call(10)) < 0.028     # a pinch
+	d.aim_origin = j.call(10)
+	d.aim_dir = (j.call(10) - j.call(7)).normalized()
+	d.thumb = 1.0 - clampf(((j.call(5) as Vector3).distance_to(j.call(7)) - 0.03) / 0.06, 0.0, 1.0)
+	d.bare = true
+	return d
+
+
 ## Works out the hand the player sees (solid against the machine) and the points that touch the controls.
 func _pose_hands(hs: Array) -> void:
 	for i in range(hs.size()):
@@ -521,9 +558,10 @@ func _pose_hands(hs: Array) -> void:
 		var holding := grab_hand == i
 		var idx_c: float = 1.0 if holding else h.trig_val
 		var grip_c: float = 1.0 if holding else h.grip_val
-		vis.set_pose(idx_c, grip_c, 0.9 if holding else maxf(grip_c * 0.8, idx_c * 0.3))
+		var thumb_c: float = h.thumb if h.thumb >= 0.0 else maxf(grip_c * 0.8, idx_c * 0.3)
+		vis.set_pose(idx_c, grip_c, 0.9 if holding else thumb_c)
 		vis.global_transform = final_xf
-		vis.visible = xr_on or demo
+		vis.visible = (xr_on and h.active) or demo
 		h.palm = final_xf.origin
 		h.vis_xf = final_xf
 		h.tip = final_xf * Vector3(0, 0, -0.15 + 0.05 * idx_c)
@@ -673,7 +711,7 @@ func _stick(hs: Array, delta: float) -> void:
 
 
 func _buttons(hs: Array) -> void:
-	var down := {"fire": false, "grenade": false, "menu": false, "lock": false}
+	var down := {"fire": false, "grenade": false, "menu": false, "lock": false, "pause": false}
 	for i in range(hs.size()):
 		var h: Dictionary = hs[i]
 		for use_tip in [true, false]:
@@ -686,7 +724,7 @@ func _buttons(hs: Array) -> void:
 		if h.get("a", false):
 			down["grenade"] = true
 		if h.get("b", false):
-			down["menu"] = true
+			down["pause"] = true
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
 	var fire_edge: bool = down.fire and not fire_now
@@ -706,7 +744,21 @@ func _buttons(hs: Array) -> void:
 		else:
 			audio.ui("click")
 	grenade_prev = down.grenade
+	# the machine's MENU button pauses; pressed again while paused it opens the options board (the way to reach it with bare hands)
 	if down.menu and not menu_prev:
+		if menu.open:
+			_close_menu()
+		elif state == "play":
+			audio.ui("back")
+			state = "paused"
+			screen.mode = "paused"
+		elif state == "paused":
+			_open_menu()
+		else:
+			_open_menu()
+	menu_prev = down.menu
+	# the B button on a controller toggles pause
+	if down.pause and not pause_prev:
 		audio.ui("back")
 		if state == "play":
 			state = "paused"
@@ -714,7 +766,7 @@ func _buttons(hs: Array) -> void:
 		elif state == "paused":
 			state = "play"
 			screen.mode = "play"
-	menu_prev = down.menu
+	pause_prev = down.pause
 	if down.lock and not lock_prev:
 		_press_lock()
 	lock_prev = down.lock
