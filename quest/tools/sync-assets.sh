@@ -11,6 +11,7 @@ for f in arena-*.webp zombie-*.webp boss-*.webp player-*.webp bullet-*.webp pick
   [ -f "$f" ] && cp "$f" "$Q/art/"
 done
 cp art-bounds.json "$Q/art/art-bounds.json"
+cp quest/vr-art/*.jpg "$Q/art/"
 # sound: the pre-rendered effects and music
 cp snd-*.wav mus-*.wav "$Q/audio/"
 cp font-barlow-condensed-900.woff2 font-barlow-condensed-700.woff2 "$Q/fonts/"

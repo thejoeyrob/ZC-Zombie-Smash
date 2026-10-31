@@ -30,7 +30,7 @@ func build(root: Node3D, pos: Vector3, yaw: float, font: Font) -> void:
 	VRBuild.box(self, Vector3(3.3, 0.08, 0.42), Vector3(0, 2.4, 0.1), wood)
 	for y in [1.15, 1.7]:
 		VRBuild.box(self, Vector3(3.1, 0.05, 0.38), Vector3(0, y, 0.12), wood)
-		VRBuild.box(self, Vector3(3.1, 0.015, 0.015), Vector3(0, y + 0.03, 0.32), glow)
+		VRBuild.box(self, Vector3(3.1, 0.015, 0.015), Vector3(0, y - 0.005, 0.315), glow)
 	VRBuild.box(self, Vector3(3.1, 0.02, 0.02), Vector3(0, 2.36, 0.3), glow)
 	VRBuild.label(self, "PRIZES", 0.3, Vector3(0, 2.62, 0.0), Color(1.0, 0.35, 0.75), Vector3.ZERO, 12, font)
 	VRBuild.label(self, "BEAT A BOSS TO OPEN THE NEXT BOX", 0.075, Vector3(0, 2.46, 0.32), Color(1, 0.95, 0.8, 0.9), Vector3.ZERO, 3, font)
@@ -69,19 +69,19 @@ func _fill(p: Dictionary, open: bool) -> void:
 	if not open:
 		var box := Node3D.new()
 		p.root.add_child(box)
-		var col := Color.from_hsv(0.78 + p.index * 0.02, 0.7, 0.55)
-		var m := VRBuild.mat(col, 0.35, 0.1, 0.25)
-		VRBuild.box(box, Vector3(0.26, 0.26, 0.26), Vector3(0, 0.15, 0), m)
-		VRBuild.box(box, Vector3(0.28, 0.035, 0.28), Vector3(0, 0.255, 0), gold)
-		VRBuild.box(box, Vector3(0.035, 0.27, 0.27), Vector3(0, 0.15, 0), gold)
-		VRBuild.box(box, Vector3(0.27, 0.27, 0.035), Vector3(0, 0.15, 0), gold)
+		var wrap = load("res://assets/art/box-wrap.jpg")
+		var face = load("res://assets/art/box-mystery.jpg")
+		var top := VRBuild.tex_mat(wrap, 0.2, 0.4) if wrap != null else VRBuild.mat(Color(0.5, 0.1, 0.6), 0.4)
+		var front := VRBuild.tex_mat(face, 0.35, 0.4) if face != null else VRBuild.mat(Color(0.5, 0.1, 0.6), 0.4)
+		# six faces, so the picture sits whole on each side
 		for rot in [0.0, PI / 2, PI, -PI / 2]:
 			var holder := Node3D.new()
 			holder.rotation.y = rot
 			box.add_child(holder)
-			var q := VRBuild.label(holder, "?", 0.2, Vector3(0, 0.15, 0.133), Color(1, 1, 1), Vector3.ZERO, 6)
-			q.double_sided = false
-		VRBuild.label(p.root, "STAGE %d" % (p.index + 1), 0.045, Vector3(0, 0.0, 0.09), Color(1, 0.9, 0.6, 0.9), Vector3(-0.6, 0, 0), 3)
+			VRBuild.quad(holder, Vector2(0.26, 0.26), Vector3(0, 0.15, 0.13), front)
+		VRBuild.quad(box, Vector2(0.26, 0.26), Vector3(0, 0.28, 0), top, Vector3(-PI / 2, 0, 0))
+		VRBuild.box(box, Vector3(0.25, 0.01, 0.25), Vector3(0, 0.02, 0), top)
+		VRBuild.label(p.root, "STAGE %d" % (p.index + 1), 0.045, Vector3(0, 0.012, 0.13), Color(1, 0.9, 0.6, 0.9), Vector3(-0.6, 0, 0), 3)
 	else:
 		# bobble head: a brass plinth, a spring and the boss on a springy neck
 		VRBuild.cylinder(p.root, 0.11, 0.025, Vector3(0, 0.0125, 0), gold, 0.1)
@@ -96,7 +96,7 @@ func _fill(p: Dictionary, open: bool) -> void:
 		mat.alpha_scissor_threshold = 0.4
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		VRBuild.quad(head, Vector2(0.4, 0.4), Vector3(0, 0.2, 0), mat)
-		VRBuild.label(p.root, str(boss.name), 0.05, Vector3(0, 0.0, 0.09), Color(1, 0.95, 0.8), Vector3(-0.6, 0, 0), 3)
+		VRBuild.label(p.root, str(boss.name), 0.05, Vector3(0, 0.012, 0.13), Color(1, 0.95, 0.8), Vector3(-0.6, 0, 0), 3)
 
 
 func animate(delta: float) -> void:

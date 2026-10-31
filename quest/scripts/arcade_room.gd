@@ -34,21 +34,30 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	_decor(root, font)
 
 
+func _art(file: String, fallback: Texture2D) -> Texture2D:
+	var t = load("res://assets/art/" + file)
+	return t if t != null else fallback
+
+
 func _shell(root: Node3D) -> void:
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
 	# carpet
-	var carpet := VRBuild.tex_mat(VRBuild.carpet_texture(), 0.0, 0.95)
+	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95)
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
 	# ceiling
-	var ceiling := VRBuild.mat(Color(0.03, 0.025, 0.06), 0.9)
+	var ceiling := VRBuild.tex_mat(_art("ceiling-tiles.jpg", null), 0.0, 0.9, false, Color(0.45, 0.4, 0.6))
+	ceiling.uv1_scale = Vector3(w / 1.5, d / 1.5, 1)
+	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
 	# walls: lower wood panelling, upper dark violet
-	var wood := VRBuild.mat(Color(0.20, 0.11, 0.07), 0.8)
-	var paint := VRBuild.mat(Color(0.09, 0.05, 0.16), 0.9)
+	var wood := VRBuild.tex_mat(_art("wood-trim.jpg", null), 0.0, 0.7, false, Color(1.1, 1.0, 1.0))
+	var paint := VRBuild.tex_mat(_art("wallpaper.jpg", null), 0.35, 0.9, false, Color(1.15, 1.15, 1.15))
+	wood.texture_repeat = true
+	paint.texture_repeat = true
 	var walls := [
 		[Vector3(0, 0, FRONT_Z), 0.0, w],
 		[Vector3(0, 0, BACK_Z), PI, w],
@@ -60,8 +69,12 @@ func _shell(root: Node3D) -> void:
 		root_w.position = wall[0]
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
-		VRBuild.quad(root_w, Vector2(wall[2], 1.1), Vector3(0, 0.55, 0), wood)
-		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - 1.1), Vector3(0, 1.1 + (HEIGHT - 1.1) / 2.0, 0), paint)
+		var wm: StandardMaterial3D = wood.duplicate()
+		wm.uv1_scale = Vector3(wall[2] / 3.5, 1, 1)
+		var pm: StandardMaterial3D = paint.duplicate()
+		pm.uv1_scale = Vector3(wall[2] / 1.4, (HEIGHT - 1.1) / 1.4, 1)
+		VRBuild.quad(root_w, Vector2(wall[2], 1.1), Vector3(0, 0.55, 0), wm)
+		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - 1.1), Vector3(0, 1.1 + (HEIGHT - 1.1) / 2.0, 0), pm)
 		VRBuild.box(root_w, Vector3(wall[2], 0.06, 0.05), Vector3(0, 1.1, 0.02), VRBuild.mat(Color(0.35, 0.2, 0.1), 0.6))
 		# neon strip near the ceiling, alternating colours
 		var neon := VRBuild.mat(Color(1.0, 0.2, 0.7) if int(wall[1] * 10) % 2 == 0 else Color(0.1, 0.9, 1.0), 0.4, 0.0, 2.2)

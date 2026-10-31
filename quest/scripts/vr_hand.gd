@@ -24,6 +24,11 @@ func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color :=
 	side = hand_side
 	s = 1.0 if side == 0 else -1.0
 	var glove := VRBuild.mat(glove_color, 0.55)
+	var gt = load("res://assets/art/hand-glove.jpg")
+	if gt != null:
+		glove = VRBuild.tex_mat(gt, 0.0, 0.7, false, Color(0.97, 0.97, 1.0))
+		glove.uv1_scale = Vector3(1.5, 1.5, 1)
+		glove.texture_repeat = true
 	var stitch := VRBuild.mat(glove_color.darkened(0.35), 0.7)
 	var cuff := VRBuild.mat(cuff_color, 0.5)
 	# palm and back of the hand
