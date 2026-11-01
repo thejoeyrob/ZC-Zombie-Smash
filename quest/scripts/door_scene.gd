@@ -31,18 +31,17 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	var door_w := 2.1
 	var door_h := 2.35
 	var wall_w := half_w - door_w / 2.0
-	# the wall either side of the door and above it
+	# the wall either side of the door and above it (the black neon wall painting, floor to ceiling)
 	for side in [-1, 1]:
 		var cx: float = side * (door_w / 2.0 + wall_w / 2.0)
 		var wmat: StandardMaterial3D = wood.duplicate()
-		wmat.uv1_scale = Vector3(wall_w / 2.5, 1, 1)
+		wmat.uv1_scale = Vector3(wall_w / 2.4, height / 2.4, 1)
 		wmat.texture_repeat = true
-		var pmat: StandardMaterial3D = paper.duplicate()
-		pmat.uv1_scale = Vector3(wall_w / 2.4, (height - 1.25) / 2.4, 1)
-		pmat.texture_repeat = true
-		VRBuild.box(self, Vector3(wall_w, 1.25, 0.12), Vector3(cx, 0.625, 0), wmat)
-		VRBuild.box(self, Vector3(wall_w, height - 1.25, 0.12), Vector3(cx, 1.25 + (height - 1.25) / 2.0, 0), pmat)
-	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), paper)
+		VRBuild.box(self, Vector3(wall_w, height, 0.12), Vector3(cx, height / 2.0, 0), wmat)
+	var tmat: StandardMaterial3D = wood.duplicate()
+	tmat.uv1_scale = Vector3(door_w / 2.4, (height - door_h) / 2.4, 1)
+	tmat.texture_repeat = true
+	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), tmat)
 	# frame
 	var frame := RuinedExterior.surface("materials", 3, Color(0.24,0.26,0.28), 0.7)
 	for sx in [-1, 1]:

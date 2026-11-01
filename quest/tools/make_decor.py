@@ -9,7 +9,7 @@ HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, "..", "vr-art")
 ROOT = os.path.join(HERE, "..", "..")
 random.seed(11)
-NEON = [(255, 70, 160), (60, 240, 255), (255, 240, 60), (150, 255, 60), (255, 255, 255), (255, 150, 40)]
+NEON = [(255, 46, 147), (0, 229, 255), (255, 230, 0), (124, 255, 0), (160, 70, 255), (255, 122, 0)]
 
 
 def wrap_draw(draw_fn, size):
@@ -22,17 +22,7 @@ def wrap_draw(draw_fn, size):
 
 def wall():
     N = 1024
-    base = Image.new("RGB", (N, N))
-    bd = ImageDraw.Draw(base)
-    for y in range(N):
-        t = y / N
-        bd.line((0, y, N, y), fill=(int(120 - 50 * t), int(55 + 60 * t), int(205 - 20 * t)))
-    bands = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-    bnd = ImageDraw.Draw(bands)
-    for i in range(-2, 5):
-        x = i * 300
-        bnd.polygon([(x, 0), (x + 120, 0), (x + 120 - 400, N), (x - 400, N)], fill=(255, 255, 255, 26))
-    base = Image.alpha_composite(base.convert("RGBA"), bands).convert("RGB")
+    base = Image.new("RGB", (N, N), (7, 5, 20))
     shapes = []
     for i in range(26):
         shapes.append((random.randint(0, N), random.randint(0, N), random.choice(["tri", "ring", "zig", "squig", "plus", "dots"]), random.choice(NEON), random.randint(50, 120), random.uniform(0, 6.28)))
@@ -70,8 +60,8 @@ def wall():
     # faint grid, like the floor-to-ceiling grid of a laser tag arena
     gd = ImageDraw.Draw(img)
     for i in range(0, N, 128):
-        gd.line((i, 0, i, N), fill=(150, 110, 235, 255), width=2)
-        gd.line((0, i, N, i), fill=(150, 110, 235, 255), width=2)
+        gd.line((i, 0, i, N), fill=(30, 24, 70, 255), width=2)
+        gd.line((0, i, N, i), fill=(30, 24, 70, 255), width=2)
     img.alpha_composite(glow)
     # dim the core slightly so it reads as painted glow-in-the-dark neon
     core.putalpha(core.split()[3].point(lambda v: int(v * 0.95)))
@@ -81,11 +71,11 @@ def wall():
 
 def ceiling():
     N = 1024
-    img = Image.new("RGB", (N, N), (40, 34, 120))
+    img = Image.new("RGB", (N, N), (3, 3, 10))
     d = ImageDraw.Draw(img)
     for i in range(0, N, 256):
-        d.line((i, 0, i, N), fill=(95, 85, 200), width=6)
-        d.line((0, i, N, i), fill=(95, 85, 200), width=6)
+        d.line((i, 0, i, N), fill=(14, 12, 30), width=6)
+        d.line((0, i, N, i), fill=(14, 12, 30), width=6)
     lights = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     ld = ImageDraw.Draw(lights)
     for _ in range(160):

@@ -40,25 +40,19 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.5, 0.42, 0.7)
-	env.ambient_light_energy = 0.7
+	env.ambient_light_color = Color(0.5, 0.33, 0.68)
+	env.ambient_light_energy = 0.95
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
-	var wood := VRBuild.tex_mat(_art("wainscot.jpg", null), 0.9, 0.7)
-	var paper := VRBuild.tex_mat(_art("wallpaper.jpg", null), 0.7, 0.9)
+	var wood := VRBuild.tex_mat(_art("wall90.jpg", null), 0.35, 0.8)
+	var paper := wood
 	wood.texture_repeat = true
-	paper.texture_repeat = true
 	_shell(root, wood, paper, font)
 	_lights(root)
 	door = DoorScene.new()
-	var dw: StandardMaterial3D = wood.duplicate()
-	dw.uv1_scale = Vector3(1.0, 1, 1)
-	var dp: StandardMaterial3D = paper.duplicate()
-	dp.uv1_scale = Vector3(3.0, 1.4, 1)
-	dw.uv1_scale = Vector3(1.4, 1, 1)
-	door.build(root, FRONT_Z, HALF_W, HEIGHT, dw, dp, font)
+	door.build(root, FRONT_Z, HALF_W, HEIGHT, wood, paper, font)
 	_machines(root)
 	_back_wall(root, font)
 	_decor(root, font)
@@ -76,11 +70,11 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.tex_mat(_art("floor90.jpg", VRBuild.carpet_texture()), 0.0, 0.9, false, Color(0.5, 0.45, 0.65))
+	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95)
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9, false, Color(0.3, 0.3, 0.45))
+	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9)
 	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -96,25 +90,12 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
-		wm.uv1_scale = Vector3(wall[2] / 2.5, 1, 1)
+		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
 		wm.texture_repeat = true
-		var pm: StandardMaterial3D = paper.duplicate()
-		pm.uv1_scale = Vector3(wall[2] / 2.4, (HEIGHT - WAIN_H) / 2.4, 1)
-		pm.texture_repeat = true
-		VRBuild.quad(root_w, Vector2(wall[2], WAIN_H), Vector3(0, WAIN_H / 2.0, 0), wm)
-		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - WAIN_H), Vector3(0, WAIN_H + (HEIGHT - WAIN_H) / 2.0, 0), pm)
-		VRBuild.box(root_w, Vector3(wall[2], 0.12, 0.1), Vector3(0, HEIGHT - 0.06, 0.05), trim)   # cornice
-		var n := neon_b
-		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.14, 0.05), neon_a)      # glowing line under the cornice
-		# pilasters with a neon edge
-		var count := int(wall[2] / 2.4)
-		for i in range(1, count):
-			if k == 0:
-				continue          # the back wall carries the shelves and boards; no posts in front of them
-			var px: float = -wall[2] / 2.0 + i * wall[2] / count
-			VRBuild.box(root_w, Vector3(0.22, HEIGHT, 0.1), Vector3(px, HEIGHT / 2.0, 0.05), trim)
-			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px - 0.1, HEIGHT / 2.0, 0.108), n)
-			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px + 0.1, HEIGHT / 2.0, 0.108), n)
+		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
+		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.12, 0.03), neon_a)      # neon tube along the top of the wall
+		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, 0.12, 0.03), neon_b)             # and along the floor
+		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [0.8, 2.6, 4.4, 6.2, 7.8]:
@@ -179,14 +160,6 @@ func _machines(root: Node3D) -> void:
 		ring.position = ARC_CENTRE + Vector3(0, 0.02, 0)
 		ring.material_override = VRBuild.mat(ring_spec[2], 0.4, 0.0, 2.6)
 		root.add_child(ring)
-	# a mirror ball over the rug
-	var ball := Node3D.new()
-	ball.position = ARC_CENTRE + Vector3(0, HEIGHT - 0.95, 0)
-	root.add_child(ball)
-	VRBuild.cylinder(ball, 0.008, 0.7, Vector3(0, 0.65, 0), VRBuild.mat(Color(0.5, 0.5, 0.55), 0.3, 0.5, 0.2, Color(0.5, 0.5, 0.55)))
-	var mb := VRBuild.sphere(ball, 0.32, Vector3.ZERO, VRBuild.mat(Color.WHITE), 24)
-	mb.material_override = _mirror_ball_material()
-	ball_mat_spin = ball
 	_active = player_index
 
 
@@ -247,8 +220,8 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	_neon_sign(root, "neon-scores.png", Vector3(2.2, 2.78, BACK_Z - 0.04), PI, Vector2(1.9, 0.57))
 	# the snack machine in the far corner on the left as you come in
 	vending = VendingMachine.new()
-	vending.position = Vector3(HALF_W - 0.67, 0, BACK_Z - 0.67)
-	vending.rotation.y = -3.0 * PI / 4.0
+	vending.position = Vector3(HALF_W - 0.42, 0, 5.1)       # against the right-hand wall, mirroring the jukebox
+	vending.rotation.y = -PI / 2.0
 	root.add_child(vending)
 	vending.build(font)
 	blockers.append([vending.position.x, vending.position.z, 0.75])
@@ -267,13 +240,23 @@ func _decor(root: Node3D, font: Font) -> void:
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
+	# glowing wall art in the manner of a real arcade: pixel sprites and hexagon light fixtures
+	_neon_sign(root, "wallart-chase.png", Vector3(-HALF_W + 0.04, 2.55, 5.1), PI / 2.0, Vector2(2.6, 0.62))
+	_neon_sign(root, "wallart-invaders.png", Vector3(HALF_W - 0.04, 2.6, 5.1), -PI / 2.0, Vector2(2.0, 0.5))
+	_neon_sign(root, "wallart-pad.png", Vector3(-2.0, 2.75, BACK_Z - 0.04), PI, Vector2(0.75, 0.43))
+	_neon_sign(root, "wallart-stick.png", Vector3(2.0, 2.75, BACK_Z - 0.04), PI, Vector2(0.5, 0.5))
+	_neon_sign(root, "wallart-heart.png", Vector3(-HALF_W + 0.04, 2.3, 7.3), PI / 2.0, Vector2(0.6, 0.52))
+	for hx in [[-2.2, 2.2, "hex-blue.png"], [2.3, 4.6, "hex-pink.png"], [-1.0, 6.8, "hex-blue.png"]]:
+		var hm := VRBuild.tex_mat(_art(hx[2], null), 0.0, 0.5, true)
+		hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		VRBuild.quad(root, Vector2(2.6, 2.6), Vector3(hx[0], HEIGHT - 0.03, hx[1]), hm, Vector3(PI / 2, 0, 0))
 	_neon_sign(root, "neon-gameon.png", Vector3(-HALF_W + 0.04, 2.92, 3.8), PI / 2.0, Vector2(1.3, 0.39))
 	_neon_sign(root, "neon-player1.png", Vector3(HALF_W - 0.04, 2.92, 3.8), -PI / 2.0, Vector2(1.3, 0.39))
 	# the boss arenas as framed pictures between the posters
 	var arenas := ["arena-jordan.webp", "arena-debo.webp", "arena-fatamy.webp", "arena-drmantis.webp"]
 	var ai := 0
 	for side in [-1, 1]:
-		for z in [2.95, 4.7]:
+		for z in ([2.95] if side == 1 else [2.95, 4.7]):
 			var fr := Node3D.new()
 			fr.position = Vector3(side * (HALF_W - 0.04), 1.75, z)
 			fr.rotation.y = -side * PI / 2.0
@@ -354,7 +337,7 @@ func _spots() -> void:
 	spots.append(["prizes_a", "PRIZES", Vector3(-3.3, 0, BACK_Z - 1.55), Vector3(-3.3, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
 	spots.append(["prizes_b", "PRIZES", Vector3(-2.0, 0, BACK_Z - 1.55), Vector3(-2.0, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
 	spots.append(["hall", "HALL OF FAME", Vector3(2.2, 0, BACK_Z - 2.2), Vector3(2.2, 1.8, BACK_Z), Color(1.0, 0.82, 0.25)])
-	spots.append(["vending", "SNACKS", Vector3(3.0, 0, BACK_Z - 2.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
+	spots.append(["vending", "SNACKS", Vector3(HALF_W - 1.5, 0, 5.1), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
 	spots.append(["jukebox", "JUKEBOX", Vector3(-2.95, 0, 5.1), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
 	spots.append(["exit", "EXIT", Vector3(0, 0, 0.75), Vector3(0, 1.4, FRONT_Z), Color(0.3, 1.0, 0.45)])
 
