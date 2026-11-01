@@ -1,5 +1,9 @@
 # Message for the existing VR (Meta Quest) chat
 
-Read `CLAUDE.md`, `docs/OWNERS-GUIDE.md` and `docs/PLATFORMS.md` on `main`. You own `quest/` and the `quest-build` branch only. The phone game now lives on `main` at 7.62.4. Merge `main` into `quest-build` when you want the latest game changes, and do not edit shared game files; ask the game chat or the owner. Before changing any game rule in the Godot port, check whether it should be a shared-game change instead.
+The game is being separated into its own repository, `thejoeyrob/zombie-smash-game` (the "cartridge"), with the consoles in `thejoeyrob/zombie-smash-consoles`. Until those repositories are pushed, this message and the files it refers to exist only in the game chat's session; ask the owner for `docs/VR-INTEGRATION.md`.
 
-Open question for the owner and you: the Godot port duplicates the game rules (JavaScript on phone, GDScript in `quest/`). Propose which option in `docs/PLATFORMS.md` "How to get there", step 4, suits Quest performance (shared game in a web view on the cabinet screen, or a tested port with golden-run comparisons), and record the decision there. Also plan whether `quest/` should move to its own repo once that is settled (note the Quest signing key is in this repo's secrets).
+What changes for you:
+- `exports/vr/zs_data.json` and `golden.json` are now produced by the game repo from game 7.62.4 (the code behind iPhone build 142). `zs_data.json` is byte-identical to your `quest/data/zs_data.json`. Your `engine.js` and `game-data.js` are unchanged from 7.62.4.
+- You can stop maintaining `quest/tools/export-data.mjs` and `quest/tools/golden.mjs`; take the exported files from the game repo instead and keep running `tests/trace.gd`.
+- The cartridge's real `engine.js` has been run inside QuickJS (outside any browser) and matches the golden results. Please evaluate embedding it in Godot instead of maintaining `zs_engine.gd`: check a Godot 4 QuickJS GDExtension, Quest performance and build size. Report back; do not rip out the port until that is proven.
+- Do not change shared game files. If the game needs a change, ask the owner so it is made in the game repo.
