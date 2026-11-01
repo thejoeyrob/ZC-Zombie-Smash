@@ -243,8 +243,8 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	pinball.rotation.y = PI
 	root.add_child(pinball)
 	pinball.build(font)
-	var pin_sign := VRBuild.label(root, "PINBALL", 0.36, Vector3(0, 2.75, BACK_Z - 0.06), Color(1.0, 0.85, 0.2), Vector3(0, PI, 0), 12, font)
-	sign_labels.append(pin_sign)
+	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.7, BACK_Z - 0.04), PI, Vector2(2.6, 0.78))
+	_neon_sign(root, "neon-scores.png", Vector3(2.2, 2.78, BACK_Z - 0.04), PI, Vector2(1.9, 0.57))
 	# the snack machine in the far corner on the left as you come in
 	vending = VendingMachine.new()
 	vending.position = Vector3(HALF_W - 0.67, 0, BACK_Z - 0.67)
@@ -267,6 +267,21 @@ func _decor(root: Node3D, font: Font) -> void:
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
+	_neon_sign(root, "neon-gameon.png", Vector3(-HALF_W + 0.04, 2.92, 3.8), PI / 2.0, Vector2(1.3, 0.39))
+	_neon_sign(root, "neon-player1.png", Vector3(HALF_W - 0.04, 2.92, 3.8), -PI / 2.0, Vector2(1.3, 0.39))
+	# the boss arenas as framed pictures between the posters
+	var arenas := ["arena-jordan.webp", "arena-debo.webp", "arena-fatamy.webp", "arena-drmantis.webp"]
+	var ai := 0
+	for side in [-1, 1]:
+		for z in [2.95, 4.7]:
+			var fr := Node3D.new()
+			fr.position = Vector3(side * (HALF_W - 0.04), 1.75, z)
+			fr.rotation.y = -side * PI / 2.0
+			root.add_child(fr)
+			var at: Texture2D = load("res://assets/art/" + arenas[ai])
+			VRBuild.box(fr, Vector3(0.8, 0.52, 0.03), Vector3.ZERO, VRBuild.mat(Color(0.04, 0.03, 0.06), 0.4, 0.4))
+			VRBuild.quad(fr, Vector2(0.75, 0.47), Vector3(0, 0, 0.017), VRBuild.tex_mat(at, 0.3, 0.6))
+			ai += 1
 	# six posters, three on each side wall
 	var posters := ["poster-1.jpg", "poster-2.jpg", "poster-3.jpg", "poster-4.jpg", "poster-5.jpg", "poster-6.jpg"]
 	var k := 0
@@ -280,6 +295,20 @@ func _decor(root: Node3D, font: Font) -> void:
 			VRBuild.box(holder, Vector3(0.82, 1.2, 0.03), Vector3.ZERO, VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5))
 			VRBuild.quad(holder, Vector2(0.8, 1.18), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6, false, Color(1, 1, 1)))
 			k += 1
+
+
+## A glowing neon tube sign on a wall (yaw turns it to face into the room).
+func _neon_sign(root: Node3D, file: String, pos: Vector3, yaw: float, size: Vector2) -> void:
+	var t = load("res://assets/art/" + file)
+	if t == null:
+		return
+	var m := VRBuild.tex_mat(t, 0.0, 0.5, true)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var holder := Node3D.new()
+	holder.position = pos
+	holder.rotation.y = yaw
+	root.add_child(holder)
+	VRBuild.quad(holder, size, Vector3(0, 0, 0.02), m)
 
 
 ## A wall-mounted plate on brushed steel standoffs with its own spotlight.
