@@ -46,7 +46,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "hud": "on", "battle": "JORDAN"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -105,7 +105,7 @@ func _ready() -> void:
 	menu.build(self, font, settings, build_number())
 	# a small build number on the machine's panel and on the floor sign, so a new install is easy to recognise
 	for m in machines:
-		VRBuild.label(m.panel, "BUILD %d" % build_number(), 0.03, Vector3(-0.2, 0.003, -0.14), Color(1, 1, 1, 0.4), Vector3(-PI / 2, 0, 0), 3)
+		VRBuild.label(m.panel, "BUILD %d" % build_number(), 0.03, Vector3(0.0, 0.003, 0.163), Color(1, 1, 1, 0.4), Vector3(-PI / 2, 0, 0), 3)
 	menu.changed.connect(_on_setting)
 	menu.action.connect(_on_menu_action)
 	_capture_attract()
@@ -191,6 +191,8 @@ func _build_screen() -> void:
 	screen.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	viewport.add_child(screen)
 	screen.preload_all()
+	screen.tex("intro-jw.png")
+	screen.intro_done.connect(_on_intro_done)
 
 
 static func _blank_hand() -> Dictionary:
@@ -277,6 +279,8 @@ func _load_settings() -> void:
 				if d.has(k):
 					settings[k] = d[k]
 			settings.snap = int(settings.snap)
+			settings.handroll = int(settings.handroll)
+			settings.handtilt = int(settings.handtilt)
 
 
 func _save_settings() -> void:
@@ -372,6 +376,10 @@ func _on_menu_action(name: String) -> void:
 			recenter()
 		"quit":
 			get_tree().quit()
+		"story":
+			_close_menu()
+			if locked and state == "title":
+				_begin_intro()
 		"fight":
 			_close_menu()
 			start_game()
@@ -696,6 +704,8 @@ func _pose_hands(hs: Array) -> void:
 		var h: Dictionary = hs[i]
 		var vis: VRHand = hands[i].vis
 		var xf: Transform3D = h.xf
+		if not h.bare and (int(settings.handroll) != 0 or int(settings.handtilt) != 0):
+			xf.basis = xf.basis * Basis.from_euler(Vector3(deg_to_rad(float(settings.handtilt)), 0.0, deg_to_rad(float(settings.handroll))))
 		var sgn := vis.s
 		h.grip = xf * Vector3(sgn * HAND_ANCHOR, 0.0, -0.012)      # where the stick ball is held
 		# keep palm and finger out of the cabinet
@@ -718,7 +728,7 @@ func _pose_hands(hs: Array) -> void:
 		vis.global_transform = final_xf
 		vis.visible = (xr_on and h.active) or demo
 		var arm: VRArm = hands[i].arm
-		arm.visible = vis.visible
+		arm.visible = false          # no arms: the glove's gauntlet is all that shows
 		if arm.visible:
 			var cg := cam.global_transform
 			var fwd := -cg.basis.z
@@ -741,11 +751,36 @@ func _set_locked(on: bool) -> void:
 		for m in machines:
 			m.set_lock_light(false)
 	teleporter.set_shown(not on)
+	if on and state == "title" and not progress.codes.has("story_seen"):
+		_begin_intro()
+	if not on and state == "intro":
+		screen.video.stop()
+		screen.mode = "title"
+		state = "title"
 	if not on and (state == "over" or state == "title"):
 		audio.play_music("ambient", 1.0)
 	if not on and state == "play":
 		state = "paused"
 		screen.mode = "paused"
+
+
+## The opening of the phone game: the JW Eds card, then the three comic clips, then the title.
+func _begin_intro() -> void:
+	state = "intro"
+	screen.start_intro()
+	audio.current = ""
+	audio.play_music("story", 0.6)
+
+
+func _on_intro_done() -> void:
+	if state != "intro":
+		return
+	state = "title"
+	if not progress.codes.has("story_seen"):
+		progress.codes.append("story_seen")
+		progress.save()
+	audio.current = ""
+	audio.play_music("home", 1.0)
 
 
 func _head_floor() -> Vector3:
@@ -899,7 +934,7 @@ func _buttons(hs: Array) -> void:
 		for use_tip in [true, false]:
 			var p: Vector3 = h.tip if use_tip else h.palm
 			var hit := cab.button_at(cab.to_panel(p), 0.032 if use_tip else 0.07)
-			if hit != "" and grab_hand != i and (hit != "lock" or use_tip):
+			if hit != "" and grab_hand != i and ((hit != "lock" and hit != "menu") or use_tip):
 				down[hit] = true
 			if not locked and use_tip:
 				for m in machines:
@@ -924,6 +959,8 @@ func _buttons(hs: Array) -> void:
 		if state == "title":
 			audio.ui("chime")
 			start_game()
+		elif state == "intro":
+			screen.skip_intro()
 		elif state == "over" and clock - over_at > 1.5:
 			audio.ui("chime")
 			start_game()
@@ -1113,6 +1150,9 @@ func _run_shots() -> void:
 		"themed2": [Vector3(2.2, 1.6, 2.3), Vector3(2.7, 1.1, 0.9)],
 	}
 	var plan: Array = String(args.get("views", "head,panel,overview,door,pinball")).split(",")
+	if args.has("intro"):
+		_begin_intro()
+		await get_tree().create_timer(float(args.get("intro", "5"))).timeout
 	if args.has("play") or args.has("demo"):
 		if args.has("play"):
 			start_game()

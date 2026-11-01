@@ -233,6 +233,8 @@ func _build_ui() -> void:
 		sw.add_child(b)
 		_widgets["topper_" + k] = b
 	_stepper(right, "pointer", "Pointer hand", ["right", "left"], "")
+	_stepper(right, "handroll", "Hand roll (if hands look twisted)", [-90, -60, -30, 0, 30, 60, 90, 180], "°")
+	_stepper(right, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
 	_stepper(right, "assist", "Controller assist (marks scores *)", ["off", "on"], "")
 	_stepper(right, "hud", "Screen shake", ["on", "off"], "")
 	right.add_child(_label("BOSS BATTLE", 30, Color(0.4, 1.0, 0.7)))
@@ -243,6 +245,9 @@ func _build_ui() -> void:
 	var fight := _button("FIGHT THIS BOSS (PRACTICE)", Color("#7a2a8f"), 32)
 	fight.pressed.connect(func(): action.emit("fight"))
 	right.add_child(fight)
+	var story := _button("REPLAY THE STORY (comic intro)", Color("#2a5fa8"), 30)
+	story.pressed.connect(func(): action.emit("story"))
+	right.add_child(story)
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(sp)

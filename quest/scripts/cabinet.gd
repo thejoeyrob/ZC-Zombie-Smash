@@ -11,12 +11,14 @@ const BALL_RADIUS := 0.029
 const MAX_TILT := 0.40                # radians the stick can lean
 const BUTTONS := {
 	"fire": {"pos": Vector3(0.19, 0.0, 0.03), "radius": 0.036},
-	"grenade": {"pos": Vector3(0.03, 0.0, -0.005), "radius": 0.031},
-	"menu": {"pos": Vector3(0.03, 0.0, 0.1), "radius": 0.019},
-	"lock": {"pos": Vector3(0.285, 0.0, -0.115), "radius": 0.02},
+	"grenade": {"pos": Vector3(0.07, 0.0, 0.04), "radius": 0.031},
+	# these two sit on the front of the lower cabinet either side of the coin door (their pos is (x, 0, -height) in that face's frame)
+	"menu": {"pos": Vector3(0.2, 0.0, -0.56), "radius": 0.02, "front": true},
+	"lock": {"pos": Vector3(-0.2, 0.0, -0.56), "radius": 0.022, "front": true},
 }
 
 var panel: Node3D
+var front_panel: Node3D      # frame of the front face of the lower body: local +y points out toward the player
 var stick_pivot: Node3D
 var ball: MeshInstance3D
 var ball_mat: StandardMaterial3D
@@ -173,11 +175,20 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.quad(mon, Vector2(0.64, 0.78), Vector3(0, 0.0, 0.1065), sheen)
 	VRBuild.box(mon, Vector3(0.68, 0.016, 0.014), Vector3(0, 0.398, 0.103), chrome)
 	VRBuild.box(mon, Vector3(0.68, 0.016, 0.014), Vector3(0, -0.398, 0.103), chrome)
-	# marquee on top
+	# marquee: the header bar sits in the tall part of the side outline, its face flush with the front of that part
 	var marq := Node3D.new()
 	marq.rotation = Vector3(-0.1, 0, 0)
-	# its face is flush with the front of the monitor at the top, standing proud of the side cheeks
 	marq.position = Vector3(0, mon.position.y + 0.394 + 0.125, monitor_z + 0.03 - 0.06)
+	if not poly.is_empty():
+		var top_v := float(profile.get("top_v", 0.01)) + 0.025
+		var top_y := CabProfile.y_of(top_v)
+		var bot_v := 1.0 - (top_y - 0.22) / CabProfile.H_M
+		var front_u := 1.0
+		var v := top_v
+		while v <= bot_v:
+			front_u = minf(front_u, CabProfile.edges_at(poly, v).y)
+			v += 0.01
+		marq.position = Vector3(0, top_y - 0.11, CabProfile.z_of(front_u) - 0.01 - 0.06)
 	add_child(marq)
 	VRBuild.box(marq, Vector3(0.67, 0.22, 0.12), Vector3.ZERO, dark)
 	if marquee_tex != null:
@@ -186,17 +197,53 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		VRBuild.quad(marq, Vector2(0.64, 0.2), Vector3(0, 0, 0.0605), VRBuild.unshaded(marquee_color))
 		VRBuild.label(marq, marquee_text, 0.075, Vector3(0, 0, 0.062), Color(1, 1, 1), Vector3.ZERO, 6)
 	if interactive:
+		front_panel = Node3D.new()
+		front_panel.position = Vector3(0, 0, front_z + 0.004)
+		front_panel.rotation = Vector3(PI / 2, 0, 0)
+		add_child(front_panel)
 		_build_controls()
 		_build_traffic_light()
-		var lab := Color(1, 1, 1, 0.85)
-		VRBuild.label(panel, "LOCK", 0.026, Vector3(0.285, 0.003, -0.07), lab, Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "MENU", 0.03, Vector3(0.03, 0.003, 0.14), lab, Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "FIRE", 0.05, Vector3(0.19, 0.003, 0.098), Color(1, 0.85, 0.85), Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "GRENADE", 0.03, Vector3(0.03, 0.003, 0.05), Color(0.8, 0.9, 1), Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "MOVE", 0.05, Vector3(-0.19, 0.003, 0.125), Color(1, 0.92, 0.7), Vector3(-PI / 2, 0, 0), 4)
+		_build_decals()
 		set_lit(lit)
-	for n in [self, panel, mon, marq]:
+	for n in [self, panel, mon, marq, front_panel]:
 		VRBuild.merge_static(n)
+
+
+static var _decal_mats := {}
+
+
+func _decal(parent: Node3D, file: String, size: float, pos: Vector3, rot := Vector3.ZERO, roll := 0.0) -> void:
+	if not _decal_mats.has(file):
+		var t = load("res://assets/art/%s" % file)
+		if t == null:
+			return
+		var m := VRBuild.tex_mat(t, 0.0, 0.45)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+		_decal_mats[file] = m
+	var q := VRBuild.quad(parent, Vector2(size, size), pos, _decal_mats[file], rot)
+	q.rotate_object_local(Vector3(0, 0, 1), roll)
+
+
+## Bold sticker decals for the instructions and the decoration: die-cut, outlined, like the collector stickers and POGs of the 90s.
+func _build_decals() -> void:
+	var flat := Vector3(-PI / 2, 0, 0)
+	_decal(panel, "decal-move.png", 0.115, Vector3(-0.19, 0.0015, 0.122), flat, 0.0)
+	_decal(panel, "decal-fire.png", 0.105, Vector3(0.19, 0.0015, 0.105), flat, 0.1)
+	_decal(panel, "decal-grenade.png", 0.09, Vector3(0.07, 0.0015, 0.108), flat, -0.08)
+	_decal(panel, "decal-skull.png", 0.075, Vector3(-0.285, 0.0015, -0.118), flat, 0.2)
+	_decal(panel, "decal-bolt.png", 0.065, Vector3(-0.1, 0.0015, -0.125), flat, -0.25)
+	_decal(panel, "decal-1up.png", 0.07, Vector3(0.05, 0.0015, -0.122), flat, 0.12)
+	_decal(panel, "decal-pog-1.png", 0.07, Vector3(0.15, 0.0015, -0.118), flat, 0.0)
+	_decal(panel, "decal-pog-2.png", 0.07, Vector3(0.235, 0.0015, -0.12), flat, 0.0)
+	_decal(panel, "decal-pog-3.png", 0.06, Vector3(0.29, 0.0015, -0.04), flat, 0.0)
+	var fz := front_z + 0.0075
+	_decal(self, "decal-lock.png", 0.1, Vector3(-0.2, 0.46, fz), Vector3.ZERO, 0.0)
+	_decal(self, "decal-menu.png", 0.1, Vector3(0.2, 0.46, fz), Vector3.ZERO, 0.0)
+	_decal(self, "decal-smash.png", 0.17, Vector3(0.0, 0.3, fz), Vector3.ZERO, 0.08)
+	_decal(self, "decal-pog-4.png", 0.075, Vector3(-0.2, 0.72, fz), Vector3.ZERO, 0.0)
+	_decal(self, "decal-bolt.png", 0.075, Vector3(0.2, 0.72, fz), Vector3.ZERO, 0.2)
+	_decal(self, "decal-skull.png", 0.07, Vector3(-0.255, 0.2, fz), Vector3.ZERO, -0.2)
+	_decal(self, "decal-1up.png", 0.07, Vector3(0.255, 0.2, fz), Vector3.ZERO, 0.15)
 
 
 func _build_sides(poly: Array, body: Material) -> void:
@@ -298,6 +345,7 @@ func _build_controls() -> void:
 		var b: Dictionary = BUTTONS[k]
 		var r: float = b.radius
 		var col: Color = cfg[k][0]
+		var panel: Node3D = front_panel if b.get("front", false) else self.panel
 		VRBuild.cylinder(panel, r + 0.016, 0.003, b.pos + Vector3(0, 0.0015, 0), black, -1.0, Vector3.ZERO, 40)         # cut-out in the deck
 		VRBuild.cylinder(panel, r + 0.012, 0.008, b.pos + Vector3(0, 0.005, 0), brass, r + 0.01, Vector3.ZERO, 40)        # brass ring
 		VRBuild.cylinder(panel, r + 0.006, 0.012, b.pos + Vector3(0, 0.008, 0), chrome, r + 0.004, Vector3.ZERO, 40)      # chrome collar
@@ -423,9 +471,17 @@ func button_pressed_visual(name: String, down: bool) -> void:
 
 ## Which button (if any) is under a point given in panel-local coordinates. Returns "" when none.
 func button_at(local: Vector3, reach_above := 0.05) -> String:
+	var in_cab := panel.transform * local
 	for k in BUTTONS:
 		var b: Dictionary = BUTTONS[k]
-		var d := Vector2(local.x - b.pos.x, local.z - b.pos.z).length()
-		if d <= float(b.radius) + 0.012 and local.y > -0.015 and local.y < reach_above:
+		var q := local
+		var reach := reach_above
+		if b.get("front", false):
+			if front_panel == null:
+				continue
+			q = front_panel.transform.affine_inverse() * in_cab
+			reach = minf(reach_above, 0.04)
+		var d := Vector2(q.x - b.pos.x, q.z - b.pos.z).length()
+		if d <= float(b.radius) + 0.012 and q.y > -0.015 and q.y < reach:
 			return k
 	return ""

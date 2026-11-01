@@ -14,6 +14,12 @@ var final_wave := 0
 var final_kills := 0
 var clock := 0.0
 var topper_color := Color("#f5b800")
+signal intro_done
+
+# the opening, exactly the phone game's order: the JW Eds studio card, then the three comic clips (FIRE moves on)
+var intro_t := 0.0
+var story_step := 0
+var video: VideoStreamPlayer
 
 var _tex := {}
 var _bounds := {}
@@ -33,6 +39,12 @@ func _ready() -> void:
 	_font = load(FONT_PATH)
 	if _font == null:
 		_font = ThemeDB.fallback_font
+	video = VideoStreamPlayer.new()
+	video.expand = false
+	video.size = Vector2(8, 8)
+	video.modulate = Color(1, 1, 1, 0)
+	video.finished.connect(_story_next)
+	add_child(video)
 
 
 var _base := Transform2D.IDENTITY
@@ -79,8 +91,56 @@ func preload_all() -> void:
 		tex("weapon-glowstick-%s.webp" % c)
 
 
+func start_intro() -> void:
+	mode = "jw"
+	intro_t = 0.0
+	story_step = 0
+
+
+func intro_active() -> bool:
+	return mode == "jw" or mode == "story"
+
+
+## FIRE during the opening: skip the studio card, or move on to the next comic clip.
+func skip_intro() -> void:
+	if mode == "jw":
+		_play_story(0)
+	elif mode == "story":
+		_story_next()
+
+
+func _play_story(i: int) -> void:
+	story_step = i
+	var st = load("res://assets/art/story-%d.ogv" % (i + 1))
+	if st == null:
+		_end_intro()
+		return
+	mode = "story"
+	video.stream = st
+	video.play()
+
+
+func _story_next() -> void:
+	if mode != "story":
+		return
+	if story_step < 2:
+		_play_story(story_step + 1)
+	else:
+		_end_intro()
+
+
+func _end_intro() -> void:
+	video.stop()
+	mode = "title"
+	intro_done.emit()
+
+
 func _process(delta: float) -> void:
 	clock += delta
+	if mode == "jw":
+		intro_t += delta
+		if intro_t > 3.6:
+			_play_story(0)
 	queue_redraw()
 
 
@@ -143,6 +203,12 @@ func _draw() -> void:
 	draw_set_transform_matrix(_base)
 	if W == 0.0:
 		return
+	if mode == "jw":
+		draw_jw()
+		return
+	if mode == "story":
+		draw_story()
+		return
 	if mode == "title":
 		draw_title()
 		return
@@ -158,6 +224,28 @@ func _draw() -> void:
 		text("PRESS MENU TO RESUME", W / 2.0, H / 2.0 + 18.0, 12, Color.WHITE)
 	if mode == "over":
 		draw_over()
+
+
+func draw_jw() -> void:
+	draw_rect(Rect2(0, 0, W, H), Color.BLACK)
+	var t := tex("intro-jw.png")
+	if t == null:
+		return
+	var a := clampf(minf(intro_t / 0.7, (3.6 - intro_t) / 0.6), 0.0, 1.0)
+	var w := W * 0.96
+	var h := w * float(t.get_height()) / float(t.get_width())
+	draw_texture_rect(t, Rect2((W - w) / 2.0, (H - h) / 2.0, w, h), false, Color(1, 1, 1, a))
+	text("PRESS FIRE TO SKIP", W / 2.0, H - 14.0, 9, Color(1, 1, 1, 0.45 * a))
+
+
+func draw_story() -> void:
+	draw_rect(Rect2(0, 0, W, H), Color.BLACK)
+	var vt := video.get_video_texture()
+	if vt != null and vt.get_width() > 0:
+		var k := H / float(vt.get_height())
+		var w := vt.get_width() * k
+		draw_texture_rect(vt, Rect2((W - w) / 2.0, 0, w, H), false)
+	text("FIRE  >>", W - 34.0, H - 8.0, 9, Color(1, 1, 1, 0.55))
 
 
 func draw_title() -> void:

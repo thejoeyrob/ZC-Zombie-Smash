@@ -15,6 +15,7 @@ cp art-bounds.json "$Q/art/art-bounds.json"
 cp quest/art-hires/*.webp "$Q/art/" 2>/dev/null || true
 cp quest/art-hires/art-bounds.json "$Q/art/art-bounds.json"
 cp quest/vr-art/mus-*.wav "$Q/audio/" 2>/dev/null || true
+cp quest/vr-art/*.ogv "$Q/art/" 2>/dev/null || true
 cp quest/vr-art/*.jpg quest/vr-art/*.png quest/vr-art/*.obj quest/vr-art/*-atlas.json "$Q/art/" 2>/dev/null || cp quest/vr-art/*.jpg quest/vr-art/*.png "$Q/art/"
 # sound: the pre-rendered effects and music
 cp snd-*.wav mus-*.wav "$Q/audio/"

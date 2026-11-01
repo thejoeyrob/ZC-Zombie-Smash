@@ -150,6 +150,12 @@ func _item(it: Dictionary, pos: Vector3) -> void:
 			VRBuild.box(self, Vector3(0.095, 0.15, 0.03), pos + Vector3(0, 0.075, 0), m, Vector3(-0.18, 0, 0))
 			VRBuild.box(self, Vector3(0.08, 0.05, 0.032), pos + Vector3(0, 0.1, 0.002), VRBuild.mat(Color(1, 1, 1), 0.5), Vector3(-0.18, 0, 0))
 			VRBuild.box(self, Vector3(0.095, 0.012, 0.03), pos + Vector3(0, 0.152, -0.01), m.duplicate(), Vector3(-0.18, 0, 0))
+		"pogz":
+			# a tube of POGs: a stack of round, brightly coloured milk-caps in a clear sleeve, with a slammer on top
+			var cols := [Color("#ffd600"), Color("#00e5ff"), Color("#ff2e93"), Color("#7cff00"), Color("#ff7a00"), Color("#9b30ff")]
+			for i in range(9):
+				VRBuild.cylinder(self, 0.034, 0.011, pos + Vector3(0, 0.008 + i * 0.0125, 0), VRBuild.mat(cols[i % cols.size()], 0.3, 0.0, 0.2, cols[i % cols.size()]), -1.0, Vector3.ZERO, 20)
+			VRBuild.cylinder(self, 0.037, 0.016, pos + Vector3(0, 0.128, 0), VRBuild.mat(Color(0.75, 0.78, 0.85), 0.15, 0.9, 0.2, Color(0.75, 0.78, 0.85)), -1.0, Vector3.ZERO, 20)
 		"can":
 			VRBuild.cylinder(self, 0.032, 0.13, pos + Vector3(0, 0.065, 0), m)
 			VRBuild.cylinder(self, 0.033, 0.014, pos + Vector3(0, 0.134, 0), VRBuild.mat(Color(0.8, 0.82, 0.88), 0.2, 0.55, 0.16, Color(0.8, 0.82, 0.88)))
