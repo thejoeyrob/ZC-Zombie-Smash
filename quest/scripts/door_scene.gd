@@ -44,14 +44,14 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		VRBuild.box(self, Vector3(wall_w, height - 1.25, 0.12), Vector3(cx, 1.25 + (height - 1.25) / 2.0, 0), pmat)
 	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), paper)
 	# frame
-	var frame := VRBuild.mat(Color(0.26, 0.17, 0.33), 0.5)
+	var frame := RuinedExterior.surface("materials", 3, Color(0.24,0.26,0.28), 0.7)
 	for sx in [-1, 1]:
 		VRBuild.box(self, Vector3(0.12, door_h, 0.2), Vector3(sx * (door_w / 2.0 + 0.04), door_h / 2.0, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.24, 0.12, 0.2), Vector3(0, door_h + 0.04, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.2, 0.04, 0.4), Vector3(0, 0.01, 0.05), VRBuild.mat(Color(0.5, 0.45, 0.35), 0.4, 0.5, 0.2, Color(0.5, 0.45, 0.35)))   # brass threshold
 	# two leaves, each with a glass window
-	var leaf := VRBuild.mat(Color(0.38, 0.14, 0.48), 0.45)
-	var brass := VRBuild.mat(Color(0.85, 0.65, 0.25), 0.25, 0.5, 0.2, Color(0.85, 0.65, 0.25))
+	var leaf := RuinedExterior.surface("materials", 3, Color(0.18,0.21,0.23), 0.65)
+	var brass := RuinedExterior.surface("materials", 3, Color(0.75,0.77,0.79), 0.8)
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.5, 0.65, 0.9, 0.07)
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -68,7 +68,11 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		VRBuild.box(self, Vector3(0.04, door_h - 1.05, 0.05), Vector3(cx, 0.98 + (door_h - 1.05) / 2.0, 0), leaf)   # mullion
 		VRBuild.quad(self, Vector2(lw - 0.15, door_h - 1.1), Vector3(cx, 0.98 + (door_h - 1.1) / 2.0 + 0.02, 0), glass)
 		# push bar and handle plate on the inside
-		VRBuild.box(self, Vector3(0.62, 0.05, 0.05), Vector3(cx + side * -0.0, 1.02, 0.09), brass)
+		RuinedExterior.rod(self, Vector3(cx-0.31,1.02,0.13), Vector3(cx+0.31,1.02,0.13), 0.024, brass)
+		for hx in [-0.27,0.27]:
+			RuinedExterior.rod(self, Vector3(cx+hx,1.02,0.04), Vector3(cx+hx,1.02,0.13), 0.02, brass)
+		for hy in [0.24,1.18,2.12]:
+			RuinedExterior.rod(self, Vector3(cx+side*0.47,hy-0.05,0.05),Vector3(cx+side*0.47,hy+0.05,0.05),0.018,brass)
 		VRBuild.box(self, Vector3(0.1, 0.5, 0.03), Vector3(cx - side * (lw / 2.0 - 0.1), 1.02, 0.06), brass)
 		VRBuild.label(self, "PUSH", 0.07, Vector3(cx, 0.65, 0.04), Color(0.9, 0.8, 0.5, 0.8), Vector3.ZERO, 0, font)
 	# EXIT sign and neon title above the door
@@ -80,17 +84,8 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 
 
 func _build_outside(font: Font) -> void:
-	# ground: pavement by the door, a kerb, then tarmac with bay lines
-	var path := VRBuild.mat(Color(0.12, 0.12, 0.16), 0.9)
-	var tarmac := VRBuild.mat(Color(0.025, 0.025, 0.04), 0.95)
-	var line := VRBuild.mat(Color(0.8, 0.8, 0.75), 0.7, 0.0, 0.2)
-	VRBuild.quad(self, Vector2(40, 2.2), Vector3(0, 0.0, -1.1), path, Vector3(-PI / 2.0, 0, 0))
-	VRBuild.box(self, Vector3(40, 0.14, 0.2), Vector3(0, -0.07, -2.3), VRBuild.mat(Color(0.4, 0.4, 0.42), 0.8))
-	VRBuild.quad(self, Vector2(90, 60), Vector3(0, -0.14, -32.0), tarmac, Vector3(-PI / 2.0, 0, 0))
-	for i in range(-7, 8):
-		VRBuild.box(self, Vector3(0.08, 0.01, 5.0), Vector3(i * 2.8, -0.135, -7.6), line)
-	VRBuild.box(self, Vector3(40, 0.01, 0.08), Vector3(0, -0.135, -5.2), line)
-	# sky, moon and a skyline
+	RuinedExterior.build(self)
+	# the night sky and moon
 	var sky := StandardMaterial3D.new()
 	sky.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var gt := GradientTexture2D.new()
@@ -105,30 +100,7 @@ func _build_outside(font: Font) -> void:
 	var moon := VRBuild.mat(Color(0.85, 0.9, 1.0), 0.5, 0.0, 3.0)
 	moon.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	VRBuild.sphere(self, 1.8, Vector3(-14, 22, -55), moon, 20)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	var bld := VRBuild.mat(Color(0.012, 0.014, 0.03), 0.9)
-	var win := VRBuild.mat(Color(1.0, 0.78, 0.3), 0.5, 0.0, 0.9)
-	for i in range(14):
-		var bx := -60.0 + i * 9.0 + rng.randf() * 3.0
-		var bh := 6.0 + rng.randf() * 16.0
-		VRBuild.box(self, Vector3(6.0 + rng.randf() * 4.0, bh, 5.0), Vector3(bx, bh / 2.0 - 0.14, -48.0 - rng.randf() * 6.0), bld)
-		for k in range(int(bh / 3.0)):
-			if rng.randf() < 0.35:
-				VRBuild.quad(self, Vector2(0.9, 1.1), Vector3(bx + rng.randf_range(-2, 2), 1.5 + k * 3.0, -45.4), win)
-	# cars of the 1980s: boxy sedans, a hatchback, a pickup, an estate with wood panels, a van
-	var cars := [
-		[Vector3(-6.2, 0, -7.4), PI, "sedan", Color(0.7, 0.1, 0.12)], [Vector3(-3.4, 0, -7.4), PI, "hatch", Color(0.15, 0.3, 0.7)],
-		[Vector3(-0.6, 0, -7.6), PI, "estate", Color(0.75, 0.7, 0.55)], [Vector3(2.2, 0, -7.4), PI, "pickup", Color(0.1, 0.45, 0.25)],
-		[Vector3(5.0, 0, -7.4), PI, "sedan", Color(0.85, 0.75, 0.15)], [Vector3(8.0, 0, -7.6), PI, "van", Color(0.9, 0.9, 0.92)],
-		[Vector3(-9.0, 0, -7.4), PI, "hatch", Color(0.45, 0.15, 0.55)], [Vector3(-4.8, 0, -13.5), 0.0, "sedan", Color(0.2, 0.2, 0.22)],
-		[Vector3(1.4, 0, -13.5), 0.0, "estate", Color(0.55, 0.12, 0.1)], [Vector3(6.6, 0, -13.5), 0.0, "pickup", Color(0.15, 0.2, 0.55)],
-	]
-	for c in cars:
-		_car(c[0], c[1], c[2], c[3])
-	# street lights with a warm glow
-	for lx in [-5.5, 0.4, 6.0]:
-		_lamp_post(Vector3(lx, 0, -3.6))
+
 	# a porch light just outside the door, so whatever passes the glass is a black shape against a pool of cold light
 	var haze := StandardMaterial3D.new()
 	haze.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -136,7 +108,7 @@ func _build_outside(font: Font) -> void:
 	haze.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	var rt := GradientTexture2D.new()
 	var rg := Gradient.new()
-	rg.colors = PackedColorArray([Color(0.8, 0.9, 1.0, 0.95), Color(0.3, 0.4, 0.75, 0.0)])
+	rg.colors = PackedColorArray([Color(0.8, 0.9, 1.0, 0.8), Color(0.3, 0.4, 0.75, 0.0)])
 	rt.gradient = rg
 	rt.fill = GradientTexture2D.FILL_RADIAL
 	rt.fill_from = Vector2(0.5, 0.5)
@@ -163,70 +135,6 @@ func _build_outside(font: Font) -> void:
 	zombie.visible = false
 	zombie.set_meta("dynamic", true)
 	VRBuild.merge_static(self)
-
-
-func _car(pos: Vector3, yaw: float, kind: String, col: Color) -> void:
-	var c := Node3D.new()
-	c.position = pos
-	c.rotation.y = yaw
-	add_child(c)
-	var paint := VRBuild.mat(col * 0.5, 0.3, 0.6)
-	var glass := VRBuild.mat(Color(0.05, 0.07, 0.1), 0.1, 0.5, 0.2, Color(0.05, 0.07, 0.1))
-	var dark := VRBuild.mat(Color(0.02, 0.02, 0.02), 0.8)
-	var head := VRBuild.mat(Color(1.0, 0.95, 0.8), 0.3, 0.0, 1.4)
-	var tail := VRBuild.mat(Color(1.0, 0.08, 0.05), 0.3, 0.0, 1.2)
-	var len := 4.3
-	var wid := 1.7
-	var base_h := 0.6
-	var cab_len := 2.1
-	var cab_z := -0.2
-	var cab_h := 0.55
-	match kind:
-		"hatch":
-			len = 3.7
-			cab_len = 2.3
-			cab_z = -0.35
-		"estate":
-			len = 4.6
-			cab_len = 3.0
-			cab_z = -0.5
-		"pickup":
-			len = 4.6
-			cab_len = 1.3
-			cab_z = 0.6
-		"van":
-			len = 4.4
-			cab_len = 4.0
-			cab_h = 0.95
-			cab_z = -0.1
-	VRBuild.box(c, Vector3(wid, base_h, len), Vector3(0, 0.25 + base_h / 2.0, 0), paint)
-	VRBuild.box(c, Vector3(wid - 0.15, cab_h, cab_len), Vector3(0, 0.25 + base_h + cab_h / 2.0, cab_z), glass)
-	VRBuild.box(c, Vector3(wid - 0.1, 0.05, cab_len + 0.1), Vector3(0, 0.25 + base_h + cab_h + 0.02, cab_z), paint)
-	if kind == "pickup":
-		VRBuild.box(c, Vector3(wid, 0.4, 1.9), Vector3(0, 0.25 + base_h + 0.1, -1.3), paint)
-		VRBuild.box(c, Vector3(wid - 0.2, 0.3, 1.7), Vector3(0, 0.25 + base_h + 0.3, -1.3), dark)
-	if kind == "estate":
-		VRBuild.box(c, Vector3(wid + 0.02, 0.18, len - 0.4), Vector3(0, 0.25 + base_h / 2.0, 0), VRBuild.mat(Color(0.35, 0.2, 0.1), 0.6))
-	for sx in [-1, 1]:
-		for sz in [-1, 1]:
-			VRBuild.cylinder(c, 0.31, 0.22, Vector3(sx * (wid / 2.0 - 0.02), 0.31, sz * (len / 2.0 - 0.8)), dark, -1.0, Vector3(0, 0, PI / 2.0), 14)
-		VRBuild.box(c, Vector3(0.3, 0.12, 0.05), Vector3(sx * 0.55, 0.62, len / 2.0 + 0.01), head)
-		VRBuild.box(c, Vector3(0.3, 0.12, 0.05), Vector3(sx * 0.55, 0.62, -len / 2.0 - 0.01), tail)
-	VRBuild.box(c, Vector3(wid + 0.05, 0.12, 0.12), Vector3(0, 0.38, len / 2.0 + 0.03), VRBuild.mat(Color(0.7, 0.7, 0.72), 0.3, 0.5, 0.2, Color(0.7, 0.7, 0.72)))
-	VRBuild.merge_static(c)
-
-
-func _lamp_post(pos: Vector3) -> void:
-	var metal := VRBuild.mat(Color(0.12, 0.12, 0.14), 0.5, 0.5, 0.2, Color(0.12, 0.12, 0.14))
-	VRBuild.cylinder(self, 0.07, 5.2, pos + Vector3(0, 2.6, 0), metal)
-	VRBuild.box(self, Vector3(0.12, 0.1, 1.0), pos + Vector3(0, 5.2, 0.45), metal)
-	var lamp := VRBuild.mat(Color(1.0, 0.85, 0.5), 0.4, 0.0, 3.5)
-	lamp.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	VRBuild.box(self, Vector3(0.3, 0.08, 0.5), pos + Vector3(0, 5.12, 0.85), lamp)
-	var pool := VRBuild.mat(Color(1.0, 0.85, 0.5, 0.14), 0.5, 0.0, 1.0)
-	pool.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	pool.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	VRBuild.quad(self, Vector2(7, 7), pos + Vector3(0, -0.13, 0.85), pool, Vector3(-PI / 2.0, 0, 0))
 
 
 func _process(delta: float) -> void:

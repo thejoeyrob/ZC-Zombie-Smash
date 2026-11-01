@@ -27,7 +27,7 @@ var enabled := false
 
 func build(font: Font, art_dir := "res://assets/art/") -> void:
 	var body := VRBuild.mat(Color(0.07, 0.05, 0.1), 0.45, 0.35)
-	var chrome := VRBuild.mat(Color(0.82, 0.84, 0.9), 0.18, 0.55, 0.16, Color(0.82, 0.84, 0.9))
+	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
 	var dark := VRBuild.mat(Color(0.015, 0.015, 0.02), 0.6)
 	var glow := VRBuild.mat(Color(1.0, 0.3, 0.7), 0.4, 0.0, 2.6)
 	var side = load(art_dir + "side-pinball.png")

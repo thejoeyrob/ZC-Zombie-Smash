@@ -68,7 +68,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var mid_z := (front_z + back_z) / 2.0
 	var depth := front_z - back_z
 	# lower body: the front is painted in the game's colour, with a chrome coin door and kick plate and glowing edge trim
-	var chrome := VRBuild.mat(Color(0.82, 0.84, 0.9), 0.18, 0.55, 0.16, Color(0.82, 0.84, 0.9))
+	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
 	var black_tex := VRBuild.tex_mat(VRBuild.panel_texture(Color(0.045, 0.045, 0.05), 11), 0.0, 0.7)    # flat black with a subtle grain
 	black_tex.uv1_scale = Vector3(3, 6, 1)
 	black_tex.texture_repeat = true
@@ -233,7 +233,7 @@ func look_world() -> Vector3:
 
 
 func _build_controls() -> void:
-	var chrome := VRBuild.mat(Color(0.86, 0.88, 0.94), 0.14, 0.55, 0.16, Color(0.86, 0.88, 0.94))
+	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
 	var brass := VRBuild.mat(Color(0.8, 0.6, 0.22), 0.28, 0.5, 0.2, Color(0.8, 0.6, 0.22))
 	var black := VRBuild.mat(Color(0.012, 0.012, 0.016), 0.35, 0.2)
 	var rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)

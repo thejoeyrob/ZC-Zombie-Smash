@@ -26,7 +26,7 @@ func build(font: Font) -> void:
 	var red := VRBuild.mat(Color(0.58, 0.07, 0.11), 0.3, 0.25)
 	var red_dark := VRBuild.mat(Color(0.36, 0.04, 0.07), 0.35, 0.25)
 	var dark := VRBuild.mat(Color(0.03, 0.03, 0.04), 0.6)
-	var chrome := VRBuild.mat(Color(0.82, 0.84, 0.9), 0.18, 0.55, 0.16, Color(0.82, 0.84, 0.9))
+	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
 	var cream := VRBuild.mat(Color(0.96, 0.93, 0.85), 0.45)
 	var lamp := VRBuild.mat(Color(1.0, 0.96, 0.82), 0.5, 0.0, 2.4)
 	# the cabinet: a red shell with the window, control column and dispenser cut out of the front
