@@ -35,6 +35,9 @@ var lock_cap_mat: StandardMaterial3D
 var back_z := -0.79
 var front_z := 0.02
 var monitor_z := -0.30
+var deck_front_z := 0.28
+var deck_front_y := 0.82
+var mon_node: Node3D
 var _light: OmniLight3D
 
 
@@ -52,14 +55,29 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	if not poly.is_empty():
 		back_z = CabProfile.z_of(float(profile.get("back_body", 0.05))) + 0.01
 		front_z = CabProfile.z_of(float(profile.get("front_body", 0.9))) - 0.005
-		var e30 := CabProfile.edges_at(poly, 0.30)
-		monitor_z = (CabProfile.z_of(e30.x) + CabProfile.z_of(e30.y)) / 2.0 - 0.06
-		var e07 := CabProfile.edges_at(poly, 0.07)
-		spire_z = (CabProfile.z_of(e07.x) + CabProfile.z_of(e07.y)) / 2.0
+		# the control deck's front lip sits at the furthest point the side panels reach at deck height, never beyond it
+		var bulge_v := 0.60
+		var bulge_u := 0.0
+		for i in range(40, 80):
+			var vv := float(i) / 100.0
+			var uu: float = CabProfile.edges_at(poly, vv).y
+			if uu > bulge_u + 0.001:
+				bulge_u = uu
+				bulge_v = vv
+		var deck_y := clampf(CabProfile.y_of(bulge_v), 0.78, 0.92)
+		var vf := 1.0 - deck_y / CabProfile.H_M
+		var reach := 1.0
+		for k in range(-3, 4):
+			reach = minf(reach, CabProfile.edges_at(poly, vf + float(k) * 0.01).y)
+		deck_front_z = CabProfile.z_of(minf(reach, float(profile.get("front_body", 0.9)) + 0.04)) - 0.012
+		deck_front_y = deck_y
+		front_z = minf(front_z, deck_front_z)
 		_build_sides(poly, body)
 	else:
 		front_z = 0.02
 		back_z = -0.79
+		deck_front_z = front_z + 0.3
+		deck_front_y = 0.95
 		var profile_pts := PackedVector2Array([
 			Vector2(-0.80, 0.0), Vector2(0.02, 0.0), Vector2(0.02, 0.97), Vector2(0.30, 1.0), Vector2(0.30, 1.04),
 			Vector2(-0.02, 1.10), Vector2(-0.10, 1.60), Vector2(-0.04, 1.84), Vector2(-0.04, 1.96), Vector2(-0.70, 1.96), Vector2(-0.80, 1.84)])
@@ -73,7 +91,8 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	black_tex.uv1_scale = Vector3(3, 6, 1)
 	black_tex.texture_repeat = true
 	var front_paint := black_tex
-	VRBuild.box(self, Vector3(0.67, 0.95, 0.03), Vector3(0, 0.475, front_z - 0.012), front_paint)
+	var body_h := deck_front_y - 0.05          # the lower body stops just under the control deck's front lip
+	VRBuild.box(self, Vector3(0.67, body_h, 0.03), Vector3(0, body_h / 2.0, front_z - 0.012), front_paint)
 	VRBuild.box(self, Vector3(0.65, 0.12, 0.036), Vector3(0, 0.07, front_z - 0.004), black_tex)             # kick plate
 	VRBuild.box(self, Vector3(0.65, 0.02, 0.04), Vector3(0, 0.14, front_z - 0.002), dark)
 	if detail:
@@ -90,13 +109,13 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		coin_light.omni_range = 0.6
 		add_child(coin_light)
 		for sx in [-0.325, 0.325]:       # glowing trim down both front edges
-			VRBuild.box(self, Vector3(0.016, 0.95, 0.018), Vector3(sx, 0.475, front_z - 0.004), trim)
-		VRBuild.box(self, Vector3(0.6, 0.012, 0.012), Vector3(0, 0.98, front_z + 0.26), trim)
+			VRBuild.box(self, Vector3(0.016, body_h, 0.018), Vector3(sx, body_h / 2.0, front_z - 0.004), trim)
 	VRBuild.box(self, Vector3(0.67, 1.9, 0.03), Vector3(0, 0.95, back_z + 0.015), black_tex)             # the back board: flat black
 	VRBuild.box(self, Vector3(0.67, 0.03, depth), Vector3(0, 0.015, mid_z), dark)
 	# control panel: one flat, textured painted surface in the theme colour, edged in chrome
 	panel = Node3D.new()
-	panel.position = Vector3(0, 1.035, front_z + 0.12)
+	# placed so that its front lip lands exactly on (deck_front_z, deck_front_y)
+	panel.position = Vector3(0, deck_front_y + 0.0553, deck_front_z - 0.183)
 	panel.rotation = Vector3(PANEL_TILT, 0, 0)
 	add_child(panel)
 	var panel_col := trim_color.darkened(0.48)
@@ -109,10 +128,16 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(-0.337, -0.012, 0.0), chrome)           # side lips
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(0.337, -0.012, 0.0), chrome)
 	VRBuild.box(panel, Vector3(0.68, 0.02, 0.012), Vector3(0, -0.012, -0.176), dark)                 # joint with the monitor
+	# underside of the deck so it reads as a solid shelf, closed at the sides by the cabinet walls
+	VRBuild.box(panel, Vector3(0.66, 0.12, 0.3), Vector3(0, -0.08, -0.02), front_paint)
 	# monitor: bezel, glass
 	var mon := Node3D.new()
-	mon.position = Vector3(0, 1.41, monitor_z)
+	var rear_z := panel.position.z - 0.168
+	var rear_y := panel.position.y + 0.03
+	monitor_z = rear_z - 0.166
+	mon.position = Vector3(0, rear_y + 0.377, monitor_z)
 	mon.rotation = Vector3(-0.17, 0, 0)
+	mon_node = mon
 	add_child(mon)
 	VRBuild.box(mon, Vector3(0.66, 0.8, 0.2), Vector3(0, 0, 0), dark)
 	var sm := StandardMaterial3D.new()
@@ -150,8 +175,9 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.box(mon, Vector3(0.68, 0.016, 0.014), Vector3(0, -0.398, 0.103), chrome)
 	# marquee on top
 	var marq := Node3D.new()
-	marq.position = Vector3(0, 1.855, spire_z + 0.1)
 	marq.rotation = Vector3(-0.1, 0, 0)
+	# its face is flush with the front of the monitor at the top, standing proud of the side cheeks
+	marq.position = Vector3(0, mon.position.y + 0.394 + 0.125, monitor_z + 0.03 - 0.06)
 	add_child(marq)
 	VRBuild.box(marq, Vector3(0.67, 0.22, 0.12), Vector3.ZERO, dark)
 	if marquee_tex != null:
@@ -159,9 +185,6 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	else:
 		VRBuild.quad(marq, Vector2(0.64, 0.2), Vector3(0, 0, 0.0605), VRBuild.unshaded(marquee_color))
 		VRBuild.label(marq, marquee_text, 0.075, Vector3(0, 0, 0.062), Color(1, 1, 1), Vector3.ZERO, 6)
-	if detail:
-		for sx in [-0.26, 0.26]:
-			VRBuild.box(self, Vector3(0.08, 0.1, 0.03), Vector3(sx, 1.68, monitor_z + 0.2), dark, Vector3(-0.1, 0, 0))
 	if interactive:
 		_build_controls()
 		_build_traffic_light()
@@ -233,26 +256,37 @@ func look_world() -> Vector3:
 
 
 func _build_controls() -> void:
-	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
-	var brass := VRBuild.mat(Color(0.8, 0.6, 0.22), 0.28, 0.5, 0.2, Color(0.8, 0.6, 0.22))
+	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)
+	var brass := VRBuild.mat(Color(0.8, 0.6, 0.22), 0.25, 0.9)
 	var black := VRBuild.mat(Color(0.012, 0.012, 0.016), 0.35, 0.2)
 	var rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
-	# Atari-style stick: a black well with a brass and chrome ring, a rubber boot, a steel shaft and a ball
-	VRBuild.cylinder(panel, 0.066, 0.008, STICK_LOCAL + Vector3(0, 0.004, 0), brass, -1.0, Vector3.ZERO, 40)
-	VRBuild.cylinder(panel, 0.057, 0.012, STICK_LOCAL + Vector3(0, 0.007, 0), chrome, -1.0, Vector3.ZERO, 40)
-	VRBuild.cylinder(panel, 0.048, 0.014, STICK_LOCAL + Vector3(0, 0.008, 0), black, -1.0, Vector3.ZERO, 40)
-	VRBuild.cylinder(panel, 0.036, 0.028, STICK_LOCAL + Vector3(0, 0.026, 0), rubber, 0.012, Vector3.ZERO, 28)      # dust boot
-	VRBuild.cylinder(panel, 0.03, 0.004, STICK_LOCAL + Vector3(0, 0.014, 0), chrome, -1.0, Vector3.ZERO, 28)        # washer
+	var steel := VRBuild.mat(Color(0.88, 0.89, 0.94), 0.15, 0.9)
+	# the joystick: a square steel mounting plate with four screws, a chrome dish, a rubber boot, a polished shaft and a ball
+	VRBuild.box(panel, Vector3(0.15, 0.004, 0.15), STICK_LOCAL + Vector3(0, 0.002, 0), steel)
+	for dx in [-0.062, 0.062]:
+		for dz in [-0.062, 0.062]:
+			VRBuild.cylinder(panel, 0.007, 0.006, STICK_LOCAL + Vector3(dx, 0.006, dz), black, 0.006, Vector3.ZERO, 6)
+			VRBuild.cylinder(panel, 0.0035, 0.007, STICK_LOCAL + Vector3(dx, 0.0065, dz), chrome, -1.0, Vector3.ZERO, 6)
+	VRBuild.cylinder(panel, 0.062, 0.008, STICK_LOCAL + Vector3(0, 0.008, 0), brass, 0.058, Vector3.ZERO, 44)
+	VRBuild.cylinder(panel, 0.052, 0.012, STICK_LOCAL + Vector3(0, 0.011, 0), chrome, 0.048, Vector3.ZERO, 44)
+	VRBuild.cylinder(panel, 0.044, 0.012, STICK_LOCAL + Vector3(0, 0.012, 0), black, -1.0, Vector3.ZERO, 44)
+	VRBuild.cylinder(panel, 0.038, 0.034, STICK_LOCAL + Vector3(0, 0.03, 0), rubber, 0.012, Vector3.ZERO, 28)         # dust boot
+	for k in range(4):
+		VRBuild.cylinder(panel, 0.034 - k * 0.0045, 0.0035, STICK_LOCAL + Vector3(0, 0.016 + k * 0.0075, 0), VRBuild.mat(Color(0.05, 0.05, 0.06), 0.8), -1.0, Vector3.ZERO, 24)   # its ribs
 	stick_pivot = Node3D.new()
 	stick_pivot.position = STICK_LOCAL + Vector3(0, 0.03, 0)
 	panel.add_child(stick_pivot)
-	VRBuild.cylinder(stick_pivot, 0.007, STICK_LENGTH, Vector3(0, STICK_LENGTH / 2.0, 0), VRBuild.mat(Color(0.88, 0.89, 0.94), 0.15, 0.55, 0.16, Color(0.88, 0.89, 0.94)), -1.0, Vector3.ZERO, 14)
-	VRBuild.cylinder(stick_pivot, 0.017, 0.006, Vector3(0, 0.02, 0), chrome, -1.0, Vector3.ZERO, 20)                 # stop collar
-	ball_mat = VRBuild.mat(Color("#f5b800"), 0.2, 0.0)
+	VRBuild.cylinder(stick_pivot, 0.007, STICK_LENGTH, Vector3(0, STICK_LENGTH / 2.0, 0), steel, -1.0, Vector3.ZERO, 14)
+	VRBuild.cylinder(stick_pivot, 0.016, 0.005, Vector3(0, 0.022, 0), chrome, -1.0, Vector3.ZERO, 20)
+	VRBuild.cylinder(stick_pivot, 0.011, 0.012, Vector3(0, STICK_LENGTH - 0.026, 0), black, 0.009, Vector3.ZERO, 16)    # the ball's collar
+	ball_mat = VRBuild.mat(Color("#f5b800"), 0.12, 0.0)
 	ball_mat.rim_enabled = true
-	ball_mat.rim = 0.3
-	ball = VRBuild.sphere(stick_pivot, BALL_RADIUS, Vector3(0, STICK_LENGTH, 0), ball_mat, 32)
-	# buttons: brass outer ring, black well, chrome inner ring and a glossy dome you can see the light in
+	ball_mat.rim = 0.35
+	ball_mat.clearcoat_enabled = true
+	ball_mat.clearcoat = 1.0
+	ball_mat.clearcoat_roughness = 0.05
+	ball = VRBuild.sphere(stick_pivot, BALL_RADIUS, Vector3(0, STICK_LENGTH, 0), ball_mat, 40)
+	# buttons: a black bezel with a brass ring, a recessed dish, a lit inner lamp under a glossy domed cap
 	var cfg := {
 		"fire": [Color("#e3262a"), 0.022],
 		"grenade": [Color("#1d6fe0"), 0.02],
@@ -262,39 +296,42 @@ func _build_controls() -> void:
 	for k in BUTTONS:
 		var b: Dictionary = BUTTONS[k]
 		var r: float = b.radius
-		VRBuild.cylinder(panel, r + 0.013, 0.007, b.pos + Vector3(0, 0.0035, 0), brass, -1.0, Vector3.ZERO, 36)
-		VRBuild.cylinder(panel, r + 0.007, 0.011, b.pos + Vector3(0, 0.0055, 0), chrome, -1.0, Vector3.ZERO, 36)
-		VRBuild.cylinder(panel, r + 0.002, 0.013, b.pos + Vector3(0, 0.0065, 0), black, -1.0, Vector3.ZERO, 36)
 		var col: Color = cfg[k][0]
-		var cap_mat := VRBuild.mat(col, 0.1, 0.0, 0.22)
+		VRBuild.cylinder(panel, r + 0.016, 0.003, b.pos + Vector3(0, 0.0015, 0), black, -1.0, Vector3.ZERO, 40)         # cut-out in the deck
+		VRBuild.cylinder(panel, r + 0.012, 0.008, b.pos + Vector3(0, 0.005, 0), brass, r + 0.01, Vector3.ZERO, 40)        # brass ring
+		VRBuild.cylinder(panel, r + 0.006, 0.012, b.pos + Vector3(0, 0.008, 0), chrome, r + 0.004, Vector3.ZERO, 40)      # chrome collar
+		VRBuild.cylinder(panel, r + 0.001, 0.014, b.pos + Vector3(0, 0.0085, 0), black, -1.0, Vector3.ZERO, 40)           # dark well
+		VRBuild.cylinder(panel, r * 0.97, 0.002, b.pos + Vector3(0, 0.0125, 0), VRBuild.mat(col.darkened(0.2), 0.3, 0.0, 1.2, col), -1.0, Vector3.ZERO, 36)  # the lamp under the cap
+		var cap_mat := VRBuild.mat(col.lightened(0.05), 0.08, 0.0, 0.5, col)
 		cap_mat.rim_enabled = true
-		cap_mat.rim = 0.35
+		cap_mat.rim = 0.4
+		cap_mat.clearcoat_enabled = true
+		cap_mat.clearcoat = 1.0
+		cap_mat.clearcoat_roughness = 0.04
 		var cap := Node3D.new()
-		cap.position = b.pos + Vector3(0, 0.012, 0)
+		cap.position = b.pos + Vector3(0, 0.013, 0)
 		panel.add_child(cap)
-		VRBuild.cylinder(cap, r * 0.94, 0.012, Vector3(0, 0.006, 0), cap_mat, r * 0.94, Vector3.ZERO, 36)
-		var dome := VRBuild.sphere(cap, r * 0.94, Vector3(0, 0.012, 0), cap_mat, 36)
-		dome.scale = Vector3(1.0, 0.5, 1.0)
-		VRBuild.sphere(cap, r * 0.2, Vector3(-r * 0.3, 0.012 + r * 0.38, -r * 0.3), VRBuild.mat(Color(1, 1, 1), 0.1, 0.0, 1.6), 10)   # the glint
+		VRBuild.cylinder(cap, r * 0.95, 0.011, Vector3(0, 0.0055, 0), cap_mat, r * 0.95, Vector3.ZERO, 40)
+		var dome := VRBuild.sphere(cap, r * 0.95, Vector3(0, 0.011, 0), cap_mat, 40)
+		dome.scale = Vector3(1.0, 0.42, 1.0)
+		VRBuild.sphere(cap, r * 0.22, Vector3(-r * 0.32, 0.011 + r * 0.33, -r * 0.32), VRBuild.mat(Color(1, 1, 1), 0.1, 0.0, 1.8), 10)    # the glint of a window
 		if k == "lock":
 			lock_cap_mat = cap_mat
 		caps[k] = cap
 		pressed[k] = false
 
 
-## Traffic light: red = locked to the machine (in play), green = free to move about the room.
+## Traffic light: red = locked to the machine (in play), green = free to move about the room. It sits in the left bezel of the monitor.
 func _build_traffic_light() -> void:
-	var housing := VRBuild.mat(Color(0.03, 0.03, 0.04), 0.5, 0.3)
+	var housing := VRBuild.mat(Color(0.02, 0.02, 0.03), 0.4, 0.3)
 	var holder := Node3D.new()
-	holder.position = Vector3(-0.405, 1.42, monitor_z + 0.24)
-	add_child(holder)
-	VRBuild.box(holder, Vector3(0.07, 0.19, 0.05), Vector3.ZERO, housing)
-	VRBuild.box(holder, Vector3(0.012, 0.06, 0.012), Vector3(0, -0.12, -0.005), housing)
+	holder.position = Vector3(-0.3, 0.0, 0.109)
+	mon_node.add_child(holder)
+	VRBuild.box(holder, Vector3(0.054, 0.17, 0.014), Vector3.ZERO, housing)
 	lamp_red = VRBuild.mat(Color(0.35, 0.02, 0.02), 0.3, 0.0, 0.0)
 	lamp_green = VRBuild.mat(Color(0.02, 0.3, 0.05), 0.3, 0.0, 0.0)
-	VRBuild.cylinder(holder, 0.026, 0.012, Vector3(0, 0.048, 0.027), lamp_red, -1.0, Vector3(PI / 2, 0, 0), 24)
-	VRBuild.cylinder(holder, 0.026, 0.012, Vector3(0, -0.048, 0.027), lamp_green, -1.0, Vector3(PI / 2, 0, 0), 24)
-	VRBuild.label(holder, "LOCK", 0.022, Vector3(0, 0.0, 0.0275), Color(1, 1, 1, 0.8), Vector3.ZERO, 3)
+	VRBuild.cylinder(holder, 0.021, 0.012, Vector3(0, 0.045, 0.008), lamp_red, -1.0, Vector3(PI / 2, 0, 0), 24)
+	VRBuild.cylinder(holder, 0.021, 0.012, Vector3(0, -0.045, 0.008), lamp_green, -1.0, Vector3(PI / 2, 0, 0), 24)
 	set_lock_light(true)
 
 

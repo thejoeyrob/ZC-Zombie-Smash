@@ -86,8 +86,9 @@ func _ready() -> void:
 	cab.set_live(viewport.get_texture())
 	room.set_active(room.player_index)
 	room.prize_wall.set_unlocked(progress.unlocked(), true)
-	room.pinball.set_enabled(progress.codes.has("pinball"))
+	room.pinball.set_enabled(true)      # the pinball machine is always playable
 	room.pinball.table.best = progress.pinball_best
+	room.pinball.table.bonus_balls = progress.codes.has("pinball")
 	room.vending.code_entered.connect(_on_code)
 	room.vending.key_pressed.connect(func(k, ok): audio.sfx("key" if ok else "error", 0.7, 0.0, room.vending.global_position + Vector3(0, 1.3, 0.5)); _haptic(-1, 0.2, 0.03))
 	room.pinball.sound.connect(_on_pinball_sound)
@@ -307,7 +308,8 @@ func _on_code(action: String) -> void:
 		if not progress.codes.has("pinball"):
 			progress.codes.append("pinball")
 			progress.save()
-		room.pinball.set_enabled(true)
+		room.pinball.table.bonus_balls = true       # the secret code gives the pinball machine five balls a game
+		room.pinball.table.balls_left = 5
 		audio.sfx("clear", 0.9)
 		audio.sfx("chime", 0.8, 0.0, room.pinball.global_position + Vector3(0, 1.0, 0))
 
@@ -995,6 +997,10 @@ func _run_shots() -> void:
 		"overview": [Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5)],
 		"door": [Vector3(0, 1.7, 3.2), Vector3(0, 1.5, -0.55)],
 		"outside": [Vector3(0, 1.7, 1.0), Vector3(0, 1.3, -5.0)],
+		"cab_side": [cab.to_global(Vector3(2.4, 1.2, -0.25)), cab.to_global(Vector3(0, 1.2, -0.25))],
+		"cab_threeq": [cab.to_global(Vector3(1.3, 1.7, 1.5)), cab.to_global(Vector3(0, 1.1, -0.2))],
+		"cab_front": [cab.to_global(Vector3(0.0, 1.6, 1.6)), cab.to_global(Vector3(0, 1.1, -0.2))],
+		"cab_top": [cab.to_global(Vector3(0.9, 2.2, 0.7)), cab.to_global(Vector3(0, 1.2, -0.3))],
 		"scare": [Vector3(0.6, 1.65, 2.2), Vector3(0, 1.1, -0.55)],
 		"arc_l": [Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0)],
 		"arc_r": [Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0)],

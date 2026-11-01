@@ -17,6 +17,7 @@ const BUMPER_R := 23.0
 const TARGETS := [Vector2(95, 130), Vector2(150, 100), Vector2(205, 88), Vector2(262, 100)]
 const TARGET_R := 11.0
 
+var bonus_balls := false
 var enabled := false              # the machine only works once the code has been keyed in at the snack machine
 var art: Texture2D
 var font: Font
@@ -88,7 +89,7 @@ func _build_segments() -> void:
 
 func reset_game() -> void:
 	score = 0
-	balls_left = 3
+	balls_left = 5 if bonus_balls else 3
 	game_over = false
 	_new_ball()
 	flash("BALL 1")

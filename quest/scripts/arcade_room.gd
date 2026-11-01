@@ -164,7 +164,7 @@ func _machines(root: Node3D) -> void:
 		c.side_art = _art("side-%s.png" % key, null)
 		var arena: Texture2D = _art("arena-%s.webp" % id, null)
 		c.build(arena, _art("marquee-%s.jpg" % key, null), accent.darkened(0.8), accent, true, str(bosses[id].name))
-		c.set_lock_light(i != player_index)
+		c.set_lock_light(i == player_index)      # red = somebody is playing here, green = free
 		c.set_lit(i == player_index)
 		machines.append(c)
 		flickers.append([c.screen_mat, 1.0, 0.7 + i * 0.13, i * 1.7, i])
@@ -206,7 +206,7 @@ func _mirror_ball_material() -> StandardMaterial3D:
 func set_active(i: int) -> void:
 	_active = i
 	for k in range(machines.size()):
-		machines[k].set_lock_light(k != i)
+		machines[k].set_lock_light(k == i)
 		machines[k].set_lit(k == i)
 		if k != i:
 			machines[k].set_live(null)
