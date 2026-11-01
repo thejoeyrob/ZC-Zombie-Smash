@@ -148,6 +148,7 @@ def exit_sign():
     img.save(os.path.join(OUT, "exit-sign.png"))
 
 
-banner()
-fatty()
-exit_sign()
+if __name__ == "__main__":
+    banner()
+    fatty()
+    exit_sign()

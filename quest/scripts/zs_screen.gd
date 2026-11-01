@@ -139,7 +139,7 @@ func _process(delta: float) -> void:
 	clock += delta
 	if mode == "jw":
 		intro_t += delta
-		if intro_t > 3.6:
+		if intro_t > 4.8:
 			_play_story(0)
 	queue_redraw()
 
@@ -231,10 +231,18 @@ func draw_jw() -> void:
 	var t := tex("intro-jw.png")
 	if t == null:
 		return
-	var a := clampf(minf(intro_t / 0.7, (3.6 - intro_t) / 0.6), 0.0, 1.0)
+	var a := clampf(minf(intro_t / 0.7, (4.8 - intro_t) / 0.6), 0.0, 1.0)
 	var w := W * 0.96
 	var h := w * float(t.get_height()) / float(t.get_width())
 	draw_texture_rect(t, Rect2((W - w) / 2.0, (H - h) / 2.0, w, h), false, Color(1, 1, 1, a))
+	# the four coloured squares of the studio mark pop in one after another, as on the phone
+	var x0 := (W - w) / 2.0
+	var y0 := (H - h) / 2.0
+	for sq in [[50.0, 53.8, 9.71, 13.7, "#cb1412", 2.9], [61.5, 53.8, 9.71, 13.7, "#0e5cf7", 3.2], [72.7, 53.0, 9.35, 14.5, "#ebce21", 3.5], [83.8, 53.8, 9.71, 13.7, "#10bb3d", 3.8]]:
+		if intro_t > float(sq[5]):
+			var c := hc(str(sq[4]))
+			c.a = a
+			draw_rect(Rect2(x0 + w * sq[0] / 100.0, y0 + h * sq[1] / 100.0, w * sq[2] / 100.0, h * sq[3] / 100.0), c)
 	text("PRESS FIRE TO SKIP", W / 2.0, H - 14.0, 9, Color(1, 1, 1, 0.45 * a))
 
 

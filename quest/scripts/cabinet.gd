@@ -224,26 +224,31 @@ func _decal(parent: Node3D, file: String, size: float, pos: Vector3, rot := Vect
 	q.rotate_object_local(Vector3(0, 0, 1), roll)
 
 
-## Bold sticker decals for the instructions and the decoration: die-cut, outlined, like the collector stickers and POGs of the 90s.
+## Instruction stickers: just the word, die-cut with a white border, sitting on the far side of each control (never under the hand).
 func _build_decals() -> void:
 	var flat := Vector3(-PI / 2, 0, 0)
-	_decal(panel, "decal-move.png", 0.115, Vector3(-0.19, 0.0015, 0.122), flat, 0.0)
-	_decal(panel, "decal-fire.png", 0.105, Vector3(0.19, 0.0015, 0.105), flat, 0.1)
-	_decal(panel, "decal-grenade.png", 0.09, Vector3(0.07, 0.0015, 0.108), flat, -0.08)
-	_decal(panel, "decal-skull.png", 0.075, Vector3(-0.285, 0.0015, -0.118), flat, 0.2)
-	_decal(panel, "decal-bolt.png", 0.065, Vector3(-0.1, 0.0015, -0.125), flat, -0.25)
-	_decal(panel, "decal-1up.png", 0.07, Vector3(0.05, 0.0015, -0.122), flat, 0.12)
-	_decal(panel, "decal-pog-1.png", 0.07, Vector3(0.15, 0.0015, -0.118), flat, 0.0)
-	_decal(panel, "decal-pog-2.png", 0.07, Vector3(0.235, 0.0015, -0.12), flat, 0.0)
-	_decal(panel, "decal-pog-3.png", 0.06, Vector3(0.29, 0.0015, -0.04), flat, 0.0)
-	var fz := front_z + 0.0075
-	_decal(self, "decal-lock.png", 0.1, Vector3(-0.155, 0.46, fz), Vector3.ZERO, 0.0)
-	_decal(self, "decal-menu.png", 0.1, Vector3(0.155, 0.46, fz), Vector3.ZERO, 0.0)
-	_decal(self, "decal-smash.png", 0.17, Vector3(0.0, 0.3, fz), Vector3.ZERO, 0.08)
-	_decal(self, "decal-pog-4.png", 0.075, Vector3(-0.2, 0.72, fz), Vector3.ZERO, 0.0)
-	_decal(self, "decal-bolt.png", 0.075, Vector3(0.2, 0.72, fz), Vector3.ZERO, 0.2)
-	_decal(self, "decal-skull.png", 0.07, Vector3(-0.255, 0.2, fz), Vector3.ZERO, -0.2)
-	_decal(self, "decal-1up.png", 0.07, Vector3(0.255, 0.2, fz), Vector3.ZERO, 0.15)
+	_word(panel, "move", 0.13, Vector3(-0.19, 0.0015, -0.1), flat)
+	_word(panel, "fire", 0.095, Vector3(0.19, 0.0015, -0.047), flat)
+	_word(panel, "grenade", 0.125, Vector3(0.07, 0.0015, -0.03), flat)
+	var up := 0.6 + 0.07
+	_word(self, "lock", 0.09, Vector3(-0.155, up, front_z + 0.0075), Vector3.ZERO)
+	_word(self, "menu", 0.095, Vector3(0.155, up, front_z + 0.0075), Vector3.ZERO)
+
+
+func _word(parent: Node3D, name: String, width: float, pos: Vector3, rot: Vector3) -> void:
+	var file := "word-%s.png" % name
+	if not _decal_mats.has(file):
+		var t = load("res://assets/art/%s" % file)
+		if t == null:
+			return
+		var m := VRBuild.tex_mat(t, 0.0, 0.45)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+		_decal_mats[file] = m
+		_decal_aspect[file] = float(t.get_height()) / float(t.get_width())
+	VRBuild.quad(parent, Vector2(width, width * float(_decal_aspect[file])), pos, _decal_mats[file], rot)
+
+
+static var _decal_aspect := {}
 
 
 func _build_sides(poly: Array, body: Material) -> void:

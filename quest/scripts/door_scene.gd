@@ -31,18 +31,17 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	var door_w := 2.1
 	var door_h := 2.35
 	var wall_w := half_w - door_w / 2.0
-	# the wall either side of the door and above it
+	# the wall either side of the door and above it (the black neon wall painting, floor to ceiling)
 	for side in [-1, 1]:
 		var cx: float = side * (door_w / 2.0 + wall_w / 2.0)
 		var wmat: StandardMaterial3D = wood.duplicate()
-		wmat.uv1_scale = Vector3(wall_w / 2.5, 1, 1)
+		wmat.uv1_scale = Vector3(wall_w / 2.4, height / 2.4, 1)
 		wmat.texture_repeat = true
-		var pmat: StandardMaterial3D = paper.duplicate()
-		pmat.uv1_scale = Vector3(wall_w / 2.4, (height - 1.25) / 2.4, 1)
-		pmat.texture_repeat = true
-		VRBuild.box(self, Vector3(wall_w, 1.25, 0.12), Vector3(cx, 0.625, 0), wmat)
-		VRBuild.box(self, Vector3(wall_w, height - 1.25, 0.12), Vector3(cx, 1.25 + (height - 1.25) / 2.0, 0), pmat)
-	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), paper)
+		VRBuild.box(self, Vector3(wall_w, height, 0.12), Vector3(cx, height / 2.0, 0), wmat)
+	var tmat: StandardMaterial3D = wood.duplicate()
+	tmat.uv1_scale = Vector3(door_w / 2.4, (height - door_h) / 2.4, 1)
+	tmat.texture_repeat = true
+	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), tmat)
 	# frame
 	var frame := RuinedExterior.surface("materials", 3, Color(0.24,0.26,0.28), 0.7)
 	for sx in [-1, 1]:
@@ -80,30 +79,21 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		VRBuild.quad(self, Vector2(0.72, 0.72), Vector3(cx, 1.62, 0.032), decal)
 		VRBuild.quad(self, Vector2(0.72, 0.72), Vector3(cx, 1.62, -0.032), decal, Vector3(0, PI, 0))
 		VRBuild.label(self, "PUSH", 0.07, Vector3(cx, 0.65, 0.04), Color(0.9, 0.8, 0.5, 0.8), Vector3.ZERO, 0, font)
-	# the EXIT sign: painted, lit, and not entirely serious about where it leads
+	# the EXIT sign above the door: painted, lit, and not entirely serious about where it leads
 	var exit_mat := VRBuild.tex_mat(_art("exit-sign.png"), 0.7, 0.5)
 	exit_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	var back := VRBuild.mat(Color(0.08, 0.1, 0.09), 0.5, 0.4)
-	var ex := -1.75
+	var ey := door_h + 0.4
 	for i in range(4):
-		VRBuild.quad(self, Vector2(1.04, 0.52), Vector3(ex, 2.6, 0.07 - i * 0.012), back)
-	VRBuild.quad(self, Vector2(1.04, 0.52), Vector3(ex, 2.6, 0.085), exit_mat)
-	VRBuild.quad(self, Vector2(1.04, 0.52), Vector3(ex, 2.6, 0.02), exit_mat, Vector3(0, PI, 0))
+		VRBuild.quad(self, Vector2(1.04, 0.52), Vector3(0, ey, 0.07 - i * 0.012), back)
+	VRBuild.quad(self, Vector2(1.04, 0.52), Vector3(0, ey, 0.085), exit_mat)
+	VRBuild.quad(self, Vector2(1.04, 0.52), Vector3(0, ey, 0.02), exit_mat, Vector3(0, PI, 0))
 	var exit_light := OmniLight3D.new()
-	exit_light.position = Vector3(ex, 2.6, 0.5)
+	exit_light.position = Vector3(0, ey, 0.5)
 	exit_light.light_color = Color(0.4, 1.0, 0.55)
 	exit_light.light_energy = 0.6
 	exit_light.omni_range = 2.2
 	add_child(exit_light)
-	# the Zombie Smash banner over it, and the same seen from the street
-	var ban := VRBuild.tex_mat(_art("zs-banner.png"), 0.9, 0.5)
-	ban.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	VRBuild.quad(self, Vector2(2.0, 0.667), Vector3(0, height - 0.34, 0.07), ban)
-	VRBuild.quad(self, Vector2(2.0, 0.667), Vector3(0, height - 0.34, -0.07), ban, Vector3(0, PI, 0))
-	# Fatty's own logo plate beside the door
-	var logo := VRBuild.tex_mat(_art("fatty-logo.png"), 0.4, 0.5)
-	logo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	VRBuild.quad(self, Vector2(1.15, 1.15), Vector3(-3.0, 2.0, 0.07), logo)
 	_build_outside(font)
 
 

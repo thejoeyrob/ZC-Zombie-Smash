@@ -23,22 +23,16 @@ func build(root: Node3D, pos: Vector3, yaw: float, font: Font) -> void:
 	var wood := VRBuild.mat(Color(0.26, 0.12, 0.36), 0.55)
 	var dark := VRBuild.mat(Color(0.05, 0.03, 0.09), 0.8)
 	var glow := VRBuild.mat(Color(1.0, 0.35, 0.75), 0.4, 0.0, 2.4)
-	# the cabinet: back board, side posts, two shelves, neon trim and a sign
-	VRBuild.box(self, Vector3(3.1, 1.6, 0.06), Vector3(0, 1.58, -0.05), dark)
-	for sx in [-1.6, 1.6]:
-		VRBuild.box(self, Vector3(0.1, 1.9, 0.4), Vector3(sx, 1.0, 0.1), wood)
-	VRBuild.box(self, Vector3(3.3, 0.08, 0.42), Vector3(0, 2.4, 0.1), wood)
+	# floating shelves fixed straight to the wall, lit from underneath
 	for y in [1.15, 1.7]:
-		VRBuild.box(self, Vector3(3.1, 0.05, 0.38), Vector3(0, y, 0.12), wood)
-		VRBuild.box(self, Vector3(3.1, 0.015, 0.015), Vector3(0, y - 0.005, 0.315), glow)
-	VRBuild.box(self, Vector3(3.1, 0.02, 0.02), Vector3(0, 2.36, 0.3), glow)
-	VRBuild.label(self, "PRIZES", 0.3, Vector3(0, 2.62, 0.0), Color(1.0, 0.35, 0.75), Vector3.ZERO, 12, font)
-	VRBuild.label(self, "BEAT A BOSS TO OPEN THE NEXT BOX", 0.075, Vector3(0, 2.46, 0.32), Color(1, 0.95, 0.8, 0.9), Vector3.ZERO, 3, font)
+		VRBuild.box(self, Vector3(3.1, 0.04, 0.34), Vector3(0, y, -0.03), wood)
+		VRBuild.box(self, Vector3(3.1, 0.012, 0.012), Vector3(0, y - 0.026, 0.14), glow)
+	VRBuild.label(self, "BOBBLE HEADS", 0.2, Vector3(0, 2.25, -0.185), Color(1.0, 0.35, 0.75), Vector3.ZERO, 10, font)
 	var spots: Array = []
 	for i in range(4):
-		spots.append(Vector3(-1.05 + i * 0.7, 1.175, 0.2))
+		spots.append(Vector3(-1.05 + i * 0.7, 1.175, -0.02))
 	for i in range(3):
-		spots.append(Vector3(-0.7 + i * 0.7, 1.725, 0.2))
+		spots.append(Vector3(-0.7 + i * 0.7, 1.725, -0.02))
 	var n := mini(ZSEngine.BOSSES.size(), spots.size())
 	for i in range(n):
 		var holder := Node3D.new()
@@ -52,7 +46,7 @@ func set_unlocked(count: int, quiet := false) -> void:
 	var before := unlocked_count
 	unlocked_count = count
 	for p in prizes:
-		var open: bool = p.index < count
+		var open: bool = true      # every bobble head is on show; the count only marks which ones were earned
 		if p.root.get_child_count() == 0 or p.unlocked != open:
 			_fill(p, open)
 			if open and not quiet and p.index >= before:
@@ -81,7 +75,6 @@ func _fill(p: Dictionary, open: bool) -> void:
 			VRBuild.quad(holder, Vector2(0.26, 0.26), Vector3(0, 0.15, 0.13), front)
 		VRBuild.quad(box, Vector2(0.26, 0.26), Vector3(0, 0.28, 0), top, Vector3(-PI / 2, 0, 0))
 		VRBuild.box(box, Vector3(0.25, 0.01, 0.25), Vector3(0, 0.02, 0), top)
-		VRBuild.label(p.root, "STAGE %d" % (p.index + 1), 0.045, Vector3(0, 0.012, 0.13), Color(1, 0.9, 0.6, 0.9), Vector3(-0.6, 0, 0), 3)
 	else:
 		# a solid figure standing on its own feet; its head and shoulders wobble like a bobble head
 		var mesh = load("res://assets/art/bobble-%s.obj" % boss.id)

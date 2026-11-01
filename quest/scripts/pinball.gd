@@ -39,7 +39,11 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 			VRBuild.box(self, Vector3(0.06, 0.64, 0.06), Vector3(sx, 0.32, sz), chrome)
 			VRBuild.box(self, Vector3(0.075, 0.03, 0.075), Vector3(sx, 0.015, sz), dark)
 	# a hollow cabinet: two side walls, a front and a back wall, a base, and the playfield sunk below the rails
-	var cab_col := VRBuild.mat(Color(0.2, 0.08, 0.3), 0.4, 0.3)
+	var cab_tex = load(art_dir + "pin-cab.jpg")
+	var cab_col: StandardMaterial3D = VRBuild.tex_mat(cab_tex, 0.0, 0.3) if cab_tex != null else VRBuild.mat(Color(0.2, 0.08, 0.3), 0.4, 0.3)
+	cab_col.metallic = 0.15
+	cab_col.clearcoat_enabled = true
+	cab_col.clearcoat = 0.8
 	for sx in [-0.29, 0.29]:
 		VRBuild.box(self, Vector3(0.025, 0.32, 1.46), Vector3(sx, 0.76, 0.07), cab_col)
 	VRBuild.box(self, Vector3(0.6, 0.3, 0.03), Vector3(0, 0.75, 0.80), cab_col)              # front wall
@@ -106,7 +110,12 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	VRBuild.cylinder(plunger_knob, 0.007, 0.2, Vector3(0, 0, -0.1), chrome, -1.0, Vector3(PI / 2, 0, 0), 12)
 	VRBuild.sphere(plunger_knob, 0.027, Vector3(0, 0, 0.012), VRBuild.mat(Color(0.95, 0.12, 0.15), 0.2, 0.0, 0.6), 16)
 	# the backbox with the picture, the title and a live score display
-	VRBuild.box(self, Vector3(0.64, 0.98, 0.2), Vector3(0, 1.42, -0.66), body)
+	VRBuild.box(self, Vector3(0.64, 0.98, 0.2), Vector3(0, 1.42, -0.66), cab_col)
+	var front_tex = load(art_dir + "pin-front.png")
+	if front_tex != null:
+		var fm2 := VRBuild.tex_mat(front_tex, 0.25, 0.4)
+		fm2.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		VRBuild.quad(self, Vector2(0.5, 0.25), Vector3(0, 0.76, 0.8156), fm2)
 	VRBuild.box(self, Vector3(0.68, 0.04, 0.24), Vector3(0, 1.93, -0.66), chrome)
 	VRBuild.box(self, Vector3(0.68, 0.04, 0.24), Vector3(0, 0.93, -0.66), chrome)
 	if field != null:

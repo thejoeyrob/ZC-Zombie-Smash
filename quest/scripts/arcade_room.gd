@@ -46,19 +46,14 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
-	var wood := VRBuild.tex_mat(_art("wainscot.jpg", null), 0.9, 0.7)
-	var paper := VRBuild.tex_mat(_art("wallpaper.jpg", null), 0.7, 0.9)
+	# early-90s arcade: black walls painted with glowing neon shapes, a starry black ceiling, confetti carpet
+	var wood := VRBuild.tex_mat(_art("wall90.jpg", null), 0.35, 0.8)
+	var paper := wood
 	wood.texture_repeat = true
-	paper.texture_repeat = true
 	_shell(root, wood, paper, font)
 	_lights(root)
 	door = DoorScene.new()
-	var dw: StandardMaterial3D = wood.duplicate()
-	dw.uv1_scale = Vector3(1.0, 1, 1)
-	var dp: StandardMaterial3D = paper.duplicate()
-	dp.uv1_scale = Vector3(3.0, 1.4, 1)
-	dw.uv1_scale = Vector3(1.4, 1, 1)
-	door.build(root, FRONT_Z, HALF_W, HEIGHT, dw, dp, font)
+	door.build(root, FRONT_Z, HALF_W, HEIGHT, wood, paper, font)
 	_machines(root)
 	_back_wall(root, font)
 	_decor(root, font)
@@ -80,8 +75,8 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling-tiles.jpg", null), 0.25, 0.9, false, Color(1.15, 1.05, 1.25))
-	ceiling.uv1_scale = Vector3(w / 1.5, d / 1.5, 1)
+	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9)
+	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
 	# the back wall and the two side walls (the front wall, with the door, belongs to the door scene)
@@ -96,36 +91,17 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
-		wm.uv1_scale = Vector3(wall[2] / 2.5, 1, 1)
+		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
 		wm.texture_repeat = true
-		var pm: StandardMaterial3D = paper.duplicate()
-		pm.uv1_scale = Vector3(wall[2] / 2.4, (HEIGHT - WAIN_H) / 2.4, 1)
-		pm.texture_repeat = true
-		VRBuild.quad(root_w, Vector2(wall[2], WAIN_H), Vector3(0, WAIN_H / 2.0, 0), wm)
-		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - WAIN_H), Vector3(0, WAIN_H + (HEIGHT - WAIN_H) / 2.0, 0), pm)
-		VRBuild.box(root_w, Vector3(wall[2], 0.12, 0.1), Vector3(0, HEIGHT - 0.06, 0.05), trim)   # cornice
-		var n := neon_b
-		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.14, 0.05), neon_a)      # glowing line under the cornice
-		# pilasters with a neon edge
-		var count := int(wall[2] / 2.4)
-		for i in range(1, count):
-			if k == 0:
-				continue          # the back wall carries the shelves and boards; no posts in front of them
-			var px: float = -wall[2] / 2.0 + i * wall[2] / count
-			VRBuild.box(root_w, Vector3(0.22, HEIGHT, 0.1), Vector3(px, HEIGHT / 2.0, 0.05), trim)
-			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px - 0.1, HEIGHT / 2.0, 0.108), n)
-			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px + 0.1, HEIGHT / 2.0, 0.108), n)
+		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
+		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.12, 0.03), neon_a)      # neon tube along the top of the wall
+		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, 0.12, 0.03), neon_b)             # and along the floor
+		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
 		k += 1
-	# ceiling beams and light panels
-	var beam := VRBuild.mat(TRIM.darkened(0.1), 0.7)
-	for z in [0.8, 3.3, 5.8]:
-		VRBuild.box(root, Vector3(w, 0.18, 0.28), Vector3(0, HEIGHT - 0.09, z), beam)
-		for dz in [-0.13, 0.13]:
-			VRBuild.box(root, Vector3(w, 0.022, 0.022), Vector3(0, HEIGHT - 0.19, z + dz), neon_a)       # neon along the beam
-	var panel_light := VRBuild.mat(Color(1, 0.82, 1.0), 0.5, 0.0, 1.8)
-	for x in [-2.8, 0.0, 2.8]:
-		for z in [2.05, 4.55, 7.0]:
-			VRBuild.box(root, Vector3(0.7, 0.04, 0.36), Vector3(x, HEIGHT - 0.04, z), panel_light)
+	# neon tubes across the ceiling instead of beams and panels
+	for z in [0.8, 2.6, 4.4, 6.2, 7.8]:
+		var tube := neon_a if int(z * 10.0) % 2 == 0 else neon_b
+		VRBuild.box(root, Vector3(w, 0.03, 0.03), Vector3(0, HEIGHT - 0.04, z), tube)
 
 
 func _lights(root: Node3D) -> void:
@@ -215,14 +191,6 @@ func set_active(i: int) -> void:
 
 # ---- the back wall: prizes, pinball, hall of fame, vending ------------------------------------------------------
 func _back_wall(root: Node3D, font: Font) -> void:
-	var counter := VRBuild.mat(PURPLE, 0.55)
-	var top := VRBuild.mat(PURPLE.lightened(0.18), 0.4)
-	var gold := VRBuild.mat(Color(1.0, 0.8, 0.3), 0.3, 0.0, 1.0)
-	VRBuild.box(root, Vector3(3.4, 1.0, 0.6), Vector3(-2.65, 0.5, BACK_Z - 0.4), counter)
-	VRBuild.box(root, Vector3(3.5, 0.06, 0.7), Vector3(-2.65, 1.02, BACK_Z - 0.4), top)
-	VRBuild.box(root, Vector3(3.4, 0.04, 0.4), Vector3(-2.65, 1.0, BACK_Z - 0.18), gold)
-	VRBuild.box(root, Vector3(3.0, 0.75, 0.3), Vector3(2.2, 0.375, BACK_Z - 0.2), counter)
-	VRBuild.box(root, Vector3(3.1, 0.05, 0.4), Vector3(2.2, 0.77, BACK_Z - 0.2), top)
 	prize_wall = PrizeWall.new()
 	prize_wall.build(root, Vector3(-2.65, 0.0, BACK_Z - 0.2), PI, font)
 	hall = HallBoard.new()
@@ -247,36 +215,9 @@ func _back_wall(root: Node3D, font: Font) -> void:
 
 
 func _decor(root: Node3D, font: Font) -> void:
-	# the JW Eds logo: a wall-mounted business sign on brushed steel standoffs with its own spotlight, beside the door
-	var logo_tex = load("res://assets/art/jw-logo.png")
-	var plate := Node3D.new()
-	plate.position = Vector3(2.95, 2.0, FRONT_Z + 0.04)
-	root.add_child(plate)
-	var steel := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.2)
-	var charcoal := VRBuild.mat(Color(0.05, 0.05, 0.07), 0.35, 0.3)
-	VRBuild.box(plate, Vector3(1.5, 0.74, 0.03), Vector3(0, 0, 0.03), charcoal)
-	for sx in [-0.7, 0.7]:
-		for sy in [-0.33, 0.33]:
-			VRBuild.cylinder(plate, 0.012, 0.03, Vector3(sx, sy, 0.0), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
-			VRBuild.cylinder(plate, 0.018, 0.008, Vector3(sx, sy, 0.047), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
-	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, 0.375, 0.03), steel)
-	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, -0.375, 0.03), steel)
-	if logo_tex != null:
-		var lm := VRBuild.tex_mat(logo_tex, 0.55, 0.4)
-		lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		lm.emission_enabled = true
-		lm.emission_texture = logo_tex
-		lm.emission_energy_multiplier = 0.6
-		VRBuild.quad(plate, Vector2(1.26, 0.53), Vector3(0, 0, 0.047), lm)
-	var spot := SpotLight3D.new()
-	spot.position = Vector3(0, 0.55, 0.5)
-	spot.rotation = Vector3(-1.1, 0, 0)
-	spot.spot_range = 2.2
-	spot.spot_angle = 38.0
-	spot.light_energy = 2.2
-	spot.light_color = Color(1.0, 0.95, 0.85)
-	plate.add_child(spot)
-	VRBuild.box(plate, Vector3(0.1, 0.05, 0.22), Vector3(0, 0.45, 0.14), charcoal)
+	# two matching wall plates beside the door: the JW Eds sign on the right, the Zombie Smash poster on the left
+	_plate(root, Vector3(2.95, 2.0, FRONT_Z + 0.04), "jw-logo.png", Vector2(1.26, 0.53), true)
+	_plate(root, Vector3(-2.95, 2.0, FRONT_Z + 0.04), "zs-poster.png", Vector2(1.42, 0.7), false)
 	# the jukebox against the left wall
 	jukebox = Jukebox.new()
 	jukebox.position = Vector3(-HALF_W + 0.38, 0, 5.1)
@@ -297,18 +238,40 @@ func _decor(root: Node3D, font: Font) -> void:
 			VRBuild.box(holder, Vector3(0.82, 1.2, 0.03), Vector3.ZERO, VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5))
 			VRBuild.quad(holder, Vector2(0.8, 1.18), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6, false, Color(1, 1, 1)))
 			k += 1
-	# wall sconces halfway between the posts
-	var shade := VRBuild.mat(Color(1.0, 0.86, 0.6), 0.4, 0.0, 1.6)
-	var brass := VRBuild.mat(Color(0.85, 0.65, 0.25), 0.25, 0.5, 0.2, Color(0.85, 0.65, 0.25))
-	for side in [-1, 1]:
-		for z in [0.55, 3.0, 5.3, 7.4]:
-			var holder := Node3D.new()
-			holder.position = Vector3(side * (HALF_W - 0.02), 2.05, z)
-			holder.rotation.y = -side * PI / 2.0
-			root.add_child(holder)
-			VRBuild.box(holder, Vector3(0.1, 0.16, 0.02), Vector3(0, 0, 0.01), brass)
-			VRBuild.box(holder, Vector3(0.03, 0.03, 0.1), Vector3(0, 0.0, 0.06), brass)
-			VRBuild.cylinder(holder, 0.08, 0.16, Vector3(0, 0.1, 0.12), shade, 0.045, Vector3.ZERO, 16)
+
+
+## A wall-mounted plate on brushed steel standoffs with its own spotlight.
+func _plate(root: Node3D, pos: Vector3, file: String, art_size: Vector2, transparent: bool) -> void:
+	var tex = load("res://assets/art/" + file)
+	var plate := Node3D.new()
+	plate.position = pos
+	root.add_child(plate)
+	var steel := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.2)
+	var charcoal := VRBuild.mat(Color(0.05, 0.05, 0.07), 0.35, 0.3)
+	VRBuild.box(plate, Vector3(1.5, 0.74, 0.03), Vector3(0, 0, 0.03), charcoal)
+	for sx in [-0.7, 0.7]:
+		for sy in [-0.33, 0.33]:
+			VRBuild.cylinder(plate, 0.012, 0.03, Vector3(sx, sy, 0.0), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
+			VRBuild.cylinder(plate, 0.018, 0.008, Vector3(sx, sy, 0.047), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
+	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, 0.375, 0.03), steel)
+	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, -0.375, 0.03), steel)
+	if tex != null:
+		var lm := VRBuild.tex_mat(tex, 0.45, 0.4)
+		if transparent:
+			lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		lm.emission_enabled = true
+		lm.emission_texture = tex
+		lm.emission_energy_multiplier = 0.5
+		VRBuild.quad(plate, art_size, Vector3(0, 0, 0.047), lm)
+	var spot := SpotLight3D.new()
+	spot.position = Vector3(0, 0.55, 0.5)
+	spot.rotation = Vector3(-1.1, 0, 0)
+	spot.spot_range = 2.2
+	spot.spot_angle = 38.0
+	spot.light_energy = 2.2
+	spot.light_color = Color(1.0, 0.95, 0.85)
+	plate.add_child(spot)
+	VRBuild.box(plate, Vector3(0.1, 0.05, 0.22), Vector3(0, 0.45, 0.14), charcoal)
 
 
 # ---- where the player can jump to --------------------------------------------------------------------------------
@@ -335,10 +298,10 @@ func collide(p: Vector3) -> Vector3:
 			var n := d.normalized() if d.length() > 0.001 else Vector2(0, 1)
 			out.x = b[0] + n.x * r
 			out.z = b[1] + n.y * r
-	if out.z > BACK_Z - 1.05 and out.x < -0.8:
-		out.z = BACK_Z - 1.05
-	if out.z > BACK_Z - 0.85 and out.x > 0.8 and out.x < 3.4:
-		out.z = BACK_Z - 0.85
+	if out.z > BACK_Z - 0.7 and out.x < -0.8:
+		out.z = BACK_Z - 0.7
+	if out.z > BACK_Z - 0.7 and out.x > 0.8 and out.x < 3.4:
+		out.z = BACK_Z - 0.7
 	return out
 
 
