@@ -16,6 +16,7 @@ var cab: Cabinet
 var machines: Array = []
 var viewport: SubViewport
 var screen: ZSScreen
+var cartridge: Cartridge       # the game every machine runs (Zombie Smash is the first cartridge)
 var audio: ZSAudio
 var game: ZSEngine
 var font: Font
@@ -79,12 +80,13 @@ func _ready() -> void:
 	font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
 	_setup_xr()
 	_build_screen()
+	cartridge = Cartridges.create(Cartridges.default_id(), self)
 	room = ArcadeRoom.new()
 	var banner: Texture2D = load("res://assets/art/game-banner.webp")
-	room.build(self, viewport.get_texture(), banner, font, progress)
+	room.build(self, cartridge.screen_texture(), banner, font, progress)
 	machines = room.machines
 	cab = machines[room.player_index]
-	cab.set_live(viewport.get_texture())
+	cab.set_live(cartridge.screen_texture())
 	room.set_active(room.player_index)
 	room.prize_wall.set_unlocked(progress.unlocked(), true)
 	room.pinball.set_enabled(true)      # the pinball machine is always playable
@@ -344,7 +346,7 @@ func _on_pinball_sound(n: String, pos: Vector3) -> void:
 ## Every machine plays the same game: the ones nobody is using show its title screen, whichever one you lock on to goes live.
 func _capture_attract() -> void:
 	await get_tree().create_timer(1.2).timeout
-	var img := viewport.get_texture().get_image()
+	var img := cartridge.screen_texture().get_image()
 	if img == null:
 		return
 	var tex := ImageTexture.create_from_image(img)
@@ -427,6 +429,16 @@ func _save_best() -> void:
 	var f := FileAccess.open(BEST_PATH, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify({"best": best}))
+
+
+## The cartridge asks the app to pause or resume the running game.
+func set_game_paused(on: bool) -> void:
+	if on and state == "play":
+		state = "paused"
+		screen.mode = "paused"
+	elif not on and state == "paused":
+		state = "play"
+		screen.mode = "play"
 
 
 # ---- the game ------------------------------------------------------------------------------------
@@ -1059,7 +1071,7 @@ func _select_machine(i: int) -> void:
 	for k in cab.caps:
 		cab.button_pressed_visual(k, false)
 	cab = m
-	cab.set_live(viewport.get_texture())
+	cab.set_live(cartridge.screen_texture())
 	cab.screen_mat.albedo_color = Color.WHITE
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)
