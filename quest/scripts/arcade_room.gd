@@ -4,14 +4,14 @@ extends RefCounted
 ## of the door (a place for each player of a party), the pinball machine faces the door from the back wall between the prize
 ## shelves and the hall of fame, and a snack machine waits in the far corner.
 
-const HALF_W := 4.6
+const HALF_W := 4.0
 const FRONT_Z := -0.55
-const BACK_Z := 8.2
+const BACK_Z := 7.3
 const HEIGHT := 3.2
-const ARC_CENTRE := Vector3(0, 0, 3.3)
-const ARC_RADIUS := 3.15
+const ARC_CENTRE := Vector3(0, 0, 2.9)
+const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
-const SLOTS := [[-84.0, "jordan"], [-62.0, "glowinghumanity"], [-41.0, "debo"], [-20.0, "caffeinatedsloth"], [20.0, "discoman"], [41.0, "fatamy"], [62.0, "drmantis"], [84.0, "joeyrob"]]
+const SLOTS := [[-84.0, "jordan"], [-63.0, "glowinghumanity"], [-43.0, "debo"], [-24.0, "caffeinatedsloth"], [24.0, "discoman"], [43.0, "fatamy"], [63.0, "drmantis"], [84.0, "joeyrob"]]
 const PLAYER_SLOT := 4
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
 const TRIM := Color(0.25, 0.17, 0.32)      # beams, posts and mouldings
@@ -98,7 +98,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
-	for z in [0.8, 2.6, 4.4, 6.2, 7.8]:
+	for z in [0.8, 2.4, 4.0, 5.6, 7.0]:
 		var tube := neon_a if int(z * 10.0) % 2 == 0 else neon_b
 		VRBuild.box(root, Vector3(w, 0.03, 0.03), Vector3(0, HEIGHT - 0.04, z), tube)
 
@@ -148,7 +148,7 @@ func _machines(root: Node3D) -> void:
 		flickers.append([c.screen_mat, 1.0, 0.7 + i * 0.13, i * 1.7, i])
 		blockers.append([pos.x - sin(yaw) * 0.3, pos.z - cos(yaw) * 0.3, 0.7])
 	# a round rug and rings of light in the middle of the curve
-	for ring_spec in [[2.14, 2.22, Color(1.0, 0.3, 0.75)], [1.5, 1.56, Color(0.2, 0.9, 1.0)]]:
+	for ring_spec in [[1.98, 2.06, Color(1.0, 0.3, 0.75)], [1.78, 1.82, Color(0.2, 0.9, 1.0)]]:
 		var ring := MeshInstance3D.new()
 		var tm := TorusMesh.new()
 		tm.inner_radius = ring_spec[0]
@@ -160,6 +160,7 @@ func _machines(root: Node3D) -> void:
 		ring.position = ARC_CENTRE + Vector3(0, 0.02, 0)
 		ring.material_override = VRBuild.mat(ring_spec[2], 0.4, 0.0, 2.6)
 		root.add_child(ring)
+	_lounge(root)
 	_active = player_index
 
 
@@ -204,10 +205,49 @@ func set_active(i: int) -> void:
 			machines[k].set_live(null)
 
 
+# ---- the social corner in the middle of the curve ------------------------------------------------------------
+func _lounge(root: Node3D) -> void:
+	var c := ARC_CENTRE
+	# bean bags in a ring round a low round table with a board game on it
+	var cols := ["pink", "cyan", "amber", "green", "purple", "red"]
+	for i in range(cols.size()):
+		var a := TAU * float(i) / float(cols.size()) + 0.3
+		var bag := Node3D.new()
+		bag.position = c + Vector3(sin(a) * 1.15, 0, cos(a) * 1.15)
+		bag.rotation = Vector3(0.05 * sin(a * 3.0), a + 3.14, 0.04 * cos(a * 2.0))
+		root.add_child(bag)
+		var m := VRBuild.tex_mat(_art("bean-%s.jpg" % cols[i], null), 0.0, 0.85)
+		m.rim_enabled = true
+		m.rim = 0.25
+		var body := VRBuild.sphere(bag, 0.46, Vector3(0, 0.27, 0), m, 28)
+		body.scale = Vector3(1.0, 0.7, 0.95)
+		back.scale = Vector3(1.05, 0.9, 0.5)
+	var table := Node3D.new()
+	table.position = c
+	root.add_child(table)
+	var steel := RuinedExterior.surface("materials", 3, Color(0.8, 0.82, 0.9), 0.3)
+	VRBuild.cylinder(table, 0.06, 0.38, Vector3(0, 0.19, 0), steel, -1.0, Vector3.ZERO, 16)
+	VRBuild.cylinder(table, 0.3, 0.025, Vector3(0, 0.0125, 0), steel, -1.0, Vector3.ZERO, 24)
+	VRBuild.cylinder(table, 0.56, 0.05, Vector3(0, 0.4, 0), VRBuild.mat(Color(0.04, 0.03, 0.08), 0.3, 0.4), -1.0, Vector3.ZERO, 40)
+	var board := VRBuild.tex_mat(_art("boardgame.jpg", null), 0.0, 0.5)
+	VRBuild.cylinder(table, 0.53, 0.004, Vector3(0, 0.427, 0), board, -1.0, Vector3.ZERO, 48)
+	var pawn_cols := [Color(1, 0.2, 0.55), Color(0.1, 0.9, 1.0), Color(1, 0.85, 0.1), Color(0.5, 1, 0.2)]
+	for k in range(4):
+		var pa := 0.7 + k * 1.5
+		var pc: Color = pawn_cols[k]
+		var px := Vector3(sin(pa) * 0.4, 0.45, cos(pa) * 0.4)
+		VRBuild.cylinder(table, 0.018, 0.04, px + Vector3(0, 0.0, 0), VRBuild.mat(pc, 0.3, 0.1, 0.4, pc), 0.012, Vector3.ZERO, 14)
+		VRBuild.sphere(table, 0.016, px + Vector3(0, 0.03, 0), VRBuild.mat(pc, 0.3, 0.1, 0.4, pc), 12)
+	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.14, 0.445, 0.1), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.3, 0.5, 0.2))
+	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.19, 0.445, 0.04), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.1, 0.9, 0.4))
+	VRBuild.quad(root, Vector2(3.4, 3.4), c + Vector3(0, 0.014, 0), _pool(Color(1.0, 0.35, 0.8)), Vector3(-PI / 2, 0, 0))
+	blockers.append([c.x, c.z, 0.62])
+
+
 # ---- the back wall: prizes, pinball, hall of fame, vending ------------------------------------------------------
 func _back_wall(root: Node3D, font: Font) -> void:
 	prize_wall = PrizeWall.new()
-	prize_wall.build(root, Vector3(-2.65, 0.0, BACK_Z - 0.2), PI, font)
+	prize_wall.build(root, Vector3(-2.3, 0.0, BACK_Z - 0.2), PI, font)
 	hall = HallBoard.new()
 	hall.build(root, font, progress, Vector3(2.2, 1.85, BACK_Z - 0.08), PI)
 	# the pinball machine between them, facing the door
@@ -220,7 +260,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	_neon_sign(root, "neon-scores.png", Vector3(2.2, 2.78, BACK_Z - 0.04), PI, Vector2(1.9, 0.57))
 	# the snack machine in the far corner on the left as you come in
 	vending = VendingMachine.new()
-	vending.position = Vector3(HALF_W - 0.42, 0, 5.1)       # against the right-hand wall, mirroring the jukebox
+	vending.position = Vector3(HALF_W - 0.42, 0, 4.6)       # against the right-hand wall, mirroring the jukebox
 	vending.rotation.y = -PI / 2.0
 	root.add_child(vending)
 	vending.build(font)
@@ -235,28 +275,28 @@ func _decor(root: Node3D, font: Font) -> void:
 	_plate(root, Vector3(-2.95, 2.0, FRONT_Z + 0.04), "zs-poster.png", Vector2(1.42, 0.7), false)
 	# the jukebox against the left wall
 	jukebox = Jukebox.new()
-	jukebox.position = Vector3(-HALF_W + 0.38, 0, 5.1)
+	jukebox.position = Vector3(-HALF_W + 0.38, 0, 4.6)
 	jukebox.rotation.y = PI / 2.0
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
 	# glowing wall art in the manner of a real arcade: pixel sprites and hexagon light fixtures
-	_neon_sign(root, "wallart-chase.png", Vector3(-HALF_W + 0.04, 2.55, 5.1), PI / 2.0, Vector2(2.6, 0.62))
-	_neon_sign(root, "wallart-invaders.png", Vector3(HALF_W - 0.04, 2.6, 5.1), -PI / 2.0, Vector2(2.0, 0.5))
+	_neon_sign(root, "wallart-chase.png", Vector3(-HALF_W + 0.04, 2.6, 4.6), PI / 2.0, Vector2(1.3, 0.31))
+	_neon_sign(root, "wallart-invaders.png", Vector3(HALF_W - 0.04, 2.6, 4.6), -PI / 2.0, Vector2(1.3, 0.33))
 	_neon_sign(root, "wallart-pad.png", Vector3(-2.0, 2.75, BACK_Z - 0.04), PI, Vector2(0.75, 0.43))
 	_neon_sign(root, "wallart-stick.png", Vector3(2.0, 2.75, BACK_Z - 0.04), PI, Vector2(0.5, 0.5))
-	_neon_sign(root, "wallart-heart.png", Vector3(-HALF_W + 0.04, 2.3, 7.3), PI / 2.0, Vector2(0.6, 0.52))
-	for hx in [[-2.2, 2.2, "hex-blue.png"], [2.3, 4.6, "hex-pink.png"], [-1.0, 6.8, "hex-blue.png"]]:
+	_neon_sign(root, "wallart-heart.png", Vector3(-HALF_W + 0.04, 2.3, 6.7), PI / 2.0, Vector2(0.6, 0.52))
+	for hx in [[-2.0, 2.0, "hex-blue.png"], [2.1, 4.0, "hex-pink.png"], [-0.8, 6.0, "hex-blue.png"]]:
 		var hm := VRBuild.tex_mat(_art(hx[2], null), 0.0, 0.5, true)
 		hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		VRBuild.quad(root, Vector2(2.6, 2.6), Vector3(hx[0], HEIGHT - 0.03, hx[1]), hm, Vector3(PI / 2, 0, 0))
-	_neon_sign(root, "neon-gameon.png", Vector3(-HALF_W + 0.04, 2.92, 3.8), PI / 2.0, Vector2(1.3, 0.39))
-	_neon_sign(root, "neon-player1.png", Vector3(HALF_W - 0.04, 2.92, 3.8), -PI / 2.0, Vector2(1.3, 0.39))
+	_neon_sign(root, "neon-gameon.png", Vector3(-HALF_W + 0.04, 2.92, 3.4), PI / 2.0, Vector2(1.3, 0.39))
+	_neon_sign(root, "neon-player1.png", Vector3(HALF_W - 0.04, 2.92, 3.4), -PI / 2.0, Vector2(1.3, 0.39))
 	# the boss arenas as framed pictures between the posters
 	var arenas := ["arena-jordan.webp", "arena-debo.webp", "arena-fatamy.webp", "arena-drmantis.webp"]
 	var ai := 0
 	for side in [-1, 1]:
-		for z in ([2.95] if side == 1 else [2.95, 4.7]):
+		for z in [2.6]:
 			var fr := Node3D.new()
 			fr.position = Vector3(side * (HALF_W - 0.04), 1.75, z)
 			fr.rotation.y = -side * PI / 2.0
@@ -269,7 +309,7 @@ func _decor(root: Node3D, font: Font) -> void:
 	var posters := ["poster-1.jpg", "poster-2.jpg", "poster-3.jpg", "poster-4.jpg", "poster-5.jpg", "poster-6.jpg"]
 	var k := 0
 	for side in [-1, 1]:
-		for z in [1.3, 3.8, 6.3]:
+		for z in [1.2, 3.4, 5.6]:
 			var holder := Node3D.new()
 			holder.position = Vector3(side * (HALF_W - 0.04), 2.1, z)
 			holder.rotation.y = -side * PI / 2.0
@@ -334,11 +374,12 @@ func _spots() -> void:
 		var m: Cabinet = machines[i]
 		spots.append(["m%d" % i, "PLAY", m.stand_world(), m.look_world(), m.theme_color])
 	spots.append(["pinball", "PINBALL", pinball.stand_world(), pinball.look_world(), Color(1.0, 0.85, 0.2)])
-	spots.append(["prizes_a", "PRIZES", Vector3(-3.3, 0, BACK_Z - 1.55), Vector3(-3.3, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
-	spots.append(["prizes_b", "PRIZES", Vector3(-2.0, 0, BACK_Z - 1.55), Vector3(-2.0, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
+	spots.append(["prizes_a", "PRIZES", Vector3(-2.9, 0, BACK_Z - 1.55), Vector3(-2.9, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
+	spots.append(["prizes_b", "PRIZES", Vector3(-1.7, 0, BACK_Z - 1.55), Vector3(-1.7, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
 	spots.append(["hall", "HALL OF FAME", Vector3(2.2, 0, BACK_Z - 2.2), Vector3(2.2, 1.8, BACK_Z), Color(1.0, 0.82, 0.25)])
-	spots.append(["vending", "SNACKS", Vector3(HALF_W - 1.5, 0, 5.1), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
-	spots.append(["jukebox", "JUKEBOX", Vector3(-2.95, 0, 5.1), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
+	spots.append(["vending", "SNACKS", Vector3(HALF_W - 1.5, 0, 4.6), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
+	spots.append(["jukebox", "JUKEBOX", Vector3(-HALF_W + 1.1, 0, 4.6), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
+	spots.append(["lounge", "LOUNGE", ARC_CENTRE + Vector3(0, 0, -1.7), ARC_CENTRE + Vector3(0, 0.4, 0), Color(1.0, 0.45, 0.85)])
 	spots.append(["exit", "EXIT", Vector3(0, 0, 0.75), Vector3(0, 1.4, FRONT_Z), Color(0.3, 1.0, 0.45)])
 
 
