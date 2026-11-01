@@ -56,3 +56,7 @@ shared game core (rules, data, waves, bosses, scoring)   <- written once
 3. Landing page on zc2.quest with links to the App Store, Google Play and Meta Store (links go live as each store approves). The playable web game would move to a path such as `/play`.
 4. Moderation for leaderboard names (report and block path, stricter server-side filtering).
 5. Android project, signing and Play listing (Android chat).
+
+## New structure (started 2026-11-01)
+The game and the consoles are being separated into new repositories, `thejoeyrob/zombie-smash-game` (the cartridge) and `thejoeyrob/zombie-smash-consoles` (phone, Android, later VR). This repository stays as the archive and as the live iPhone build 142 line. Do not add new features here. Details: the new repos' `docs/OWNERS-GUIDE.md`.
+Verified: the new phone console assembled from the cartridge is byte-identical to this repo's current `www/` build.
