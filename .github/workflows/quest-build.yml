@@ -8,6 +8,9 @@ on:
   push:
     branches: [quest-build]
 
+permissions:
+  contents: write      # lets the build attach the finished APK to the "quest-latest" test release
+
 concurrency:
   group: quest-build
   cancel-in-progress: true
@@ -140,3 +143,16 @@ jobs:
           name: zombie-smash-vr-apk
           path: quest/build/ZombieSmashVR-build*.apk
           if-no-files-found: error
+
+      # A plain, unzipped APK at one fixed address, so it can be opened in the Quest browser and saved straight to Files.
+      - name: Publish the APK as the latest test download
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp "quest/build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk" FattysGameShack-Quest.apk
+          NOTES="Build ${GITHUB_RUN_NUMBER} (commit ${GITHUB_SHA::7}) of the Fatty's Game Shack Quest VR test build. Download FattysGameShack-Quest.apk and install it on a Quest in developer mode."
+          gh release view quest-latest >/dev/null 2>&1 || gh release create quest-latest --prerelease --target "$GITHUB_SHA" --title "Fatty's Game Shack - Quest test build" --notes "$NOTES"
+          gh release upload quest-latest FattysGameShack-Quest.apk --clobber
+          gh release edit quest-latest --notes "$NOTES"
