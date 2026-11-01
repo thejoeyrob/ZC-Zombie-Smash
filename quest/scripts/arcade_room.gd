@@ -27,6 +27,7 @@ var hall: HallBoard
 var progress: VRProgress
 var pinball: Pinball
 var vending: VendingMachine
+var jukebox: Jukebox
 var door: DoorScene
 var ball_mat_spin: Node3D
 var blockers: Array = []        # circles [centre x, centre z, radius] the player cannot walk through
@@ -246,6 +247,43 @@ func _back_wall(root: Node3D, font: Font) -> void:
 
 
 func _decor(root: Node3D, font: Font) -> void:
+	# the JW Eds logo: a wall-mounted business sign on brushed steel standoffs with its own spotlight, beside the door
+	var logo_tex = load("res://assets/art/jw-logo.png")
+	var plate := Node3D.new()
+	plate.position = Vector3(2.95, 2.0, FRONT_Z + 0.04)
+	root.add_child(plate)
+	var steel := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.2)
+	var charcoal := VRBuild.mat(Color(0.05, 0.05, 0.07), 0.35, 0.3)
+	VRBuild.box(plate, Vector3(1.5, 0.74, 0.03), Vector3(0, 0, 0.03), charcoal)
+	for sx in [-0.7, 0.7]:
+		for sy in [-0.33, 0.33]:
+			VRBuild.cylinder(plate, 0.012, 0.03, Vector3(sx, sy, 0.0), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
+			VRBuild.cylinder(plate, 0.018, 0.008, Vector3(sx, sy, 0.047), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
+	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, 0.375, 0.03), steel)
+	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, -0.375, 0.03), steel)
+	if logo_tex != null:
+		var lm := VRBuild.tex_mat(logo_tex, 0.55, 0.4)
+		lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		lm.emission_enabled = true
+		lm.emission_texture = logo_tex
+		lm.emission_energy_multiplier = 0.6
+		VRBuild.quad(plate, Vector2(1.26, 0.53), Vector3(0, 0, 0.047), lm)
+	var spot := SpotLight3D.new()
+	spot.position = Vector3(0, 0.55, 0.5)
+	spot.rotation = Vector3(-1.1, 0, 0)
+	spot.spot_range = 2.2
+	spot.spot_angle = 38.0
+	spot.light_energy = 2.2
+	spot.light_color = Color(1.0, 0.95, 0.85)
+	plate.add_child(spot)
+	VRBuild.box(plate, Vector3(0.1, 0.05, 0.22), Vector3(0, 0.45, 0.14), charcoal)
+	# the jukebox against the left wall
+	jukebox = Jukebox.new()
+	jukebox.position = Vector3(-HALF_W + 0.38, 0, 5.1)
+	jukebox.rotation.y = PI / 2.0
+	root.add_child(jukebox)
+	jukebox.build(font)
+	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
 	# six posters, three on each side wall
 	var posters := ["poster-1.jpg", "poster-2.jpg", "poster-3.jpg", "poster-4.jpg", "poster-5.jpg", "poster-6.jpg"]
 	var k := 0
@@ -283,6 +321,7 @@ func _spots() -> void:
 	spots.append(["prizes_b", "PRIZES", Vector3(-2.0, 0, BACK_Z - 1.55), Vector3(-2.0, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
 	spots.append(["hall", "HALL OF FAME", Vector3(2.2, 0, BACK_Z - 2.2), Vector3(2.2, 1.8, BACK_Z), Color(1.0, 0.82, 0.25)])
 	spots.append(["vending", "SNACKS", Vector3(3.0, 0, BACK_Z - 2.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
+	spots.append(["jukebox", "JUKEBOX", Vector3(-2.95, 0, 5.1), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
 	spots.append(["exit", "EXIT", Vector3(0, 0, 0.75), Vector3(0, 1.4, FRONT_Z), Color(0.3, 1.0, 0.45)])
 
 

@@ -169,10 +169,12 @@ func _draw() -> void:
 		_label(root, "Play a game and your\nlast run shows here.", 40, Color(0.8, 0.88, 1.0), Vector2(x0, 190), w, HORIZONTAL_ALIGNMENT_CENTER)
 	else:
 		_label(root, "LAST RUN", 34, Color(0.6, 0.7, 0.9), Vector2(x0, 168), w, HORIZONTAL_ALIGNMENT_CENTER)
-		_label(root, ZSEngine.commas(int(last.score)), 90, Color.WHITE, Vector2(x0, 198), w, HORIZONTAL_ALIGNMENT_CENTER)
+		_label(root, ZSEngine.commas(int(last.score)) + ("*" if last.get("assisted", false) else ""), 90, Color.WHITE, Vector2(x0, 198), w, HORIZONTAL_ALIGNMENT_CENTER)
 		_label(root, "Wave %d   Kills %d   Bosses %d" % [int(last.wave), int(last.kills), int(last.bosses)], 34, Color(0.8, 0.88, 1.0), Vector2(x0, 308), w, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(root, "YOUR BEST", 34, Color(0.6, 0.7, 0.9), Vector2(x0, 372), w, HORIZONTAL_ALIGNMENT_CENTER)
-	_label(root, ZSEngine.commas(progress.best), 64, Color(1.0, 0.82, 0.25), Vector2(x0, 404), w, HORIZONTAL_ALIGNMENT_CENTER)
+	_label(root, ZSEngine.commas(progress.best) + ("*" if progress.best_star else ""), 64, Color(1.0, 0.82, 0.25), Vector2(x0, 404), w, HORIZONTAL_ALIGNMENT_CENTER)
+	if progress.best_star or bool(last.get("assisted", false)):
+		_label(root, "* controller assist was on", 24, Color(1.0, 0.75, 0.4), Vector2(x0, 472), w, HORIZONTAL_ALIGNMENT_CENTER)
 	_label(root, "BADGES  %d / %d" % [progress.badges.size(), VRProgress.BADGES.size()], 40, Color(0.4, 1.0, 0.7), Vector2(x0, 500), w, HORIZONTAL_ALIGNMENT_CENTER)
 	var size := 124.0
 	var gap := (w - 4.0 * size) / 3.0

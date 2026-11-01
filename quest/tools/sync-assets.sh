@@ -11,6 +11,10 @@ for f in arena-*.webp zombie-*.webp boss-*.webp player-*.webp bullet-*.webp pick
   [ -f "$f" ] && cp "$f" "$Q/art/"
 done
 cp art-bounds.json "$Q/art/art-bounds.json"
+# the phone app ships its sprites at phone-screen size; the headset gets the full-size originals (and the matching crop boxes)
+cp quest/art-hires/*.webp "$Q/art/" 2>/dev/null || true
+cp quest/art-hires/art-bounds.json "$Q/art/art-bounds.json"
+cp quest/vr-art/mus-*.wav "$Q/audio/" 2>/dev/null || true
 cp quest/vr-art/*.jpg quest/vr-art/*.png quest/vr-art/*.obj quest/vr-art/*-atlas.json "$Q/art/" 2>/dev/null || cp quest/vr-art/*.jpg quest/vr-art/*.png "$Q/art/"
 # sound: the pre-rendered effects and music
 cp snd-*.wav mus-*.wav "$Q/audio/"

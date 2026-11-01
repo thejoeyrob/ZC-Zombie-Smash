@@ -141,8 +141,38 @@ func set_pose(index_curl: float, grip_curl: float, thumb_curl: float) -> void:
 	curl.thumb = clampf(thumb_curl, 0.0, 1.0)
 
 
+## Real finger bends from the headset's hand tracking: per finger the three joint angles in radians (thumb: two).
+var tracked := {}
+var tracked_shown := {}
+
+
+func set_tracked(angles: Dictionary) -> void:
+	tracked = angles
+
+
+func clear_tracked() -> void:
+	tracked = {}
+
+
 func _process(delta: float) -> void:
 	var k := 1.0 - exp(-delta * 22.0)
+	if not tracked.is_empty():
+		for key in tracked:
+			var want: Array = tracked[key]
+			var have: Array = tracked_shown.get(key, want)
+			var out: Array = []
+			for i in range(want.size()):
+				out.append(lerpf(float(have[i]), float(want[i]), 1.0 - exp(-delta * 30.0)))
+			tracked_shown[key] = out
+		for f in FINGERS:
+			var a: Array = tracked_shown.get(f[0], [0.2, 0.3, 0.2])
+			var js: Array = joints[f[0]]
+			for i in range(3):
+				_flex(js[i], clampf(float(a[i]), -0.2, 1.75))
+		var th: Array = tracked_shown.get("thumb", [0.2, 0.3])
+		_flex(thumb[0], clampf(float(th[0]), -0.2, 1.2))
+		_flex(thumb[1], clampf(float(th[1]), -0.2, 1.4))
+		return
 	for key in shown:
 		shown[key] = lerpf(shown[key], curl[key], k)
 	_apply()

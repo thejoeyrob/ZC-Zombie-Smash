@@ -36,17 +36,26 @@ func _ready() -> void:
 
 
 var _base := Transform2D.IDENTITY
+var ss := 1.0                 # supersampling: the game is drawn this many times sharper than its 343 x 412 world
 var no_shake := false
 
 
 func set_xf(pos: Vector2, rot: float) -> void:
-	_base = Transform2D(rot, pos)
+	_base = Transform2D(0.0, Vector2(ss, ss), 0.0, Vector2.ZERO) * Transform2D(rot, pos)
 	draw_set_transform_matrix(_base)
 
 
 func tex(file: String) -> Texture2D:
 	if not _tex.has(file):
 		var t = load(ART + file)
+		if t is Texture2D and not (t is ImageTexture):
+			# smooth minification: give every picture its mipmaps so small sprites do not shimmer
+			var img: Image = (t as Texture2D).get_image()
+			if img != null:
+				if img.is_compressed():
+					img.decompress()
+				img.generate_mipmaps()
+				t = ImageTexture.create_from_image(img)
 		_tex[file] = t
 	return _tex[file]
 
@@ -97,8 +106,11 @@ func text(s: String, x: float, y: float, size := 11, color := Color.WHITE, align
 		px = x - width / 2.0
 	elif align == HORIZONTAL_ALIGNMENT_RIGHT:
 		px = x - width
-	draw_string(_font, Vector2(px + 0.8, y + 0.8), s, align, width, size, Color(0, 0, 0, 0.8))
-	draw_string(_font, Vector2(px, y), s, align, width, size, color)
+	# text is rasterised at its final pixel size, so it stays crisp however much the picture is supersampled
+	draw_set_transform_matrix(_base * Transform2D(0.0, Vector2(1.0 / ss, 1.0 / ss), 0.0, Vector2.ZERO))
+	draw_string(_font, Vector2(px + 0.8, y + 0.8) * ss, s, align, width * ss, int(round(size * ss)), Color(0, 0, 0, 0.8))
+	draw_string(_font, Vector2(px, y) * ss, s, align, width * ss, int(round(size * ss)), color)
+	draw_set_transform_matrix(_base)
 
 
 func circle_line(c: Vector2, r: float, col: Color, width := 1.0, start := 0.0, end := TAU) -> void:
@@ -127,7 +139,8 @@ func hc(s: String) -> Color:
 
 # ---- the whole frame ----------------------------------------------------------------------------
 func _draw() -> void:
-	_base = Transform2D.IDENTITY
+	_base = Transform2D(0.0, Vector2(ss, ss), 0.0, Vector2.ZERO)
+	draw_set_transform_matrix(_base)
 	if W == 0.0:
 		return
 	if mode == "title":

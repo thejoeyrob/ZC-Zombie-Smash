@@ -10,10 +10,10 @@ const STICK_LENGTH := 0.125           # pivot to ball centre
 const BALL_RADIUS := 0.029
 const MAX_TILT := 0.40                # radians the stick can lean
 const BUTTONS := {
-	"fire": {"pos": Vector3(0.20, 0.0, 0.035), "radius": 0.036},
-	"grenade": {"pos": Vector3(0.065, 0.0, -0.03), "radius": 0.031},
-	"menu": {"pos": Vector3(0.0, 0.0, 0.115), "radius": 0.019},
-	"lock": {"pos": Vector3(-0.285, 0.0, -0.115), "radius": 0.02},
+	"fire": {"pos": Vector3(0.19, 0.0, 0.03), "radius": 0.036},
+	"grenade": {"pos": Vector3(0.03, 0.0, -0.005), "radius": 0.031},
+	"menu": {"pos": Vector3(0.03, 0.0, 0.1), "radius": 0.019},
+	"lock": {"pos": Vector3(0.285, 0.0, -0.115), "radius": 0.02},
 }
 
 var panel: Node3D
@@ -188,11 +188,12 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	if interactive:
 		_build_controls()
 		_build_traffic_light()
-		VRBuild.label(panel, "LOCK", 0.026, Vector3(-0.285, 0.003, -0.07), Color(1, 1, 1, 0.8), Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "MENU", 0.035, Vector3(0.0, 0.003, 0.155), Color(1, 1, 1, 0.8), Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "FIRE", 0.05, Vector3(0.20, 0.003, 0.108), Color(1, 0.85, 0.85), Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "GRENADE", 0.032, Vector3(0.065, 0.003, 0.03), Color(0.8, 0.9, 1), Vector3(-PI / 2, 0, 0), 4)
-		VRBuild.label(panel, "MOVE", 0.05, Vector3(-0.19, 0.003, 0.12), Color(1, 0.92, 0.7), Vector3(-PI / 2, 0, 0), 4)
+		var lab := Color(1, 1, 1, 0.85)
+		VRBuild.label(panel, "LOCK", 0.026, Vector3(0.285, 0.003, -0.07), lab, Vector3(-PI / 2, 0, 0), 4)
+		VRBuild.label(panel, "MENU", 0.03, Vector3(0.03, 0.003, 0.14), lab, Vector3(-PI / 2, 0, 0), 4)
+		VRBuild.label(panel, "FIRE", 0.05, Vector3(0.19, 0.003, 0.098), Color(1, 0.85, 0.85), Vector3(-PI / 2, 0, 0), 4)
+		VRBuild.label(panel, "GRENADE", 0.03, Vector3(0.03, 0.003, 0.05), Color(0.8, 0.9, 1), Vector3(-PI / 2, 0, 0), 4)
+		VRBuild.label(panel, "MOVE", 0.05, Vector3(-0.19, 0.003, 0.125), Color(1, 0.92, 0.7), Vector3(-PI / 2, 0, 0), 4)
 		set_lit(lit)
 	for n in [self, panel, mon, marq]:
 		VRBuild.merge_static(n)

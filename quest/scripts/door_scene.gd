@@ -78,8 +78,9 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	# EXIT sign and neon title above the door
 	VRBuild.box(self, Vector3(0.7, 0.24, 0.08), Vector3(0, door_h + 0.32, 0.08), VRBuild.mat(Color(0.02, 0.2, 0.05), 0.5, 0.0, 1.6, Color(0.1, 1.0, 0.3)))
 	VRBuild.label(self, "EXIT", 0.18, Vector3(0, door_h + 0.32, 0.125), Color(0.85, 1.0, 0.85), Vector3.ZERO, 3, font)
-	var title := VRBuild.label(self, "ZOMBIE SMASH ARCADE", 0.2, Vector3(0, height - 0.3, 0.09), Color(0.4, 1.0, 0.45), Vector3.ZERO, 10, font)
+	var title := VRBuild.label(self, "FATTY'S GAME SHACK", 0.2, Vector3(0, height - 0.3, 0.09), Color(1.0, 0.45, 0.8), Vector3.ZERO, 10, font)
 	title.name = "DoorTitle"
+	VRBuild.label(self, "FATTY'S GAME SHACK", 0.26, Vector3(0, height - 0.35, -0.1), Color(1.0, 0.45, 0.8), Vector3(0, PI, 0), 12, font)     # the same sign, seen from the street
 	_build_outside(font)
 
 

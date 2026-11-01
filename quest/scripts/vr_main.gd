@@ -46,11 +46,12 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "height": 1.0, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "trigger fires", "hud": "on", "battle": "JORDAN"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "hud": "on", "battle": "JORDAN"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
 var run_hurt_wave := false
+var run_assisted := false
 var run_clean_wave := false
 var run_start := 0.0
 var menu: VRMenu
@@ -104,9 +105,10 @@ func _ready() -> void:
 	menu.build(self, font, settings, build_number())
 	# a small build number on the machine's panel and on the floor sign, so a new install is easy to recognise
 	for m in machines:
-		VRBuild.label(m.panel, "BUILD %d" % build_number(), 0.03, Vector3(0.27, 0.003, 0.105), Color(1, 1, 1, 0.55), Vector3(-PI / 2, 0, 0), 3)
+		VRBuild.label(m.panel, "BUILD %d" % build_number(), 0.03, Vector3(-0.2, 0.003, -0.14), Color(1, 1, 1, 0.4), Vector3(-PI / 2, 0, 0), 3)
 	menu.changed.connect(_on_setting)
 	menu.action.connect(_on_menu_action)
+	_capture_attract()
 	if args.has("scare"):
 		room.door.debug_show(str(args.scare) if str(args.scare).ends_with(".webp") else "zombie-brute.webp", 0.3)
 	if args.has("pinplay"):
@@ -134,7 +136,8 @@ func _ready() -> void:
 	audio.setup(cab)
 	audio.set_volumes(float(settings.music), float(settings.effects))
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
-	audio.play_music("home", 0.01)
+	audio.play_music("ambient", 0.01)
+	room.jukebox.command.connect(_on_jukebox)
 	screen.best = best
 	if not xr_on:
 		_setup_desktop_camera()
@@ -178,19 +181,21 @@ func _setup_desktop_camera() -> void:
 
 func _build_screen() -> void:
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(686, 824)
+	viewport.size = Vector2i(1029, 1236)         # the 343 x 412 game, drawn three times sharper than on the phone
+	viewport.msaa_2d = Viewport.MSAA_2X
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.transparent_bg = false
 	add_child(viewport)
 	screen = ZSScreen.new()
-	screen.scale = Vector2(2, 2)
+	screen.ss = 3.0
+	screen.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	viewport.add_child(screen)
 	screen.preload_all()
 
 
 static func _blank_hand() -> Dictionary:
 	return {"xf": Transform3D.IDENTITY, "grip": Vector3.ZERO, "gripping": false, "trigger": false, "grip_val": 0.0, "trig_val": 0.0,
-		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0}
+		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0, "angles": {}}
 
 
 func _build_hands() -> void:
@@ -285,7 +290,7 @@ func _on_setting(key: String, value) -> void:
 	match key:
 		"music", "effects":
 			audio.set_volumes(float(settings.music), float(settings.effects))
-		"height":
+		"lift", "reach":
 			_apply_height()
 		"topper":
 			cab.set_topper_color(VRMenu.TOPPERS[value])
@@ -293,14 +298,18 @@ func _on_setting(key: String, value) -> void:
 			settings.snap = int(value)
 		"hud":
 			screen.no_shake = value == "off"
-	if key != "music" and key != "effects" and key != "height" and key != "haptics":
+	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
 		audio.ui("click")
 	_save_settings()
 
 
+## The room and the machines are a fixed size; the player is what moves: "lift" raises or lowers the player, "reach" moves them
+## nearer to or further from the machine they are playing.
 func _apply_height() -> void:
-	for m in machines:
-		m.scale = Vector3.ONE * clampf(base_scale * float(settings.height), 0.7, 1.4)
+	if xr_on:
+		origin.position.y = float(settings.lift)
+	if locked and calibrated:
+		_place_player(cab.stand_world(), cab.look_world(), true)
 
 
 func _on_code(action: String) -> void:
@@ -328,6 +337,32 @@ func _on_pinball_sound(n: String, pos: Vector3) -> void:
 		room.hall.refresh()
 
 
+## Every machine plays the same game: the ones nobody is using show its title screen, whichever one you lock on to goes live.
+func _capture_attract() -> void:
+	await get_tree().create_timer(1.2).timeout
+	var img := viewport.get_texture().get_image()
+	if img == null:
+		return
+	var tex := ImageTexture.create_from_image(img)
+	for m in machines:
+		m.attract_tex = tex
+		if m != cab:
+			m.set_live(null)
+
+
+func _on_jukebox(cmd: String) -> void:
+	audio.ambient_track = room.jukebox.current_id()
+	audio.sfx("click", 0.7, 0.0, room.jukebox.global_position + Vector3(0, 1.1, 0.3))
+	_haptic(-1, 0.2, 0.03)
+	if state == "play":
+		return                       # a game's own music is not interrupted; the choice applies when the game ends
+	if cmd == "stop":
+		audio.stop_music(0.4)
+	else:
+		audio.current = ""
+		audio.play_music("ambient", 0.8)
+
+
 func _on_menu_action(name: String) -> void:
 	match name:
 		"resume":
@@ -351,7 +386,7 @@ func _on_menu_action(name: String) -> void:
 				game = null
 				screen.g = null
 				screen.mode = "title"
-				audio.play_music("home", 1.0)
+				audio.play_music("ambient", 1.0)
 
 
 func _open_menu() -> void:
@@ -398,6 +433,7 @@ func start_game() -> void:
 	run_grenades = 0
 	run_hurt_wave = false
 	run_clean_wave = false
+	run_assisted = false
 	run_start = clock
 	audio.want = "main"
 	audio.wave = 1
@@ -444,7 +480,7 @@ func _finish(_d: Dictionary) -> void:
 		best = game.score
 		_save_best()
 		audio.stinger("highscore")
-	var fresh := progress.record_run(game.score, game.wave, game.kills, run_bosses, run_grenades, run_clean_wave, clock - run_start)
+	var fresh := progress.record_run(game.score, game.wave, game.kills, run_bosses, run_grenades, run_clean_wave, clock - run_start, run_assisted)
 	room.prize_wall.set_unlocked(progress.unlocked())
 	room.hall.refresh()
 	if not fresh.is_empty():
@@ -519,11 +555,7 @@ func recenter() -> void:
 	calibrated = true
 	if not xr_on:
 		return
-	var h := cam.global_position.y
-	if h > 0.9:
-		base_scale = clampf(h / 1.70, 0.8, 1.2)
-		_apply_height()
-	_place_player(cab.stand_world(), cab.look_world())
+	_place_player(cab.stand_world(), cab.look_world(), true)
 
 
 ## Both hands as raw controller data (from the controllers in VR, simulated on the desktop).
@@ -615,10 +647,20 @@ func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
 	d.aim_dir = (j.call(10) - j.call(7)).normalized()
 	d.thumb = 1.0 - clampf(((j.call(5) as Vector3).distance_to(j.call(7)) - 0.03) / 0.06, 0.0, 1.0)
 	d.bare = true
+	# the real bend of every finger joint, so the hand makes the same shape as yours
+	var dir := func(a: int, b: int) -> Vector3: return ((j.call(b) as Vector3) - (j.call(a) as Vector3)).normalized()
+	var bend := func(a: Vector3, b: Vector3) -> float: return acos(clampf(a.dot(b), -1.0, 1.0))
+	var ang := {}
+	for pair in [["index", 6], ["middle", 11], ["ring", 16], ["pinky", 21]]:
+		var m: int = pair[1]
+		ang[pair[0]] = [bend.call(dir.call(m, m + 1), dir.call(m + 1, m + 2)), bend.call(dir.call(m + 1, m + 2), dir.call(m + 2, m + 3)), bend.call(dir.call(m + 2, m + 3), dir.call(m + 3, m + 4))]
+	ang["thumb"] = [bend.call(dir.call(2, 3), dir.call(3, 4)), bend.call(dir.call(3, 4), dir.call(4, 5))]
+	d.angles = ang
 	return d
 
 
 var _key_last := ["", ""]
+var _jb_last := ["", ""]
 
 
 ## Hands pressing the snack machine's keypad, and working the pinball machine's buttons and plunger.
@@ -632,6 +674,11 @@ func _world_inputs(hs: Array) -> void:
 		if k != "" and k != _key_last[i] and not menu.open:
 			room.vending.press(k)
 		_key_last[i] = k
+	for i2 in range(hs.size()):
+		var jb: String = room.jukebox.button_at(hs[i2].tip)
+		if jb != "" and jb != _jb_last[i2] and not menu.open:
+			room.jukebox.press(jb)
+		_jb_last[i2] = jb
 	var near := _head_floor().distance_to(room.pinball.stand_world()) < 1.5 and not menu.open
 	room.pinball.interact(tips, palms, hs[0].trigger and near, hs[1].trigger and near, (hs[0].a or hs[1].a), near)
 
@@ -663,6 +710,10 @@ func _pose_hands(hs: Array) -> void:
 		var idx_c: float = 1.0 if holding else h.trig_val
 		var grip_c: float = 1.0 if holding else h.grip_val
 		var thumb_c: float = h.thumb if h.thumb >= 0.0 else maxf(grip_c * 0.8, idx_c * 0.3)
+		if h.bare and not h.angles.is_empty() and not holding:
+			vis.set_tracked(h.angles)
+		else:
+			vis.clear_tracked()
 		vis.set_pose(idx_c, grip_c, 0.9 if holding else thumb_c)
 		vis.global_transform = final_xf
 		vis.visible = (xr_on and h.active) or demo
@@ -690,6 +741,8 @@ func _set_locked(on: bool) -> void:
 		for m in machines:
 			m.set_lock_light(false)
 	teleporter.set_shown(not on)
+	if not on and (state == "over" or state == "title"):
+		audio.play_music("ambient", 1.0)
 	if not on and state == "play":
 		state = "paused"
 		screen.mode = "paused"
@@ -745,7 +798,10 @@ func _locomotion(hs: Array, delta: float) -> void:
 		var clamped := room.collide(hp)
 		origin.position += clamped - hp
 	var tx: float = hs[1].stick.x
-	if absf(tx) > 0.6 and turn_ready:
+	if str(settings.turn) == "smooth":
+		if absf(tx) > 0.18:
+			_turn(-tx * deg_to_rad(float(settings.turnspeed)) * delta)
+	elif absf(tx) > 0.6 and turn_ready:
 		turn_ready = false
 		_turn(-signf(tx) * deg_to_rad(float(settings.snap)))
 	elif absf(tx) < 0.3:
@@ -767,7 +823,7 @@ func teleport_to(idx: int) -> void:
 	var m := fade_quad.material_override as StandardMaterial3D
 	var tw := create_tween()
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.12)
-	tw.tween_callback(func(): _place_player(teleporter.spots[idx][2], teleporter.spots[idx][3]))
+	tw.tween_callback(func(): _place_player(teleporter.spots[idx][2], teleporter.spots[idx][3], str(teleporter.spots[idx][0]).begins_with("m")))
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
 	tw.tween_callback(func():
 		fade_quad.visible = false
@@ -776,10 +832,14 @@ func teleport_to(idx: int) -> void:
 			_open_menu())
 
 
-func _place_player(pos: Vector3, look: Vector3) -> void:
+func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
 	if not xr_on:
 		return
 	var dir := look - pos
+	dir.y = 0.0
+	if machine and dir.length() > 0.01:
+		pos -= dir.normalized() * float(settings.reach)       # positive = stand further back
+	dir = look - pos
 	var want_yaw := atan2(-dir.x, -dir.z)
 	var f := cam.transform.basis * Vector3(0, 0, -1)
 	f.y = 0.0
@@ -787,6 +847,7 @@ func _place_player(pos: Vector3, look: Vector3) -> void:
 	origin.rotation.y = want_yaw - local_yaw
 	var head := Vector3(cam.position.x, 0.0, cam.position.z)
 	origin.position = pos - Basis(Vector3.UP, origin.rotation.y) * head
+	origin.position.y = float(settings.lift)
 
 
 func _stick(hs: Array, delta: float) -> void:
@@ -820,8 +881,9 @@ func _stick(hs: Array, delta: float) -> void:
 	# assist: thumbstick on either controller moves Joey too
 	for h in hs:
 		var sx: float = h.get("stick", Vector2.ZERO).x
-		if locked and absf(sx) > 0.25:
+		if locked and str(settings.assist) == "on" and absf(sx) > 0.25:
 			m = sx
+			run_assisted = true
 	var prev := axis
 	axis = clampf(m * 1.12, -1.0, 1.0)
 	axis_seen = maxf(axis_seen, absf(axis))
@@ -843,10 +905,14 @@ func _buttons(hs: Array) -> void:
 				for m in machines:
 					if m != cab and m.button_at(m.to_panel(p), 0.032) == "lock":
 						down["lock"] = true
-		if locked and not menu.open and settings.assist == "trigger fires" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
-			down["fire"] = true       # assist: any trigger fires
-		if h.get("a", false):
+		if locked and not menu.open and str(settings.assist) == "on" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
+			down["fire"] = true       # assist: any trigger fires (the score is marked with an asterisk)
+			if state == "play":
+				run_assisted = true
+		if h.get("a", false) and str(settings.assist) == "on":
 			down["grenade"] = true
+			if state == "play":
+				run_assisted = true
 		if h.get("b", false):
 			down["pause"] = true
 	for k in down:
@@ -915,9 +981,32 @@ func _press_lock() -> void:
 		audio.ui("error")
 		return
 	audio.ui("toggle")
-	_select_machine(best)
-	_place_player(cab.stand_world(), cab.look_world())
-	_set_locked(true)
+	_enter_machine(best)
+
+
+## Settling in at a machine: a quick fade, the player is placed exactly in front of it, then the screen powers up and the controls light.
+func _enter_machine(i: int) -> void:
+	tele_busy = true
+	fade_quad.visible = true
+	var fm := fade_quad.material_override as StandardMaterial3D
+	var tw := create_tween()
+	tw.tween_method(func(v: float): fm.albedo_color.a = v, 0.0, 1.0, 0.14)
+	tw.tween_callback(func():
+		_select_machine(i)
+		_place_player(cab.stand_world(), cab.look_world(), true)
+		_set_locked(true)
+		cab.screen_mat.albedo_color = Color(0.1, 0.1, 0.1)
+		audio.sfx("power", 0.6, 0.0, cab.global_position + Vector3(0, 1.3, 0.3)))
+	tw.tween_method(func(v: float): fm.albedo_color.a = v, 1.0, 0.0, 0.3)
+	tw.tween_callback(func():
+		fade_quad.visible = false
+		tele_busy = false
+		_haptic(-1, 0.35, 0.1))
+	# the monitor warms up from dark to full brightness
+	var sm := cab.screen_mat
+	var tw2 := create_tween()
+	tw2.tween_interval(0.16)
+	tw2.tween_method(func(v: float): sm.albedo_color = Color(v, v, v), 0.1, 1.0, 0.8)
 
 
 ## Makes a machine the one in play: the live screen, the sound and the controls move to it.
@@ -1001,6 +1090,8 @@ func _run_shots() -> void:
 		"cab_threeq": [cab.to_global(Vector3(1.3, 1.7, 1.5)), cab.to_global(Vector3(0, 1.1, -0.2))],
 		"cab_front": [cab.to_global(Vector3(0.0, 1.6, 1.6)), cab.to_global(Vector3(0, 1.1, -0.2))],
 		"cab_top": [cab.to_global(Vector3(0.9, 2.2, 0.7)), cab.to_global(Vector3(0, 1.2, -0.3))],
+		"logo": [Vector3(2.0, 1.7, 1.6), Vector3(3.0, 2.0, -0.55)],
+		"jukebox": [Vector3(-2.7, 1.6, 4.3), Vector3(-4.2, 1.3, 5.2)],
 		"scare": [Vector3(0.6, 1.65, 2.2), Vector3(0, 1.1, -0.55)],
 		"arc_l": [Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0)],
 		"arc_r": [Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0)],

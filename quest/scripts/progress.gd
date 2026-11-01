@@ -19,6 +19,7 @@ var best := 0
 var last := {}                   # {score, wave, kills, bosses, seconds}
 var badges: Array = []
 var runs := 0
+var best_star := false           # the best score was set with the controller assist on
 var codes: Array = []            # codes keyed in at the snack machine (e.g. "pinball")
 var pinball_best := 0
 
@@ -34,6 +35,7 @@ func load_all() -> void:
 		last = d.get("last", {})
 		badges = d.get("badges", [])
 		runs = int(d.get("runs", 0))
+		best_star = bool(d.get("best_star", false))
 		codes = d.get("codes", [])
 		pinball_best = int(d.get("pinball_best", 0))
 
@@ -41,7 +43,7 @@ func load_all() -> void:
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"bosses_beaten": bosses_beaten, "best": best, "last": last, "badges": badges, "runs": runs, "codes": codes, "pinball_best": pinball_best}))
+		f.store_string(JSON.stringify({"bosses_beaten": bosses_beaten, "best": best, "last": last, "badges": badges, "runs": runs, "codes": codes, "pinball_best": pinball_best, "best_star": best_star}))
 
 
 ## How many bobble heads are unlocked (they open in stage order).
@@ -50,14 +52,15 @@ func unlocked() -> int:
 
 
 ## Records a finished run; returns the badges earned for the first time.
-func record_run(score: int, wave: int, kills: int, bosses: int, grenades: int, clean_wave: bool, seconds: float) -> Array:
+func record_run(score: int, wave: int, kills: int, bosses: int, grenades: int, clean_wave: bool, seconds: float, assisted := false) -> Array:
 	runs += 1
 	var fresh: Array = []
 	bosses_beaten += bosses
 	var new_best := score > best
 	if new_best:
 		best = score
-	last = {"score": score, "wave": wave, "kills": kills, "bosses": bosses, "seconds": int(seconds)}
+		best_star = assisted
+	last = {"score": score, "wave": wave, "kills": kills, "bosses": bosses, "seconds": int(seconds), "assisted": assisted}
 	var earned := {
 		"first_boss": bosses >= 1,
 		"all_bosses": bosses >= ZSEngine.BOSSES.size(),

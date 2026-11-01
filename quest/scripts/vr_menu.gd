@@ -6,8 +6,8 @@ extends Node3D
 signal changed(key: String, value)
 signal action(name: String)
 
-const VIEW := Vector2i(1100, 720)
-const SIZE := Vector2(1.1, 0.72)
+const VIEW := Vector2i(1100, 900)
+const SIZE := Vector2(1.1, 0.9)
 const TOPPERS := {"grey": Color("#9aa3ad"), "red": Color("#e3262a"), "yellow": Color("#f5b800"), "blue": Color("#2f7bff"), "green": Color("#2fcf55")}
 
 var open := false
@@ -213,8 +213,11 @@ func _build_ui() -> void:
 	_slider(left, "music", "Music", 0.0, 1.0, 0.05)
 	_slider(left, "effects", "Effects", 0.0, 1.0, 0.05)
 	left.add_child(_label("COMFORT", 30, Color(0.4, 1.0, 0.7)))
-	_slider(left, "height", "Machine height", 0.8, 1.25, 0.01)
-	_stepper(left, "snap", "Snap turn", [15, 30, 45, 60, 90], "°")
+	_slider(left, "lift", "Player height", -0.5, 0.8, 0.02)
+	_slider(left, "reach", "Distance to machine", -0.25, 0.4, 0.02)
+	_stepper(left, "turn", "Turning", ["smooth", "snap"], "")
+	_stepper(left, "turnspeed", "Smooth turn speed", [60, 90, 120, 150], "°/s")
+	_stepper(left, "snap", "Snap turn size", [15, 30, 45, 60, 90], "°")
 	_stepper(left, "walk", "Walk speed", [1.0, 1.5, 2.0, 2.5], " m/s")
 	_slider(left, "haptics", "Vibration", 0.0, 1.0, 0.1)
 	right.add_child(_label("JOYSTICK TOP", 30, Color(0.4, 1.0, 0.7)))
@@ -230,7 +233,7 @@ func _build_ui() -> void:
 		sw.add_child(b)
 		_widgets["topper_" + k] = b
 	_stepper(right, "pointer", "Pointer hand", ["right", "left"], "")
-	_stepper(right, "assist", "Fire assist", ["trigger fires", "buttons only"], "")
+	_stepper(right, "assist", "Controller assist (marks scores *)", ["off", "on"], "")
 	_stepper(right, "hud", "Screen shake", ["on", "off"], "")
 	right.add_child(_label("BOSS BATTLE", 30, Color(0.4, 1.0, 0.7)))
 	var names: Array = []

@@ -8,7 +8,7 @@ const MUS_PATH := "res://assets/audio/mus-%s.wav"
 const SFX_NAMES := ["click", "chime", "back", "toggle", "key", "error", "page", "pistol", "smg", "shotgun", "dmr", "burst", "hose", "rainbow",
 	"bass", "beans", "laser", "remover", "purge", "hit", "kill", "ricochet", "bosshit", "throw", "explosion", "hurt", "breach", "pickup", "heart",
 	"goldheart", "boost1", "boost2", "boost3", "power", "switch", "target", "clear", "alarm", "warn", "doom", "mutation"]
-const MUSIC_NAMES := ["home", "story", "wave1", "wave2", "wave3", "warning", "boss", "finale", "disco", "over"]
+const MUSIC_NAMES := ["home", "story", "wave1", "wave2", "wave3", "warning", "boss", "finale", "disco", "over", "arcade"]
 const STING_LEN := {"victory": 6.0, "defeat": 6.6, "highscore": 7.0, "wavestart": 1.9}
 # name -> [minimum gap in ms, most that may sound at once]
 const LIMITS := {
@@ -23,6 +23,7 @@ var music_volume := 0.55
 var effects_volume := 0.8
 var wave := 1
 var boss_track := "boss"
+var ambient_track := "arcade"      # what the arcade plays when nobody is in a game (the jukebox changes it)
 var want := ""
 var current := ""
 var holding_until := 0.0
@@ -110,6 +111,7 @@ func resolve(id: String) -> String:
 		"menu": return "home"
 		"entrance": return "warning"
 		"boss": return boss_track
+		"ambient": return ambient_track
 	return id
 
 
