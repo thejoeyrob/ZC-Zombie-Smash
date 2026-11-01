@@ -154,11 +154,11 @@ def pin_front():
 
 def poster():
     W, H = 1500, 740
-    bg = Image.open(os.path.join(ROOT, "title-bg.webp")).convert("RGB")
+    bg = Image.open(os.path.join(ROOT, "game-banner.webp")).convert("RGB")
     k = max(W / bg.width, H / bg.height)
     bg = bg.resize((int(bg.width * k), int(bg.height * k)), Image.LANCZOS)
-    bg = bg.crop(((bg.width - W) // 2, (bg.height - H) // 2, (bg.width - W) // 2 + W, (bg.height - H) // 2 + H))
-    img = Image.eval(bg, lambda v: int(v * 0.62)).convert("RGBA")
+    bg = bg.crop(((bg.width - W) // 2, (bg.height - H) // 2, (bg.width - W) // 2 + W, (bg.height - H) // 2 + H)).filter(ImageFilter.UnsharpMask(2, 90, 2))
+    img = Image.eval(bg, lambda v: int(v * 0.75)).convert("RGBA")
     d = ImageDraw.Draw(img)
     vig = Image.new("L", (W, H), 0)
     ImageDraw.Draw(vig).rectangle((0, 0, W, H), fill=140)
