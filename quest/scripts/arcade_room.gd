@@ -48,7 +48,8 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
-	var wood := VRBuild.tex_mat(_art("wall90.jpg", null), 0.35, 0.8)
+	# real dark brick walls with neon tubes, like a proper old arcade
+	var wood := VRBuild.tex_mat(_art("wall-brick.jpg", null), 0.0, 0.85, false, Color(0.5, 0.4, 0.62))
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -76,7 +77,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9)
+	var ceiling := VRBuild.tex_mat(_art("ceiling-tiles.jpg", null), 0.35, 0.9, false, Color(0.28, 0.26, 0.36))
 	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -92,7 +93,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
-		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
+		wm.uv1_scale = Vector3(wall[2] / 2.0, HEIGHT / 2.0, 1)
 		wm.texture_repeat = true
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.12, 0.03), neon_a)      # neon tube along the top of the wall
@@ -100,7 +101,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
-	for z in [0.8, 2.4, 4.0, 5.6, 7.0]:
+	for z in [1.4, 3.4, 5.4]:
 		var tube := neon_a if int(z * 10.0) % 2 == 0 else neon_b
 		VRBuild.box(root, Vector3(w, 0.03, 0.03), Vector3(0, HEIGHT - 0.04, z), tube)
 
@@ -148,18 +149,6 @@ func _machines(root: Node3D) -> void:
 		flickers.append([c.screen_mat, 1.0, 0.7 + i * 0.13, i * 1.7, i])
 		blockers.append([pos.x - sin(yaw) * 0.3, pos.z - cos(yaw) * 0.3, 0.7])
 	# a round rug and rings of light in the middle of the curve
-	for ring_spec in [[1.62, 1.68, Color(1.0, 0.3, 0.75)], [1.45, 1.49, Color(0.2, 0.9, 1.0)]]:
-		var ring := MeshInstance3D.new()
-		var tm := TorusMesh.new()
-		tm.inner_radius = ring_spec[0]
-		tm.outer_radius = ring_spec[1]
-		tm.rings = 64
-		tm.ring_segments = 6
-		ring.mesh = tm
-		ring.scale = Vector3(1, 0.1, 1)
-		ring.position = ARC_CENTRE + Vector3(0, 0.02, 0)
-		ring.material_override = VRBuild.mat(ring_spec[2], 0.4, 0.0, 2.6)
-		root.add_child(ring)
 	_lounge(root)
 	_active = player_index
 
@@ -260,7 +249,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	pinball.build(font)
 	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.7, BACK_Z - 0.04), PI, Vector2(2.6, 0.78))
 	_neon_sign(root, "neon-scores.png", Vector3(2.2, 2.78, BACK_Z - 0.04), PI, Vector2(1.9, 0.57))
-	# the snack machine in the far corner on the left as you come in
+	# the snack machine beside the door
 	vending = VendingMachine.new()
 	vending.position = Vector3(1.8, 0, -0.05)       # beside the door, inside on the right
 	vending.rotation.y = 0.0
@@ -282,31 +271,26 @@ func _decor(root: Node3D, font: Font) -> void:
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
-	# glowing wall art in the manner of a real arcade: pixel sprites and hexagon light fixtures
-	_neon_sign(root, "wallart-chase.png", Vector3(-HALF_W + 0.04, 2.6, 4.6), PI / 2.0, Vector2(1.3, 0.31))
-	_neon_sign(root, "wallart-invaders.png", Vector3(HALF_W - 0.04, 2.6, 4.6), -PI / 2.0, Vector2(1.3, 0.33))
-	_neon_sign(root, "wallart-pad.png", Vector3(-2.0, 2.75, BACK_Z - 0.04), PI, Vector2(0.75, 0.43))
-	_neon_sign(root, "wallart-stick.png", Vector3(2.0, 2.75, BACK_Z - 0.04), PI, Vector2(0.5, 0.5))
-	_neon_sign(root, "wallart-heart.png", Vector3(-HALF_W + 0.04, 2.3, 6.7), PI / 2.0, Vector2(0.6, 0.52))
-	for hx in [[-2.0, 2.0, "hex-blue.png"], [2.1, 4.0, "hex-pink.png"], [-0.8, 6.0, "hex-blue.png"]]:
-		var hm := VRBuild.tex_mat(_art(hx[2], null), 0.0, 0.5, true)
-		hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		VRBuild.quad(root, Vector2(2.6, 2.6), Vector3(hx[0], HEIGHT - 0.03, hx[1]), hm, Vector3(PI / 2, 0, 0))
-	_neon_sign(root, "neon-gameon.png", Vector3(-HALF_W + 0.04, 2.92, 3.4), PI / 2.0, Vector2(1.3, 0.39))
-	_neon_sign(root, "neon-player1.png", Vector3(HALF_W - 0.04, 2.92, 3.4), -PI / 2.0, Vector2(1.3, 0.39))
-	# six posters, three on each side wall
+	# one picture above each machine, in line with it: posters over the first three of each row, a framed arena over the last
 	var posters := ["poster-1.jpg", "poster-2.jpg", "poster-3.jpg", "poster-4.jpg", "poster-5.jpg", "poster-6.jpg"]
+	var arenas := {-1: "marquee-caffeinatedsloth.jpg", 1: "marquee-mantis.jpg"}
 	var k := 0
 	for side in [-1, 1]:
-		for z in [1.2, 3.4, 5.6]:
+		for z in [0.9, 2.4, 3.9, 5.4]:
 			var holder := Node3D.new()
-			holder.position = Vector3(side * (HALF_W - 0.04), 2.4, z)
+			holder.position = Vector3(side * (HALF_W - 0.04), 2.55, z)
 			holder.rotation.y = -side * PI / 2.0
 			root.add_child(holder)
-			var t: Texture2D = load("res://assets/art/" + posters[k])
-			VRBuild.box(holder, Vector3(0.82, 1.2, 0.03), Vector3.ZERO, VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5))
-			VRBuild.quad(holder, Vector2(0.8, 1.18), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6, false, Color(1, 1, 1)))
-			k += 1
+			var frame := VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5)
+			if z < 5.0:
+				var t: Texture2D = load("res://assets/art/" + posters[k])
+				VRBuild.box(holder, Vector3(0.72, 1.07, 0.03), Vector3.ZERO, frame)
+				VRBuild.quad(holder, Vector2(0.68, 1.03), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6))
+				k += 1
+			else:
+				var t2: Texture2D = load("res://assets/art/" + arenas[side])
+				VRBuild.box(holder, Vector3(1.26, 0.46, 0.03), Vector3.ZERO, frame)
+				VRBuild.quad(holder, Vector2(1.22, 0.407), Vector3(0, 0, 0.017), VRBuild.tex_mat(t2, 0.45, 0.6))
 
 
 ## A glowing neon tube sign on a wall (yaw turns it to face into the room).
