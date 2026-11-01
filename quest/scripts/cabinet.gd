@@ -13,8 +13,8 @@ const BUTTONS := {
 	"fire": {"pos": Vector3(0.19, 0.0, 0.03), "radius": 0.036},
 	"grenade": {"pos": Vector3(0.07, 0.0, 0.04), "radius": 0.031},
 	# these two sit on the front of the lower cabinet either side of the coin door (their pos is (x, 0, -height) in that face's frame)
-	"menu": {"pos": Vector3(0.2, 0.0, -0.56), "radius": 0.02, "front": true},
-	"lock": {"pos": Vector3(-0.2, 0.0, -0.56), "radius": 0.022, "front": true},
+	"menu": {"pos": Vector3(0.155, 0.0, -0.56), "radius": 0.02, "front": true},
+	"lock": {"pos": Vector3(-0.155, 0.0, -0.56), "radius": 0.022, "front": true},
 }
 
 var panel: Node3D
@@ -237,8 +237,8 @@ func _build_decals() -> void:
 	_decal(panel, "decal-pog-2.png", 0.07, Vector3(0.235, 0.0015, -0.12), flat, 0.0)
 	_decal(panel, "decal-pog-3.png", 0.06, Vector3(0.29, 0.0015, -0.04), flat, 0.0)
 	var fz := front_z + 0.0075
-	_decal(self, "decal-lock.png", 0.1, Vector3(-0.2, 0.46, fz), Vector3.ZERO, 0.0)
-	_decal(self, "decal-menu.png", 0.1, Vector3(0.2, 0.46, fz), Vector3.ZERO, 0.0)
+	_decal(self, "decal-lock.png", 0.1, Vector3(-0.155, 0.46, fz), Vector3.ZERO, 0.0)
+	_decal(self, "decal-menu.png", 0.1, Vector3(0.155, 0.46, fz), Vector3.ZERO, 0.0)
 	_decal(self, "decal-smash.png", 0.17, Vector3(0.0, 0.3, fz), Vector3.ZERO, 0.08)
 	_decal(self, "decal-pog-4.png", 0.075, Vector3(-0.2, 0.72, fz), Vector3.ZERO, 0.0)
 	_decal(self, "decal-bolt.png", 0.075, Vector3(0.2, 0.72, fz), Vector3.ZERO, 0.2)
