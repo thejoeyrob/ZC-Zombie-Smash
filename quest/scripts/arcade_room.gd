@@ -11,8 +11,8 @@ const HEIGHT := 3.2
 const ARC_CENTRE := Vector3(0, 0, 3.3)
 const ARC_RADIUS := 3.15
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
-const SLOTS := [[-74.0, "jordan"], [-49.0, "discoman"], [-24.0, "debo"], [24.0, "fatamy"], [49.0, "glowinghumanity"], [74.0, "drmantis"]]
-const PLAYER_SLOT := 3
+const SLOTS := [[-84.0, "jordan"], [-62.0, "glowinghumanity"], [-41.0, "debo"], [-20.0, "caffeinatedsloth"], [20.0, "discoman"], [41.0, "fatamy"], [62.0, "drmantis"], [84.0, "joeyrob"]]
+const PLAYER_SLOT := 4
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
 const TRIM := Color(0.25, 0.17, 0.32)      # beams, posts and mouldings
 const WAIN_H := 1.25                       # height of the panelled lower wall
@@ -40,8 +40,8 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.7, 0.55, 0.9)
-	env.ambient_light_energy = 1.15
+	env.ambient_light_color = Color(0.5, 0.42, 0.7)
+	env.ambient_light_energy = 0.7
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
 	we.environment = env
@@ -76,11 +76,11 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.tex_mat(_art("floor90.jpg", VRBuild.carpet_texture()), 0.0, 0.9)
+	var carpet := VRBuild.tex_mat(_art("floor90.jpg", VRBuild.carpet_texture()), 0.0, 0.9, false, Color(0.5, 0.45, 0.65))
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9, false, Color(1.2, 1.2, 1.3))
+	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9, false, Color(0.3, 0.3, 0.45))
 	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -116,10 +116,6 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px - 0.1, HEIGHT / 2.0, 0.108), n)
 			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px + 0.1, HEIGHT / 2.0, 0.108), n)
 		k += 1
-	var strip := VRBuild.mat(Color(1.0, 0.98, 1.0), 0.5, 0.0, 3.0)
-	for x in [-2.8, 0.0, 2.8]:
-		for z in [1.7, 3.5, 5.3, 7.1]:
-			VRBuild.box(root, Vector3(0.12, 0.03, 1.1), Vector3(x, HEIGHT - 0.03, z), strip)
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [0.8, 2.6, 4.4, 6.2, 7.8]:
 		var tube := neon_a if int(z * 10.0) % 2 == 0 else neon_b
@@ -147,6 +143,7 @@ func _machines(root: Node3D) -> void:
 	for b in ZSEngine.BOSSES:
 		bosses[b.id] = b
 	var art_key := {"discoman": "disco", "drmantis": "mantis"}
+	bosses["joeyrob"] = {"name": "JOEY ROB", "accent": "#7fd64a"}
 	for i in range(SLOTS.size()):
 		var a := deg_to_rad(float(SLOTS[i][0]))
 		var id: String = SLOTS[i][1]
@@ -159,10 +156,11 @@ func _machines(root: Node3D) -> void:
 		c.rotation.y = yaw
 		root.add_child(c)
 		var accent := Color.html(str(bosses[id].accent))
-		c.profile = CabProfile.get_profile(key)
+		c.profile = CabProfile.get_profile("fatamy" if key == "joeyrob" else key)
 		c.side_art = _art("side-%s.png" % key, null)
-		var arena: Texture2D = _art("arena-%s.webp" % id, null)
+		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id == "joeyrob" else id), null)
 		c.build(arena, _art("marquee-%s.jpg" % key, null), accent.darkened(0.8), accent, true, str(bosses[id].name))
+		VRBuild.quad(c, Vector2(2.3, 2.3), Vector3(0, 0.012, 0.85), _pool(accent), Vector3(-PI / 2, 0, 0))     # a soft pool of the machine's colour on the floor
 		c.set_lock_light(i == player_index)      # red = somebody is playing here, green = free
 		c.set_lit(i == player_index)
 		machines.append(c)
@@ -190,6 +188,29 @@ func _machines(root: Node3D) -> void:
 	mb.material_override = _mirror_ball_material()
 	ball_mat_spin = ball
 	_active = player_index
+
+
+static var _pool_tex: GradientTexture2D
+
+
+## A soft, round pool of coloured light (additive, no hard edge) for the floor in front of a machine.
+func _pool(col: Color) -> StandardMaterial3D:
+	if _pool_tex == null:
+		_pool_tex = GradientTexture2D.new()
+		var g := Gradient.new()
+		g.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0.35), Color(1, 1, 1, 0)])
+		g.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+		_pool_tex.gradient = g
+		_pool_tex.fill = GradientTexture2D.FILL_RADIAL
+		_pool_tex.fill_from = Vector2(0.5, 0.5)
+		_pool_tex.fill_to = Vector2(1.0, 0.5)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_texture = _pool_tex
+	m.albedo_color = Color(col.r, col.g, col.b, 0.28)
+	return m
 
 
 func _mirror_ball_material() -> StandardMaterial3D:
