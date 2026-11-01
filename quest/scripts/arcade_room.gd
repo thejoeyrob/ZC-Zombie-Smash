@@ -40,14 +40,14 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.5, 0.33, 0.68)
-	env.ambient_light_energy = 0.95
+	env.ambient_light_color = Color(0.85, 0.75, 1.0)
+	env.ambient_light_energy = 1.25
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
 	# early-90s arcade: black walls painted with glowing neon shapes, a starry black ceiling, confetti carpet
-	var wood := VRBuild.tex_mat(_art("wall90.jpg", null), 0.35, 0.8)
+	var wood := VRBuild.tex_mat(_art("wall90.jpg", null), 0.35, 0.8, false, Color(1.0, 0.98, 1.08))
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -71,11 +71,11 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95)
+	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95, false, Color(1.45, 1.4, 1.5))
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9)
+	var ceiling := VRBuild.tex_mat(_art("ceiling90.jpg", null), 0.35, 0.9, false, Color(1.2, 1.2, 1.3))
 	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -98,6 +98,10 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, 0.12, 0.03), neon_b)             # and along the floor
 		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
 		k += 1
+	var strip := VRBuild.mat(Color(1.0, 0.98, 1.0), 0.5, 0.0, 3.0)
+	for x in [-2.8, 0.0, 2.8]:
+		for z in [1.7, 3.5, 5.3, 7.1]:
+			VRBuild.box(root, Vector3(0.12, 0.03, 1.1), Vector3(x, HEIGHT - 0.03, z), strip)
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [0.8, 2.6, 4.4, 6.2, 7.8]:
 		var tube := neon_a if int(z * 10.0) % 2 == 0 else neon_b
