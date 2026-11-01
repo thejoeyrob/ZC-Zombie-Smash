@@ -102,9 +102,6 @@ func build(font: Font) -> void:
 	var flap := VRBuild.box(self, Vector3(0.58, 0.15, 0.02), Vector3(w_x, 0.28, FRONT_Z + 0.02), VRBuild.mat(Color(0.015, 0.015, 0.02), 0.25, 0.3), Vector3(-0.08, 0, 0))
 	VRBuild.label(self, "PUSH", 0.04, Vector3(w_x, 0.28, FRONT_Z + 0.032), Color(0.8, 0.8, 0.85, 0.7), Vector3.ZERO, 0, font)
 	# a warm pool of light on the floor
-	var halo := VRBuild.mat(Color(1.0, 0.85, 0.6, 0.13), 0.5, 0.0, 1.0)
-	halo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	VRBuild.quad(self, Vector2(1.8, 1.8), Vector3(0, 0.012, 0.7), halo, Vector3(-PI / 2.0, 0, 0))
 	var l2 := OmniLight3D.new()
 	l2.position = Vector3(0, 1.2, 0.9)
 	l2.light_color = Color(1.0, 0.92, 0.8)

@@ -220,7 +220,43 @@ def jw():
     im.save(os.path.join(OUT, "jw-logo.png"))
 
 
+def floor():
+    N = 1024
+    img = Image.new("RGB", (N, N), (58, 34, 140))
+    d0 = ImageDraw.Draw(img)
+    for y in range(N):
+        t = y / N
+        d0.line((0, y, N, y), fill=(64, 40, 148))
+    shapes = []
+    for i in range(46):
+        shapes.append((random.randint(0, N), random.randint(0, N), random.choice(["tri", "ring", "zig", "dot", "bar"]), random.choice(NEON), random.randint(26, 60), random.uniform(0, 6.28)))
+
+    def draw(d, n):
+        for ox in range(3):
+            for oy in range(3):
+                for x, y, kind, col, sz, rot in shapes:
+                    cx, cy = x + ox * n, y + oy * n
+                    c = col + (255,)
+                    if kind == "tri":
+                        pts = [(cx + math.cos(rot + k * 2.094) * sz, cy + math.sin(rot + k * 2.094) * sz) for k in range(3)]
+                        d.polygon(pts, fill=c)
+                    elif kind == "ring":
+                        d.ellipse((cx - sz * 0.6, cy - sz * 0.6, cx + sz * 0.6, cy + sz * 0.6), outline=c, width=11)
+                    elif kind == "zig":
+                        pts = [(cx - sz + k * sz / 2.0, cy + (sz / 3.0 if k % 2 else -sz / 3.0)) for k in range(5)]
+                        d.line(pts, fill=c, width=11, joint="curve")
+                    elif kind == "dot":
+                        d.ellipse((cx - sz * 0.35, cy - sz * 0.35, cx + sz * 0.35, cy + sz * 0.35), fill=c)
+                    else:
+                        d.rounded_rectangle((cx - sz, cy - 7, cx + sz, cy + 7), 7, fill=c)
+    layer = wrap_draw(draw, N)
+    out = img.convert("RGBA")
+    out.alpha_composite(layer)
+    out.convert("RGB").save(os.path.join(OUT, "floor90.jpg"), quality=90)
+
+
 wall()
+floor()
 ceiling()
 pin_cab()
 pin_front()

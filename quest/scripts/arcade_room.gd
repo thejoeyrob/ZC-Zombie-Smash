@@ -40,20 +40,25 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.85, 0.75, 1.0)
-	env.ambient_light_energy = 1.25
+	env.ambient_light_color = Color(0.7, 0.55, 0.9)
+	env.ambient_light_energy = 1.15
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
-	# early-90s arcade: black walls painted with glowing neon shapes, a starry black ceiling, confetti carpet
-	var wood := VRBuild.tex_mat(_art("wall90.jpg", null), 0.35, 0.8, false, Color(1.0, 0.98, 1.08))
-	var paper := wood
+	var wood := VRBuild.tex_mat(_art("wainscot.jpg", null), 0.9, 0.7)
+	var paper := VRBuild.tex_mat(_art("wallpaper.jpg", null), 0.7, 0.9)
 	wood.texture_repeat = true
+	paper.texture_repeat = true
 	_shell(root, wood, paper, font)
 	_lights(root)
 	door = DoorScene.new()
-	door.build(root, FRONT_Z, HALF_W, HEIGHT, wood, paper, font)
+	var dw: StandardMaterial3D = wood.duplicate()
+	dw.uv1_scale = Vector3(1.0, 1, 1)
+	var dp: StandardMaterial3D = paper.duplicate()
+	dp.uv1_scale = Vector3(3.0, 1.4, 1)
+	dw.uv1_scale = Vector3(1.4, 1, 1)
+	door.build(root, FRONT_Z, HALF_W, HEIGHT, dw, dp, font)
 	_machines(root)
 	_back_wall(root, font)
 	_decor(root, font)
@@ -71,7 +76,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95, false, Color(1.45, 1.4, 1.5))
+	var carpet := VRBuild.tex_mat(_art("floor90.jpg", VRBuild.carpet_texture()), 0.0, 0.9)
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
@@ -91,12 +96,25 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
-		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
+		wm.uv1_scale = Vector3(wall[2] / 2.5, 1, 1)
 		wm.texture_repeat = true
-		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
-		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.12, 0.03), neon_a)      # neon tube along the top of the wall
-		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, 0.12, 0.03), neon_b)             # and along the floor
-		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
+		var pm: StandardMaterial3D = paper.duplicate()
+		pm.uv1_scale = Vector3(wall[2] / 2.4, (HEIGHT - WAIN_H) / 2.4, 1)
+		pm.texture_repeat = true
+		VRBuild.quad(root_w, Vector2(wall[2], WAIN_H), Vector3(0, WAIN_H / 2.0, 0), wm)
+		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT - WAIN_H), Vector3(0, WAIN_H + (HEIGHT - WAIN_H) / 2.0, 0), pm)
+		VRBuild.box(root_w, Vector3(wall[2], 0.12, 0.1), Vector3(0, HEIGHT - 0.06, 0.05), trim)   # cornice
+		var n := neon_b
+		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.14, 0.05), neon_a)      # glowing line under the cornice
+		# pilasters with a neon edge
+		var count := int(wall[2] / 2.4)
+		for i in range(1, count):
+			if k == 0:
+				continue          # the back wall carries the shelves and boards; no posts in front of them
+			var px: float = -wall[2] / 2.0 + i * wall[2] / count
+			VRBuild.box(root_w, Vector3(0.22, HEIGHT, 0.1), Vector3(px, HEIGHT / 2.0, 0.05), trim)
+			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px - 0.1, HEIGHT / 2.0, 0.108), n)
+			VRBuild.box(root_w, Vector3(0.018, HEIGHT - 0.6, 0.012), Vector3(px + 0.1, HEIGHT / 2.0, 0.108), n)
 		k += 1
 	var strip := VRBuild.mat(Color(1.0, 0.98, 1.0), 0.5, 0.0, 3.0)
 	for x in [-2.8, 0.0, 2.8]:
@@ -151,7 +169,6 @@ func _machines(root: Node3D) -> void:
 		flickers.append([c.screen_mat, 1.0, 0.7 + i * 0.13, i * 1.7, i])
 		blockers.append([pos.x - sin(yaw) * 0.3, pos.z - cos(yaw) * 0.3, 0.7])
 	# a round rug and rings of light in the middle of the curve
-	VRBuild.cylinder(root, 2.2, 0.012, ARC_CENTRE + Vector3(0, 0.008, 0), VRBuild.mat(Color(0.04, 0.03, 0.1), 0.9), -1.0, Vector3.ZERO, 64)
 	for ring_spec in [[2.14, 2.22, Color(1.0, 0.3, 0.75)], [1.5, 1.56, Color(0.2, 0.9, 1.0)]]:
 		var ring := MeshInstance3D.new()
 		var tm := TorusMesh.new()

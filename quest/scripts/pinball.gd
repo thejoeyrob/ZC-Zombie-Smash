@@ -129,10 +129,6 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	score_label = VRBuild.label(self, "0", 0.1, Vector3(0, 1.03, -0.552), Color(1.0, 0.5, 0.1), Vector3.ZERO, 2, font)
 	best_label = VRBuild.label(self, "", 0.034, Vector3(0, 0.97, -0.552), Color(0.6, 0.9, 1.0), Vector3.ZERO, 0, font)
 	VRBuild.box(self, Vector3(0.64, 0.02, 0.2), Vector3(0, 1.955, -0.66), glow)
-	# a glow under the machine
-	var halo := VRBuild.mat(Color(1.0, 0.3, 0.7, 0.16), 0.5, 0.0, 1.2)
-	halo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	VRBuild.quad(self, Vector2(1.5, 2.2), Vector3(0, 0.01, 0.07), halo, Vector3(-PI / 2.0, 0, 0))
 	VRBuild.merge_static(self)
 	VRBuild.merge_static(pf)
 
