@@ -35,11 +35,21 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	var side = load(art_dir + "side-pinball.png")
 	var field = load(art_dir + "playfield-pinball.jpg")
 	var head = load(art_dir + "marquee-pinball.jpg")
-	# legs, cabinet body, side strips
+	# legs: tapered chrome tubes with a bolted bracket at the top, a screw leveller and a rubber foot, tied together with stretcher bars
+	var black_rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
 	for sx in [-0.26, 0.26]:
 		for sz in [-0.58, 0.74]:
-			VRBuild.box(self, Vector3(0.06, 0.64, 0.06), Vector3(sx, 0.32, sz), chrome)
-			VRBuild.box(self, Vector3(0.075, 0.03, 0.075), Vector3(sx, 0.015, sz), dark)
+			VRBuild.cylinder(self, 0.034, 0.58, Vector3(sx, 0.34, sz), chrome, 0.024, Vector3.ZERO, 24)
+			VRBuild.box(self, Vector3(0.09, 0.02, 0.09), Vector3(sx, 0.615, sz), chrome)                  # the bracket under the cabinet
+			for bx in [-0.03, 0.03]:
+				for bz in [-0.03, 0.03]:
+					VRBuild.cylinder(self, 0.006, 0.008, Vector3(sx + bx, 0.628, sz + bz), black_rubber, -1.0, Vector3.ZERO, 8)
+			VRBuild.cylinder(self, 0.011, 0.05, Vector3(sx, 0.04, sz), chrome, -1.0, Vector3.ZERO, 12)    # the leveller
+			VRBuild.cylinder(self, 0.034, 0.02, Vector3(sx, 0.01, sz), black_rubber, 0.032, Vector3.ZERO, 20)
+	for sx in [-0.26, 0.26]:
+		VRBuild.cylinder(self, 0.011, 1.32, Vector3(sx, 0.2, 0.08), chrome, -1.0, Vector3(PI / 2, 0, 0), 12)  # a bar between the legs on each side
+	VRBuild.cylinder(self, 0.011, 0.52, Vector3(0, 0.2, -0.58), chrome, -1.0, Vector3(0, 0, PI / 2), 12)
+	VRBuild.cylinder(self, 0.011, 0.52, Vector3(0, 0.2, 0.74), chrome, -1.0, Vector3(0, 0, PI / 2), 12)
 	# a hollow cabinet: two side walls, a front and a back wall, a base, and the playfield sunk below the rails
 	var cab_tex = load(art_dir + "pin-cab.jpg")
 	var cab_col: StandardMaterial3D = VRBuild.tex_mat(cab_tex, 0.0, 0.3) if cab_tex != null else VRBuild.mat(Color(0.2, 0.08, 0.3), 0.4, 0.3)
@@ -99,8 +109,9 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 		var btn := Node3D.new()
 		btn.position = Vector3(sx * 0.31, 0.79, 0.55)
 		add_child(btn)
-		VRBuild.cylinder(btn, 0.034, 0.014, Vector3(sx * 0.0, 0, 0), chrome, -1.0, Vector3(0, 0, PI / 2), 24)
-		var cap := VRBuild.cylinder(btn, 0.028, 0.03, Vector3(sx * 0.02, 0, 0), VRBuild.mat(Color(1.0, 0.45, 0.1), 0.2, 0.0, 0.5), 0.026, Vector3(0, 0, PI / 2), 24)
+		VRBuild.cylinder(btn, 0.044, 0.016, Vector3(sx * 0.0, 0, 0), chrome, 0.04, Vector3(0, 0, PI / 2), 28)
+		VRBuild.cylinder(btn, 0.048, 0.006, Vector3(-sx * 0.008, 0, 0), black_rubber, -1.0, Vector3(0, 0, PI / 2), 28)
+		var cap := VRBuild.cylinder(btn, 0.036, 0.034, Vector3(sx * 0.022, 0, 0), VRBuild.mat(Color(1.0, 0.45, 0.1), 0.12, 0.0, 0.6), 0.034, Vector3(0, 0, PI / 2), 28)
 		_flip_buttons[i] = cap
 	# plunger: a chrome rod and a red knob that sticks out of the front on the right
 	var lane_x := (366.0 - 200.0) / 400.0 * PF_W

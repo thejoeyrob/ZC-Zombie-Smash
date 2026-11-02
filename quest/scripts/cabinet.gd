@@ -10,8 +10,8 @@ const STICK_LENGTH := 0.125           # pivot to ball centre
 const BALL_RADIUS := 0.029
 const MAX_TILT := 0.40                # radians the stick can lean
 const BUTTONS := {
-	"fire": {"pos": Vector3(0.19, 0.0, 0.03), "radius": 0.036},
-	"grenade": {"pos": Vector3(0.07, 0.0, 0.04), "radius": 0.031},
+	"fire": {"pos": Vector3(0.205, 0.0, 0.02), "radius": 0.052},
+	"grenade": {"pos": Vector3(0.025, 0.0, 0.06), "radius": 0.03},
 	# these two sit on the front of the lower cabinet either side of the coin door (their pos is (x, 0, -height) in that face's frame)
 	"menu": {"pos": Vector3(0.155, 0.0, -0.56), "radius": 0.02, "front": true},
 }
@@ -226,8 +226,8 @@ func _decal(parent: Node3D, file: String, size: float, pos: Vector3, rot := Vect
 func _build_decals() -> void:
 	var flat := Vector3(-PI / 2, 0, 0)
 	_word(panel, "move", 0.13, Vector3(-0.19, 0.0015, -0.1), flat)
-	_word(panel, "fire", 0.095, Vector3(0.19, 0.0015, -0.047), flat)
-	_word(panel, "grenade", 0.125, Vector3(0.07, 0.0015, -0.03), flat)
+	_word(panel, "fire", 0.11, Vector3(0.205, 0.0015, -0.085), flat)
+	_word(panel, "grenade", 0.12, Vector3(0.025, 0.0015, -0.04), flat)
 	var up := 0.6 + 0.07
 	_word(self, "menu", 0.095, Vector3(0.155, up, front_z + 0.0075), Vector3.ZERO)
 
@@ -338,7 +338,7 @@ func _build_controls() -> void:
 	ball = VRBuild.sphere(stick_pivot, BALL_RADIUS, Vector3(0, STICK_LENGTH, 0), ball_mat, 40)
 	# buttons: a black bezel with a brass ring, a recessed dish, a lit inner lamp under a glossy domed cap
 	var cfg := {
-		"fire": [Color("#e3262a"), 0.022],
+		"fire": [Color("#e3262a"), 0.03],
 		"grenade": [Color("#1d6fe0"), 0.02],
 		"menu": [Color("#d8d8d8"), 0.014],
 		"lock": [Color("#e3262a"), 0.016],

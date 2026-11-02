@@ -49,7 +49,15 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	we.environment = env
 	root.add_child(we)
 	# real dark brick walls with neon tubes, like a proper old arcade
-	var wood := VRBuild.tex_mat(_art("wall-brick.jpg", null), 0.0, 0.85, false, Color(0.5, 0.4, 0.62))
+	var wood := VRBuild.tex_mat(_art("wall-brick-hd.jpg", _art("wall-brick.jpg", null)), 0.0, 1.0, false, Color(0.95, 0.9, 1.05))
+	var brick_n = _art("wall-brick-hd-normal.png", null)
+	if brick_n != null:
+		wood.normal_enabled = true
+		wood.normal_texture = brick_n
+		wood.normal_scale = 0.8
+	var brick_r = _art("wall-brick-hd-roughness.png", null)
+	if brick_r != null:
+		wood.roughness_texture = brick_r
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -93,7 +101,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
-		wm.uv1_scale = Vector3(wall[2] / 2.0, HEIGHT / 2.0, 1)
+		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
 		wm.texture_repeat = true
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.035), Vector3(0, HEIGHT - 0.12, 0.03), neon_a)      # neon tube along the top of the wall
@@ -271,26 +279,29 @@ func _decor(root: Node3D, font: Font) -> void:
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
-	# one picture above each machine, in line with it: posters over the first three of each row, a framed arena over the last
-	var posters := ["poster-1.jpg", "poster-2.jpg", "poster-3.jpg", "poster-4.jpg", "poster-5.jpg", "poster-6.jpg"]
-	var arenas := {-1: "marquee-caffeinatedsloth.jpg", 1: "marquee-mantis.jpg"}
-	var k := 0
-	for side in [-1, 1]:
-		for z in [0.9, 2.4, 3.9, 5.4]:
-			var holder := Node3D.new()
-			holder.position = Vector3(side * (HALF_W - 0.04), 2.55, z)
-			holder.rotation.y = -side * PI / 2.0
-			root.add_child(holder)
-			var frame := VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5)
-			if z < 5.0:
-				var t: Texture2D = load("res://assets/art/" + posters[k])
-				VRBuild.box(holder, Vector3(0.72, 1.07, 0.03), Vector3.ZERO, frame)
-				VRBuild.quad(holder, Vector2(0.68, 1.03), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6))
-				k += 1
-			else:
-				var t2: Texture2D = load("res://assets/art/" + arenas[side])
-				VRBuild.box(holder, Vector3(1.26, 0.46, 0.03), Vector3.ZERO, frame)
-				VRBuild.quad(holder, Vector2(1.22, 0.407), Vector3(0, 0, 0.017), VRBuild.tex_mat(t2, 0.45, 0.6))
+	# one framed picture above each machine, all the same size and in line with it, then two comic pages in the back corners
+	var pics := {"m0": "poster-2.jpg", "m1": "poster-5.jpg", "m2": "poster-debo.jpg", "m3": "poster-6.jpg",
+		"m4": "poster-3.jpg", "m5": "poster-comic-fatamy.jpg", "m6": "poster-4.jpg", "m7": "poster-1.jpg"}
+	for i in range(machines.size()):
+		var m: Cabinet = machines[i]
+		var t: Texture2D = _art(pics["m%d" % i], null)
+		if t == null:
+			continue
+		_frame(root, t, Vector3(m.position.x + (0.0), 2.55, m.position.z), -signf(m.position.x))
+	_frame(root, _art("poster-comic-glowing.jpg", null), Vector3(-HALF_W + 0.04, 2.4, 6.6), 1.0)
+	_frame(root, _art("poster-comic-fatamy.jpg", null), Vector3(HALF_W - 0.04, 2.4, 6.6), -1.0)
+
+
+## A framed picture on a side wall (side: +1 left wall, -1 right wall).
+func _frame(root: Node3D, t: Texture2D, pos: Vector3, side: float) -> void:
+	var holder := Node3D.new()
+	var wall_x := -HALF_W + 0.04 if side > 0.0 else HALF_W - 0.04
+	holder.position = Vector3(wall_x, pos.y, pos.z)
+	holder.rotation.y = side * PI / 2.0
+	root.add_child(holder)
+	var frame := VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5)
+	VRBuild.box(holder, Vector3(0.76, 1.12, 0.03), Vector3.ZERO, frame)
+	VRBuild.quad(holder, Vector2(0.72, 1.08), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6))
 
 
 ## A glowing neon tube sign on a wall (yaw turns it to face into the room).
