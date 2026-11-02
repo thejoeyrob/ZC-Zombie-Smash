@@ -326,3 +326,72 @@ static func scanline_texture() -> ImageTexture:
 		for x in range(4):
 			img.set_pixel(x, y, Color(0, 0, 0, 0.0 if y % 2 == 0 else 0.16))
 	return ImageTexture.create_from_image(img)
+
+## A real neon tube: a round glass tube with a hot white core, a soft glow around it, and dark mounting clips along its length.
+## It runs along local X from the given centre. Rotate the parent (or pass rot) to point it anywhere.
+static func neon_tube(parent: Node, length: float, pos: Vector3, color: Color, rot := Vector3.ZERO, standoff := 0.03) -> Node3D:
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation = rot
+	parent.add_child(root)
+	var axis := Vector3(0, 0, PI / 2)          # cylinders stand up by default; lay them along X
+	var glass := CylinderMesh.new()
+	glass.top_radius = 0.014
+	glass.bottom_radius = 0.014
+	glass.height = length
+	glass.radial_segments = 12
+	glass.rings = 1
+	var gm := StandardMaterial3D.new()
+	gm.albedo_color = color
+	gm.emission_enabled = true
+	gm.emission = color
+	gm.emission_energy_multiplier = 2.4
+	gm.roughness = 0.15
+	var gi := MeshInstance3D.new()
+	gi.mesh = glass
+	gi.material_override = gm
+	gi.rotation = axis
+	root.add_child(gi)
+	var core := CylinderMesh.new()               # the hot white line down the middle of the glass
+	core.top_radius = 0.0055
+	core.bottom_radius = 0.0055
+	core.height = length
+	core.radial_segments = 8
+	core.rings = 1
+	var cm := StandardMaterial3D.new()
+	cm.albedo_color = Color(1, 1, 1)
+	cm.emission_enabled = true
+	cm.emission = color.lerp(Color(1, 1, 1), 0.75)
+	cm.emission_energy_multiplier = 3.5
+	cm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var ci := MeshInstance3D.new()
+	ci.mesh = core
+	ci.material_override = cm
+	ci.rotation = axis
+	root.add_child(ci)
+	var halo := CylinderMesh.new()               # soft glow around the tube (additive, no hard edge)
+	halo.top_radius = 0.055
+	halo.bottom_radius = 0.055
+	halo.height = length
+	halo.radial_segments = 10
+	halo.rings = 1
+	var hm := StandardMaterial3D.new()
+	hm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	hm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	hm.albedo_color = Color(color.r * 0.16, color.g * 0.16, color.b * 0.16, 1.0)
+	hm.cull_mode = BaseMaterial3D.CULL_FRONT
+	var hi := MeshInstance3D.new()
+	hi.mesh = halo
+	hi.material_override = hm
+	hi.rotation = axis
+	hi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(hi)
+	var clip_m := mat(Color(0.03, 0.03, 0.035), 0.4, 0.6)    # dark metal clips holding the tube off the wall
+	var n := int(maxf(2.0, ceilf(length / 1.2)))
+	for i in range(n + 1):
+		var x := -length / 2.0 + length * float(i) / float(n)
+		box(root, Vector3(0.025, 0.012, 0.012), Vector3(x, 0, 0.0), clip_m)
+		box(root, Vector3(0.016, 0.016, standoff), Vector3(x, 0, -standoff / 2.0), clip_m)
+	return root
+
