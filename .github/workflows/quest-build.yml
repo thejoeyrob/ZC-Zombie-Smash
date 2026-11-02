@@ -124,9 +124,21 @@ jobs:
           sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"0.${GITHUB_RUN_NUMBER}.0\"/" export_presets.cfg
           echo "{\"build\": ${GITHUB_RUN_NUMBER}}" > build.json
           godot --headless --import || true
-          godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
+          if [ -n "${RELEASE_KEYSTORE_B64:-}" ]; then
+            # the real store key: builds signed like this can go to the Meta store
+            echo "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="fattysgameshack"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
+            godot --headless --verbose --export-release "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
+          else
+            godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
+          fi
           cp build/zombie-smash-vr.apk "build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk"
           ls -la build
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
 
       - name: Show what the APK declares (headset support, permissions)
         continue-on-error: true
