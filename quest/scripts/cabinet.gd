@@ -14,7 +14,6 @@ const BUTTONS := {
 	"grenade": {"pos": Vector3(0.07, 0.0, 0.04), "radius": 0.031},
 	# these two sit on the front of the lower cabinet either side of the coin door (their pos is (x, 0, -height) in that face's frame)
 	"menu": {"pos": Vector3(0.155, 0.0, -0.56), "radius": 0.02, "front": true},
-	"lock": {"pos": Vector3(-0.155, 0.0, -0.56), "radius": 0.022, "front": true},
 }
 
 var panel: Node3D
@@ -202,7 +201,6 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		front_panel.rotation = Vector3(PI / 2, 0, 0)
 		add_child(front_panel)
 		_build_controls()
-		_build_traffic_light()
 		_build_decals()
 		set_lit(lit)
 	for n in [self, panel, mon, marq, front_panel]:
@@ -231,7 +229,6 @@ func _build_decals() -> void:
 	_word(panel, "fire", 0.095, Vector3(0.19, 0.0015, -0.047), flat)
 	_word(panel, "grenade", 0.125, Vector3(0.07, 0.0015, -0.03), flat)
 	var up := 0.6 + 0.07
-	_word(self, "lock", 0.09, Vector3(-0.155, up, front_z + 0.0075), Vector3.ZERO)
 	_word(self, "menu", 0.095, Vector3(0.155, up, front_z + 0.0075), Vector3.ZERO)
 
 

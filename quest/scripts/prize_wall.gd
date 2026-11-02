@@ -27,7 +27,6 @@ func build(root: Node3D, pos: Vector3, yaw: float, font: Font) -> void:
 	for y in [1.15, 1.7]:
 		VRBuild.box(self, Vector3(3.1, 0.04, 0.34), Vector3(0, y, -0.03), wood)
 		VRBuild.box(self, Vector3(3.1, 0.012, 0.012), Vector3(0, y - 0.026, 0.14), glow)
-	VRBuild.label(self, "BOBBLE HEADS", 0.2, Vector3(0, 2.25, -0.185), Color(1.0, 0.35, 0.75), Vector3.ZERO, 10, font)
 	var spots: Array = []
 	for i in range(4):
 		spots.append(Vector3(-1.05 + i * 0.7, 1.175, -0.02))

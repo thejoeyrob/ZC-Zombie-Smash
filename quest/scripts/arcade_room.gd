@@ -347,8 +347,7 @@ func _spots() -> void:
 		var m: Cabinet = machines[i]
 		spots.append(["m%d" % i, "PLAY", m.stand_world(), m.look_world(), m.theme_color])
 	spots.append(["pinball", "PINBALL", pinball.stand_world(), pinball.look_world(), Color(1.0, 0.85, 0.2)])
-	spots.append(["prizes_a", "PRIZES", Vector3(-2.9, 0, BACK_Z - 1.55), Vector3(-2.9, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
-	spots.append(["prizes_b", "PRIZES", Vector3(-1.7, 0, BACK_Z - 1.55), Vector3(-1.7, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
+	spots.append(["prizes", "PRIZES", Vector3(-2.3, 0, BACK_Z - 1.55), Vector3(-2.3, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
 	spots.append(["hall", "HALL OF FAME", Vector3(2.2, 0, BACK_Z - 2.2), Vector3(2.2, 1.8, BACK_Z), Color(1.0, 0.82, 0.25)])
 	spots.append(["vending", "SNACKS", Vector3(1.8, 0, 1.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
 	spots.append(["jukebox", "JUKEBOX", Vector3(-1.85, 0, 1.3), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])

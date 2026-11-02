@@ -23,6 +23,8 @@ var _launch_prev := false
 var _flip_buttons := [null, null]
 var _flip_down := [false, false]
 var enabled := false
+var reset_btn: Node3D
+var _reset_prev := false
 
 
 func build(font: Font, art_dir := "res://assets/art/") -> void:
@@ -109,6 +111,14 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	add_child(plunger_knob)
 	VRBuild.cylinder(plunger_knob, 0.007, 0.2, Vector3(0, 0, -0.1), chrome, -1.0, Vector3(PI / 2, 0, 0), 12)
 	VRBuild.sphere(plunger_knob, 0.027, Vector3(0, 0, 0.012), VRBuild.mat(Color(0.95, 0.12, 0.15), 0.2, 0.0, 0.6), 16)
+	# a lit RESET button on the front starts a fresh game from any state
+	reset_btn = Node3D.new()
+	reset_btn.position = Vector3(-0.21, 0.69, 0.84)
+	add_child(reset_btn)
+	VRBuild.cylinder(reset_btn, 0.032, 0.012, Vector3.ZERO, chrome, -1.0, Vector3(PI / 2, 0, 0), 20)
+	var amber := Color(1.0, 0.55, 0.1)
+	VRBuild.cylinder(reset_btn, 0.025, 0.016, Vector3(0, 0, 0.01), VRBuild.mat(amber, 0.2, 0.0, 1.8, amber), 0.023, Vector3(PI / 2, 0, 0), 20)
+	VRBuild.label(reset_btn, "RESET", 0.03, Vector3(0, -0.055, 0.004), Color(1, 0.85, 0.6), Vector3.ZERO, 4, font)
 	# the backbox with the picture, the title and a live score display
 	VRBuild.box(self, Vector3(0.64, 0.98, 0.2), Vector3(0, 1.42, -0.66), cab_col)
 	var front_tex = load(art_dir + "pin-front.png")
@@ -195,6 +205,16 @@ func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, laun
 			_flip_down[i] = down
 			var push := 0.012 if i == 0 else -0.012
 			cap2.position.x += push if down else -push
+	var on_reset := false
+	for tp in tips:
+		if reset_btn != null and reset_btn.global_position.distance_to(tp) < 0.05:
+			on_reset = true
+	if on_reset and not _reset_prev and enabled:
+		table.reset_game()
+		sound.emit("launch", reset_btn.global_position)
+	_reset_prev = on_reset
+	if reset_btn != null:
+		reset_btn.get_child(1).position.z = 0.004 if on_reset else 0.01
 	# plunger: touch the red knob to pull it back; let go to launch
 	var touching := false
 	var knob := plunger_knob.global_position

@@ -39,7 +39,11 @@ var menu_prev := false
 var click_side := 0
 var axis_seen := 0.0
 var locked := true             # red light: held at the machine; green: free to move about the room
-var teleporter: Teleporter
+var selector: Selector
+var leave_t := 0.0
+var leave_prompt: Node3D
+var leave_fill: MeshInstance3D
+var leave_label: Label3D
 var fade_quad: MeshInstance3D
 var lock_prev := false
 var pause_prev := false
@@ -99,8 +103,16 @@ func _ready() -> void:
 	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	_build_hands()
-	teleporter = Teleporter.new()
-	teleporter.build(self, room.spots)
+	selector = Selector.new()
+	selector.accessible = Callable(self, "_floor_ok")
+	selector.build(self, _selector_targets(), font)
+	_build_leave_prompt()
+	if args.has("hover"):
+		for i in range(selector.targets.size()):
+			if selector.targets[i].id == str(args.hover):
+				selector.forced = i
+				selector.set_shown(true)
+				selector.aim(Vector3.ZERO, Vector3.FORWARD)
 	_build_fade()
 	_load_settings()
 	menu = VRMenu.new()
@@ -762,7 +774,9 @@ func _set_locked(on: bool) -> void:
 	else:
 		for m in machines:
 			m.set_lock_light(false)
-	teleporter.set_shown(not on)
+	selector.set_shown(not on)
+	leave_t = 0.0
+	leave_prompt.visible = false
 	if on and state == "title" and not progress.codes.has("story_seen"):
 		_begin_intro()
 	if not on and state == "intro":
@@ -815,20 +829,30 @@ func _menu_input(hs: Array) -> void:
 
 func _locomotion(hs: Array, delta: float) -> void:
 	if menu.open:
-		teleporter.aim(Vector3.ZERO, Vector3.UP)
+		selector.aim(Vector3.ZERO, Vector3.UP)
+		leave_prompt.visible = false
 		return
-	if locked or not xr_on and not demo:
-		teleporter.aim(Vector3.ZERO, Vector3.UP)
+	# the hand that points: the chosen pointer hand, or the other one while it squeezes its trigger
+	var ph := 0 if settings.pointer == "left" else 1
+	if hs[1 - ph].trig_val > hs[ph].trig_val + 0.15:
+		ph = 1 - ph
+	if locked:
+		selector.aim(Vector3.ZERO, Vector3.UP)
+		if xr_on or demo:
+			_leave_gesture(hs, ph, delta)
+		for i in range(2):
+			trig_prev[i] = hs[i].trigger
 		return
-	# pointing: the right hand, or whichever hand is squeezing its trigger harder
-	var ph := 1
-	if hs[0].trig_val > hs[1].trig_val + 0.15:
-		ph = 0
-	var hover := teleporter.aim(hs[ph].aim_origin, hs[ph].aim_dir)
+	if not xr_on and not demo:
+		return
+	var hover := selector.aim(hs[ph].aim_origin, hs[ph].aim_dir)
 	for i in range(2):
 		var down: bool = hs[i].trigger
-		if down and not trig_prev[i] and i == ph and hover >= 0 and not tele_busy:
-			teleport_to(hover)
+		if down and not trig_prev[i] and i == ph and not tele_busy:
+			if hover >= 0:
+				_choose(str(selector.targets[hover].id))
+			elif selector.floor_ok:
+				_move_to(selector.floor_pos)
 		trig_prev[i] = down
 	if not xr_on:
 		return
@@ -862,21 +886,148 @@ func _turn(angle: float) -> void:
 	origin.position = hp + r * (origin.position - hp)
 
 
-## Jumps to a floor marker, facing the way its arrow points. The screen fades for a moment so it is comfortable.
-func teleport_to(idx: int) -> void:
+## Walks to a spot beside something (a jukebox, the pinball machine...), facing it. The screen fades briefly so it is comfortable.
+func teleport_to_spot(spot: Array, machine := false) -> void:
 	tele_busy = true
 	audio.ui("switch")
 	fade_quad.visible = true
 	var m := fade_quad.material_override as StandardMaterial3D
 	var tw := create_tween()
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.12)
-	tw.tween_callback(func(): _place_player(teleporter.spots[idx][2], teleporter.spots[idx][3], str(teleporter.spots[idx][0]).begins_with("m")))
+	tw.tween_callback(func(): _place_player(spot[2], spot[3], machine))
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
 	tw.tween_callback(func():
 		fade_quad.visible = false
-		tele_busy = false
-		if str(teleporter.spots[idx][0]) == "exit":
-			_open_menu())
+		tele_busy = false)
+
+
+## Point and move: lands you where the ring showed, keeping the way you were facing.
+func _move_to(p: Vector3) -> void:
+	tele_busy = true
+	audio.ui("switch")
+	fade_quad.visible = true
+	var m := fade_quad.material_override as StandardMaterial3D
+	var tw := create_tween()
+	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.1)
+	tw.tween_callback(func():
+		var hp := _head_floor()
+		origin.position += p - hp)
+	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.18)
+	tw.tween_callback(func():
+		fade_quad.visible = false
+		tele_busy = false)
+
+
+func _floor_ok(p: Vector3) -> bool:
+	return room.collide(p).distance_to(Vector3(p.x, 0.0, p.z)) < 0.06
+
+
+## What the player chose by pointing and pulling the trigger.
+func _choose(id: String) -> void:
+	_haptic(-1, 0.3, 0.05)
+	if id.begins_with("m") and id.substr(1).is_valid_int():
+		audio.ui("toggle")
+		_enter_machine(int(id.substr(1)))
+		return
+	if id == "exit":
+		audio.ui("switch")
+		_open_menu()
+		return
+	for spot in room.spots:
+		if str(spot[0]) == id:
+			teleport_to_spot(spot)
+			return
+
+
+## The things in the room that can be pointed at: each machine, the pinball table, the jukebox, the snack machine, the shelves,
+## the score board, the lounge and the door. Boxes are in each thing's own space so they turn with it.
+func _selector_targets() -> Array:
+	var out: Array = []
+	var amber := Color(1.0, 0.7, 0.25)
+	for i in range(machines.size()):
+		var m: Cabinet = machines[i]
+		var zf := maxf(m.front_z, m.deck_front_z) + 0.1
+		var box := AABB(Vector3(-0.35, 0.0, m.back_z), Vector3(0.7, 2.05, zf - m.back_z))
+		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color})
+	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2)})
+	out.append({"id": "jukebox", "label": "MUSIC", "xf": room.jukebox.global_transform, "box": AABB(Vector3(-0.46, 0.0, -0.15), Vector3(0.92, 1.95, 0.45)), "colour": amber})
+	out.append({"id": "vending", "label": "SNACKS", "xf": room.vending.global_transform, "box": AABB(Vector3(-0.42, 0.0, -0.45), Vector3(0.84, 1.95, 0.85)), "colour": Color(1.0, 0.4, 0.35)})
+	out.append({"id": "prizes", "label": "PRIZES", "xf": room.prize_wall.global_transform, "box": AABB(Vector3(-1.6, 1.0, -0.2), Vector3(3.2, 1.0, 0.55)), "colour": Color(1.0, 0.35, 0.75)})
+	out.append({"id": "hall", "label": "HIGH SCORES", "xf": Transform3D(Basis(Vector3.UP, PI), Vector3(2.2, 1.85, ArcadeRoom.BACK_Z - 0.1)), "box": AABB(Vector3(-1.1, -0.6, -0.1), Vector3(2.2, 1.2, 0.2)), "colour": Color(1.0, 0.85, 0.3)})
+	out.append({"id": "lounge", "label": "PLAY", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-1.35, 0.0, -1.35), Vector3(2.7, 0.7, 2.7)), "colour": Color(1.0, 0.45, 0.85)})
+	out.append({"id": "exit", "label": "EXIT", "xf": Transform3D(Basis.IDENTITY, Vector3(0, 0, ArcadeRoom.FRONT_Z)), "box": AABB(Vector3(-1.15, 0.0, -0.2), Vector3(2.3, 2.55, 0.4)), "colour": Color(0.4, 1.0, 0.55)})
+	return out
+
+
+## While held at a machine: point clearly away from it, hold the trigger for two seconds, and you step back from it.
+func _leave_gesture(hs: Array, ph: int, delta: float) -> void:
+	var o: Vector3 = hs[ph].aim_origin
+	var d: Vector3 = hs[ph].aim_dir
+	var to_machine := (cab.look_world() - o)
+	var away := d.dot(to_machine.normalized()) < 0.2          # more than about 78 degrees off the screen
+	if away:
+		for t in selector.targets:
+			if t.id == "m%d" % machines.find(cab):
+				away = _ray_hits_target(o, d, t) == false
+	var holding: bool = hs[ph].trigger
+	if away and holding:
+		leave_t = minf(2.0, leave_t + delta)
+	else:
+		leave_t = maxf(0.0, leave_t - delta * 2.0)
+	leave_prompt.visible = away
+	if away:
+		var f := -cam.global_transform.basis.z
+		f.y = 0.0
+		leave_prompt.global_position = cam.global_position + f.normalized() * 0.9 + Vector3(0, -0.28, 0)
+		leave_prompt.look_at(cam.global_position + Vector3(0, -0.28, 0), Vector3.UP, true)
+		leave_fill.scale.x = maxf(0.001, leave_t / 2.0)
+		leave_fill.position.x = -0.15 + 0.15 * (leave_t / 2.0)
+		leave_label.text = "HOLD THE TRIGGER TO LEAVE THE MACHINE" if leave_t < 0.05 else "LEAVING..."
+	if leave_t >= 2.0:
+		leave_t = 0.0
+		leave_prompt.visible = false
+		audio.ui("toggle")
+		_haptic(-1, 0.4, 0.08)
+		_set_locked(false)
+
+
+func _ray_hits_target(o: Vector3, d: Vector3, t: Dictionary) -> bool:
+	var inv: Transform3D = (t.xf as Transform3D).affine_inverse()
+	var hit = (t.box as AABB).intersects_ray(inv * o, (inv.basis * d).normalized())
+	return hit != null
+
+
+func _build_leave_prompt() -> void:
+	leave_prompt = Node3D.new()
+	add_child(leave_prompt)
+	leave_prompt.visible = false
+	var back := MeshInstance3D.new()
+	var qm := QuadMesh.new()
+	qm.size = Vector2(0.34, 0.016)
+	back.mesh = qm
+	var bm := StandardMaterial3D.new()
+	bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	bm.albedo_color = Color(0.1, 0.1, 0.16, 0.85)
+	bm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	bm.no_depth_test = true
+	back.material_override = bm
+	back.position = Vector3(0, -0.04, 0)
+	leave_prompt.add_child(back)
+	leave_fill = MeshInstance3D.new()
+	var fm := QuadMesh.new()
+	fm.size = Vector2(0.3, 0.010)
+	leave_fill.mesh = fm
+	var fmm := StandardMaterial3D.new()
+	fmm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fmm.albedo_color = Color(0.3, 1.0, 0.6)
+	fmm.no_depth_test = true
+	fmm.render_priority = 1
+	leave_fill.material_override = fmm
+	leave_fill.position = Vector3(-0.15, -0.04, 0.001)
+	leave_prompt.add_child(leave_fill)
+	leave_label = VRBuild.label(leave_prompt, "HOLD THE TRIGGER TO LEAVE THE MACHINE", 0.03, Vector3(0, 0.0, 0), Color(1, 1, 1), Vector3.ZERO, 6, font)
+	leave_label.no_depth_test = true
+	leave_label.render_priority = 5
 
 
 func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
@@ -940,18 +1091,14 @@ func _stick(hs: Array, delta: float) -> void:
 
 
 func _buttons(hs: Array) -> void:
-	var down := {"fire": false, "grenade": false, "menu": false, "lock": false, "pause": false}
+	var down := {"fire": false, "grenade": false, "menu": false, "pause": false}
 	for i in range(hs.size()):
 		var h: Dictionary = hs[i]
 		for use_tip in [true, false]:
 			var p: Vector3 = h.tip if use_tip else h.palm
 			var hit := cab.button_at(cab.to_panel(p), 0.032 if use_tip else 0.07)
-			if hit != "" and grab_hand != i and ((hit != "lock" and hit != "menu") or use_tip):
+			if hit != "" and grab_hand != i and (hit != "menu" or use_tip):
 				down[hit] = true
-			if not locked and use_tip:
-				for m in machines:
-					if m != cab and m.button_at(m.to_panel(p), 0.032) == "lock":
-						down["lock"] = true
 		if locked and not menu.open and str(settings.assist) == "on" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
 			down["fire"] = true       # assist: any trigger fires (the score is marked with an asterisk)
 			if state == "play":
@@ -1006,31 +1153,6 @@ func _buttons(hs: Array) -> void:
 			state = "play"
 			screen.mode = "play"
 	pause_prev = down.pause
-	if down.lock and not lock_prev:
-		_press_lock()
-	lock_prev = down.lock
-
-
-## A machine's LOCK button: red keeps you at that machine, green lets you walk and teleport.
-func _press_lock() -> void:
-	_haptic(-1, 0.4, 0.06)
-	if locked:
-		audio.ui("toggle")
-		_set_locked(false)
-		return
-	# going back to red: you must be standing at a machine; the player is placed exactly in front of it
-	var best := -1
-	var best_d := 1.4
-	for i in range(machines.size()):
-		var d := _head_floor().distance_to(machines[i].stand_world())
-		if d < best_d:
-			best_d = d
-			best = i
-	if best < 0:
-		audio.ui("error")
-		return
-	audio.ui("toggle")
-	_enter_machine(best)
 
 
 ## Settling in at a machine: a quick fade, the player is placed exactly in front of it, then the screen powers up and the controls light.
@@ -1094,14 +1216,14 @@ func _run_tour() -> void:
 		[st + Vector3(0, 1.68, 0), cab.look_world() - Vector3(0, 0.1, 0), 0.1, 4.0],
 		[st + Vector3(0.05, 1.55, 0.0), cab.panel.global_position + Vector3(0, 0.1, 0), 2.0, 3.0],
 		[Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5), 3.5, 3.0],
-		[Vector3(-0.8, 1.7, 0.2), Vector3(-3.1, 1.2, 4.2), 3.5, 3.0],
-		[Vector3(0.8, 1.7, 0.2), Vector3(3.1, 1.2, 4.2), 5.0, 3.0],
+		[Vector3(-0.8, 1.7, 0.2), Vector3(-3.1, 1.2, 4.2), 3.5, 3.0, "m1"],
+		[Vector3(0.8, 1.7, 0.2), Vector3(3.1, 1.2, 4.2), 5.0, 3.0, "m6"],
 		[Vector3(0, 1.7, 3.0), Vector3(0, 1.9, -0.55), 4.0, 3.0],
-		[Vector3(-1.4, 1.6, 1.8), Vector3(-1.85, 1.2, -0.3), 3.0, 3.0],
+		[Vector3(-1.4, 1.6, 1.8), Vector3(-1.85, 1.2, -0.3), 3.0, 3.0, "jukebox"],
 		[Vector3(1.4, 1.6, 1.8), Vector3(1.8, 1.2, -0.05), 3.0, 3.0],
 		[Vector3(0, 1.7, 0.9), Vector3(0, 1.3, -5.0), 3.0, 5.0],
-		[Vector3(-1.6, 1.7, 1.2), Vector3(0, 0.4, 2.9), 3.5, 3.0],
-		[Vector3(0, 1.7, 4.6), Vector3(0, 1.1, 6.5), 3.5, 3.0],
+		[Vector3(-1.6, 1.7, 1.2), Vector3(0, 0.4, 2.9), 3.5, 3.0, "lounge"],
+		[Vector3(0, 1.7, 4.6), Vector3(0, 1.1, 6.5), 3.5, 3.0, "pinball"],
 		[Vector3(-2.3, 1.6, 5.6), Vector3(-2.3, 1.6, 7.2), 3.5, 3.0],
 		[Vector3(-2.3, 1.55, 6.3), Vector3(-2.3, 1.45, 7.2), 2.5, 3.0],
 		[Vector3(2.2, 1.65, 5.2), Vector3(2.2, 1.85, 7.2), 3.5, 4.0],
@@ -1109,6 +1231,13 @@ func _run_tour() -> void:
 	var pos: Vector3 = stops[0][0]
 	var look: Vector3 = stops[0][1]
 	for stop in stops:
+		selector.forced = -1
+		selector.set_shown(false)
+		if stop.size() > 4:
+			for ti in range(selector.targets.size()):
+				if selector.targets[ti].id == str(stop[4]):
+					selector.forced = ti
+			selector.set_shown(true)
 		var p0 := pos
 		var l0 := look
 		var t := 0.0

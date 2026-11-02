@@ -43,6 +43,7 @@ var clock := 0.0
 var trail: Array = []
 var segments: Array = []          # [a, b, restitution, kick]
 var _launch_ready := true
+var _slow_t := 0.0                # how long the ball has barely moved
 
 const FLIP_LEN := 66.0
 const LEFT_PIVOT := Vector2(132, 742)
@@ -216,6 +217,15 @@ func _step(dt: float) -> void:
 		_launch_ready = true
 		vel = Vector2.ZERO
 		ball = Vector2(LANE_X, 700.0)
+	# a ball that has stopped dead on the table (it can wedge between a post and a wall) gets a nudge
+	if vel.length() < 25.0 and not (ball.x > 352.0 and ball.y > 690.0):
+		_slow_t += dt
+		if _slow_t > 3.0:
+			_slow_t = 0.0
+			vel = Vector2(randf_range(-160.0, 160.0), -520.0)
+			flash("NUDGE")
+	else:
+		_slow_t = 0.0
 	# lost down the middle, or out the bottom
 	if ball.y > H + 40.0:
 		_drain()
