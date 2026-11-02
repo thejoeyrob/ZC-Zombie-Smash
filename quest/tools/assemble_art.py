@@ -77,11 +77,12 @@ def run():
     side("glowinghumanity", P("poster-5.png")).save(os.path.join(OUT, "side-glowinghumanity.png"))
     side("caffeinatedsloth", P("poster-6.png")).save(os.path.join(OUT, "side-caffeinatedsloth.png"))
     for n in ["disco", "fatamy", "mantis", "joeyrob"]:
-        Image.open(os.path.join(SRC, "chatgpt-round2", "side-%s.png" % n)).save(os.path.join(OUT, "side-%s.png" % n))
-        Image.open(os.path.join(SRC, "chatgpt-round2", "marquee-%s.jpg" % n)).resize((1024, 341), Image.LANCZOS).save(os.path.join(OUT, "marquee-%s.jpg" % n), quality=92)
+        if n != "joeyrob":
+            Image.open(os.path.join(SRC, "chatgpt-round3", "side-%s.png" % n)).save(os.path.join(OUT, "side-%s.png" % n))
+        Image.open(os.path.join(SRC, "chatgpt-round2", "marquee-%s.jpg" % n)).convert("RGB").save(os.path.join(OUT, "marquee-%s.jpg" % n), quality=95)
     # headers for the other four: the ChatGPT originals, untouched
     for n in ["debo", "jordan", "glowinghumanity", "caffeinatedsloth"]:
-        Image.open(os.path.join(SRC, "chatgpt-round2", "marquee-%s.jpg" % n)).resize((1024, 341), Image.LANCZOS).save(os.path.join(OUT, "marquee-%s.jpg" % n), quality=94)
+        Image.open(os.path.join(SRC, "chatgpt-round2", "marquee-%s.jpg" % n)).save(os.path.join(OUT, "marquee-%s.jpg" % n), quality=95)
     # framed wall pictures, one set size (2:3)
     for i in range(1, 7):
         poster_frame(P("poster-%d.png" % i), "poster-%d.jpg" % i)
