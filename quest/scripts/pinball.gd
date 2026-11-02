@@ -25,6 +25,7 @@ var _flip_down := [false, false]
 var enabled := false
 var reset_btn: Node3D
 var _reset_prev := false
+var _grab_z := 0.0
 
 
 func build(font: Font, art_dir := "res://assets/art/") -> void:
@@ -180,12 +181,12 @@ func set_enabled(on: bool) -> void:
 
 
 func stand_world() -> Vector3:
-	var p := to_global(Vector3(0, 0, 1.3))
+	var p := to_global(Vector3(0, 0, 1.12))      # a hand's reach from the front rail
 	return Vector3(p.x, 0.0, p.z)
 
 
 func look_world() -> Vector3:
-	return to_global(Vector3(0, 0.9, 0.0))
+	return to_global(Vector3(0, 0.78, -0.2))     # the middle of the playfield, so you look down on it
 
 
 func _on_table_event(n: String) -> void:
@@ -226,29 +227,36 @@ func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, laun
 	_reset_prev = on_reset
 	if reset_btn != null:
 		reset_btn.get_child(1).position.z = 0.004 if on_reset else 0.01
-	# plunger: touch the red knob to pull it back; let go to launch
-	var touching := false
-	var knob := plunger_knob.global_position
+	# plunger: close a hand on the red knob and draw it back toward you; the further you pull, the harder it launches. Let go to fire.
+	var knob := to_global(plunger_rest + Vector3(0, 0, (_charge if _held else 0.0) * 0.1))
+	var best_p := Vector3.ZERO
+	var best_d := 99.0
 	for p2 in tips + palms:
-		if p2.distance_to(knob) < 0.07:
-			touching = true
-	if touching and not _held:
+		var dd: float = p2.distance_to(knob)
+		if dd < best_d:
+			best_d = dd
+			best_p = p2
+	if not _held and best_d < 0.09:
 		_held = true
 		_charge = 0.0
-	if _held:
-		if touching:
-			_charge = minf(1.0, _charge + get_process_delta_time() * 1.1)
+		_grab_z = to_local(best_p).z
+	elif _held:
+		if best_d < 0.22:
+			_charge = clampf((to_local(best_p).z - _grab_z) / 0.1, 0.0, 1.0)
 			table.pull(_charge)
 		else:
 			_held = false
-			table.launch()
+			if _charge > 0.1:
+				table.launch()
+			else:
+				table.pull(0.0)
 			_charge = 0.0
 	if launch and not _launch_prev and near:
 		table.pull(0.8)
 		table.launch()
 	_launch_prev = launch
 	var pulled := _charge if _held else table.plunger
-	plunger_knob.position = plunger_rest + Vector3(0, 0, pulled * 0.07)
+	plunger_knob.position = plunger_rest + Vector3(0, 0, pulled * 0.1)
 
 
 func _process(_delta: float) -> void:

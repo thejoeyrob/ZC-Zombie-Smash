@@ -82,7 +82,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95)
+	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95, false, Color(0.55, 0.55, 0.62))      # calmer: the confetti is a background, not the show
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
@@ -273,7 +273,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	vending.build(font)
 	blockers.append([vending.position.x, vending.position.z, 0.75])
 	blockers.append([0.0, BACK_Z - 1.05, 0.62])
-	blockers.append([0.0, BACK_Z - 1.6, 0.42])
+	blockers.append([0.0, BACK_Z - 1.6, 0.25])
 
 
 func _decor(root: Node3D, font: Font) -> void:
