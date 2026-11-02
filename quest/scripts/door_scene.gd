@@ -424,7 +424,7 @@ func _start_pass() -> void:
 	_walking = true
 	_dir = 1.0 if randf() < 0.5 else -1.0
 	var r := randf()
-	_kind = "approach" if r < 0.5 else ("dash" if r < 0.8 else ("crawl" if r < 0.92 else "tall"))
+	_kind = "approach" if (r < 0.5 or force_approach) else ("dash" if r < 0.8 else ("crawl" if r < 0.92 else "tall"))
 	var file: String = SHAPES[randi() % SHAPES.size()]
 	zombie_mat_sh.set_shader_parameter("tex", load("res://assets/art/" + file))
 	_size = 1.5 + randf() * 0.6
@@ -459,6 +459,7 @@ func _start_pass() -> void:
 
 
 var _size := 1.8
+var force_approach := false
 var _y := 0.9
 var _z := -0.7
 var _fire_glow: MeshInstance3D

@@ -125,6 +125,9 @@ func _ready() -> void:
 	menu.changed.connect(_on_setting)
 	menu.action.connect(_on_menu_action)
 	_capture_attract()
+	if args.has("approach"):
+		room.door.force_approach = true
+		room.door._timer = 0.2
 	if args.has("scare"):
 		room.door.debug_show(str(args.scare) if str(args.scare).ends_with(".webp") else "zombie-brute.webp", 0.3)
 	if args.has("pinplay"):
