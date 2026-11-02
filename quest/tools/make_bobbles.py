@@ -11,8 +11,8 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else "/tmp/claude-0/zips/b4b"
 OUT = sys.argv[2] if len(sys.argv) > 2 else "quest/vr-art"
 IDS = ["jordan", "glowinghumanity", "debo", "caffeinatedsloth", "discoman", "fatamy", "drmantis"]
 HEIGHT_M = 0.36
-CELL = 8            # picture pixels per voxel
-H = 480             # every view is scaled to this many pixels tall
+CELL = 10           # picture pixels per voxel
+H = 720             # every view is scaled to this many pixels tall
 
 
 def cut(sheet):
@@ -66,7 +66,7 @@ def build(name):
     vol = np.pad(vol, 2)
     vol = vol.astype(float)
     vol = ndi.gaussian_filter(vol, 0.9)
-    verts, faces, normals, _ = measure.marching_cubes(vol, 0.5)
+    verts, faces, normals, _ = measure.marching_cubes(vol, 0.5, step_size=2)
     verts -= 2    # undo padding
     # voxel (y, x, z) -> metres, feet on y=0, centred on x and z
     cell_m = HEIGHT_M / ny
@@ -84,7 +84,7 @@ def build(name):
     Image.fromarray(atlas).save(f"{OUT}/bobble-{name}-atlas.jpg", quality=90)
     # the shader blends the three pictures by surface direction, so the mesh needs only positions and normals
     import json
-    json.dump({"widths": [wf, ws, wb]}, open(f"{OUT}/bobble-{name}-atlas.json", "w"))
+    json.dump({"widths": [wf, ws, wb], "h": H}, open(f"{OUT}/bobble-{name}-atlas.json", "w"))
     lines = ["# bobble %s" % name]
     for p, n in zip(P, N):
         lines.append("v %.4f %.4f %.4f" % tuple(p))

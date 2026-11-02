@@ -87,12 +87,16 @@ func _fill(p: Dictionary, open: bool) -> void:
 			mi.material_override = _bobble_material(atlas, _widths(str(boss.id)))
 			var fig := Node3D.new()
 			p.root.add_child(fig)
+			fig.position.y = 0.018
+			fig.scale = Vector3(1.0, 1.0, 0.55)      # a thick relief: front and back pictures carry the figure, so keep the rim thin
 			fig.add_child(mi)
 			p.head = fig
 			p.mat = mi.material_override
 		else:
 			VRBuild.label(p.root, "?", 0.1, Vector3(0, 0.15, 0), Color.WHITE)
-		VRBuild.label(p.root, str(boss.name), 0.05, Vector3(0, 0.012, 0.13), Color(1, 0.95, 0.8), Vector3(-0.6, 0, 0), 3)
+		var base_m := VRBuild.mat(Color(0.05, 0.04, 0.07), 0.3, 0.5)
+		VRBuild.cylinder(p.root, 0.105, 0.014, Vector3(0, 0.007, 0), base_m, 0.115, Vector3.ZERO, 40)       # a round display base, like a collector figure
+		VRBuild.label(p.root, str(boss.name), 0.04, Vector3(0, 0.012, 0.15), Color(1, 0.95, 0.8), Vector3(-0.6, 0, 0), 3)
 
 
 static var _shader: Shader
@@ -131,11 +135,13 @@ void fragment() {
 	ub.x = clamp(ub.x, (widths.x + widths.y) / aw + 0.001, 0.999);
 	us.x = clamp(us.x, widths.x / aw + 0.001, (widths.x + widths.y) / aw - 0.001);
 	vec3 n = normalize(mnrm);
-	float wf = pow(max(n.z, 0.0), 3.0);
-	float wb = pow(max(-n.z, 0.0), 3.0);
-	float ws = pow(abs(n.x), 3.0);
+	// the side picture is a three-quarter view, so projecting it smears faces; the front and back pictures carry the whole figure
+	float wf = smoothstep(-0.25, 0.25, n.z);
+	float wb = 1.0 - wf;
+	float ws = 0.0;
 	float sum = wf + wb + ws + 0.0001;
 	vec3 col = (texture(atlas, uf).rgb * wf + texture(atlas, ub).rgb * wb + texture(atlas, us).rgb * ws) / sum;
+	col *= mix(0.28, 1.0, smoothstep(0.15, 0.55, abs(n.z)));      // the thin rim of the figure is a dark edge, not a smear
 	ALBEDO = col;
 	ROUGHNESS = 0.6;
 	EMISSION = col * 0.12;
@@ -145,7 +151,11 @@ void fragment() {
 	m.shader = _shader
 	m.set_shader_parameter("atlas", atlas)
 	m.set_shader_parameter("widths", widths)
+	m.set_shader_parameter("picture_h", float(_pic_h))
 	return m
+
+
+var _pic_h := 720
 
 
 func _widths(id: String) -> Vector3:
@@ -154,18 +164,13 @@ func _widths(id: String) -> Vector3:
 		var d = JSON.parse_string(f.get_as_text())
 		if d is Dictionary:
 			var w: Array = d.widths
+			_pic_h = int(d.get("h", 480))
 			return Vector3(float(w[0]), float(w[1]), float(w[2]))
 	return Vector3(265, 260, 240)
 
 
 func animate(delta: float) -> void:
-	_t += delta
-	for p in prizes:
-		if p.head != null and p.get("mat") != null:
-			var held: bool = p.held
-			var amp := 0.035 if held else 0.012
-			p.mat.set_shader_parameter("amp", amp)
-			p.mat.set_shader_parameter("swing", sin(_t * (6.0 if held else 2.3) + p.index) )
+	_t += delta       # the figures are static now: solid collectibles, not bobble heads
 
 
 ## hs: per hand {grab: bool, xf: Transform3D (the hand as drawn), point: Vector3 (palm position)}
