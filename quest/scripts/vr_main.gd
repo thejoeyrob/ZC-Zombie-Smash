@@ -40,7 +40,6 @@ var click_side := 0
 var axis_seen := 0.0
 var locked := true             # red light: held at the machine; green: free to move about the room
 var selector: Selector
-var flat: FlatView            # browser and desktop mode: mouse and keyboard stand in for the headset
 var leave_t := 0.0
 var leave_prompt: Node3D
 var leave_fill: MeshInstance3D
@@ -108,10 +107,6 @@ func _ready() -> void:
 	selector.accessible = Callable(self, "_floor_ok")
 	selector.build(self, _selector_targets(), font)
 	_build_leave_prompt()
-	if not xr_on and (OS.has_feature("web") or args.has("flat")):
-		flat = FlatView.new()
-		add_child(flat)
-		flat.setup(self, cam, origin, font)
 	if args.has("hover"):
 		for i in range(selector.targets.size()):
 			if selector.targets[i].id == str(args.hover):
@@ -206,13 +201,13 @@ func _setup_desktop_camera() -> void:
 
 func _build_screen() -> void:
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(515, 618) if OS.has_feature("web") else Vector2i(1029, 1236)         # the 343 x 412 game, drawn three times sharper than on the phone
+	viewport.size = Vector2i(1029, 1236)         # the 343 x 412 game, drawn three times sharper than on the phone
 	viewport.msaa_2d = Viewport.MSAA_2X
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.transparent_bg = false
 	add_child(viewport)
 	screen = ZSScreen.new()
-	screen.ss = 1.5 if OS.has_feature("web") else 3.0
+	screen.ss = 3.0
 	screen.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	viewport.add_child(screen)
 	screen.preload_all()
@@ -941,8 +936,6 @@ func _choose(id: String) -> void:
 		_enter_machine(int(id.substr(1)))
 		return
 	if id == "exit":
-		if flat != null:
-			return
 		audio.ui("switch")
 		_open_menu()
 		return
@@ -1044,9 +1037,6 @@ func _build_leave_prompt() -> void:
 
 
 func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
-	if flat != null:
-		flat.place(pos, look)
-		return
 	if not xr_on:
 		return
 	var dir := look - pos
@@ -1100,8 +1090,6 @@ func _stick(hs: Array, delta: float) -> void:
 			run_assisted = true
 	var prev := axis
 	axis = clampf(m * 1.12, -1.0, 1.0)
-	if flat != null and absf(flat.axis) > 0.01:
-		axis = flat.axis
 	axis_seen = maxf(axis_seen, absf(axis))
 	if absf(axis) > 0.55 and absf(prev) <= 0.55 and grab_hand >= 0:
 		audio.sfx("switch", 0.5)
@@ -1127,10 +1115,6 @@ func _buttons(hs: Array) -> void:
 				run_assisted = true
 		if h.get("b", false):
 			down["pause"] = true
-	if flat != null:
-		down.fire = down.fire or flat.fire
-		down.grenade = down.grenade or flat.alt
-		down.pause = down.pause or flat.pause
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
 	var fire_edge: bool = down.fire and not fire_now
