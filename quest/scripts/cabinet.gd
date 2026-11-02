@@ -178,16 +178,8 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var marq := Node3D.new()
 	marq.rotation = Vector3(-0.1, 0, 0)
 	marq.position = Vector3(0, mon.position.y + 0.394 + 0.125, monitor_z + 0.03 - 0.06)
-	if not poly.is_empty():
-		var top_v := float(profile.get("top_v", 0.01)) + 0.025
-		var top_y := CabProfile.y_of(top_v)
-		var bot_v := 1.0 - (top_y - 0.22) / CabProfile.H_M
-		var front_u := 1.0
-		var v := top_v
-		while v <= bot_v:
-			front_u = minf(front_u, CabProfile.edges_at(poly, v).y)
-			v += 0.01
-		marq.position = Vector3(0, top_y - 0.11, CabProfile.z_of(front_u) - 0.01 - 0.06)
+	# the header is the front-most thing at the top: its picture stands clear of the screen glass, never behind it
+	marq.position = Vector3(0, mon.position.y + 0.394 + 0.125 + 0.02, monitor_z + 0.1 + 0.05 - 0.0605)
 	add_child(marq)
 	VRBuild.box(marq, Vector3(0.67, 0.22, 0.12), Vector3.ZERO, dark)
 	if marquee_tex != null:
