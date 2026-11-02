@@ -214,7 +214,12 @@ func _lounge(root: Node3D) -> void:
 		bag.position = c + Vector3(sin(a) * 0.95, 0, cos(a) * 0.95)
 		bag.rotation = Vector3(0.05 * sin(a * 3.0), a + 3.14, 0.04 * cos(a * 2.0))
 		root.add_child(bag)
-		var m := VRBuild.tex_mat(_art("bean-%s.jpg" % cols[i], null), 0.0, 0.85)
+		var tints := {"pink": Color(1.0, 0.35, 0.65), "cyan": Color(0.35, 0.85, 1.0), "amber": Color(1.0, 0.7, 0.25), "green": Color(0.5, 0.95, 0.35), "purple": Color(0.65, 0.4, 1.0), "red": Color(1.0, 0.3, 0.3)}
+		var m := VRBuild.tex_mat(_art("tex-leather.jpg", null), 0.0, 0.55, false, tints[cols[i]])
+		m.uv1_scale = Vector3(2, 2, 1)
+		m.texture_repeat = true
+		m.clearcoat_enabled = true
+		m.clearcoat = 0.25
 		m.rim_enabled = true
 		m.rim = 0.25
 		var body := VRBuild.sphere(bag, 0.36, Vector3(0, 0.21, 0), m, 28)
@@ -281,8 +286,8 @@ func _decor(root: Node3D, font: Font) -> void:
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
 	# one framed picture above each machine, all the same size and in line with it, then two comic pages in the back corners
-	var pics := {"m0": "poster-2.jpg", "m1": "poster-5.jpg", "m2": "poster-debo.jpg", "m3": "poster-6.jpg",
-		"m4": "poster-3.jpg", "m5": "poster-comic-fatamy.jpg", "m6": "poster-4.jpg", "m7": "poster-1.jpg"}
+	var pics := {"m0": "poster-fire.jpg", "m1": "poster-neon.jpg", "m2": "poster-debo.jpg", "m3": "poster-sloth.jpg",
+		"m4": "poster-disco.jpg", "m5": "poster-comic-fatamy.jpg", "m6": "poster-mantis.jpg", "m7": "poster-crowd.jpg"}
 	for i in range(machines.size()):
 		var m: Cabinet = machines[i]
 		var t: Texture2D = _art(pics["m%d" % i], null)
@@ -300,8 +305,8 @@ func _frame(root: Node3D, t: Texture2D, pos: Vector3, side: float) -> void:
 	holder.position = Vector3(wall_x, pos.y, pos.z)
 	holder.rotation.y = side * PI / 2.0
 	root.add_child(holder)
-	var w := 0.72
 	var h := 1.08
+	var w := minf(0.9, h * float(t.get_width()) / float(t.get_height()))
 	VRBuild.box(holder, Vector3(w + 0.016, h + 0.016, 0.012), Vector3(0, 0, 0.004), VRBuild.mat(Color(0.02, 0.015, 0.03), 0.6))
 	VRBuild.quad(holder, Vector2(w, h), Vector3(0, 0, 0.012), VRBuild.tex_mat(t, 0.8, 0.5))
 

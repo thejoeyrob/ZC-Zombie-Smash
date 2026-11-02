@@ -20,7 +20,10 @@ func build(root: Node3D, pos: Vector3, yaw: float, font: Font) -> void:
 	position = pos
 	rotation.y = yaw
 	root.add_child(self)
-	var wood := VRBuild.mat(Color(0.26, 0.12, 0.36), 0.55)
+	var wtex = load("res://assets/art/tex-wood.jpg")
+	var wood: StandardMaterial3D = VRBuild.tex_mat(wtex, 0.0, 0.5) if wtex != null else VRBuild.mat(Color(0.26, 0.12, 0.36), 0.55)
+	wood.uv1_scale = Vector3(1.0, 0.12, 1)
+	wood.texture_repeat = true
 	var dark := VRBuild.mat(Color(0.05, 0.03, 0.09), 0.8)
 	var glow := VRBuild.mat(Color(1.0, 0.35, 0.75), 0.4, 0.0, 2.4)
 	# floating shelves fixed straight to the wall, lit from underneath
