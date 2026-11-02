@@ -61,6 +61,8 @@ jobs:
         run: |
           cd quest
           godot --headless --import || true
+          # mipmaps on for every picture, so far-away detail stays smooth instead of shimmering in the headset
+          grep -l 'importer="texture"' assets/art/*.import | xargs sed -i 's/^mipmaps\/generate=false/mipmaps\/generate=true/'
           godot --headless --import
 
       - name: Check the engine port against the JavaScript engine
