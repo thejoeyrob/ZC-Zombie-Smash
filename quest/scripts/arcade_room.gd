@@ -85,7 +85,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
 	carpet.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("ceiling-tiles.jpg", null), 0.35, 0.9, false, Color(0.28, 0.26, 0.36))
+	var ceiling := VRBuild.tex_mat(_art("tex-neon.jpg", _art("ceiling-tiles.jpg", null)), 0.2, 0.9, false, Color(0.7, 0.7, 0.8))
 	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
 	ceiling.texture_repeat = true
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))

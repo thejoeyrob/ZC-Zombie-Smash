@@ -369,6 +369,11 @@ func _build_controls() -> void:
 		VRBuild.cylinder(panel, r + 0.001, 0.014, b.pos + Vector3(0, 0.0085, 0), black, -1.0, Vector3.ZERO, 40)           # dark well
 		VRBuild.cylinder(panel, r * 0.97, 0.002, b.pos + Vector3(0, 0.0125, 0), VRBuild.mat(col.darkened(0.2), 0.3, 0.0, 1.2, col), -1.0, Vector3.ZERO, 36)  # the lamp under the cap
 		var cap_mat := VRBuild.mat(col.lightened(0.05), 0.08, 0.0, 0.5, col)
+		if k == "fire":
+			var ft = load("res://assets/art/fire-cap.jpg")
+			if ft != null:
+				cap_mat.albedo_texture = ft
+				cap_mat.albedo_color = Color.WHITE
 		cap_mat.rim_enabled = true
 		cap_mat.rim = 0.4
 		cap_mat.clearcoat_enabled = true
