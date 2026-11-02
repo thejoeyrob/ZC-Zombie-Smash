@@ -15,6 +15,8 @@ window/vsync/vsync_mode=0
 [rendering]
 renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
+renderer/rendering_method.web="gl_compatibility"
+textures/vram_compression/import_s3tc_bptc=true
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=2
 textures/default_filters/anisotropic_filtering_level=4

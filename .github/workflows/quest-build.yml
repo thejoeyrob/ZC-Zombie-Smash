@@ -156,3 +156,18 @@ jobs:
           gh release view quest-latest >/dev/null 2>&1 || gh release create quest-latest --prerelease --target "$GITHUB_SHA" --title "Fatty's Game Shack - Quest test build" --notes "$NOTES"
           gh release upload quest-latest FattysGameShack-Quest.apk --clobber
           gh release edit quest-latest --notes "$NOTES"
+
+      # The browser version: the same room, walked with mouse and keyboard. A small separate site repository picks this file up and puts it online.
+      - name: Build the browser version
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install pillow >/dev/null 2>&1 || true
+          bash quest/tools/build-web.sh quest web-site
+          echo "Build ${GITHUB_RUN_NUMBER} (commit ${GITHUB_SHA::7})" > web-site/build.txt
+          (cd web-site && zip -qr ../FattysGameShack-Web.zip .)
+          ls -la FattysGameShack-Web.zip
+          gh release upload quest-latest FattysGameShack-Web.zip --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
