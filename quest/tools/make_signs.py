@@ -5,7 +5,6 @@ from PIL import Image, ImageDraw, ImageFilter, ImageChops, ImageFont
 
 HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, "..", "vr-art")
-BARLOW = os.path.join(HERE, "..", "..", "font-barlow-condensed-900.woff2")
 OBL = "/usr/share/fonts/truetype/freefont/FreeSansBoldOblique.ttf"
 random.seed(5)
 
@@ -24,34 +23,71 @@ def glow(img, radius, k=1.0):
     return b
 
 
-def extruded(canvas, xy, txt, f, face_top, face_bot, side, outline, depth=14, stroke=8, anchor="mm"):
-    """3D-looking chunky lettering: a stack of offset copies for the extrusion, then a gradient face with an outline."""
+FONTS = os.path.join(HERE, "..", "fonts-src")
+ANTON = os.path.join(FONTS, "Anton-Regular.ttf")
+BARLOW = ANTON            # the display face for everything in the arcade: tall, bold, poster-like
+
+
+def fnt(name, sz):
+    return ImageFont.truetype(os.path.join(FONTS, name), sz)
+
+
+def extruded(canvas, xy, txt, f, face_top, face_bot, side, outline, depth=14, stroke=8, anchor="mm", glow_col=None):
+    """Poster-quality lettering: soft drop shadow, a stepped extrusion with edge light, a coloured outline,
+    a metallic face with a bright band and a dark lower band, a bevel highlight along the top and left, and an optional glow."""
     w, h = canvas.size
-    layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(layer)
-    for i in range(depth, 0, -1):
-        d.text((xy[0] + i * 0.7, xy[1] + i), txt, font=f, fill=side, anchor=anchor, stroke_width=stroke, stroke_fill=outline)
-    canvas.alpha_composite(layer)
     mask = Image.new("L", (w, h), 0)
     ImageDraw.Draw(mask).text(xy, txt, font=f, fill=255, anchor=anchor)
     bb = mask.getbbox()
+    if bb is None:
+        return
+    # glow
+    if glow_col is not None:
+        g = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        g.paste(Image.new("RGBA", (w, h), glow_col + (255,)), (0, 0), mask.filter(ImageFilter.MaxFilter(9)))
+        g = g.filter(ImageFilter.GaussianBlur(max(6, depth)))
+        canvas.alpha_composite(g)
+    # drop shadow
+    sh = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    sm = ImageChops.offset(mask.filter(ImageFilter.MaxFilter(stroke * 2 + 1)), int(depth * 0.9), int(depth * 1.3))
+    sh.paste(Image.new("RGBA", (w, h), (0, 0, 0, 170)), (0, 0), sm.filter(ImageFilter.GaussianBlur(depth * 0.6)))
+    canvas.alpha_composite(sh)
+    # stepped extrusion
+    ext = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    big = mask.filter(ImageFilter.MaxFilter(stroke * 2 + 1)) if stroke > 0 else mask
+    for i in range(depth, 0, -1):
+        shade = tuple(int(side[j] * (0.55 + 0.45 * (1 - i / depth))) for j in range(3)) + (255,)
+        ext.paste(Image.new("RGBA", (w, h), shade), (0, 0), ImageChops.offset(big, int(i * 0.5), i))
+    canvas.alpha_composite(ext)
+    # outline: dark outer line, then a thin light line inside it
+    outer = mask.filter(ImageFilter.MaxFilter(stroke * 2 + 1))
+    inner = mask.filter(ImageFilter.MaxFilter(max(3, stroke) | 1))
+    canvas.paste(Image.new("RGBA", (w, h), tuple(outline[:3]) + (255,)), (0, 0), outer)
+    light = tuple(min(255, c + 90) for c in face_top)
+    canvas.paste(Image.new("RGBA", (w, h), light + (255,)), (0, 0), inner)
+    # face: vertical gradient with a bright band near the top and a dark band near the bottom
     face = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     gd = ImageDraw.Draw(face)
-    for y in range(bb[1], bb[3]):
-        t = (y - bb[1]) / max(1, bb[3] - bb[1])
-        c = tuple(int(face_top[j] + (face_bot[j] - face_top[j]) * t) for j in range(3)) + (255,)
-        gd.line((0, y, w, y), fill=c)
-    top = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    top.paste(face, (0, 0), mask)
-    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(out).text(xy, txt, font=f, fill=(0, 0, 0, 0), anchor=anchor, stroke_width=stroke, stroke_fill=outline)
-    canvas.alpha_composite(out)
-    canvas.alpha_composite(top)
-    # a glint along the top of each letter
-    hi = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    ImageDraw.Draw(hi).text((xy[0], xy[1] - 4), txt, font=f, fill=(255, 255, 255, 90), anchor=anchor)
-    hi = ImageChops.multiply(hi, Image.merge("RGBA", (mask, mask, mask, mask.point(lambda v: 255 if v else 0))).filter(ImageFilter.MinFilter(3)))
-    canvas.alpha_composite(hi)
+    y0, y1 = bb[1], bb[3]
+    for y in range(y0, y1 + 1):
+        t = (y - y0) / max(1, y1 - y0)
+        k = t * 1.0
+        c = [face_top[j] + (face_bot[j] - face_top[j]) * k for j in range(3)]
+        if t < 0.42:
+            c = [min(255, v + 55 * (1 - t / 0.42)) for v in c]
+        if 0.46 < t < 0.52:
+            c = [v * 0.82 for v in c]
+        if t > 0.5:
+            c = [v * (1.0 - 0.18 * (t - 0.5) * 2) for v in c]
+        gd.line((0, y, w, y), fill=tuple(int(max(0, min(255, v))) for v in c) + (255,))
+    canvas.paste(face, (0, 0), mask)
+    # bevel: light along the top-left edges, shade along the bottom-right
+    up = ImageChops.subtract(mask, ImageChops.offset(mask, 0, max(2, stroke // 3)))
+    left = ImageChops.subtract(mask, ImageChops.offset(mask, max(2, stroke // 4), 0))
+    hl = ImageChops.lighter(up, left)
+    canvas.paste(Image.new("RGBA", (w, h), (255, 255, 255, 255)), (0, 0), hl.point(lambda v: int(v * 0.75)))
+    dn = ImageChops.subtract(mask, ImageChops.offset(mask, 0, -max(2, stroke // 3)))
+    canvas.paste(Image.new("RGBA", (w, h), (0, 0, 0, 255)), (0, 0), dn.point(lambda v: int(v * 0.45)))
 
 
 def banner():
@@ -67,8 +103,8 @@ def banner():
         d.ellipse((x - r, y - r, x + r, y + r), fill=(255, 255, 255, random.randint(60, 200)))
     f = font(BARLOW, 245)
     sm = font(BARLOW, 66)
-    extruded(img, (400, 265), "ZOMBIE", f, (120, 255, 70), (15, 150, 30), (10, 70, 20, 255), (5, 25, 8, 255), 16, 10)
-    extruded(img, (1115, 265), "SMASH", f, (255, 80, 55), (165, 10, 15), (90, 5, 10, 255), (30, 2, 4, 255), 16, 10)
+    extruded(img, (455, 270), "ZOMBIE", fnt("RubikWetPaint-Regular.ttf", 128), (150, 255, 90), (20, 150, 40), (15, 80, 25, 255), (8, 30, 10, 255), 14, 9, glow_col=(60, 255, 60))
+    extruded(img, (1060, 270), "SMASH", fnt("Chango-Regular.ttf", 128), (255, 120, 90), (180, 10, 20), (100, 5, 10, 255), (30, 2, 4, 255), 14, 9, glow_col=(255, 40, 20))
     d = ImageDraw.Draw(img)
     d.text((W // 2, 450), "HOLD THE LINE", font=sm, fill=(255, 226, 150, 255), anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0, 255))
     # slime drips from the top edge
@@ -94,19 +130,19 @@ def fatty():
     d.polygon(pts, fill=(255, 190, 30, 255))
     d.polygon([(cx + (x - cx) * 0.9, cy + (y - cy) * 0.9) for x, y in pts], fill=(255, 100, 40, 255))
     f = font(BARLOW, 250)
-    extruded(img, (N // 2, 400), "FATTY'S", f, (255, 245, 150), (255, 170, 20), (150, 20, 90, 255), (40, 4, 30, 255), 14, 9)
+    extruded(img, (N // 2, 400), "FATTY'S", fnt("Chango-Regular.ttf", 138), (255, 245, 150), (255, 170, 20), (150, 20, 90, 255), (40, 4, 30, 255), 14, 9)
     # ribbon with GAME SHACK
     d = ImageDraw.Draw(img)
     d.polygon([(110, 610), (914, 610), (880, 700), (914, 790), (110, 790), (144, 700)], fill=(255, 60, 150, 255), outline=(40, 4, 30, 255))
     d.line([(110, 610), (914, 610), (880, 700), (914, 790), (110, 790), (144, 700), (110, 610)], fill=(40, 4, 30, 255), width=8)
-    d.text((N // 2, 702), "GAME SHACK", font=font(BARLOW, 150), fill=(255, 255, 255, 255), anchor="mm", stroke_width=6, stroke_fill=(40, 4, 30, 255))
+    d.text((N // 2, 702), "GAME SHACK", font=fnt("Bungee-Regular.ttf", 112), fill=(255, 255, 255, 255), anchor="mm", stroke_width=6, stroke_fill=(40, 4, 30, 255))
     # a little joystick and two buttons under the ribbon
     d.rectangle((492, 820, 532, 900), fill=(220, 220, 230, 255), outline=(30, 30, 40, 255), width=4)
     d.ellipse((470, 790, 554, 874), fill=(255, 220, 30, 255), outline=(30, 30, 40, 255), width=5)
     d.rounded_rectangle((420, 890, 604, 930), 14, fill=(40, 40, 60, 255), outline=(255, 255, 255, 255), width=3)
     for bx, col in [(380, (230, 40, 50, 255)), (644, (40, 150, 250, 255))]:
         d.ellipse((bx - 30, 860, bx + 30, 920), fill=col, outline=(30, 30, 40, 255), width=5)
-    d.text((N // 2, 960), "EST. 1985  -  ZOMBIES WELCOME", font=font(BARLOW, 50), fill=(255, 226, 150, 255), anchor="mm")
+    d.text((N // 2, 960), "EST. 1985  -  ZOMBIES WELCOME", font=fnt("BebasNeue-Regular.ttf", 56), fill=(255, 226, 150, 255), anchor="mm")
     img.save(os.path.join(OUT, "fatty-logo.png"))
     # frosted-vinyl door decal: the same logo in white, dark areas see-through
     lum = img.convert("L")
@@ -128,7 +164,7 @@ def exit_sign():
     d.rounded_rectangle((6, 6, W - 6, H - 6), 40, fill=(6, 40, 14, 255), outline=(190, 200, 200, 255), width=12)
     d.rounded_rectangle((26, 26, W - 26, H - 26), 28, outline=(60, 255, 110, 255), width=5)
     f = font(BARLOW, 215)
-    extruded(img, (250, 165), "EXIT", f, (220, 255, 220), (70, 255, 120), (10, 100, 40, 255), (2, 30, 10, 255), 8, 6)
+    extruded(img, (250, 165), "EXIT", fnt("Bungee-Regular.ttf", 150), (220, 255, 220), (70, 255, 120), (10, 100, 40, 255), (2, 30, 10, 255), 8, 6)
     d = ImageDraw.Draw(img)
     # the running man, and something chasing him
     def runner(ox, oy, s, col, zombie=False):
@@ -143,8 +179,8 @@ def exit_sign():
     runner(690, 160, 2.0, (235, 255, 240, 255))
     runner(870, 160, 1.9, (120, 200, 90, 255), True)
     d.polygon([(430, 125), (490, 125), (490, 95), (555, 160), (490, 225), (490, 195), (430, 195)], fill=(60, 255, 110, 255))
-    d.text((W // 2, 340), "TO ZOMBIELAND", font=font(BARLOW, 100), fill=(255, 245, 160, 255), anchor="mm", stroke_width=5, stroke_fill=(0, 20, 5, 255))
-    d.text((W // 2, 435), "THEY ARE FRIENDLY.  MOSTLY.  NO REFUNDS ON BRAINS.", font=font(BARLOW, 36), fill=(180, 255, 200, 255), anchor="mm")
+    d.text((W // 2, 340), "TO ZOMBIELAND", font=fnt("Bungee-Regular.ttf", 74), fill=(255, 245, 160, 255), anchor="mm", stroke_width=5, stroke_fill=(0, 20, 5, 255))
+    d.text((W // 2, 435), "THEY ARE FRIENDLY.  MOSTLY.  NO REFUNDS ON BRAINS.", font=fnt("BebasNeue-Regular.ttf", 42), fill=(180, 255, 200, 255), anchor="mm")
     img.save(os.path.join(OUT, "exit-sign.png"))
 
 

@@ -20,4 +20,5 @@ cp quest/vr-art/*.jpg quest/vr-art/*.png quest/vr-art/*.obj quest/vr-art/*-atlas
 # sound: the pre-rendered effects and music
 cp snd-*.wav mus-*.wav "$Q/audio/"
 cp font-barlow-condensed-900.woff2 font-barlow-condensed-700.woff2 "$Q/fonts/"
+cp quest/fonts-src/*.ttf "$Q/fonts/"
 echo "assets: $(ls "$Q/art" | wc -l) art files, $(ls "$Q/audio" | wc -l) audio files"

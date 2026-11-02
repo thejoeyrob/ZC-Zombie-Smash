@@ -107,8 +107,8 @@ static func build(parent: Node3D) -> void:
 		rod(set_root,Vector3(9.4,y,-9.15),Vector3(12,y,-9.3),0.018,rust)
 	var fill := OmniLight3D.new()
 	fill.position = Vector3(-2,5,-8)
-	fill.light_color = Color(0.48,0.64,0.85)
-	fill.light_energy = 1.6
+	fill.light_color = Color(0.34,0.44,0.7)
+	fill.light_energy = 0.55
 	fill.omni_range = 25
 	fill.shadow_enabled = false
 	set_root.add_child(fill)

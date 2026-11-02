@@ -161,17 +161,17 @@ def poster():
     ImageDraw.Draw(vig).rectangle((90, 70, W - 90, H - 70), fill=0)
     img.paste(Image.new("RGBA", (W, H), (0, 0, 0, 255)), (0, 0), vig.filter(ImageFilter.GaussianBlur(70)))
     f = ms.font(ms.BARLOW, 235)
-    ms.extruded(img, (410, 270), "ZOMBIE", f, (120, 255, 70), (15, 150, 30), (10, 70, 20, 255), (5, 25, 8, 255), 18, 10)
-    ms.extruded(img, (1110, 270), "SMASH", f, (255, 80, 55), (165, 10, 15), (90, 5, 10, 255), (30, 2, 4, 255), 18, 10)
+    ms.extruded(img, (385, 270), "ZOMBIE", ms.fnt("RubikWetPaint-Regular.ttf", 140), (150, 255, 90), (20, 150, 40), (15, 80, 25, 255), (8, 30, 10, 255), 16, 10, glow_col=(60, 255, 60))
+    ms.extruded(img, (1140, 270), "SMASH", ms.fnt("Chango-Regular.ttf", 140), (255, 120, 90), (180, 10, 20), (100, 5, 10, 255), (30, 2, 4, 255), 16, 10, glow_col=(255, 40, 20))
     d = ImageDraw.Draw(img)
-    d.text((W // 2, 560), "HOLD THE LINE", font=ms.font(ms.BARLOW, 120), fill=(255, 226, 150, 255), anchor="mm", stroke_width=6, stroke_fill=(0, 0, 0, 255))
-    d.text((W // 2, 665), "THE ARCADE GAME  -  ONLY AT FATTY'S GAME SHACK", font=ms.font(ms.BARLOW, 54), fill=(255, 255, 255, 230), anchor="mm")
+    d.text((W // 2, 560), "HOLD THE LINE", font=ms.fnt("BebasNeue-Regular.ttf", 150), fill=(255, 226, 150, 255), anchor="mm", stroke_width=6, stroke_fill=(0, 0, 0, 255))
+    d.text((W // 2, 665), "THE ARCADE GAME  -  ONLY AT FATTY'S GAME SHACK", font=ms.fnt("BebasNeue-Regular.ttf", 66), fill=(255, 255, 255, 230), anchor="mm")
     d.rectangle((14, 14, W - 14, H - 14), outline=(255, 226, 150, 255), width=8)
     img.convert("RGB").save(os.path.join(OUT, "zs-poster.png"))
 
 
 def words():
-    f = ms.font(ms.BARLOW, 300)
+    f = ms.fnt("Bungee-Regular.ttf", 230)
     specs = [("MOVE", (255, 240, 60), (255, 130, 0), "move"), ("FIRE", (255, 120, 90), (220, 20, 40), "fire"), ("GRENADE", (110, 230, 255), (30, 110, 255), "grenade"),
              ("LOCK", (170, 255, 90), (20, 190, 80), "lock"), ("MENU", (255, 120, 210), (150, 60, 255), "menu")]
     for txt, top, bot, name in specs:

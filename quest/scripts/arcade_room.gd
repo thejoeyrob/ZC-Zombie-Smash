@@ -292,16 +292,23 @@ func _decor(root: Node3D, font: Font) -> void:
 	_frame(root, _art("poster-comic-fatamy.jpg", null), Vector3(HALF_W - 0.04, 2.4, 6.6), -1.0)
 
 
-## A framed picture on a side wall (side: +1 left wall, -1 right wall).
+## A framed picture on a side wall (side: +1 left wall, -1 right wall): a walnut and gold moulding with a mat, a soft shadow on the wall,
+## a little glare on the glass, and the picture sunk behind it.
 func _frame(root: Node3D, t: Texture2D, pos: Vector3, side: float) -> void:
 	var holder := Node3D.new()
 	var wall_x := -HALF_W + 0.04 if side > 0.0 else HALF_W - 0.04
 	holder.position = Vector3(wall_x, pos.y, pos.z)
 	holder.rotation.y = side * PI / 2.0
 	root.add_child(holder)
-	var frame := VRBuild.mat(Color(0.03, 0.02, 0.05), 0.5)
-	VRBuild.box(holder, Vector3(0.76, 1.12, 0.03), Vector3.ZERO, frame)
-	VRBuild.quad(holder, Vector2(0.72, 1.08), Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.45, 0.6))
+	var px := 0.00094                         # metres per pixel of the frame picture
+	VRBuild.box(holder, Vector3(0.64, 0.98, 0.02), Vector3(0, 0, 0.005), VRBuild.mat(Color(0.02, 0.015, 0.03), 0.6))
+	VRBuild.quad(holder, Vector2(660, 1020) * px, Vector3(0, 0, 0.017), VRBuild.tex_mat(t, 0.75, 0.55))
+	var fm := VRBuild.tex_mat(_art("frame-poster.png", null), 0.0, 0.5)
+	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	VRBuild.quad(holder, Vector2(860, 1220) * px, Vector3(0, 0, 0.03), fm)
+	var gm := VRBuild.tex_mat(_art("glass-glare.png", null), 0.0, 0.2, true)
+	gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	VRBuild.quad(holder, Vector2(660, 1020) * px, Vector3(0, 0, 0.034), gm)
 
 
 ## A glowing neon tube sign on a wall (yaw turns it to face into the room).

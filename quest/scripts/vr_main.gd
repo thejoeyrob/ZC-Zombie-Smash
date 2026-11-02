@@ -81,7 +81,9 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	_load_best()
 	progress.load_all()
-	font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
+	font = load("res://assets/fonts/Anton-Regular.ttf")
+	if font == null:
+		font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
 	_setup_xr()
 	_build_screen()
 	cartridge = Cartridges.create(Cartridges.default_id(), self)

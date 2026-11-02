@@ -73,9 +73,9 @@ def run():
     debo = P("debo-side-chatgpt.png")
     # side art: the new Debo painting, three posters cut to the outline, and the three strongest ChatGPT machines
     side("debo", debo).save(os.path.join(OUT, "side-debo.png"))
-    side("jordan", P("poster-2.png"), "JORDAN", (440, 520), 150).save(os.path.join(OUT, "side-jordan.png"))
-    side("glowinghumanity", P("poster-5.png"), "GLOWING\nHUMANITY", (440, 480), 105).save(os.path.join(OUT, "side-glowinghumanity.png"))
-    side("caffeinatedsloth", P("poster-6.png"), "CAFFEINATED\nSLOTH", (440, 480), 100).save(os.path.join(OUT, "side-caffeinatedsloth.png"))
+    side("jordan", P("poster-2.png"), "JORDAN", (440, 520), 215).save(os.path.join(OUT, "side-jordan.png"))
+    side("glowinghumanity", P("poster-5.png"), "GLOWING\nHUMANITY", (440, 470), 150).save(os.path.join(OUT, "side-glowinghumanity.png"))
+    side("caffeinatedsloth", P("poster-6.png"), "CAFFEINATED\nSLOTH", (440, 470), 142).save(os.path.join(OUT, "side-caffeinatedsloth.png"))
     for n in ["disco", "fatamy", "mantis", "joeyrob"]:
         Image.open(os.path.join(SRC, "chatgpt-round2", "side-%s.png" % n)).save(os.path.join(OUT, "side-%s.png" % n))
         Image.open(os.path.join(SRC, "chatgpt-round2", "marquee-%s.jpg" % n)).resize((1024, 341), Image.LANCZOS).save(os.path.join(OUT, "marquee-%s.jpg" % n), quality=92)
