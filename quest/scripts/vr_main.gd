@@ -1281,8 +1281,6 @@ func _run_shots() -> void:
 		"arc_l": [Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0)],
 		"arc_r": [Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0)],
 		"pinball": [Vector3(0, 1.7, 5.3), Vector3(0, 1.1, 7.2)],
-		"vending": [Vector3(1.8, 1.6, 1.6), Vector3(1.8, 1.0, -0.05)],
-		"lounge": [Vector3(-1.6, 1.7, 1.2), Vector3(0, 0.4, 2.9)],
 		"pin_top": [Vector3(0, 1.55, 6.15), Vector3(0, 0.85, 7.3)],
 		"pin_side": [Vector3(1.9, 1.3, 6.1), Vector3(0, 0.95, 7.3)],
 		"keypad": [Vector3(3.4, 1.55, 6.6), Vector3(3.95, 1.35, 7.55)],
