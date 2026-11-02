@@ -81,6 +81,39 @@ static func sphere(parent: Node, radius: float, pos: Vector3, material: Material
 	return mi
 
 
+## A picture frame that keeps its corners and stretches only its sides: the middle (the window) is left open.
+## win_uv is the window's rectangle in picture fractions (x0, y0, x1, y1); outer and inner are sizes in metres, both centred on the origin.
+static func frame9(parent: Node, tex: Texture2D, win_uv: Rect2, outer: Vector2, inner: Vector2, pos: Vector3, material: Material = null) -> MeshInstance3D:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var xs := [-outer.x / 2.0, -inner.x / 2.0, inner.x / 2.0, outer.x / 2.0]
+	var ys := [outer.y / 2.0, inner.y / 2.0, -inner.y / 2.0, -outer.y / 2.0]
+	var us := [0.0, win_uv.position.x, win_uv.end.x, 1.0]
+	var vs := [0.0, win_uv.position.y, win_uv.end.y, 1.0]
+	for j in range(3):
+		for i in range(3):
+			if i == 1 and j == 1:
+				continue
+			var a := Vector3(xs[i], ys[j], 0)
+			var b := Vector3(xs[i + 1], ys[j], 0)
+			var c := Vector3(xs[i + 1], ys[j + 1], 0)
+			var d := Vector3(xs[i], ys[j + 1], 0)
+			var ua := Vector2(us[i], vs[j])
+			var ub := Vector2(us[i + 1], vs[j])
+			var uc := Vector2(us[i + 1], vs[j + 1])
+			var ud := Vector2(us[i], vs[j + 1])
+			for t in [[a, ua], [b, ub], [c, uc], [a, ua], [c, uc], [d, ud]]:
+				st.set_normal(Vector3(0, 0, 1))
+				st.set_uv(t[1])
+				st.add_vertex(t[0])
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = material if material != null else tex_mat(tex, 0.25, 0.5)
+	mi.position = pos
+	parent.add_child(mi)
+	return mi
+
+
 static func quad(parent: Node, size: Vector2, pos: Vector3, material: Material, rot := Vector3.ZERO) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var qm := QuadMesh.new()

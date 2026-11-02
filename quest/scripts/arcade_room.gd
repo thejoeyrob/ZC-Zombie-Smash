@@ -146,6 +146,7 @@ func _machines(root: Node3D) -> void:
 		c.rotation.y = yaw
 		root.add_child(c)
 		var accent := Color.html(str(bosses[id].accent))
+		c.bezel_id = id
 		c.profile = CabProfile.get_profile("fatamy" if key == "joeyrob" else key)
 		c.side_art = _art("side-%s.png" % key, null)
 		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id == "joeyrob" else id), null)
@@ -289,7 +290,7 @@ func _decor(root: Node3D, font: Font) -> void:
 			continue
 		_frame(root, t, Vector3(m.position.x + (0.0), 2.55, m.position.z), -signf(m.position.x))
 	_frame(root, _art("poster-comic-glowing.jpg", null), Vector3(-HALF_W + 0.04, 2.4, 6.6), 1.0)
-	_frame(root, _art("poster-comic-fatamy.jpg", null), Vector3(HALF_W - 0.04, 2.4, 6.6), -1.0)
+	_frame(root, _art("poster-radiant.jpg", null), Vector3(HALF_W - 0.04, 2.4, 6.6), -1.0)
 
 
 ## A picture hung flat on a side wall (side: +1 left wall, -1 right wall): no frame, just the artwork on a thin dark backing with a soft shadow.

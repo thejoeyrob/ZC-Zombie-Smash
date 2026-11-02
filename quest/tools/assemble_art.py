@@ -86,6 +86,7 @@ def run():
     for i in range(1, 7):
         poster_frame(P("poster-%d.png" % i), "poster-%d.jpg" % i)
     poster_frame(debo, "poster-debo.jpg")
+    poster_frame(Image.open(os.path.join(SRC, "radiant-poster.png")), "poster-radiant.jpg")
     for n in ["fatamy", "glowing"]:
         poster_frame(Image.open(os.path.join(SRC, "comics", "comic-%s.png" % n)), "poster-comic-%s.jpg" % n)
     # the brick wall set
