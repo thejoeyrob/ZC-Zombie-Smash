@@ -145,6 +145,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var sm := StandardMaterial3D.new()
 	sm.albedo_texture = screen_tex
 	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.albedo_color = Color(1.35, 1.35, 1.35)       # a lit tube: brighter than a plain picture
 	sm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	screen_mat = sm
 	var screen_quad := VRBuild.quad(mon, Vector2(0.53, 0.64), Vector3(0, 0.0, 0.1005), sm)
@@ -431,7 +432,7 @@ func constrain(world: Vector3, radius: float) -> Vector3:
 	var zh := (front_z - back_z) / 2.0
 	var mon_front := monitor_z + 0.1
 	var boxes := [
-		[Vector3(0, 0.50, zc), Vector3(0.32, 0.50, zh)],                                                  # lower body below the panel
+		[Vector3(0, (deck_front_y - 0.05) / 2.0, zc), Vector3(0.32, (deck_front_y - 0.05) / 2.0, zh)],        # lower body below the control deck
 		[Vector3(0, 1.38, (back_z + mon_front) / 2.0), Vector3(0.32, 0.44, (mon_front - back_z) / 2.0)],  # monitor block
 		[Vector3(-0.335, 0.52, zc), Vector3(0.022, 0.52, zh)],                                           # left side
 		[Vector3(0.335, 0.52, zc), Vector3(0.022, 0.52, zh)],                                            # right side
@@ -504,6 +505,6 @@ func button_at(local: Vector3, reach_above := 0.05) -> String:
 			q = front_panel.transform.affine_inverse() * in_cab
 			reach = minf(reach_above, 0.04)
 		var d := Vector2(q.x - b.pos.x, q.z - b.pos.z).length()
-		if d <= float(b.radius) + 0.012 and q.y > -0.015 and q.y < reach:
+		if d <= maxf(float(b.radius), 0.04) + 0.015 and q.y > -0.03 and q.y < reach:
 			return k
 	return ""

@@ -865,6 +865,7 @@ func _locomotion(hs: Array, delta: float) -> void:
 	# smooth walking with the left stick, snap turns (45 degrees) with the right stick
 	var mv: Vector2 = hs[0].stick
 	if mv.length() > 0.2:
+		_stand_up()
 		var fwd := -cam.global_transform.basis.z
 		fwd.y = 0.0
 		fwd = fwd.normalized()
@@ -916,12 +917,40 @@ func _move_to(p: Vector3) -> void:
 	var tw := create_tween()
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.1)
 	tw.tween_callback(func():
+		_stand_up()
 		var hp := _head_floor()
 		origin.position += p - hp)
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.18)
 	tw.tween_callback(func():
 		fade_quad.visible = false
 		tele_busy = false)
+
+
+var seated := false
+
+
+## Sit on a bean bag: the player is moved onto it, turned to face the table, and lowered to seated eye height.
+func _sit(sd: Array) -> void:
+	tele_busy = true
+	audio.ui("switch")
+	fade_quad.visible = true
+	var m := fade_quad.material_override as StandardMaterial3D
+	var tw := create_tween()
+	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.12)
+	tw.tween_callback(func():
+		_place_player(sd[1], sd[2])
+		seated = true
+		origin.position.y = float(settings.lift) - 0.55)
+	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
+	tw.tween_callback(func():
+		fade_quad.visible = false
+		tele_busy = false)
+
+
+func _stand_up() -> void:
+	if seated:
+		seated = false
+		origin.position.y = float(settings.lift)
 
 
 func _floor_ok(p: Vector3) -> bool:
@@ -939,6 +968,11 @@ func _choose(id: String) -> void:
 		audio.ui("switch")
 		_open_menu()
 		return
+	if id.begins_with("sit"):
+		for sd in room.seats:
+			if sd[0] == id:
+				_sit(sd)
+				return
 	for spot in room.spots:
 		if str(spot[0]) == id:
 			teleport_to_spot(spot)
@@ -954,13 +988,10 @@ func _selector_targets() -> Array:
 		var m: Cabinet = machines[i]
 		var zf := maxf(m.front_z, m.deck_front_z) + 0.1
 		var box := AABB(Vector3(-0.35, 0.0, m.back_z), Vector3(0.7, 2.05, zf - m.back_z))
-		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color})
-	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2)})
-	out.append({"id": "jukebox", "label": "MUSIC", "xf": room.jukebox.global_transform, "box": AABB(Vector3(-0.46, 0.0, -0.15), Vector3(0.92, 1.95, 0.45)), "colour": amber})
-	out.append({"id": "vending", "label": "SNACKS", "xf": room.vending.global_transform, "box": AABB(Vector3(-0.42, 0.0, -0.45), Vector3(0.84, 1.95, 0.85)), "colour": Color(1.0, 0.4, 0.35)})
-	out.append({"id": "prizes", "label": "PRIZES", "xf": room.prize_wall.global_transform, "box": AABB(Vector3(-1.6, 1.0, -0.2), Vector3(3.2, 1.0, 0.55)), "colour": Color(1.0, 0.35, 0.75)})
-	out.append({"id": "hall", "label": "HIGH SCORES", "xf": Transform3D(Basis(Vector3.UP, PI), Vector3(2.2, 1.85, ArcadeRoom.BACK_Z - 0.1)), "box": AABB(Vector3(-1.1, -0.6, -0.1), Vector3(2.2, 1.2, 0.2)), "colour": Color(1.0, 0.85, 0.3)})
-	out.append({"id": "lounge", "label": "PLAY", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-1.35, 0.0, -1.35), Vector3(2.7, 0.7, 2.7)), "colour": Color(1.0, 0.45, 0.85)})
+		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color, "always": true})
+	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
+	for sd in room.seats:
+		out.append({"id": sd[0], "label": "SIT", "xf": Transform3D(Basis.IDENTITY, sd[1]), "box": AABB(Vector3(-0.42, 0.0, -0.42), Vector3(0.84, 0.75, 0.84)), "colour": Color(1.0, 0.45, 0.85), "always": true})
 	out.append({"id": "exit", "label": "EXIT", "xf": Transform3D(Basis.IDENTITY, Vector3(0, 0, ArcadeRoom.FRONT_Z)), "box": AABB(Vector3(-1.15, 0.0, -0.2), Vector3(2.3, 2.55, 0.4)), "colour": Color(0.4, 1.0, 0.55)})
 	return out
 
@@ -1052,6 +1083,7 @@ func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
 	var head := Vector3(cam.position.x, 0.0, cam.position.z)
 	origin.position = pos - Basis(Vector3.UP, origin.rotation.y) * head
 	origin.position.y = float(settings.lift)
+	seated = false
 
 
 func _stick(hs: Array, delta: float) -> void:
@@ -1102,7 +1134,7 @@ func _buttons(hs: Array) -> void:
 		var h: Dictionary = hs[i]
 		for use_tip in [true, false]:
 			var p: Vector3 = h.tip if use_tip else h.palm
-			var hit := cab.button_at(cab.to_panel(p), 0.032 if use_tip else 0.07)
+			var hit := cab.button_at(cab.to_panel(p), 0.06 if use_tip else 0.08)
 			if hit != "" and grab_hand != i and (hit != "menu" or use_tip):
 				down[hit] = true
 		if locked and not menu.open and str(settings.assist) == "on" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:

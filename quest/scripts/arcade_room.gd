@@ -21,6 +21,7 @@ const WAIN_H := 1.25                       # height of the panelled lower wall
 
 var machines: Array = []        # Cabinet, in the order of SLOTS
 var player_index := PLAYER_SLOT
+var seats: Array = []           # [id, bean bag position, point to face] for each bean bag you can sit on
 var spots: Array = []           # [id, label, floor position, point to face, colour]
 var flickers: Array = []        # [material, base, speed, phase, machine index]
 var sign_labels: Array = []
@@ -214,6 +215,7 @@ func _lounge(root: Node3D) -> void:
 		bag.position = c + Vector3(sin(a) * 0.95, 0, cos(a) * 0.95)
 		bag.rotation = Vector3(0.05 * sin(a * 3.0), a + 3.14, 0.04 * cos(a * 2.0))
 		root.add_child(bag)
+		seats.append(["sit%d" % i, bag.position, c + Vector3(0, 0.4, 0)])
 		var tints := {"pink": Color(1.0, 0.35, 0.65), "cyan": Color(0.35, 0.85, 1.0), "amber": Color(1.0, 0.7, 0.25), "green": Color(0.5, 0.95, 0.35), "purple": Color(0.65, 0.4, 1.0), "red": Color(1.0, 0.3, 0.3)}
 		var m := VRBuild.tex_mat(_art("tex-leather.jpg", null), 0.0, 0.55, false, tints[cols[i]])
 		m.uv1_scale = Vector3(2, 2, 1)

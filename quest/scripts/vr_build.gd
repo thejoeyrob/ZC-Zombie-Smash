@@ -324,7 +324,7 @@ static func scanline_texture() -> ImageTexture:
 	var img := Image.create(4, 4, false, Image.FORMAT_RGBA8)
 	for y in range(4):
 		for x in range(4):
-			img.set_pixel(x, y, Color(0, 0, 0, 0.0 if y % 2 == 0 else 0.16))
+			img.set_pixel(x, y, Color(0, 0, 0, 0.0 if y % 2 == 0 else 0.08))
 	return ImageTexture.create_from_image(img)
 
 ## A real neon tube: a round glass tube with a hot white core, a soft glow around it, and dark mounting clips along its length.
