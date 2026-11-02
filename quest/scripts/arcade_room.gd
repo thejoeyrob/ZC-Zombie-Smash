@@ -286,15 +286,18 @@ func _decor(root: Node3D, font: Font) -> void:
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
 	# one framed picture above each machine, all the same size and in line with it, then two comic pages in the back corners
-	var pics := {"m0": "poster-fire.jpg", "m1": "poster-neon.jpg", "m2": "poster-debo.jpg", "m3": "poster-sloth.jpg",
-		"m4": "poster-disco.jpg", "m5": "poster-comic-fatamy.jpg", "m6": "poster-mantis.jpg", "m7": "poster-crowd.jpg"}
+	var pics := {"m0": "battle-jordan.jpg", "m1": "battle-glowinghumanity.jpg", "m2": "battle-debo.jpg", "m3": "battle-caffeinatedsloth.jpg",
+		"m4": "battle-discoman.jpg", "m5": "battle-fatamy.jpg", "m6": "battle-drmantis.jpg", "m7": "poster-crowd.jpg"}
 	for i in range(machines.size()):
 		var m: Cabinet = machines[i]
 		var t: Texture2D = _art(pics["m%d" % i], null)
 		if t == null:
 			continue
 		_frame(root, t, Vector3(m.position.x + (0.0), 2.55, m.position.z), -signf(m.position.x))
-	_frame(root, _art("poster-comic-glowing.jpg", null), Vector3(-HALF_W + 0.04, 2.4, 6.6), 1.0)
+	# the five best posters fill the spare wall space: either side of the entrance, and the back corners
+	_frame(root, _art("poster-fire.jpg", null), Vector3(-HALF_W + 0.04, 2.4, -0.05), 1.0)
+	_frame(root, _art("poster-mantis.jpg", null), Vector3(HALF_W - 0.04, 2.4, -0.05), -1.0)
+	_frame(root, _art("poster-neon.jpg", null), Vector3(-HALF_W + 0.04, 2.4, 6.6), 1.0)
 	_frame(root, _art("poster-radiant.jpg", null), Vector3(HALF_W - 0.04, 2.4, 6.6), -1.0)
 
 
