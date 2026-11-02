@@ -258,6 +258,7 @@ render_mode unshaded, cull_disabled, depth_draw_opaque;
 uniform sampler2D tex : source_color, filter_linear_mipmap;
 uniform vec4 fog_col : source_color = vec4(0.05, 0.07, 0.12, 1.0);
 uniform vec4 rim_col : source_color = vec4(0.9, 0.35, 0.1, 1.0);
+uniform float rim = 0.0;
 uniform float fog = 0.0;
 uniform float sway = 0.0;
 uniform float lunge = 0.0;
@@ -276,7 +277,7 @@ void fragment() {
 	float edge = 1.0 - c.a;
 	vec3 body = mix(vec3(0.0), fog_col.rgb, fog);
 	float glint = smoothstep(0.35, 0.9, texture(tex, UV + vec2(0.012, 0.0)).a) - smoothstep(0.35, 0.9, texture(tex, UV - vec2(0.012, 0.0)).a);
-	body += rim_col.rgb * clamp(glint, 0.0, 1.0) * 0.5 * (1.0 - fog);
+	body += rim_col.rgb * clamp(glint, 0.0, 1.0) * 0.5 * (1.0 - fog) * rim;
 	ALBEDO = body;
 }
 """
@@ -364,7 +365,7 @@ func _pass_by(delta: float) -> void:
 	zombie.position = Vector3(_x, _y + absf(step) * (0.07 if _kind != "crawl" else 0.025), _z)
 	zombie.rotation.z = -_dir * (0.22 if _speed > 5.0 else 0.12) + step * 0.06
 	zombie_mat_sh.set_shader_parameter("sway", -_dir * (0.6 + 0.4 * step))
-	zombie_mat_sh.set_shader_parameter("fog", 0.0)
+	zombie_mat_sh.set_shader_parameter("fog", 0.3)
 	if absf(_x) > 6.2 and signf(_x) == _dir:
 		_end_pass()
 
@@ -376,7 +377,7 @@ func _end_pass() -> void:
 		_burst -= 1
 		_timer = randf_range(0.6, 2.2)
 	else:
-		_timer = randf_range(14.0, 45.0)
+		_timer = randf_range(25.0, 80.0)
 
 
 ## Everything out there that moves by itself.
@@ -424,13 +425,13 @@ func _start_pass() -> void:
 	_walking = true
 	_dir = 1.0 if randf() < 0.5 else -1.0
 	var r := randf()
-	_kind = "approach" if (r < 0.5 or force_approach) else ("dash" if r < 0.8 else ("crawl" if r < 0.92 else "tall"))
+	_kind = "approach" if force_approach else ("dash" if r < 0.8 else ("crawl" if r < 0.9 else "tall"))
 	var file: String = SHAPES[randi() % SHAPES.size()]
 	zombie_mat_sh.set_shader_parameter("tex", load("res://assets/art/" + file))
 	_size = 1.5 + randf() * 0.6
 	_z = randf_range(-0.55, -0.9)
 	_y = 0.9
-	_speed = randf_range(6.5, 9.0)
+	_speed = randf_range(9.5, 13.0)
 	_stopped = false
 	_appr = 0.0
 	match _kind:

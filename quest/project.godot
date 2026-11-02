@@ -16,13 +16,15 @@ window/vsync/vsync_mode=0
 renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
 textures/vram_compression/import_etc2_astc=true
-anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/msaa_3d=2
+textures/default_filters/anisotropic_filtering_level=4
+textures/default_filters/use_nearest_mipmap_filter=false
 environment/defaults/default_clear_color=Color(0.02, 0.01, 0.05, 1)
 
 [xr]
 openxr/enabled=true
 openxr/reference_space=2
-openxr/foveation_level=2
+openxr/foveation_level=1
 openxr/foveation_dynamic=true
 openxr/extensions/hand_tracking=true
 shaders/enabled=true

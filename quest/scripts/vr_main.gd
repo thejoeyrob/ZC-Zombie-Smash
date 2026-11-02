@@ -81,9 +81,7 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	_load_best()
 	progress.load_all()
-	font = load("res://assets/fonts/Anton-Regular.ttf")
-	if font == null:
-		font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
+	font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
 	_setup_xr()
 	_build_screen()
 	cartridge = Cartridges.create(Cartridges.default_id(), self)
@@ -183,6 +181,9 @@ func _setup_xr() -> void:
 		xr_on = true
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		get_viewport().use_xr = true
+		get_viewport().msaa_3d = Viewport.MSAA_4X
+		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
+		iface.render_target_size_multiplier = 1.3          # draw each eye 30% sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
 		cam = XRCamera3D.new()
 		origin.add_child(cam)
