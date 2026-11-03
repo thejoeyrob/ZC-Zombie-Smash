@@ -27,6 +27,7 @@ var pressed := {}         # name -> bool
 var neon: Array = []
 var theme_color := Color(0.1, 0.85, 0.35)
 var side_art: Texture2D        # picture for the outside of both sides
+var side_text := false         # the side picture has writing on it: keep the writing readable on both sides (otherwise the right side is a true mirror, so the shape lines up)
 var bezel_id := ""            # which boss's ornate screen frame this machine wears
 var profile: Dictionary = {}   # outline of that picture (see CabProfile)
 var attract_tex: Texture2D     # what the screen shows when nobody is playing
@@ -110,7 +111,32 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		add_child(coin_light)
 		for sx in [-0.325, 0.325]:       # glowing trim down both front edges
 			VRBuild.box(self, Vector3(0.016, body_h, 0.018), Vector3(sx, body_h / 2.0, front_z - 0.004), trim)
-	VRBuild.box(self, Vector3(0.67, 1.9, 0.03), Vector3(0, 0.95, back_z + 0.015), black_tex)             # the back board: flat black
+	# the back board leans with the back edge of the side panels: fit a straight line to that edge and tilt the board to match
+	var tilt := 0.0
+	var back_at := back_z
+	if not poly.is_empty():
+		var n := 0.0
+		var sy := 0.0
+		var sz := 0.0
+		var syy := 0.0
+		var syz := 0.0
+		for k in range(12):
+			var yy := 0.2 + float(k) * 0.14
+			var edge := CabProfile.edges_at(poly, 1.0 - yy / CabProfile.H_M)
+			if edge.x > 1.0e8:
+				continue
+			var zz := CabProfile.z_of(edge.x)
+			n += 1.0
+			sy += yy
+			sz += zz
+			syy += yy * yy
+			syz += yy * zz
+		if n > 3.0 and absf(n * syy - sy * sy) > 0.0001:
+			var slope := (n * syz - sy * sz) / (n * syy - sy * sy)
+			tilt = atan(clampf(slope, -0.5, 0.5))
+			back_at = (sz - slope * sy) / n + slope * 0.95 + 0.012
+	var board := VRBuild.box(self, Vector3(0.67, 1.9 / maxf(cos(tilt), 0.5), 0.03), Vector3(0, 0.95, back_at + 0.015), black_tex, Vector3(tilt, 0, 0))     # the back board: flat black, leaning like the sides
+	board.name = "BackBoard"
 	VRBuild.box(self, Vector3(0.67, 0.03, depth), Vector3(0, 0.015, mid_z), dark)
 	# control panel: one flat, textured painted surface in the theme colour, edged in chrome
 	panel = Node3D.new()
@@ -276,7 +302,7 @@ func _build_sides(poly: Array, body: Material) -> void:
 	dark.cull_mode = BaseMaterial3D.CULL_DISABLED
 	# the picture reads the right way round from outside on the left side; it is mirrored on the right
 	VRBuild.picture_slab(self, pts, uvs, -0.335, 0.04, -1.0, picture, dark, false)
-	VRBuild.picture_slab(self, pts, uvs, 0.335, 0.04, 1.0, picture, dark, true)
+	VRBuild.picture_slab(self, pts, uvs, 0.335, 0.04, 1.0, picture, dark, side_text)
 
 
 func _sheen() -> GradientTexture2D:

@@ -139,6 +139,7 @@ func _machines(root: Node3D) -> void:
 		c.bezel_id = id
 		c.profile = CabProfile.get_profile("fatamy" if key == "joeyrob" else key)
 		c.side_art = _art("side-%s.png" % key, null)
+		c.side_text = id in ["joeyrob", "debo"]       # these two sides have writing on them: keep it readable on both
 		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id == "joeyrob" else id), null)
 		c.build(arena, _art("marquee-%s.jpg" % key, null), accent.darkened(0.8), accent, true, str(bosses[id].name))
 		c.set_lock_light(i == player_index)      # red = somebody is playing here, green = free
