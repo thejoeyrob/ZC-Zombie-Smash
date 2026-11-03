@@ -1338,6 +1338,10 @@ func _run_shots() -> void:
 		"themed": [Vector3(-2.2, 1.6, 2.3), Vector3(-2.7, 1.1, 0.9)],
 		"themed2": [Vector3(2.2, 1.6, 2.3), Vector3(2.7, 1.1, 0.9)],
 	}
+	for mi in range(machines.size()):
+		var mc: Cabinet = machines[mi]
+		views["m%d_R" % mi] = [mc.to_global(Vector3(1.1, 1.1, -0.3)), mc.to_global(Vector3(0, 1.0, -0.3))]
+		views["m%d_L" % mi] = [mc.to_global(Vector3(-1.1, 1.1, -0.3)), mc.to_global(Vector3(0, 1.0, -0.3))]
 	var plan: Array = String(args.get("views", "head,panel,overview,door,pinball")).split(",")
 	if args.has("intro"):
 		_begin_intro()
