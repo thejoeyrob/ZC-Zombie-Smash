@@ -1147,6 +1147,13 @@ func _buttons(hs: Array) -> void:
 				run_assisted = true
 		if h.get("b", false):
 			down["pause"] = true
+	# the joystick does everything: left and right to move, push it away from you to fire, pull it toward you for a grenade
+	var stick_fp := pitch / (Cabinet.MAX_TILT * 0.7)
+	if locked and grab_hand >= 0:
+		if stick_fp < -0.62:
+			down["fire"] = true
+		elif stick_fp > 0.62:
+			down["grenade"] = true
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
 	var fire_edge: bool = down.fire and not fire_now
