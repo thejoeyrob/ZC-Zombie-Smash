@@ -12,9 +12,9 @@ const ARC_CENTRE := Vector3(0, 0, 2.9)
 const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 # [x, z, yaw in degrees, which boss]: four machines along each side wall, each turned a little toward the lounge so its painted side faces the door
-const SLOTS := [[-3.13, 0.9, 72.0, "jordan"], [-3.13, 2.4, 78.0, "glowinghumanity"], [-3.13, 3.9, 102.0, "debo"], [-3.13, 5.4, 108.0, "caffeinatedsloth"],
-	[3.13, 0.9, -72.0, "discoman"], [3.13, 2.4, -78.0, "fatamy"], [3.13, 3.9, -102.0, "drmantis"], [3.13, 5.4, -108.0, "joeyrob"]]
-const PLAYER_SLOT := 5
+const SLOTS := [[-3.13, 1.2, 74.0, "debo"], [-3.13, 3.15, 90.0, "drmantis"], [-3.13, 5.1, 106.0, "caffeinatedsloth"],
+	[3.13, 1.2, -74.0, "discoman"], [3.13, 3.15, -90.0, "joeyrob"], [3.13, 5.1, -106.0, "fatamy"]]
+const PLAYER_SLOT := 4
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
 const TRIM := Color(0.25, 0.17, 0.32)      # beams, posts and mouldings
 const WAIN_H := 1.25                       # height of the panelled lower wall
@@ -50,15 +50,8 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	we.environment = env
 	root.add_child(we)
 	# real dark brick walls with neon tubes, like a proper old arcade
-	var wood := VRBuild.tex_mat(_art("wall-brick-hd.jpg", _art("wall-brick.jpg", null)), 0.0, 1.0, false, Color(0.95, 0.9, 1.05))
-	var brick_n = _art("wall-brick-hd-normal.png", null)
-	if brick_n != null:
-		wood.normal_enabled = true
-		wood.normal_texture = brick_n
-		wood.normal_scale = 0.8
-	var brick_r = _art("wall-brick-hd-roughness.png", null)
-	if brick_r != null:
-		wood.roughness_texture = brick_r
+	# real dark brick: a photographed medieval brick set (colour, bumps and roughness), darkened for the late-night mood
+	var wood := VRBuild.pbr("brick", Color(0.5, 0.44, 0.5), Vector2.ONE, 1.1)
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -82,13 +75,9 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.tex_mat(_art("carpet.jpg", VRBuild.carpet_texture()), 0.0, 0.95, false, Color(0.55, 0.55, 0.62))      # calmer: the confetti is a background, not the show
-	carpet.uv1_scale = Vector3(w / 1.4, d / 1.4, 1)
-	carpet.texture_repeat = true
+	var carpet := VRBuild.pbr("carpet", Color(0.82, 0.82, 0.9), Vector2(w / 1.8, d / 1.8), 0.8)       # a woven checker carpet
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	var ceiling := VRBuild.tex_mat(_art("tex-neon.jpg", _art("ceiling-tiles.jpg", null)), 0.2, 0.9, false, Color(0.7, 0.7, 0.8))
-	ceiling.uv1_scale = Vector3(w / 2.4, d / 2.4, 1)
-	ceiling.texture_repeat = true
+	var ceiling := VRBuild.pbr("tiles", Color(0.22, 0.22, 0.3), Vector2(w / 2.4, d / 2.4), 0.8)      # dark ceiling tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
 	# the back wall and the two side walls (the front wall, with the door, belongs to the door scene)
 	var walls := [[Vector3(0, 0, BACK_Z), PI, w], [Vector3(-HALF_W, 0, cz), PI / 2, d], [Vector3(HALF_W, 0, cz), -PI / 2, d]]
@@ -107,7 +96,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.12, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.mat(Color(0.02, 0.02, 0.04), 0.6))   # black skirting
+		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.pbr("plate-blue", Color(0.55, 0.55, 0.62), Vector2(wall[2] / 1.2, 0.1)))   # worn blue-steel skirting
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [1.4, 3.4, 5.4]:
@@ -152,7 +141,6 @@ func _machines(root: Node3D) -> void:
 		c.side_art = _art("side-%s.png" % key, null)
 		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id == "joeyrob" else id), null)
 		c.build(arena, _art("marquee-%s.jpg" % key, null), accent.darkened(0.8), accent, true, str(bosses[id].name))
-		VRBuild.quad(c, Vector2(2.3, 2.3), Vector3(0, 0.012, 0.85), _pool(accent), Vector3(-PI / 2, 0, 0))     # a soft pool of the machine's colour on the floor
 		c.set_lock_light(i == player_index)      # red = somebody is playing here, green = free
 		c.set_lit(i == player_index)
 		machines.append(c)
@@ -216,14 +204,11 @@ func _lounge(root: Node3D) -> void:
 		bag.rotation = Vector3(0.05 * sin(a * 3.0), a + 3.14, 0.04 * cos(a * 2.0))
 		root.add_child(bag)
 		seats.append(["sit%d" % i, bag.position, c + Vector3(0, 0.4, 0)])
-		var tints := {"pink": Color(1.0, 0.35, 0.65), "cyan": Color(0.35, 0.85, 1.0), "amber": Color(1.0, 0.7, 0.25), "green": Color(0.5, 0.95, 0.35), "purple": Color(0.65, 0.4, 1.0), "red": Color(1.0, 0.3, 0.3)}
-		var m := VRBuild.tex_mat(_art("tex-leather.jpg", null), 0.0, 0.55, false, tints[cols[i]])
-		m.uv1_scale = Vector3(2, 2, 1)
-		m.texture_repeat = true
+		var tints := {"pink": Color(1.0, 0.55, 0.78), "cyan": Color(0.5, 0.9, 1.0), "amber": Color(1, 1, 1), "green": Color(0.6, 0.95, 0.5), "purple": Color(0.78, 0.6, 1.0), "red": Color(1, 1, 1)}
+		var leather := {"amber": "leather-orange", "red": "leather-red"}
+		var m := VRBuild.pbr(str(leather.get(cols[i], "leather-cream")), tints[cols[i]], Vector2(2, 2), 0.9)
 		m.clearcoat_enabled = true
-		m.clearcoat = 0.25
-		m.rim_enabled = true
-		m.rim = 0.25
+		m.clearcoat = 0.2
 		var body := VRBuild.sphere(bag, 0.36, Vector3(0, 0.21, 0), m, 28)
 		body.scale = Vector3(1.0, 0.68, 0.95)
 		var back := VRBuild.sphere(bag, 0.28, Vector3(0, 0.32, -0.2), m, 24)      # the raised back sits on the outside, away from the table
@@ -247,7 +232,6 @@ func _lounge(root: Node3D) -> void:
 		VRBuild.sphere(table, 0.016, px + Vector3(0, 0.03, 0), VRBuild.mat(pc, 0.3, 0.1, 0.4, pc), 12)
 	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.14, 0.445, 0.1), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.3, 0.5, 0.2))
 	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.19, 0.445, 0.04), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.1, 0.9, 0.4))
-	VRBuild.quad(root, Vector2(3.4, 3.4), c + Vector3(0, 0.014, 0), _pool(Color(1.0, 0.35, 0.8)), Vector3(-PI / 2, 0, 0))
 	blockers.append([c.x, c.z, 0.55])
 
 
@@ -287,20 +271,11 @@ func _decor(root: Node3D, font: Font) -> void:
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
-	# one framed picture above each machine, all the same size and in line with it, then two comic pages in the back corners
-	var pics := {"m0": "battle-jordan.jpg", "m1": "battle-glowinghumanity.jpg", "m2": "battle-debo.jpg", "m3": "battle-caffeinatedsloth.jpg",
-		"m4": "battle-discoman.jpg", "m5": "battle-fatamy.jpg", "m6": "battle-drmantis.jpg", "m7": "poster-crowd.jpg"}
-	for i in range(machines.size()):
-		var m: Cabinet = machines[i]
-		var t: Texture2D = _art(pics["m%d" % i], null)
-		if t == null:
-			continue
-		_frame(root, t, Vector3(m.position.x + (0.0), 2.55, m.position.z), -signf(m.position.x))
-	# the five best posters fill the spare wall space: either side of the entrance, and the back corners
-	_frame(root, _art("poster-fire.jpg", null), Vector3(-HALF_W + 0.04, 2.4, -0.05), 1.0)
-	_frame(root, _art("poster-mantis.jpg", null), Vector3(HALF_W - 0.04, 2.4, -0.05), -1.0)
-	_frame(root, _art("poster-neon.jpg", null), Vector3(-HALF_W + 0.04, 2.4, 6.6), 1.0)
-	_frame(root, _art("poster-radiant.jpg", null), Vector3(HALF_W - 0.04, 2.4, 6.6), -1.0)
+	# four framed posters, only in the gaps on the side walls between the machines
+	_frame(root, _art("poster-fire.jpg", null), Vector3(-HALF_W + 0.04, 2.0, 2.18), 1.0)
+	_frame(root, _art("poster-neon.jpg", null), Vector3(-HALF_W + 0.04, 2.0, 4.12), 1.0)
+	_frame(root, _art("poster-mantis.jpg", null), Vector3(HALF_W - 0.04, 2.0, 2.18), -1.0)
+	_frame(root, _art("poster-radiant.jpg", null), Vector3(HALF_W - 0.04, 2.0, 4.12), -1.0)
 
 
 ## A picture hung flat on a side wall (side: +1 left wall, -1 right wall): no frame, just the artwork on a thin dark backing with a soft shadow.

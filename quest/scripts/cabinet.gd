@@ -88,10 +88,8 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var mid_z := (front_z + back_z) / 2.0
 	var depth := front_z - back_z
 	# lower body: the front is painted in the game's colour, with a chrome coin door and kick plate and glowing edge trim
-	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
-	var black_tex := VRBuild.tex_mat(VRBuild.panel_texture(Color(0.045, 0.045, 0.05), 11), 0.0, 0.7)    # flat black with a subtle grain
-	black_tex.uv1_scale = Vector3(3, 6, 1)
-	black_tex.texture_repeat = true
+	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)    # brushed steel
+	var black_tex := VRBuild.pbr("plate-blue", Color(0.34, 0.34, 0.42), Vector2(1.0, 1.4), 0.9)    # worn, dark blue steel plate
 	var front_paint := black_tex
 	var body_h := deck_front_y - 0.05          # the lower body stops just under the control deck's front lip
 	VRBuild.box(self, Vector3(0.67, body_h, 0.03), Vector3(0, body_h / 2.0, front_z - 0.012), front_paint)
@@ -121,10 +119,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	panel.rotation = Vector3(PANEL_TILT, 0, 0)
 	add_child(panel)
 	var panel_col := trim_color.darkened(0.48)
-	var pm := VRBuild.tex_mat(VRBuild.panel_texture(panel_col, int(trim_color.r * 255.0 + trim_color.g * 91.0)), 0.0, 0.42)
-	pm.uv1_scale = Vector3(4.0, 2.2, 1)
-	pm.texture_repeat = true
-	pm.metallic = 0.2
+	var pm := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(1.6, 1.0), 1.0)       # the control deck is wrapped in black leather
 	VRBuild.box(panel, Vector3(0.66, 0.04, 0.34), Vector3(0, -0.02, 0), pm)
 	VRBuild.box(panel, Vector3(0.68, 0.026, 0.022), Vector3(0, -0.012, 0.18), chrome)                # front lip
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(-0.337, -0.012, 0.0), chrome)           # side lips
@@ -322,7 +317,7 @@ func look_world() -> Vector3:
 
 
 func _build_controls() -> void:
-	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)
+	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)
 	var brass := VRBuild.mat(Color(0.8, 0.6, 0.22), 0.25, 0.9)
 	var black := VRBuild.mat(Color(0.012, 0.012, 0.016), 0.35, 0.2)
 	var rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
@@ -345,9 +340,9 @@ func _build_controls() -> void:
 	VRBuild.cylinder(stick_pivot, 0.007, STICK_LENGTH, Vector3(0, STICK_LENGTH / 2.0, 0), steel, -1.0, Vector3.ZERO, 14)
 	VRBuild.cylinder(stick_pivot, 0.016, 0.005, Vector3(0, 0.022, 0), chrome, -1.0, Vector3.ZERO, 20)
 	VRBuild.cylinder(stick_pivot, 0.011, 0.012, Vector3(0, STICK_LENGTH - 0.026, 0), black, 0.009, Vector3.ZERO, 16)    # the ball's collar
-	ball_mat = VRBuild.mat(Color("#f5b800"), 0.12, 0.0)
+	ball_mat = VRBuild.pbr("leather-cream", Color("#f5b800"), Vector2(1.5, 1.5), 0.7)      # a leather-covered topper, any colour
 	ball_mat.rim_enabled = true
-	ball_mat.rim = 0.35
+	ball_mat.rim = 0.3
 	ball_mat.clearcoat_enabled = true
 	ball_mat.clearcoat = 1.0
 	ball_mat.clearcoat_roughness = 0.05

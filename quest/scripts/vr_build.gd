@@ -395,3 +395,33 @@ static func neon_tube(parent: Node, length: float, pos: Vector3, color: Color, r
 		box(root, Vector3(0.016, 0.016, standoff), Vector3(x, 0, -standoff / 2.0), clip_m)
 	return root
 
+## A realistic surface from a photographed material set: colour, normal (bumps) and roughness pictures called pbr-<name>-c/n/r in the art folder
+## (plus -m for metal where the material has one). tint multiplies the colour; uv is how many times it repeats across a unit quad.
+static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_scale := 1.0, metallic := 0.0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	var c = load("res://assets/art/pbr-%s-c.jpg" % name)
+	var n = load("res://assets/art/pbr-%s-n.png" % name)
+	var r = load("res://assets/art/pbr-%s-r.jpg" % name)
+	var mt = load("res://assets/art/pbr-%s-m.jpg" % name)
+	if c != null:
+		m.albedo_texture = c
+	m.albedo_color = tint
+	if n != null:
+		m.normal_enabled = true
+		m.normal_texture = n
+		m.normal_scale = normal_scale
+	if r != null:
+		m.roughness_texture = r
+		m.roughness = 1.0
+	else:
+		m.roughness = 0.7
+	if mt != null:
+		m.metallic_texture = mt
+		m.metallic = 1.0
+	else:
+		m.metallic = metallic
+	m.uv1_scale = Vector3(uv.x, uv.y, 1)
+	m.texture_repeat = true
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	return m
+
