@@ -402,7 +402,7 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	var c = load("res://assets/art/pbr-%s-c.jpg" % name)
 	var n = load("res://assets/art/pbr-%s-n.png" % name)
 	var r = load("res://assets/art/pbr-%s-r.jpg" % name)
-	var mt = load("res://assets/art/pbr-%s-m.jpg" % name)
+	var mt = load("res://assets/art/pbr-%s-m.jpg" % name) if ResourceLoader.exists("res://assets/art/pbr-%s-m.jpg" % name) else null
 	if c != null:
 		m.albedo_texture = c
 	m.albedo_color = tint
