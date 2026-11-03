@@ -63,6 +63,14 @@ func build(root: Node3D, list: Array, font: Font) -> void:
 	add_child(_ring)
 
 
+func relabel(id: String, text: String) -> void:
+	for i in range(targets.size()):
+		if str(targets[i].id) == id:
+			targets[i].label = text
+			if _hints.has(i):
+				(_hints[i] as Label3D).text = text
+
+
 func set_shown(on: bool) -> void:
 	shown = on
 	if not on:
@@ -172,7 +180,7 @@ func _process(delta: float) -> void:
 	_word.scale = Vector3.ONE * (1.0 + 0.06 * sin(_t * 4.0))
 	for i in _hints:
 		var h: Label3D = _hints[i]
-		h.visible = shown
+		h.visible = shown and h.text != ""
 		var on: bool = (i == hover)
 		h.modulate = Color(1, 1, 1, 1.0) if on else Color(1, 1, 1, 0.35 + 0.4 * pulse)
 		h.scale = Vector3.ONE * (1.35 if on else 1.0 + 0.05 * pulse)

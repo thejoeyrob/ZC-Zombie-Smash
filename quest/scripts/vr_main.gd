@@ -96,6 +96,14 @@ func _ready() -> void:
 	room.pinball.set_enabled(true)      # the pinball machine is always playable
 	room.pinball.table.best = progress.pinball_best
 	room.pinball.table.bonus_balls = progress.codes.has("pinball")
+	room.pinball2.set_enabled(true)
+	room.board_game.event.connect(func(n):
+		var m := {"roll": "throw", "hop": "click", "grenade": "clear", "zombie": "hurt", "heart": "pickup", "boss": "doom", "win": "chime"}
+		if m.has(n):
+			audio.sfx(m[n], 0.6, 0.02, room.board_game.global_position + Vector3(0, 0.3, 0)))
+	room.pinball2.table.best = progress.pinball_best
+	room.pinball2.table.bonus_balls = progress.codes.has("pinball")
+	room.pinball2.sound.connect(_on_pinball_sound)
 	room.vending.code_entered.connect(_on_code)
 	room.vending.key_pressed.connect(func(k, ok): audio.sfx("key" if ok else "error", 0.7, 0.0, room.vending.global_position + Vector3(0, 1.3, 0.5)); _haptic(-1, 0.2, 0.03))
 	room.pinball.sound.connect(_on_pinball_sound)
@@ -343,6 +351,7 @@ func _on_code(action: String) -> void:
 			progress.save()
 		room.pinball.table.bonus_balls = true       # the secret code gives the pinball machine five balls a game
 		room.pinball.table.balls_left = 5
+		room.pinball2.table.bonus_balls = true
 		audio.sfx("clear", 0.9)
 		audio.sfx("chime", 0.8, 0.0, room.pinball.global_position + Vector3(0, 1.0, 0))
 
@@ -356,7 +365,7 @@ func _on_pinball_sound(n: String, pos: Vector3) -> void:
 	elif n == "bump":
 		_haptic(-1, 0.4, 0.05)
 	elif n == "over":
-		progress.pinball_best = maxi(progress.pinball_best, room.pinball.table.best)
+		progress.pinball_best = maxi(progress.pinball_best, maxi(room.pinball.table.best, room.pinball2.table.best))
 		progress.save()
 		room.hall.refresh()
 
@@ -558,6 +567,7 @@ func _process(delta: float) -> void:
 		_fix_poses()
 	room.animate(clock)
 	room.prize_wall.animate(delta)
+	selector.relabel("dice", room.board_game.hint())
 	_calibrate(delta)
 	var hs := _read_hands(delta)
 	_pose_hands(hs)
@@ -719,13 +729,15 @@ func _world_inputs(hs: Array) -> void:
 		_jb_last[i2] = jb
 	var near := _head_floor().distance_to(room.pinball.stand_world()) < 1.5 and not menu.open
 	room.pinball.interact(tips, palms, hs[0].trigger and near, hs[1].trigger and near, (hs[0].a or hs[1].a), near)
+	var near2 := _head_floor().distance_to(room.pinball2.stand_world()) < 1.5 and not menu.open
+	room.pinball2.interact(tips, palms, hs[0].trigger and near2, hs[1].trigger and near2, (hs[0].a or hs[1].a), near2)
 
 
 func _solid(p: Vector3, r: float) -> Vector3:
 	var out := p
 	for m in machines:
 		out = m.constrain(out, r)
-	return room.pinball.constrain(out, r)
+	return room.pinball2.constrain(room.pinball.constrain(out, r), r)
 
 
 ## Works out the hand the player sees (solid against the machine) and the points that touch the controls.
@@ -968,6 +980,9 @@ func _choose(id: String) -> void:
 		audio.ui("switch")
 		_open_menu()
 		return
+	if id == "dice":
+		room.board_game.roll_human()
+		return
 	if id.begins_with("sit"):
 		for sd in room.seats:
 			if sd[0] == id:
@@ -989,6 +1004,8 @@ func _selector_targets() -> Array:
 		var zf := maxf(m.front_z, m.deck_front_z) + 0.1
 		var box := AABB(Vector3(-0.35, 0.0, m.back_z), Vector3(0.7, 2.05, zf - m.back_z))
 		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color, "always": true})
+	out.append({"id": "dice", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-0.42, 0.92, -0.42), Vector3(0.84, 0.3, 0.84)), "colour": Color(0.4, 1.0, 0.3), "always": true})
+	out.append({"id": "pinball2", "label": "PLAY", "xf": room.pinball2.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	for sd in room.seats:
 		out.append({"id": sd[0], "label": "SIT", "xf": Transform3D(Basis.IDENTITY, sd[1]), "box": AABB(Vector3(-0.25, 0.0, -0.25), Vector3(0.5, 0.85, 0.5)), "colour": Color(1.0, 0.45, 0.85), "always": true})
