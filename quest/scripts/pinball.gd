@@ -30,7 +30,7 @@ var _grab_z := 0.0
 
 func build(font: Font, art_dir := "res://assets/art/") -> void:
 	var body := VRBuild.mat(Color(0.07, 0.05, 0.1), 0.45, 0.35)
-	var chrome := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.15)    # brushed steel
+	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)    # brushed steel
 	var dark := VRBuild.mat(Color(0.015, 0.015, 0.02), 0.6)
 	var glow := VRBuild.mat(Color(1.0, 0.3, 0.7), 0.4, 0.0, 2.6)
 	var side = load(art_dir + "side-pinball.png")
@@ -112,7 +112,7 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 		add_child(btn)
 		VRBuild.cylinder(btn, 0.044, 0.016, Vector3(sx * 0.0, 0, 0), chrome, 0.04, Vector3(0, 0, PI / 2), 28)
 		VRBuild.cylinder(btn, 0.048, 0.006, Vector3(-sx * 0.008, 0, 0), black_rubber, -1.0, Vector3(0, 0, PI / 2), 28)
-		var cap := VRBuild.cylinder(btn, 0.036, 0.034, Vector3(sx * 0.022, 0, 0), VRBuild.mat(Color(1.0, 0.45, 0.1), 0.12, 0.0, 0.6), 0.034, Vector3(0, 0, PI / 2), 28)
+		var cap := VRBuild.cylinder(btn, 0.036, 0.034, Vector3(sx * 0.022, 0, 0), VRBuild.pbr("leather-red3", Color(1.15, 1.0, 0.9), Vector2(1, 1), 1.0), 0.034, Vector3(0, 0, PI / 2), 28)
 		_flip_buttons[i] = cap
 	# plunger: a chrome rod and a red knob that sticks out of the front on the right
 	var lane_x := (366.0 - 200.0) / 400.0 * PF_W

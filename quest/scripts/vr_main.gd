@@ -940,7 +940,7 @@ func _sit(sd: Array) -> void:
 	tw.tween_callback(func():
 		_place_player(sd[1], sd[2])
 		seated = true
-		origin.position.y = float(settings.lift) - 0.55)
+		origin.position.y = float(settings.lift) - float(sd[3]) if sd.size() > 3 else float(settings.lift) - 0.55)
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
 	tw.tween_callback(func():
 		fade_quad.visible = false
@@ -991,7 +991,7 @@ func _selector_targets() -> Array:
 		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color, "always": true})
 	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	for sd in room.seats:
-		out.append({"id": sd[0], "label": "SIT", "xf": Transform3D(Basis.IDENTITY, sd[1]), "box": AABB(Vector3(-0.42, 0.0, -0.42), Vector3(0.84, 0.75, 0.84)), "colour": Color(1.0, 0.45, 0.85), "always": true})
+		out.append({"id": sd[0], "label": "SIT", "xf": Transform3D(Basis.IDENTITY, sd[1]), "box": AABB(Vector3(-0.25, 0.0, -0.25), Vector3(0.5, 0.85, 0.5)), "colour": Color(1.0, 0.45, 0.85), "always": true})
 	out.append({"id": "exit", "label": "EXIT", "xf": Transform3D(Basis.IDENTITY, Vector3(0, 0, ArcadeRoom.FRONT_Z)), "box": AABB(Vector3(-1.15, 0.0, -0.2), Vector3(2.3, 2.55, 0.4)), "colour": Color(0.4, 1.0, 0.55)})
 	return out
 

@@ -193,47 +193,70 @@ func set_active(i: int) -> void:
 			machines[k].set_live(null)
 
 
-# ---- the social corner in the middle of the curve ------------------------------------------------------------
+# ---- the social corner: a tall table with an old Chutes & Ladders board, and six leather-topped bar stools -------------------
 func _lounge(root: Node3D) -> void:
 	var c := ARC_CENTRE
-	# bean bags in a ring round a low round table with a board game on it
+	var brushed := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 3), 0.9)                       # brushed steel poles
+	var black_metal := VRBuild.mat(Color(0.025, 0.025, 0.03), 0.38, 0.85)                          # black metal bases
 	var cols := ["pink", "cyan", "amber", "green", "purple", "red"]
-	for i in range(cols.size()):
-		var a := TAU * float(i) / float(cols.size()) + 0.3
-		var bag := Node3D.new()
-		bag.position = c + Vector3(sin(a) * 0.95, 0, cos(a) * 0.95)
-		bag.rotation = Vector3(0.05 * sin(a * 3.0), a + 3.14, 0.04 * cos(a * 2.0))
-		root.add_child(bag)
-		seats.append(["sit%d" % i, bag.position, c + Vector3(0, 0.4, 0)])
-		var tints := {"pink": Color(1.0, 0.55, 0.78), "cyan": Color(0.5, 0.9, 1.0), "amber": Color(1, 1, 1), "green": Color(0.6, 0.95, 0.5), "purple": Color(0.78, 0.6, 1.0), "red": Color(1, 1, 1)}
-		var leather := {"amber": "leather-orange", "red": "leather-red"}
-		var m := VRBuild.pbr(str(leather.get(cols[i], "leather-cream")), tints[cols[i]], Vector2(2, 2), 0.9)
-		m.clearcoat_enabled = true
-		m.clearcoat = 0.2
-		var body := VRBuild.sphere(bag, 0.36, Vector3(0, 0.21, 0), m, 28)
-		body.scale = Vector3(1.0, 0.68, 0.95)
-		var back := VRBuild.sphere(bag, 0.28, Vector3(0, 0.32, -0.2), m, 24)      # the raised back sits on the outside, away from the table
-		back.scale = Vector3(1.05, 0.95, 0.5)
-		back.scale = Vector3(1.05, 0.9, 0.5)
+	var tints := {"pink": Color(1.0, 0.55, 0.78), "cyan": Color(0.5, 0.9, 1.0), "amber": Color(1, 1, 1), "green": Color(0.6, 0.95, 0.5), "purple": Color(0.78, 0.6, 1.0), "red": Color(1, 1, 1)}
+	var leather := {"amber": "leather-orange", "red": "leather-red"}
+	# six stools: one each side of the table, two on each long side
+	var spots_xz := [Vector2(-0.95, 0.0), Vector2(0.95, 0.0), Vector2(-0.24, -0.86), Vector2(0.24, -0.86), Vector2(-0.24, 0.86), Vector2(0.24, 0.86)]
+	for i in range(spots_xz.size()):
+		var sp: Vector2 = spots_xz[i]
+		var stool := Node3D.new()
+		stool.position = c + Vector3(sp.x, 0, sp.y)
+		root.add_child(stool)
+		VRBuild.cylinder(stool, 0.19, 0.022, Vector3(0, 0.011, 0), black_metal, 0.2, Vector3.ZERO, 36)         # black metal base
+		VRBuild.cylinder(stool, 0.032, 0.62, Vector3(0, 0.33, 0), brushed, -1.0, Vector3.ZERO, 24)               # brushed metal support pole
+		var ring := MeshInstance3D.new()                                                                          # foot rest
+		var tm := TorusMesh.new()
+		tm.inner_radius = 0.125
+		tm.outer_radius = 0.142
+		tm.rings = 32
+		tm.ring_segments = 10
+		ring.mesh = tm
+		ring.material_override = brushed
+		ring.position = Vector3(0, 0.27, 0)
+		stool.add_child(ring)
+		for k in range(4):                                                                                        # four struts holding the ring
+			var ang := TAU * float(k) / 4.0 + 0.4
+			VRBuild.cylinder(stool, 0.006, 0.15, Vector3(sin(ang) * 0.065, 0.27, cos(ang) * 0.065), brushed, -1.0, Vector3(cos(ang) * PI / 2.0, 0, -sin(ang) * PI / 2.0), 8)
+		VRBuild.cylinder(stool, 0.07, 0.025, Vector3(0, 0.63, 0), black_metal, 0.04, Vector3.ZERO, 24)           # the seat plate
+		var lm := VRBuild.pbr(str(leather.get(cols[i], "leather-cream")), tints[cols[i]], Vector2(1.6, 1.6), 1.6)   # deep leather
+		lm.clearcoat_enabled = true
+		lm.clearcoat = 0.25
+		VRBuild.cylinder(stool, 0.185, 0.07, Vector3(0, 0.68, 0), lm, 0.175, Vector3.ZERO, 40)                    # leather seat top
+		var dome := VRBuild.sphere(stool, 0.178, Vector3(0, 0.715, 0), lm, 32)                                    # the padded dome
+		dome.scale = Vector3(1.0, 0.2, 1.0)
+		seats.append(["sit%d" % i, stool.position, c + Vector3(0, 0.9, 0), 0.22])
+		blockers.append([stool.position.x, stool.position.z, 0.22])
+	# the tall table
 	var table := Node3D.new()
 	table.position = c
 	root.add_child(table)
-	var steel := RuinedExterior.surface("materials", 3, Color(0.8, 0.82, 0.9), 0.3)
-	VRBuild.cylinder(table, 0.06, 0.38, Vector3(0, 0.19, 0), steel, -1.0, Vector3.ZERO, 16)
-	VRBuild.cylinder(table, 0.3, 0.025, Vector3(0, 0.0125, 0), steel, -1.0, Vector3.ZERO, 24)
-	VRBuild.cylinder(table, 0.46, 0.05, Vector3(0, 0.4, 0), VRBuild.mat(Color(0.04, 0.03, 0.08), 0.3, 0.4), -1.0, Vector3.ZERO, 40)
-	var board := VRBuild.tex_mat(_art("boardgame.jpg", null), 0.0, 0.5)
-	VRBuild.cylinder(table, 0.435, 0.004, Vector3(0, 0.427, 0), board, -1.0, Vector3.ZERO, 48)
+	VRBuild.cylinder(table, 0.3, 0.025, Vector3(0, 0.0125, 0), black_metal, 0.32, Vector3.ZERO, 40)             # black metal base
+	VRBuild.cylinder(table, 0.05, 0.98, Vector3(0, 0.5, 0), brushed, -1.0, Vector3.ZERO, 28)                    # brushed metal pole
+	VRBuild.cylinder(table, 0.12, 0.03, Vector3(0, 0.965, 0), black_metal, 0.08, Vector3.ZERO, 28)              # the plate under the top
+	var wood_edge := VRBuild.pbr("wood-navy", Color(0.75, 0.7, 0.65), Vector2(1.2, 0.2), 1.2)                    # old worn painted wood
+	VRBuild.box(table, Vector3(0.84, 0.05, 0.84), Vector3(0, 1.0, 0), wood_edge)                                  # the board's wooden frame and body
+	VRBuild.box(table, Vector3(0.86, 0.012, 0.86), Vector3(0, 0.972, 0), black_metal)
+	var game := VRBuild.tex_mat(_art("boardgame-chutes.jpg", null), 0.0, 0.7)
+	game.normal_enabled = true
+	game.normal_texture = _art("pbr-wood-navy-n.png", null)
+	game.normal_scale = 0.35
+	VRBuild.quad(table, Vector2(0.76, 0.76), Vector3(0, 1.0262, 0), game, Vector3(-PI / 2, 0, 0))                # the artwork on the board
 	var pawn_cols := [Color(1, 0.2, 0.55), Color(0.1, 0.9, 1.0), Color(1, 0.85, 0.1), Color(0.5, 1, 0.2)]
 	for k in range(4):
 		var pa := 0.7 + k * 1.5
 		var pc: Color = pawn_cols[k]
-		var px := Vector3(sin(pa) * 0.32, 0.45, cos(pa) * 0.32)
-		VRBuild.cylinder(table, 0.018, 0.04, px + Vector3(0, 0.0, 0), VRBuild.mat(pc, 0.3, 0.1, 0.4, pc), 0.012, Vector3.ZERO, 14)
+		var px := Vector3(sin(pa) * 0.2, 1.045, cos(pa) * 0.2)
+		VRBuild.cylinder(table, 0.018, 0.04, px, VRBuild.mat(pc, 0.3, 0.1, 0.4, pc), 0.012, Vector3.ZERO, 14)
 		VRBuild.sphere(table, 0.016, px + Vector3(0, 0.03, 0), VRBuild.mat(pc, 0.3, 0.1, 0.4, pc), 12)
-	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.14, 0.445, 0.1), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.3, 0.5, 0.2))
-	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.19, 0.445, 0.04), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.1, 0.9, 0.4))
-	blockers.append([c.x, c.z, 0.55])
+	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.14, 1.045, 0.1), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.3, 0.5, 0.2))
+	VRBuild.box(table, Vector3(0.03, 0.03, 0.03), Vector3(0.19, 1.045, 0.04), VRBuild.mat(Color(0.95, 0.95, 0.95), 0.3), Vector3(0.1, 0.9, 0.4))
+	blockers.append([c.x, c.z, 0.5])
 
 
 # ---- the back wall: prizes, pinball, hall of fame, vending ------------------------------------------------------

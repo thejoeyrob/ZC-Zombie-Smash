@@ -45,11 +45,11 @@ var segments: Array = []          # [a, b, restitution, kick]
 var _launch_ready := true
 var _slow_t := 0.0                # how long the ball has barely moved
 
-const FLIP_LEN := 66.0
-const LEFT_PIVOT := Vector2(132, 742)
-const RIGHT_PIVOT := Vector2(262, 742)
-const REST := 0.50                # radians below horizontal when down
-const UP := -0.46                 # radians above horizontal when raised
+const FLIP_LEN := 70.0
+const LEFT_PIVOT := Vector2(124, 742)       # wider apart: the ball can drain between them when they rest, but raised flippers still close the gap
+const RIGHT_PIVOT := Vector2(270, 742)
+const REST := 0.55                # radians below horizontal when down
+const UP := -0.35                 # radians above horizontal when raised
 
 
 func _ready() -> void:
