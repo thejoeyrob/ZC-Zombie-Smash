@@ -17,6 +17,8 @@ static func get_profile(name: String) -> Dictionary:
 			var d = JSON.parse_string(f.get_as_text())
 			if d is Dictionary:
 				_all = d
+	if name == "standard":          # every machine shares one body shape; only the artwork differs
+		return _all.get("fatamy", {})
 	return _all.get(name, {})
 
 
