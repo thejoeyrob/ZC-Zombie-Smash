@@ -1318,6 +1318,7 @@ func _run_shots() -> void:
 		"door": [Vector3(0, 1.7, 3.2), Vector3(0, 1.5, -0.55)],
 		"outside": [Vector3(0, 1.7, 1.0), Vector3(0, 1.3, -5.0)],
 		"cab_side": [cab.to_global(Vector3(1.25, 1.1, -0.3)), cab.to_global(Vector3(0, 1.0, -0.3))],
+		"promo": [Vector3(0.2, 1.7, 4.9), Vector3(1.2, 1.35, 7.2)],
 		"cab_sideL": [cab.to_global(Vector3(-1.25, 1.1, -0.3)), cab.to_global(Vector3(0, 1.0, -0.3))],
 		"cab_back": [cab.to_global(Vector3(0.6, 1.4, -1.9)), cab.to_global(Vector3(0, 1.0, -0.4))],
 		"cab_threeq": [cab.to_global(Vector3(1.3, 1.7, 1.5)), cab.to_global(Vector3(0, 1.1, -0.2))],

@@ -12,9 +12,11 @@ const ARC_CENTRE := Vector3(0, 0, 2.9)
 const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 # [x, z, yaw in degrees, which boss]: four machines along each side wall, each turned a little toward the lounge so its painted side faces the door
-const SLOTS := [[-3.13, 1.2, 74.0, "debo"], [-3.13, 3.15, 90.0, "drmantis"], [-3.13, 5.1, 106.0, "caffeinatedsloth"],
-	[3.13, 1.2, -74.0, "discoman"], [3.13, 3.15, -90.0, "joeyrob"], [3.13, 5.1, -106.0, "fatamy"]]
-const PLAYER_SLOT := 4
+const SLOTS := [[-3.13, 1.2, 74.0, "joeyrob"], [-3.13, 5.1, 106.0, "drmantis"],
+	[3.13, 1.2, -74.0, "discoman"], [3.13, 5.1, -106.0, "fatamy"]]
+# display machines built from the red cabinet model: [x, z, yaw degrees, variation]. They are for atmosphere; the playable machines are SLOTS.
+const RETRO := [[-3.13, 3.15, 90.0, "mortalkombat"], [3.13, 3.15, -90.0, "pacman"]]
+const PLAYER_SLOT := 0
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
 const TRIM := Color(0.25, 0.17, 0.32)      # beams, posts and mouldings
 const WAIN_H := 1.25                       # height of the panelled lower wall
@@ -59,6 +61,7 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	door = DoorScene.new()
 	door.build(root, FRONT_Z, HALF_W, HEIGHT, wood, paper, font)
 	_machines(root)
+	_retro(root)
 	_back_wall(root, font)
 	_decor(root, font)
 	_spots()
@@ -142,7 +145,7 @@ func _machines(root: Node3D) -> void:
 		c.bezel_id = id
 		c.profile = CabProfile.get_profile("standard")
 		c.side_art = _art("side-%s-flat.png" % ("fatamy" if key == "joeyrob" and false else key), _art("side-%s.png" % key, null))
-		c.side_text = id in ["joeyrob", "debo"]       # these two sides have writing on them: keep it readable on both
+		c.side_text = id in ["joeyrob"]       # these two sides have writing on them: keep it readable on both
 		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id == "joeyrob" else id), null)
 		c.build(arena, _art("marquee-%s.jpg" % key, null), accent.darkened(0.8), accent, true, str(bosses[id].name))
 		c.set_lock_light(i == player_index)      # red = somebody is playing here, green = free
@@ -266,7 +269,8 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	prize_wall = PrizeWall.new()
 	prize_wall.build(root, Vector3(-2.3, 0.0, BACK_Z - 0.2), PI, font)
 	hall = HallBoard.new()
-	hall.build(root, font, progress, Vector3(2.2, 1.85, BACK_Z - 0.08), PI)
+	hall.build(root, font, progress, Vector3(2.95, 1.85, BACK_Z - 0.08), PI)
+	hall.scale = Vector3(0.74, 0.74, 1.0)       # a little smaller, to leave room for the Zombie Smash promo corner
 	# the pinball machine between them, facing the door
 	pinball = Pinball.new()
 	pinball.position = Vector3(0, 0, BACK_Z - 0.82)
@@ -274,7 +278,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	root.add_child(pinball)
 	pinball.build(font)
 	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.7, BACK_Z - 0.04), PI, Vector2(2.6, 0.78))
-	_neon_sign(root, "neon-scores.png", Vector3(2.2, 2.78, BACK_Z - 0.04), PI, Vector2(1.9, 0.57))
+	_neon_sign(root, "neon-scores.png", Vector3(2.95, 2.62, BACK_Z - 0.04), PI, Vector2(1.5, 0.45))
 	# the snack machine beside the door
 	vending = VendingMachine.new()
 	vending.position = Vector3(1.8, 0, -0.05)       # beside the door, inside on the right
@@ -288,8 +292,11 @@ func _back_wall(root: Node3D, font: Font) -> void:
 
 func _decor(root: Node3D, font: Font) -> void:
 	# two matching wall plates beside the door: the JW Eds sign on the right, the Zombie Smash poster on the left
-	_plate(root, Vector3(2.95, 2.6, FRONT_Z + 0.04), "jw-logo.png", Vector2(1.26, 0.53), true)
-	_plate(root, Vector3(-2.95, 2.6, FRONT_Z + 0.04), "zs-poster.png", Vector2(1.42, 0.7), false)
+	_signboard(root, Vector3(2.95, 2.6, FRONT_Z), 0.0, "jw-logo.png", Vector2(1.26, 0.53), Color(0.2, 0.85, 1.0), true)
+	_signboard(root, Vector3(-2.95, 2.6, FRONT_Z), 0.0, "zs-poster.png", Vector2(1.42, 0.7), Color(0.6, 1.0, 0.2), false)
+	# the Zombie Smash promo corner on the back wall next to the pinball machine: a lit poster and a life-size Joey Rob cut-out
+	_signboard(root, Vector3(1.12, 2.0, BACK_Z), PI, "zs-poster.png", Vector2(1.3, 0.64), Color(0.6, 1.0, 0.2), false)
+	_cutout(root, Vector3(1.0, 0.0, BACK_Z - 1.15), PI + 0.22)
 	# the jukebox against the left wall
 	jukebox = Jukebox.new()
 	jukebox.position = Vector3(-1.85, 0, -0.3)      # beside the door, inside on the left
@@ -329,6 +336,108 @@ func _neon_sign(root: Node3D, file: String, pos: Vector3, yaw: float, size: Vect
 	holder.rotation.y = yaw
 	root.add_child(holder)
 	VRBuild.quad(holder, size, Vector3(0, 0, 0.02), m)
+
+
+## The display machines (red cabinet model) with the art of famous retro games, for atmosphere. Not playable.
+func _retro(root: Node3D) -> void:
+	var looks := {
+		"mortalkombat": {"side": "retro-mk-side.jpg", "marquee": "retro-mk-marquee.jpg", "screen": "", "trim": Color(0.75, 0.05, 0.05), "btn_a": Color(0.9, 0.1, 0.1), "btn_b": Color(0.1, 0.1, 0.12), "btn_c": Color(1, 0.8, 0.1), "mirror": false},
+		"pacman": {"side": "retro-pacman-side.jpg", "marquee": "retro-pacman-marquee.jpg", "screen": "retro-pacman-screen.jpg", "trim": Color(1.0, 0.85, 0.05), "btn_a": Color(1, 0.2, 0.1), "btn_b": Color(1, 0.85, 0.1), "btn_c": Color(0.3, 0.6, 1), "mirror": false},
+	}
+	for r in RETRO:
+		var look: Dictionary = looks[r[3]]
+		var m := ModelMachine.new()
+		m.position = Vector3(float(r[0]), 0, float(r[1]))
+		m.rotation.y = deg_to_rad(float(r[2]))
+		root.add_child(m)
+		m.build({"side": _art(look.side, null), "marquee": _art(look.marquee, null), "screen": _art(look.screen, null) if look.screen != "" else null,
+			"trim": look.trim, "btn_a": look.btn_a, "btn_b": look.btn_b, "btn_c": look.btn_c, "mirror_right": look.mirror})
+		blockers.append([m.position.x - sin(deg_to_rad(float(r[2]))) * 0.3, m.position.z - cos(deg_to_rad(float(r[2]))) * 0.3, 0.7])
+
+
+## A sign that stands proud of the brick: a brushed-steel frame on four standoffs, a lit face, and a soft glow on the wall behind it.
+## yaw 0 faces +z (the front wall), PI faces -z (the back wall).
+func _signboard(root: Node3D, pos: Vector3, yaw: float, file: String, art_size: Vector2, glow: Color, transparent: bool) -> void:
+	var tex = load("res://assets/art/" + file)
+	var holder := Node3D.new()
+	holder.position = pos
+	holder.rotation.y = yaw
+	root.add_child(holder)
+	var steel := VRBuild.pbr("metal", Color(0.9, 0.9, 0.95), Vector2(2, 1), 0.9)
+	var dark := VRBuild.pbr("plate-blue", Color(0.2, 0.2, 0.26), Vector2(1, 1), 0.9)
+	var w := art_size.x + 0.1
+	var h := art_size.y + 0.1
+	var off := 0.075                                   # how far the sign stands from the wall
+	# the glow on the brick behind the sign (additive, no hard edge)
+	var halo := _pool(glow)
+	halo.albedo_color = Color(glow.r, glow.g, glow.b, 0.65)
+	VRBuild.quad(holder, Vector2(w * 1.9, h * 2.3), Vector3(0, 0, 0.012), halo)
+	# four standoffs
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			VRBuild.cylinder(holder, 0.013, off, Vector3(sx * (w / 2.0 - 0.05), sy * (h / 2.0 - 0.05), off / 2.0), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
+			VRBuild.cylinder(holder, 0.022, 0.012, Vector3(sx * (w / 2.0 - 0.05), sy * (h / 2.0 - 0.05), off + 0.012), steel, 0.02, Vector3(PI / 2, 0, 0), 12)
+	# the sign body: a deep dark back, a steel frame round the face
+	VRBuild.box(holder, Vector3(w, h, 0.045), Vector3(0, 0, off + 0.0225), dark)
+	VRBuild.box(holder, Vector3(w + 0.03, 0.035, 0.07), Vector3(0, h / 2.0, off + 0.035), steel)
+	VRBuild.box(holder, Vector3(w + 0.03, 0.035, 0.07), Vector3(0, -h / 2.0, off + 0.035), steel)
+	VRBuild.box(holder, Vector3(0.035, h, 0.07), Vector3(-w / 2.0, 0, off + 0.035), steel)
+	VRBuild.box(holder, Vector3(0.035, h, 0.07), Vector3(w / 2.0, 0, off + 0.035), steel)
+	if tex != null:
+		var fm := VRBuild.tex_mat(tex, 0.55, 0.4)
+		if transparent:
+			fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		fm.emission_enabled = true
+		fm.emission_texture = tex
+		fm.emission_energy_multiplier = 0.7
+		VRBuild.quad(holder, art_size, Vector3(0, 0, off + 0.047), fm)
+	var spot := SpotLight3D.new()
+	spot.position = Vector3(0, h / 2.0 + 0.2, 0.55)
+	spot.rotation = Vector3(-1.2, 0, 0)
+	spot.spot_range = 2.4
+	spot.spot_angle = 40.0
+	spot.light_energy = 1.6
+	spot.light_color = Color(1.0, 0.95, 0.85)
+	holder.add_child(spot)
+
+
+## A life-size cardboard cut-out of Joey Rob: the printed face, a plain cardboard back and edge, a white die-cut border, and a strut behind.
+func _cutout(root: Node3D, pos: Vector3, yaw: float) -> void:
+	var tex = _art("cutout-joey.png", null)
+	if tex == null:
+		return
+	var holder := Node3D.new()
+	holder.position = pos
+	holder.rotation.y = yaw
+	root.add_child(holder)
+	var h := 1.78
+	var w := h * float(tex.get_width()) / float(tex.get_height())
+	var card := VRBuild.pbr("leather-neutral", Color(0.62, 0.45, 0.28), Vector2(2, 2), 0.6)       # brown cardboard
+	card.albedo_texture = null
+	card.albedo_color = Color(0.58, 0.42, 0.26)
+	card.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	card.alpha_scissor_threshold = 0.5
+	card.albedo_texture = tex
+	card.albedo_color = Color(0.45, 0.32, 0.2)
+	card.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for i in range(7):                                # the thickness of the board, a stack of thin slices
+		VRBuild.quad(holder, Vector2(w, h), Vector3(0, h / 2.0, -0.004 - float(i) * 0.0035), card)
+	var print_m := VRBuild.tex_mat(tex, 0.12, 0.7)
+	print_m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	print_m.alpha_scissor_threshold = 0.5
+	VRBuild.quad(holder, Vector2(w, h), Vector3(0, h / 2.0, 0.002), print_m)
+	var strut := VRBuild.mat(Color(0.5, 0.36, 0.22), 0.9)
+	VRBuild.box(holder, Vector3(0.5, 1.1, 0.012), Vector3(0, 0.55, -0.34), strut, Vector3(-0.3, 0, 0))     # the easel strut propping it up
+	# a small spotlight picks it out
+	var spot := SpotLight3D.new()
+	spot.position = Vector3(0.2, 2.9, 1.3)
+	spot.look_at_from_position(Vector3(0.2, 2.9, 1.3), Vector3(0, 1.0, 0), Vector3.UP)
+	spot.spot_range = 4.0
+	spot.spot_angle = 30.0
+	spot.light_energy = 2.2
+	spot.light_color = Color(1.0, 0.92, 0.8)
+	holder.add_child(spot)
+	blockers.append([pos.x, pos.z, 0.5])
 
 
 ## A wall-mounted plate on brushed steel standoffs with its own spotlight.
@@ -372,7 +481,7 @@ func _spots() -> void:
 		spots.append(["m%d" % i, "PLAY", m.stand_world(), m.look_world(), m.theme_color])
 	spots.append(["pinball", "PINBALL", pinball.stand_world(), pinball.look_world(), Color(1.0, 0.85, 0.2)])
 	spots.append(["prizes", "PRIZES", Vector3(-2.3, 0, BACK_Z - 1.55), Vector3(-2.3, 1.5, BACK_Z), Color(1.0, 0.35, 0.75)])
-	spots.append(["hall", "HALL OF FAME", Vector3(2.2, 0, BACK_Z - 2.2), Vector3(2.2, 1.8, BACK_Z), Color(1.0, 0.82, 0.25)])
+	spots.append(["hall", "HALL OF FAME", Vector3(2.95, 0, BACK_Z - 2.2), Vector3(2.95, 1.8, BACK_Z), Color(1.0, 0.82, 0.25)])
 	spots.append(["vending", "SNACKS", Vector3(1.8, 0, 1.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
 	spots.append(["jukebox", "JUKEBOX", Vector3(-1.85, 0, 1.3), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
 	spots.append(["lounge", "LOUNGE", ARC_CENTRE + Vector3(0, 0, -1.7), ARC_CENTRE + Vector3(0, 0.4, 0), Color(1.0, 0.45, 0.85)])
