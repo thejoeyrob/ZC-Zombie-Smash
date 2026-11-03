@@ -29,6 +29,8 @@ var theme_color := Color(0.1, 0.85, 0.35)
 var side_art: Texture2D        # picture for the outside of both sides
 var side_text := false         # the side picture has writing on it: keep the writing readable on both sides (otherwise the right side is a true mirror, so the shape lines up)
 var bezel_id := ""            # which boss's ornate screen frame this machine wears
+const ORNATE_BEZELS := false     # off: the plain black glass surround is back
+const WORD_STICKERS := false     # off: no MOVE / FIRE / GRENADE / MENU words round the controls
 var profile: Dictionary = {}   # outline of that picture (see CabProfile)
 var attract_tex: Texture2D     # what the screen shows when nobody is playing
 var lit := false               # a light that makes the controls glow (only the machine in use needs one)
@@ -183,7 +185,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.box(mon, Vector3(0.012, 0.64, 0.02), Vector3(0.268, 0, 0.098), black, Vector3(0, -0.5, 0))
 	var bz = load("res://assets/art/bezel-%s.jpg" % bezel_id) if bezel_id != "" else null
 	var bzd := _bezel_data()
-	if bz != null and bzd.has(bezel_id):
+	if ORNATE_BEZELS and bz != null and bzd.has(bezel_id):
 		var d: Dictionary = bzd[bezel_id]
 		var w: Array = d.win
 		var win_uv := Rect2(float(w[0]) / float(d.w), float(w[1]) / float(d.h), float(w[2] - w[0]) / float(d.w), float(w[3] - w[1]) / float(d.h))
@@ -248,6 +250,8 @@ func _decal(parent: Node3D, file: String, size: float, pos: Vector3, rot := Vect
 
 ## Instruction stickers: just the word, die-cut with a white border, sitting on the far side of each control (never under the hand).
 func _build_decals() -> void:
+	if not WORD_STICKERS:
+		return
 	var flat := Vector3(-PI / 2, 0, 0)
 	_word(panel, "move", 0.13, Vector3(-0.19, 0.0015, -0.1), flat)
 	_word(panel, "fire", 0.11, Vector3(0.205, 0.0015, -0.085), flat)
