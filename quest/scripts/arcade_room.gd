@@ -75,7 +75,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.pbr("carpet", Color(0.82, 0.82, 0.9), Vector2(w / 1.8, d / 1.8), 0.8)       # a woven checker carpet
+	var carpet := VRBuild.pbr("tiles-bw", Color(0.78, 0.78, 0.82), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
 	var ceiling := VRBuild.pbr("tiles", Color(0.22, 0.22, 0.3), Vector2(w / 2.4, d / 2.4), 0.8)      # dark ceiling tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -96,7 +96,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.12, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.pbr("plate-blue", Color(0.55, 0.55, 0.62), Vector2(wall[2] / 1.2, 0.1)))   # worn blue-steel skirting
+		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.pbr("plate", Color(0.6, 0.6, 0.6), Vector2(wall[2] / 0.6, 0.2)))   # rusted tread-plate skirting
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [1.4, 3.4, 5.4]:
