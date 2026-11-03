@@ -12,10 +12,19 @@ const GRAVITY := 980.0
 const SUBSTEPS := 8
 const MAX_SPEED := 1500.0
 const LANE_X := 366.0
-const BUMPERS := [Vector2(150, 250), Vector2(235, 230), Vector2(190, 320)]
-const BUMPER_R := 23.0
-const TARGETS := [Vector2(95, 130), Vector2(150, 100), Vector2(205, 88), Vector2(262, 100)]
-const TARGET_R := 11.0
+const BUMPERS := [Vector2(195, 169), Vector2(160, 212), Vector2(238, 212)]       # the three brain bumpers in the artwork
+const BUMPER_R := 21.0
+# two banks of four lit targets, one down each side, where the artwork has its yellow and green light bars
+const TARGETS := [Vector2(84, 402), Vector2(84, 424), Vector2(84, 446), Vector2(84, 468), Vector2(300, 402), Vector2(300, 424), Vector2(300, 446), Vector2(300, 468)]
+const TARGET_R := 8.0
+# lit inserts the ball rolls over: the orange lights down the middle lane and at the top, and the green arrows
+const INSERTS := [Vector2(203, 79), Vector2(203, 98), Vector2(203, 275), Vector2(203, 293), Vector2(203, 311), Vector2(203, 334), Vector2(122, 252), Vector2(282, 252), Vector2(148, 370), Vector2(252, 370), Vector2(180, 575), Vector2(222, 575)]
+const INSERT_COL := [Color(1, 0.7, 0.15), Color(1, 0.7, 0.15), Color(1, 0.6, 0.1), Color(1, 0.6, 0.1), Color(1, 0.6, 0.1), Color(1, 0.6, 0.1), Color(0.5, 1, 0.2), Color(0.5, 1, 0.2), Color(1, 0.3, 0.8), Color(0.2, 0.9, 1.0), Color(0.5, 1, 0.2), Color(0.5, 1, 0.2)]
+# the two ramps drawn in the artwork: the ball can run up them, travel along (above everything else) and drop back onto the table
+const RAMPS := [
+	{"entry": Vector2(104, 364), "r": 20.0, "dir": Vector2(-0.35, -0.94), "path": [Vector2(104, 364), Vector2(86, 322), Vector2(48, 282), Vector2(30, 222), Vector2(58, 162), Vector2(112, 124), Vector2(140, 76), Vector2(150, 70)], "exit_vel": Vector2(40, 120), "col": Color(1, 0.2, 0.7), "name": "PINK RAMP"},
+	{"entry": Vector2(250, 62), "r": 20.0, "dir": Vector2(1, 0.2), "path": [Vector2(250, 62), Vector2(300, 60), Vector2(346, 96), Vector2(366, 160), Vector2(358, 232), Vector2(336, 290), Vector2(326, 300)], "exit_vel": Vector2(-110, 150), "col": Color(1, 0.6, 0.1), "name": "ORANGE RAMP"},
+]
 
 var bonus_balls := false
 var enabled := false              # the machine only works once the code has been keyed in at the snack machine
@@ -34,7 +43,11 @@ var right_up := false
 var left_ang := 0.52
 var right_ang := 0.52
 var bump_flash := [0.0, 0.0, 0.0]
-var target_lit := [false, false, false, false]
+var target_lit := [false, false, false, false, false, false, false, false]
+var insert_t: Array = []           # seconds each lit insert still glows
+var on_ramp := -1
+var ramp_d := 0.0                  # distance travelled along the ramp
+var ramp_hits := 0
 var sling_flash := [0.0, 0.0]
 var sling_cool := [0.0, 0.0]
 var message := ""
@@ -45,10 +58,10 @@ var segments: Array = []          # [a, b, restitution, kick]
 var _launch_ready := true
 var _slow_t := 0.0                # how long the ball has barely moved
 
-const FLIP_LEN := 70.0
-const LEFT_PIVOT := Vector2(124, 742)       # wider apart: the ball can drain between them when they rest, but raised flippers still close the gap
-const RIGHT_PIVOT := Vector2(270, 742)
-const REST := 0.55                # radians below horizontal when down
+const FLIP_LEN := 76.0
+const LEFT_PIVOT := Vector2(122, 700)       # apart far enough that the ball drains between resting flippers (a gap of two balls), while raised flippers close the gap
+const RIGHT_PIVOT := Vector2(278, 700)
+const REST := 0.62                # radians below horizontal when down
 const UP := -0.35                 # radians above horizontal when raised
 
 
@@ -69,21 +82,21 @@ func _build_segments() -> void:
 		segments.append([prev, p, 0.45, 0.0])
 		prev = p
 	# side walls, inlanes and outlanes
-	segments.append([Vector2(20, 200), Vector2(20, 600), 0.45, 0.0])
+	segments.append([Vector2(14, 200), Vector2(14, 596), 0.45, 0.0])
 	segments.append([Vector2(380, 200), Vector2(380, 790), 0.3, 0.0])
-	segments.append([Vector2(20, 600), Vector2(52, 628), 0.4, 0.0])
-	segments.append([Vector2(52, 628), Vector2(52, 668), 0.4, 0.0])
-	segments.append([Vector2(52, 668), Vector2(LEFT_PIVOT.x - 4, LEFT_PIVOT.y - 4), 0.4, 0.0])
-	segments.append([Vector2(352, 628), Vector2(320, 652), 0.4, 0.0])
-	segments.append([Vector2(320, 652), Vector2(320, 668), 0.4, 0.0])
-	segments.append([Vector2(320, 668), Vector2(RIGHT_PIVOT.x + 4, RIGHT_PIVOT.y - 4), 0.4, 0.0])
+	segments.append([Vector2(14, 596), Vector2(46, 622), 0.4, 0.0])
+	segments.append([Vector2(46, 622), Vector2(46, 654), 0.4, 0.0])
+	segments.append([Vector2(46, 654), Vector2(LEFT_PIVOT.x - 4, LEFT_PIVOT.y - 4), 0.4, 0.0])
+	segments.append([Vector2(352, 596), Vector2(320, 622), 0.4, 0.0])
+	segments.append([Vector2(320, 622), Vector2(320, 654), 0.4, 0.0])
+	segments.append([Vector2(320, 654), Vector2(RIGHT_PIVOT.x + 4, RIGHT_PIVOT.y - 4), 0.4, 0.0])
 	# the plunger lane's inner wall, with a gap at the top so a launched ball can curl onto the table
 	segments.append([Vector2(352, 640), Vector2(352, 270), 0.4, 0.0])
 	segments.append([Vector2(352, 640), Vector2(352, 790), 0.3, 0.0])
 	segments.append([Vector2(352, 790), Vector2(380, 790), 0.1, 0.0])
 	# slingshots above the flippers
-	segments.append([Vector2(70, 610), Vector2(110, 676), 0.2, 340.0])
-	segments.append([Vector2(310, 610), Vector2(272, 676), 0.2, 340.0])
+	segments.append([Vector2(72, 584), Vector2(106, 650), 0.2, 340.0])
+	segments.append([Vector2(328, 584), Vector2(294, 650), 0.2, 340.0])
 	# a deflector guiding the ball off the top of the lane
 	segments.append([Vector2(300, 110), Vector2(338, 150), 0.3, 0.0])
 
@@ -97,6 +110,7 @@ func reset_game() -> void:
 
 
 func _new_ball() -> void:
+	on_ramp = -1
 	ball = Vector2(LANE_X, 700.0)
 	vel = Vector2.ZERO
 	in_play = false
@@ -151,6 +165,11 @@ func _process(delta: float) -> void:
 	message_t = maxf(0.0, message_t - delta)
 	for i in range(3):
 		bump_flash[i] = maxf(0.0, bump_flash[i] - delta * 4.0)
+	if insert_t.size() != INSERTS.size():
+		insert_t.resize(INSERTS.size())
+		insert_t.fill(0.0)
+	for i in range(insert_t.size()):
+		insert_t[i] = maxf(0.0, insert_t[i] - delta)
 	for i in range(2):
 		sling_flash[i] = maxf(0.0, sling_flash[i] - delta * 5.0)
 		sling_cool[i] = maxf(0.0, sling_cool[i] - delta)
@@ -173,10 +192,23 @@ func _step(dt: float) -> void:
 	var r_omega := (right_ang - r_prev) / dt
 	if not in_play:
 		return
+	if on_ramp >= 0:
+		_ride_ramp(dt)
+		return
 	vel.y += GRAVITY * dt
 	if vel.length() > MAX_SPEED:
 		vel = vel.normalized() * MAX_SPEED
 	ball += vel * dt
+	for ri in range(RAMPS.size()):
+		var rp: Dictionary = RAMPS[ri]
+		if ball.distance_to(rp.entry) < float(rp.r) and vel.length() > 380.0 and vel.normalized().dot(rp.dir.normalized()) > 0.35:
+			on_ramp = ri
+			ramp_d = 0.0
+			ramp_hits += 1
+			event.emit("ramp")
+			_score(1000, "ramp")
+			flash(str(rp.name) + "  +1000")
+			return
 	for seg in segments:
 		_hit_segment(seg[0], seg[1], seg[2], seg[3])
 	# the two flippers (their near end is the pivot; angles measured down from horizontal toward the middle)
@@ -205,12 +237,28 @@ func _step(dt: float) -> void:
 			if not target_lit[i]:
 				target_lit[i] = true
 				_score(500, "target")
-				if not target_lit.has(false):
-					_score(5000, "clear")
-					flash("TARGETS CLEARED  +5000")
-					target_lit = [false, false, false, false]
+				var bank := 0 if i < 4 else 4
+				var done := true
+				for k in range(bank, bank + 4):
+					if not target_lit[k]:
+						done = false
+				if done:
+					_score(2500, "clear")
+					flash("BANK COMPLETE  +2500")
+					for k in range(bank, bank + 4):
+						target_lit[k] = false
 			else:
 				_score(50, "target")
+	# lit inserts: roll over them and they glow; the four down the middle lane give a bonus when all are lit
+	for i in range(INSERTS.size()):
+		if ball.distance_to(INSERTS[i]) < 11.0 and insert_t[i] < 2.4:
+			insert_t[i] = 3.0
+			_score(50, "insert")
+			if i >= 2 and i <= 5 and insert_t[2] > 0.0 and insert_t[3] > 0.0 and insert_t[4] > 0.0 and insert_t[5] > 0.0:
+				_score(2000, "clear")
+				flash("MIDDLE LANE  +2000")
+				for k in range(2, 6):
+					insert_t[k] = 0.0
 	# a ball that rolls back down the lane and settles can be launched again
 	if ball.x > 352.0 and ball.y > 690.0 and vel.length() < 40.0:
 		in_play = false
@@ -232,6 +280,26 @@ func _step(dt: float) -> void:
 	trail.append(ball)
 	if trail.size() > 7:
 		trail.pop_front()
+
+
+## While on a ramp the ball runs along its path above the table: nothing else can touch it. At the end it drops back onto the playfield.
+func _ride_ramp(dt: float) -> void:
+	var rp: Dictionary = RAMPS[on_ramp]
+	var pts: Array = rp.path
+	ramp_d += 420.0 * dt
+	var d := ramp_d
+	for i in range(pts.size() - 1):
+		var seg_len: float = pts[i].distance_to(pts[i + 1])
+		if d <= seg_len:
+			ball = pts[i].lerp(pts[i + 1], d / maxf(seg_len, 0.001))
+			trail.append(ball)
+			if trail.size() > 7:
+				trail.pop_front()
+			return
+		d -= seg_len
+	ball = pts[pts.size() - 1]
+	vel = rp.exit_vel
+	on_ramp = -1
 
 
 func _hit_segment(a: Vector2, b: Vector2, rest: float, kick: float) -> void:
@@ -314,8 +382,8 @@ static func _commas(n: int) -> String:
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, W, H), Color(0.02, 0.01, 0.06))
 	if art != null:
-		draw_texture_rect(art, Rect2(0, 0, W, H), false, Color(0.55, 0.5, 0.6))
-	draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0.08, 0.38))
+		draw_texture_rect(art, Rect2(0, 0, W, H), false, Color(1.22, 1.2, 1.25))      # vibrant: the artwork at full brightness
+	_draw_inserts()
 	# plunger lane and rails
 	draw_rect(Rect2(352, 270, 28, 530), Color(0.0, 0.0, 0.0, 0.5))
 	for seg in segments:
@@ -374,6 +442,20 @@ func _draw() -> void:
 		_text("BEST " + _commas(best), Vector2(0, 560), 22, Color(0.9, 0.9, 1.0), HORIZONTAL_ALIGNMENT_CENTER, W)
 	elif not in_play:
 		_text("PULL THE PLUNGER", Vector2(0, 520), 24, Color(0.4, 1.0, 0.6, 0.6 + 0.4 * sin(clock * 5.0)), HORIZONTAL_ALIGNMENT_CENTER, W)
+
+
+func _draw_inserts() -> void:
+	for i in range(INSERTS.size()):
+		var on: float = clampf(insert_t[i] if i < insert_t.size() else 0.0, 0.0, 1.0)
+		var c: Color = INSERT_COL[i]
+		var idle := 0.12 + 0.1 * sin(clock * 3.0 + float(i))
+		draw_circle(INSERTS[i], 11.0 + on * 4.0, Color(c.r, c.g, c.b, idle + on * 0.55))
+		draw_circle(INSERTS[i], 5.0, Color(1, 1, 1, idle * 0.8 + on * 0.9))
+	if on_ramp >= 0:
+		var pts: Array = RAMPS[on_ramp].path
+		var rc: Color = RAMPS[on_ramp].col
+		for i in range(pts.size() - 1):
+			draw_line(pts[i], pts[i + 1], Color(rc.r, rc.g, rc.b, 0.55), 10.0, true)
 
 
 func _draw_flipper(pivot: Vector2, ang: float, side: float, up: bool) -> void:
