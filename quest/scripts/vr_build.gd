@@ -403,6 +403,7 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	var n = load("res://assets/art/pbr-%s-n.png" % name)
 	var r = load("res://assets/art/pbr-%s-r.jpg" % name)
 	var mt = load("res://assets/art/pbr-%s-m.jpg" % name) if ResourceLoader.exists("res://assets/art/pbr-%s-m.jpg" % name) else null
+	var ao = load("res://assets/art/pbr-%s-ao.jpg" % name) if ResourceLoader.exists("res://assets/art/pbr-%s-ao.jpg" % name) else null
 	if c != null:
 		m.albedo_texture = c
 	m.albedo_color = tint
@@ -415,6 +416,10 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 		m.roughness = 1.0
 	else:
 		m.roughness = 0.7
+	if ao != null:
+		m.ao_enabled = true
+		m.ao_texture = ao
+		m.ao_light_affect = 0.8
 	if mt != null:
 		m.metallic_texture = mt
 		m.metallic = 1.0

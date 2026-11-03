@@ -51,7 +51,7 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	root.add_child(we)
 	# real dark brick walls with neon tubes, like a proper old arcade
 	# real dark brick: a photographed medieval brick set (colour, bumps and roughness), darkened for the late-night mood
-	var wood := VRBuild.pbr("brick", Color(0.5, 0.44, 0.5), Vector2.ONE, 1.1)
+	var wood := VRBuild.pbr("brick", Color(0.5, 0.44, 0.5), Vector2.ONE, 2.4)
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -91,12 +91,15 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		var wm: StandardMaterial3D = wood.duplicate()
+		if k == 0:
+			# the back wall (shelves, pinball, high scores) is lighter, warmer brick so everything on it pops
+			wm = VRBuild.pbr("brick-light", Color(0.85, 0.62, 0.52), Vector2.ONE, 2.4)
 		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
 		wm.texture_repeat = true
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.12, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.pbr("plate", Color(0.6, 0.6, 0.6), Vector2(wall[2] / 0.6, 0.2)))   # rusted tread-plate skirting
+		VRBuild.box(root_w, Vector3(wall[2], 0.1, 0.05), Vector3(0, 0.05, 0.025), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(wall[2] / 0.9, 0.12), 1.4))   # green washed wood skirting
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [1.4, 3.4, 5.4]:
@@ -199,8 +202,7 @@ func _lounge(root: Node3D) -> void:
 	var brushed := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 3), 0.9)                       # brushed steel poles
 	var black_metal := VRBuild.mat(Color(0.025, 0.025, 0.03), 0.38, 0.85)                          # black metal bases
 	var cols := ["pink", "cyan", "amber", "green", "purple", "red"]
-	var tints := {"pink": Color(1.0, 0.55, 0.78), "cyan": Color(0.5, 0.9, 1.0), "amber": Color(1, 1, 1), "green": Color(0.6, 0.95, 0.5), "purple": Color(0.78, 0.6, 1.0), "red": Color(1, 1, 1)}
-	var leather := {"amber": "leather-orange", "red": "leather-red"}
+	var tints := {"pink": Color(1.0, 0.42, 0.7), "cyan": Color(0.35, 0.85, 1.0), "amber": Color(1.0, 0.62, 0.12), "green": Color(0.5, 0.95, 0.3), "purple": Color(0.7, 0.45, 1.0), "red": Color(1.0, 0.18, 0.18)}
 	# six stools: one each side of the table, two on each long side
 	var spots_xz := [Vector2(-0.95, 0.0), Vector2(0.95, 0.0), Vector2(-0.24, -0.86), Vector2(0.24, -0.86), Vector2(-0.24, 0.86), Vector2(0.24, 0.86)]
 	for i in range(spots_xz.size()):
@@ -224,7 +226,7 @@ func _lounge(root: Node3D) -> void:
 			var ang := TAU * float(k) / 4.0 + 0.4
 			VRBuild.cylinder(stool, 0.006, 0.15, Vector3(sin(ang) * 0.065, 0.27, cos(ang) * 0.065), brushed, -1.0, Vector3(cos(ang) * PI / 2.0, 0, -sin(ang) * PI / 2.0), 8)
 		VRBuild.cylinder(stool, 0.07, 0.025, Vector3(0, 0.63, 0), black_metal, 0.04, Vector3.ZERO, 24)           # the seat plate
-		var lm := VRBuild.pbr(str(leather.get(cols[i], "leather-cream")), tints[cols[i]], Vector2(1.6, 1.6), 1.6)   # deep leather
+		var lm := VRBuild.pbr("leather-neutral", tints[cols[i]], Vector2(1.6, 1.6), 1.6)   # the same grained leather in each colour
 		lm.clearcoat_enabled = true
 		lm.clearcoat = 0.25
 		VRBuild.cylinder(stool, 0.185, 0.07, Vector3(0, 0.68, 0), lm, 0.175, Vector3.ZERO, 40)                    # leather seat top

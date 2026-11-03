@@ -44,14 +44,14 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	tmat.texture_repeat = true
 	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), tmat)
 	# frame
-	var frame := RuinedExterior.surface("materials", 3, Color(0.24,0.26,0.28), 0.7)
+	var frame := VRBuild.pbr("wood-navy", Color(0.45, 0.47, 0.55), Vector2(1.0, 2.0), 1.2)
 	for sx in [-1, 1]:
 		VRBuild.box(self, Vector3(0.12, door_h, 0.2), Vector3(sx * (door_w / 2.0 + 0.04), door_h / 2.0, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.24, 0.12, 0.2), Vector3(0, door_h + 0.04, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.2, 0.04, 0.4), Vector3(0, 0.01, 0.05), VRBuild.mat(Color(0.5, 0.45, 0.35), 0.4, 0.5, 0.2, Color(0.5, 0.45, 0.35)))   # brass threshold
 	# two leaves, each with a glass window
-	var leaf := RuinedExterior.surface("materials", 3, Color(0.18,0.21,0.23), 0.65)
-	var brass := RuinedExterior.surface("materials", 3, Color(0.75,0.77,0.79), 0.8)
+	var leaf := VRBuild.pbr("wood-navy", Color(0.7, 0.72, 0.8), Vector2(1.0, 1.0), 1.4)       # painted wood door leaves
+	var brass := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 2), 0.9)                     # brushed metal push bars and handles
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.5, 0.65, 0.9, 0.07)
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
