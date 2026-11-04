@@ -397,6 +397,10 @@ static func neon_tube(parent: Node, length: float, pos: Vector3, color: Color, r
 
 ## A realistic surface from a photographed material set: colour, normal (bumps) and roughness pictures called pbr-<name>-c/n/r in the art folder
 ## (plus -m for metal where the material has one). tint multiplies the colour; uv is how many times it repeats across a unit quad.
+## How deep each kind of surface reads (Godot height-map scale, a fraction of one texture repeat).
+const DEPTH := {"brick": 2.4, "tiles": 1.2, "wood": 1.6, "leather": 1.0, "carpet": 1.4, "fabric": 1.2, "plate": 1.2}
+
+
 static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_scale := 1.0, metallic := 0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	var c = load("res://assets/art/pbr-%s-c.jpg" % name)
@@ -416,6 +420,14 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 		m.roughness = 1.0
 	else:
 		m.roughness = 0.7
+	# surface depth: the photographed height map pushes the pattern in and out as you look across it (mortar sinks between bricks,
+	# grout between tiles, the grain of leather and wood), so surfaces stop looking flat from the side. One cheap lookup, no extra geometry.
+	var hp := "res://assets/art/pbr-%s-h.png" % name
+	if ResourceLoader.exists(hp):
+		m.heightmap_enabled = true
+		m.heightmap_texture = load(hp)
+		m.heightmap_scale = float(DEPTH.get(name.get_slice("-", 0), 1.5))
+		m.heightmap_deep_parallax = false
 	if ao != null:
 		m.ao_enabled = true
 		m.ao_texture = ao

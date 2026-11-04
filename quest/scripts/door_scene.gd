@@ -39,6 +39,11 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		wmat.uv1_scale = Vector3(wall_w / 2.4, height / 2.4, 1)
 		wmat.texture_repeat = true
 		VRBuild.box(self, Vector3(wall_w, height, 0.12), Vector3(cx, height / 2.0, 0), wmat)
+		# the same low green skirting as the other three walls, stopping at the door frame
+		var sk_w: float = wall_w - 0.1
+		var sk_x: float = side * (door_w / 2.0 + 0.1 + sk_w / 2.0)
+		VRBuild.box(self, Vector3(sk_w, 0.13, 0.05), Vector3(sk_x, 0.065, 0.085), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(sk_w / 0.7, 0.34), 1.8))
+		VRBuild.box(self, Vector3(sk_w, 0.025, 0.065), Vector3(sk_x, 0.1425, 0.0925), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(sk_w / 0.7, 0.1), 1.8))
 	var tmat: StandardMaterial3D = wood.duplicate()
 	tmat.uv1_scale = Vector3(door_w / 2.4, (height - door_h) / 2.4, 1)
 	tmat.texture_repeat = true
@@ -74,8 +79,8 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 			VRBuild.box(self, Vector3(lw - 0.06, 0.2, 0.012), Vector3(cx, 0.1, fz * 0.041), brass)           # kick plate
 		# a long brushed-metal pull handle on the street side, and three hinges on the outer edge
 		for hy2 in [1.5, 0.74]:
-			RuinedExterior.rod(self, Vector3(cx - side * (lw / 2.0 - 0.12), hy2, -0.04), Vector3(cx - side * (lw / 2.0 - 0.12), hy2, -0.1), 0.014, brass)
-		RuinedExterior.rod(self, Vector3(cx - side * (lw / 2.0 - 0.12), 0.7, -0.1), Vector3(cx - side * (lw / 2.0 - 0.12), 1.54, -0.1), 0.019, brass)
+			RuinedExterior.rod(self, Vector3(cx - side * (lw / 2.0 - 0.045), hy2, -0.04), Vector3(cx - side * (lw / 2.0 - 0.045), hy2, -0.1), 0.014, brass)
+		RuinedExterior.rod(self, Vector3(cx - side * (lw / 2.0 - 0.045), 0.7, -0.1), Vector3(cx - side * (lw / 2.0 - 0.045), 1.54, -0.1), 0.019, brass)
 		for hy3 in [0.35, 1.2, 2.0]:
 			VRBuild.cylinder(self, 0.016, 0.16, Vector3(cx + side * (lw / 2.0 + 0.004), hy3, 0.0), brass, -1.0, Vector3.ZERO, 12)
 		VRBuild.box(self, Vector3(0.09, door_h - 0.9, 0.07), Vector3(cx - lw / 2.0 + 0.045, 0.9 + (door_h - 0.9) / 2.0, 0), leaf)
@@ -85,12 +90,13 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		VRBuild.box(self, Vector3(0.04, door_h - 1.05, 0.05), Vector3(cx, 0.98 + (door_h - 1.05) / 2.0, 0), leaf)   # mullion
 		VRBuild.quad(self, Vector2(lw - 0.15, door_h - 1.1), Vector3(cx, 0.98 + (door_h - 1.1) / 2.0 + 0.02, 0), glass)
 		# push bar and handle plate on the inside
-		RuinedExterior.rod(self, Vector3(cx-0.31,1.02,0.13), Vector3(cx+0.31,1.02,0.13), 0.024, brass)
+		# the push bar runs along the wooden lock rail, under the glass
+		RuinedExterior.rod(self, Vector3(cx-0.31,0.94,0.13), Vector3(cx+0.31,0.94,0.13), 0.024, brass)
 		for hx in [-0.27,0.27]:
-			RuinedExterior.rod(self, Vector3(cx+hx,1.02,0.04), Vector3(cx+hx,1.02,0.13), 0.02, brass)
+			RuinedExterior.rod(self, Vector3(cx+hx,0.94,0.035), Vector3(cx+hx,0.94,0.13), 0.02, brass)
 		for hy in [0.24,1.18,2.12]:
 			RuinedExterior.rod(self, Vector3(cx+side*0.47,hy-0.05,0.05),Vector3(cx+side*0.47,hy+0.05,0.05),0.018,brass)
-		VRBuild.box(self, Vector3(0.1, 0.5, 0.03), Vector3(cx - side * (lw / 2.0 - 0.1), 1.02, 0.06), brass)
+		VRBuild.box(self, Vector3(0.06, 0.34, 0.012), Vector3(cx - side * (lw / 2.0 - 0.045), 0.62, 0.041), brass)   # finger plate on the wooden stile
 		# Fatty's Game Shack: a frosted-vinyl logo on the glass of each door, readable from inside and from the street
 		var decal := VRBuild.tex_mat(_art("fatty-decal.png"), 0.25, 0.4)
 		decal.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

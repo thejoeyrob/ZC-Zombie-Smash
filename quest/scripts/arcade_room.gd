@@ -102,7 +102,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		wm.texture_repeat = true
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
-		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.12, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
+		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.2, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
 		VRBuild.box(root_w, Vector3(wall[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(wall[2] / 0.7, 0.34), 1.8))   # tall green washed wood skirting
 		VRBuild.box(root_w, Vector3(wall[2], 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(wall[2] / 0.7, 0.1), 1.8))   # its top moulding
 		k += 1
@@ -243,7 +243,7 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 		VRBuild.cylinder(stool, 0.185, 0.07, Vector3(0, 0.68, 0), lm, 0.175, Vector3.ZERO, 40)                    # leather seat top
 		var dome := VRBuild.sphere(stool, 0.178, Vector3(0, 0.715, 0), lm, 32)                                    # the padded dome
 		dome.scale = Vector3(1.0, 0.2, 1.0)
-		seats.append(["sit%d" % i, stool.position, c + Vector3(0, 0.9, 0), 0.22])
+		seats.append(["sit%d" % i, stool.position, c + Vector3(0, 0.9, 0), 0.32])     # seated: eyes about 0.4 m above the table top
 		blockers.append([stool.position.x, stool.position.z, 0.2, 0.05])
 	# the tall table
 	var table := Node3D.new()
@@ -259,9 +259,10 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 	game.normal_enabled = true
 	game.normal_texture = _art("pbr-wood-navy-n.png", null)
 	game.normal_scale = 0.3
-	VRBuild.quad(table, Vector2(0.76, 0.76), Vector3(0, 1.0262, 0), game, Vector3(-PI / 2, 0, 0))                # the board's artwork
+	VRBuild.quad(table, Vector2(0.76, 0.76), Vector3(0, 1.0262, 0), game, Vector3(-PI / 2, PI, 0))              # the board's artwork
 	board_game = BoardGame.new()                                                                                    # the playable game: pieces, die and rules
 	board_game.position = c + Vector3(0, 1.028, 0)
+	board_game.rotation.y = PI                       # the printed rules read the right way up from the stool nearest the door
 	root.add_child(board_game)
 	board_game.build(font_ref)
 	blockers.append([c.x, c.z, 0.45, 0.08])
@@ -295,7 +296,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.92, BACK_Z - 0.04), PI, Vector2(2.1, 0.62))
 	# the snack machine beside the door
 	vending = VendingMachine.new()
-	vending.position = Vector3(1.8, 0, -0.05)       # beside the door, inside on the right
+	vending.position = Vector3(1.8, 0, 0.02)        # beside the door, inside on the right
 	vending.rotation.y = 0.0
 	root.add_child(vending)
 	vending.build(font)
@@ -308,7 +309,7 @@ func _decor(root: Node3D, font: Font) -> void:
 	_signboard(root, Vector3(-2.95, 2.6, FRONT_Z), 0.0, "zs-poster.png", Vector2(1.42, 0.7), Color(0.6, 1.0, 0.2), false)
 	# the jukebox against the left wall
 	jukebox = Jukebox.new()
-	jukebox.position = Vector3(-1.85, 0, -0.3)      # beside the door, inside on the left
+	jukebox.position = Vector3(-1.85, 0, -0.12)     # beside the door, inside on the left
 	jukebox.rotation.y = 0.0
 	root.add_child(jukebox)
 	jukebox.build(font)
@@ -383,79 +384,6 @@ func _signboard(root: Node3D, pos: Vector3, yaw: float, file: String, art_size: 
 		fm.emission_texture = tex
 		fm.emission_energy_multiplier = 0.7
 		VRBuild.quad(holder, art_size, Vector3(0, 0, off + 0.047), fm)
-
-
-## A life-size cardboard cut-out of Joey Rob: the printed face, a plain cardboard back and edge, a white die-cut border, and a strut behind.
-func _cutout(root: Node3D, pos: Vector3, yaw: float) -> void:
-	var tex = _art("cutout-joey.png", null)
-	if tex == null:
-		return
-	var holder := Node3D.new()
-	holder.position = pos
-	holder.rotation.y = yaw
-	root.add_child(holder)
-	var h := 1.78
-	var w := h * float(tex.get_width()) / float(tex.get_height())
-	var card := VRBuild.pbr("leather-neutral", Color(0.62, 0.45, 0.28), Vector2(2, 2), 0.6)       # brown cardboard
-	card.albedo_texture = null
-	card.albedo_color = Color(0.58, 0.42, 0.26)
-	card.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	card.alpha_scissor_threshold = 0.5
-	card.albedo_texture = tex
-	card.albedo_color = Color(0.45, 0.32, 0.2)
-	card.cull_mode = BaseMaterial3D.CULL_DISABLED
-	for i in range(7):                                # the thickness of the board, a stack of thin slices
-		VRBuild.quad(holder, Vector2(w, h), Vector3(0, h / 2.0, -0.004 - float(i) * 0.0035), card)
-	var print_m := VRBuild.tex_mat(tex, 0.12, 0.7)
-	print_m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	print_m.alpha_scissor_threshold = 0.5
-	VRBuild.quad(holder, Vector2(w, h), Vector3(0, h / 2.0, 0.002), print_m)
-	var strut := VRBuild.mat(Color(0.5, 0.36, 0.22), 0.9)
-	VRBuild.box(holder, Vector3(0.5, 1.1, 0.012), Vector3(0, 0.55, -0.34), strut, Vector3(-0.3, 0, 0))     # the easel strut propping it up
-	# a small spotlight picks it out
-	var spot := SpotLight3D.new()
-	spot.position = Vector3(0.2, 2.9, 1.3)
-	spot.look_at_from_position(Vector3(0.2, 2.9, 1.3), Vector3(0, 1.0, 0), Vector3.UP)
-	spot.spot_range = 4.0
-	spot.spot_angle = 30.0
-	spot.light_energy = 2.2
-	spot.light_color = Color(1.0, 0.92, 0.8)
-	holder.add_child(spot)
-	blockers.append([pos.x, pos.z, 0.5])
-
-
-## A wall-mounted plate on brushed steel standoffs with its own spotlight.
-func _plate(root: Node3D, pos: Vector3, file: String, art_size: Vector2, transparent: bool) -> void:
-	var tex = load("res://assets/art/" + file)
-	var plate := Node3D.new()
-	plate.position = pos
-	root.add_child(plate)
-	var steel := RuinedExterior.surface("materials", 3, Color(0.95, 0.96, 1.0), 0.2)
-	var charcoal := VRBuild.mat(Color(0.05, 0.05, 0.07), 0.35, 0.3)
-	VRBuild.box(plate, Vector3(1.5, 0.74, 0.03), Vector3(0, 0, 0.03), charcoal)
-	for sx in [-0.7, 0.7]:
-		for sy in [-0.33, 0.33]:
-			VRBuild.cylinder(plate, 0.012, 0.03, Vector3(sx, sy, 0.0), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
-			VRBuild.cylinder(plate, 0.018, 0.008, Vector3(sx, sy, 0.047), steel, -1.0, Vector3(PI / 2, 0, 0), 12)
-	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, 0.375, 0.03), steel)
-	VRBuild.box(plate, Vector3(1.54, 0.012, 0.04), Vector3(0, -0.375, 0.03), steel)
-	if tex != null:
-		var lm := VRBuild.tex_mat(tex, 0.45, 0.4)
-		if transparent:
-			lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		lm.emission_enabled = true
-		lm.emission_texture = tex
-		lm.emission_energy_multiplier = 0.5
-		VRBuild.quad(plate, art_size, Vector3(0, 0, 0.047), lm)
-	var spot := SpotLight3D.new()
-	spot.position = Vector3(0, 0.55, 0.5)
-	spot.rotation = Vector3(-1.1, 0, 0)
-	spot.spot_range = 2.2
-	spot.spot_angle = 38.0
-	spot.light_energy = 2.2
-	spot.light_color = Color(1.0, 0.95, 0.85)
-	plate.add_child(spot)
-	VRBuild.box(plate, Vector3(0.1, 0.05, 0.22), Vector3(0, 0.45, 0.14), charcoal)
 
 
 # ---- where the player can jump to --------------------------------------------------------------------------------

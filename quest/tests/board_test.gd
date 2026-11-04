@@ -8,6 +8,18 @@ func _initialize() -> void:
 	var g := BoardGame.new()
 	root.add_child(g)
 	g.build(ThemeDB.fallback_font)
+	# seats: take one, swap, leave, come back
+	assert(g.take_seat(1, "local"))
+	assert(g.players[1].human and g.seat_of("local") == 1)
+	assert(not g.take_seat(1, "guest"))                       # taken
+	assert(g.take_seat(2, "guest", "GUEST"))
+	g.leave_seat("local")
+	assert(not g.players[1].human and g.players[1].name == "DR MANTIS")
+	assert(g.seat_for("local", 2) == 1)                       # their old seat is free, the stool they chose is not
+	assert(g.seat_for("local", 3) == 3)
+	g.leave_seat("guest")
+	assert(g.take_seat(0, "local"))
+	var swapped := 0
 	var wins := 0
 	var seen := {}
 	g.event.connect(func(n): seen[n] = int(seen.get(n, 0)) + 1)
@@ -18,6 +30,12 @@ func _initialize() -> void:
 		t += 1.0 / 60.0 * 1.0
 		if g.waiting_for_roll:
 			g.roll_human()
+		if int(t * 60.0) % 900 == 0:                               # stand up and sit down again mid-game now and then
+			swapped += 1
+			if swapped % 2 == 1:
+				g.leave_seat("local")
+			else:
+				g.take_seat(g.seat_for("local", 0), "local")
 		if g.winner >= 0 and g.winner != last_winner + 100:
 			if last_winner != g.winner or true:
 				wins += 1
@@ -27,6 +45,6 @@ func _initialize() -> void:
 				await process_frame
 				if g.waiting_for_roll:
 					g.roll_human()
-	print("events: ", seen)
+	print("events: ", seen, "  seat swaps: ", swapped)
 	print("BOARD TEST OK" if wins >= 3 else "BOARD TEST FAILED")
 	quit()

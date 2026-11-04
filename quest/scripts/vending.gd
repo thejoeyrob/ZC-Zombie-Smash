@@ -35,7 +35,7 @@ func build(font: Font) -> void:
 	VRBuild.box(self, Vector3(0.3, 1.1, 0.45), Vector3(0.35, 1.12, 0.2), red_dark)                     # control column
 	VRBuild.box(self, Vector3(1.0, 0.33, 0.45), Vector3(0, 1.855, 0.2), red)                          # header block
 	VRBuild.box(self, Vector3(1.0, 0.56, 0.45), Vector3(0, 0.28, 0.2), red)                           # lower body
-	VRBuild.box(self, Vector3(1.04, 0.06, 0.5), Vector3(0, 2.05, 0.1), VRBuild.mat(Color(0.22, 0.03, 0.05), 0.35, 0.3))
+	VRBuild.box(self, Vector3(1.04, 0.05, 0.82), Vector3(0, 2.065, 0.025), VRBuild.mat(Color(0.3, 0.04, 0.06), 0.45, 0.2))   # lid over the whole cabinet, back to front
 	VRBuild.box(self, Vector3(1.04, 0.1, 0.5), Vector3(0, 0.05, 0.1), dark)
 	# side panels: a white stripe and a lit logo plate
 	for sx in [-0.505, 0.505]:

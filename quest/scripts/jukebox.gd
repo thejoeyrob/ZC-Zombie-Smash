@@ -59,7 +59,10 @@ func build(font: Font) -> void:
 	body.rotation.y = -PI / 2.0
 	add_child(body)
 	# slab thickness runs along local x, which the rotation turns into depth; two slabs back to back make it 0.5 m deep with the front face textured
-	VRBuild.picture_slab(body, pts, uvs, -0.25, 0.5, -1.0, enamel, enamel, false)
+	var enamel_edge := VRBuild.mat(Color(0.36, 0.035, 0.045), 0.28, 0.35)      # the curved edge has no picture coordinates, so it gets a plain lacquer instead of the stretched texture
+	enamel_edge.clearcoat_enabled = true
+	enamel_edge.clearcoat = 0.4
+	VRBuild.picture_slab(body, pts, uvs, -0.25, 0.5, -1.0, enamel, enamel_edge, false)
 	var rim := Node3D.new()
 	add_child(rim)
 	# chrome bands round the arch at the front, so the solid reads as a real cabinet and not a cut-out

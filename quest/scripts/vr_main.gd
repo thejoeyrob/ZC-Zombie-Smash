@@ -1003,8 +1003,13 @@ func _move_to(p: Vector3) -> void:
 var seated := false
 
 
-## Sit on a bean bag: the player is moved onto it, turned to face the table, and lowered to seated eye height.
-func _sit(sd: Array) -> void:
+## Sit on a stool: you take that seat's board game piece (or your old seat back, if it is free), and the view moves in over the table:
+## shuffled forward off the stool and lowered to seated eye height.
+func _sit(sd_in: Array) -> void:
+	var bg: BoardGame = room.board_game
+	var want := int(str(sd_in[0]).substr(3))
+	var seat := bg.seat_for("local", want)
+	var sd: Array = room.seats[seat] if seat < room.seats.size() else sd_in
 	tele_busy = true
 	audio.ui("switch")
 	fade_quad.visible = true
@@ -1012,7 +1017,10 @@ func _sit(sd: Array) -> void:
 	var tw := create_tween()
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 0.0, 1.0, 0.12)
 	tw.tween_callback(func():
-		_place_player(sd[1], sd[2])
+		var stool: Vector3 = sd[1]
+		var to_table: Vector3 = Vector3(sd[2].x, 0.0, sd[2].z) - Vector3(stool.x, 0.0, stool.z)
+		_place_player(stool + to_table.normalized() * 0.28, sd[2])     # leaning in over the table
+		bg.take_seat(seat, "local")
 		seated = true
 		origin.position.y = float(settings.lift) - float(sd[3]) if sd.size() > 3 else float(settings.lift) - 0.55)
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
@@ -1024,6 +1032,7 @@ func _sit(sd: Array) -> void:
 func _stand_up() -> void:
 	if seated:
 		seated = false
+		room.board_game.leave_seat("local")
 		origin.position.y = float(settings.lift)
 
 
@@ -1162,6 +1171,8 @@ func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
 	var head := Vector3(cam.position.x, 0.0, cam.position.z)
 	origin.position = pos - Basis(Vector3.UP, origin.rotation.y) * head
 	origin.position.y = float(settings.lift)
+	if seated:
+		room.board_game.leave_seat("local")      # the computer carries on with your piece
 	seated = false
 
 
@@ -1379,6 +1390,7 @@ func _select_machine(i: int) -> void:
 # ---- a camera tour of the room, for a video ----------------------------------------------------------------
 func _run_tour() -> void:
 	room.board_game.auto_human = true
+	room.board_game.take_seat(0, "local")
 	progress.last = {"score": 48210, "wave": 7, "kills": 212, "bosses": 3, "seconds": 400}
 	progress.best = 61500
 	progress.badges = ["first_boss", "score_10k", "wave_10"]
@@ -1491,6 +1503,17 @@ func _run_shots() -> void:
 		var mc: Cabinet = machines[mi]
 		views["m%d_R" % mi] = [mc.to_global(Vector3(1.1, 1.1, -0.3)), mc.to_global(Vector3(0, 1.0, -0.3))]
 		views["m%d_L" % mi] = [mc.to_global(Vector3(-1.1, 1.1, -0.3)), mc.to_global(Vector3(0, 1.0, -0.3))]
+	var jb: Vector3 = room.jukebox.global_position
+	var vd: Vector3 = room.vending.global_position
+	var tc: Vector3 = ArcadeRoom.ARC_CENTRE
+	views["juke_side"] = [jb + Vector3(1.3, 1.4, 1.2), jb + Vector3(0, 1.0, 0)]
+	views["vend_top"] = [vd + Vector3(-0.9, 2.3, 1.3), vd + Vector3(0, 1.9, 0)]
+	views["door_in"] = [Vector3(0.9, 1.5, 1.4), Vector3(0, 1.0, ArcadeRoom.FRONT_Z)]
+	views["door_out"] = [Vector3(-0.8, 1.5, ArcadeRoom.FRONT_Z - 1.6), Vector3(0, 1.1, ArcadeRoom.FRONT_Z)]
+	views["wall_graze"] = [Vector3(3.3, 1.5, 6.6), Vector3(-2.0, 1.2, 7.3)]
+	views["floor_graze"] = [Vector3(0, 1.2, 0.4), Vector3(0, 0.0, 3.0)]
+	views["seated"] = [tc + Vector3(0, 1.38, -0.62), tc + Vector3(0, 0.95, 0.05)]
+	views["skirt_door"] = [Vector3(-2.6, 0.7, 1.0), Vector3(-2.6, 0.1, ArcadeRoom.FRONT_Z)]
 	var plan: Array = String(args.get("views", "head,panel,overview,door,pinball")).split(",")
 	if args.has("intro"):
 		_begin_intro()

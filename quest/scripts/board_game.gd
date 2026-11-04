@@ -2,7 +2,10 @@ class_name BoardGame
 extends Node3D
 ## The lounge board game, "Zombie Smash: Race to the Lab". A loop of 28 squares round the table. Everyone races once round:
 ##   GRENADE jump forward 3   ZOMBIE run back 2   HEART roll again   BOSS miss your next turn
-## You are the green zombie hand; three friends from the game (played by the computer) race you. Point at the table and pull the trigger to roll.
+## Four seats, one per stool, each with its own piece. A seat nobody sits on is played by the computer, so the game always runs.
+## Sit on a stool and you take over that seat's piece where it stands, mid-game; stand up and the computer carries on for you.
+## Each seat remembers who last sat there, so someone who comes back gets the same piece if the seat is still free.
+## Occupants are named by an id ("local" for this headset), ready for players joining over the network later.
 ## Square positions match the picture drawn by tools/make_zs_board.py.
 
 signal event(name: String)
@@ -15,11 +18,13 @@ const BOARD_M := 0.76             # the picture is this many metres across on th
 const KIND := {4: "grenade", 13: "grenade", 22: "grenade", 6: "zombie", 11: "zombie", 17: "zombie", 24: "zombie", 3: "heart", 9: "heart", 15: "heart", 20: "heart", 26: "heart",
 	8: "boss", 14: "boss", 19: "boss", 25: "boss"}
 const BOSS_NAME := {8: "JORDAN", 14: "DEBO", 19: "DR MANTIS", 25: "DISCO MAN"}
-const NAMES := ["YOU", "DEBO", "DR MANTIS", "DISCO MAN"]
-const COLOURS := [Color(0.35, 0.95, 0.25), Color(0.95, 0.3, 0.2), Color(0.45, 0.75, 0.2), Color(0.95, 0.35, 0.85)]
+const NAMES := ["DEBO", "DR MANTIS", "DISCO MAN", "FAT AMY"]          # the computer player in each seat
+const COLOURS := [Color(0.5, 0.95, 0.3), Color(1.0, 0.18, 0.18), Color(1.0, 0.62, 0.12), Color(0.7, 0.45, 1.0)]   # match the stools: green, red, amber, purple
+const PIECES := ["GREEN HAND", "RED GRENADE", "AMBER BRAIN", "PURPLE SKULL"]
 const TOP_Y := 0.0               # tokens stand on the board surface (this node sits on it)
 
-var players: Array = []          # {name, pos, skip, token: Node3D, human}
+var players: Array = []          # {name, pos, skip, token: Node3D, human, occupant}
+var last_occupant: Array = ["", "", "", ""]   # who sat in each seat most recently
 var current := 0
 var waiting_for_roll := false
 var busy := false
@@ -39,7 +44,7 @@ func build(font: Font) -> void:
 	for i in range(NAMES.size()):
 		var tok := _make_token(i)
 		add_child(tok)
-		players.append({"name": NAMES[i], "pos": 0, "skip": false, "token": tok, "human": i == 0})
+		players.append({"name": NAMES[i], "pos": 0, "skip": false, "token": tok, "human": false, "occupant": ""})
 	_die = _make_die()
 	_die.visible = false
 	add_child(_die)
@@ -77,11 +82,55 @@ func square_pos(i: int, slot := 0) -> Vector3:
 	return Vector3((px - PIC / 2.0) * k + off.x, TOP_Y, (pz - PIC / 2.0) * k + off.y)
 
 
+# ---- seats ------------------------------------------------------------------------------------------
+## Someone sits in a seat: they play that piece from wherever it is now. Returns false if someone else is already there.
+func take_seat(seat: int, occupant: String, display_name := "YOU") -> bool:
+	if seat < 0 or seat >= players.size():
+		return false
+	var p: Dictionary = players[seat]
+	if p.occupant != "" and p.occupant != occupant:
+		return false
+	leave_seat(occupant)                     # one seat per person
+	p.occupant = occupant
+	p.human = true
+	p.name = display_name
+	last_occupant[seat] = occupant
+	_say("%s TAKES THE %s" % [display_name, PIECES[seat]])
+	return true
+
+
+## Someone stands up: the computer player takes the piece back and carries on. A roll they were waiting on is made for them.
+func leave_seat(occupant: String) -> void:
+	for i in range(players.size()):
+		var p: Dictionary = players[i]
+		if p.occupant == occupant:
+			p.occupant = ""
+			p.human = false
+			p.name = NAMES[i]
+			if waiting_for_roll and current == i:
+				_roll_now = true
+
+
+## The seat this person should get: the one they had before if it is free, otherwise the given one.
+func seat_for(occupant: String, wanted: int) -> int:
+	var prev := last_occupant.find(occupant)
+	if prev >= 0 and prev != wanted and players[prev].occupant == "" and players[wanted].occupant != "":
+		return prev
+	return wanted
+
+
+func seat_of(occupant: String) -> int:
+	for i in range(players.size()):
+		if players[i].occupant == occupant:
+			return i
+	return -1
+
+
 # ---- the game ---------------------------------------------------------------------------------------
 func hint() -> String:
 	if winner >= 0:
 		return ""
-	return "ROLL" if waiting_for_roll else ""
+	return "ROLL" if waiting_for_roll and current == seat_of("local") else ""
 
 
 func roll_human() -> void:
@@ -96,7 +145,7 @@ func _reset_game() -> void:
 		players[i].pos = 0
 		players[i].skip = false
 		players[i].token.position = square_pos(0, i)
-	_say("RACE TO THE LAB!  YOU ARE THE GREEN HAND")
+	_say("RACE TO THE LAB!  SIT ON A STOOL TO PLAY")
 	_place_all()
 
 
@@ -131,7 +180,7 @@ func _run() -> void:
 		while again and winner < 0:
 			again = false
 			if p.human:
-				_say("YOUR TURN  -  POINT AT THE TABLE AND ROLL")
+				_say("YOUR TURN  -  POINT AT THE TABLE AND ROLL" if p.occupant == "local" else "%s'S TURN" % p.name)
 				waiting_for_roll = true
 				_roll_now = false
 				if auto_human:
@@ -140,6 +189,8 @@ func _run() -> void:
 				while not _roll_now and is_inside_tree():
 					await get_tree().process_frame
 				waiting_for_roll = false
+				if not p.human:                   # they stood up while it was their turn: the computer rolls instead
+					_say("%s ROLLS..." % p.name)
 			else:
 				_say("%s ROLLS..." % p.name)
 				await get_tree().create_timer(1.1).timeout

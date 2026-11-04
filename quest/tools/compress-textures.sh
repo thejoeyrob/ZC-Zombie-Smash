@@ -8,6 +8,6 @@ for f in pbr-*-c.jpg.import panel-*.import side-*.import marquee-*.import poster
          wall-*.import playfield-*.import pin-*.import carpet.jpg.import floor90.jpg.import ceiling*.import bobble-*-atlas.jpg.import \
          boardgame*.import jukebox-front.png.import jukebox-side.png.import; do
   case "$f" in *normal*) continue;; esac
-  sed -i 's/^compress\/mode=0/compress\/mode=2/' "$f"
+  sed -i 's/^compress\/mode=0/compress\/mode=2/; s/^compress\/high_quality=false/compress\/high_quality=true/' "$f"   # high quality = ASTC 4x4 on the Quest (crisper than ETC2)
 done
 echo "compressed: $(grep -l '^compress/mode=2' *.import | wc -l) pictures"
