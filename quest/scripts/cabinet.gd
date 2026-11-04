@@ -115,12 +115,6 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		VRBuild.box(self, Vector3(0.062, 0.115, 0.006), Vector3(0, 0.625, front_z + 0.015), orange)         # glowing bezel
 		VRBuild.box(self, Vector3(0.012, 0.07, 0.008), Vector3(0, 0.63, front_z + 0.02), dark)             # the slot itself
 		VRBuild.box(self, Vector3(0.04, 0.012, 0.008), Vector3(0, 0.555, front_z + 0.016), orange)         # lit tab under it
-		var coin_light := OmniLight3D.new()
-		coin_light.position = Vector3(0, 0.62, front_z + 0.12)
-		coin_light.light_color = Color(1.0, 0.55, 0.15)
-		coin_light.light_energy = 0.25
-		coin_light.omni_range = 0.6
-		add_child(coin_light)
 		for sx in [-0.325, 0.325]:       # glowing trim down both front edges
 			VRBuild.box(self, Vector3(0.016, body_h, 0.018), Vector3(sx, body_h / 2.0, front_z - 0.004), trim)
 	# the back board leans with the back edge of the side panels: fit a straight line to that edge and tilt the board to match

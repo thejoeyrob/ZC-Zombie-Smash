@@ -31,6 +31,7 @@ var calibrated := false
 var calibrate_timer := 0.0
 
 var grab_hand := -1
+var pin_latch: Array = [null, null]      # world spot of the pinball flipper button each hand is holding (or null)
 var grab_hand2 := -1            # the hand on the second (right) stick of a two-stick machine
 var roll := 0.0
 var pitch := 0.0
@@ -348,11 +349,18 @@ func _on_setting(key: String, value) -> void:
 
 ## The room and the machines are a fixed size; the player is what moves: "lift" raises or lowers the player, "reach" moves them
 ## nearer to or further from the machine they are playing.
+var _reach_dirty := false
+var walk_out_t := 0.0
+
+
 func _apply_height() -> void:
 	if xr_on:
 		origin.position.y = float(settings.lift)
 	if locked and calibrated:
-		_place_player(cab.stand_world(), cab.look_world(), true)
+		if menu != null and menu.open:
+			_reach_dirty = true         # applied when the board closes, so it never moves under you while you use it
+		else:
+			_place_player(cab.stand_world(), cab.look_world(), true)
 
 
 func _on_code(action: String) -> void:
@@ -451,6 +459,9 @@ func _open_menu() -> void:
 
 func _close_menu() -> void:
 	menu.set_open(false)
+	if _reach_dirty and locked:
+		_reach_dirty = false
+		_place_player(cab.stand_world(), cab.look_world(), true)
 	if menu_resume_state == "play" and state == "paused":
 		state = "play"
 		screen.mode = "play"
@@ -747,9 +758,24 @@ func _world_inputs(hs: Array) -> void:
 	var d1 := _head_floor().distance_to(room.pinball.stand_world())
 	var d2 := _head_floor().distance_to(room.pinball2.stand_world())
 	var near := d1 < 1.5 and d1 <= d2 and not menu.open
-	room.pinball.interact(tips, palms, hs[0].trigger and near, hs[1].trigger and near, (hs[0].a or hs[1].a), near)
 	var near2 := d2 < 1.5 and d2 < d1 and not menu.open
-	room.pinball2.interact(tips, palms, hs[0].trigger and near2, hs[1].trigger and near2, (hs[0].a or hs[1].a), near2)
+	# only the machine you are standing at listens to you; hands that hold its sides by the flipper buttons stay on them
+	pin_latch = [null, null]
+	var flips := [false, false, false, false]
+	for k in range(2):
+		var pb: Pinball = room.pinball if k == 0 else room.pinball2
+		var here: bool = near if k == 0 else near2
+		if not here or locked:
+			pb.release_hands()
+			continue
+		var res: Dictionary = pb.latch(hs)
+		for i in range(2):
+			if res.spot[i] != null:
+				pin_latch[i] = res.spot[i]
+		flips[k * 2] = res.left
+		flips[k * 2 + 1] = res.right
+	room.pinball.interact(tips, palms, flips[0], flips[1], (hs[0].a or hs[1].a), near)
+	room.pinball2.interact(tips, palms, flips[2], flips[3], (hs[0].a or hs[1].a), near2)
 
 
 func _solid(p: Vector3, r: float) -> Vector3:
@@ -778,6 +804,13 @@ func _pose_hands(hs: Array) -> void:
 		var final_xf := xf
 		final_xf.origin = pos + shift + (tip2 - tipw)
 		var holding := grab_hand == i or grab_hand2 == i
+		var pin_hold: Variant = pin_latch[i]
+		if grab_hand == i:
+			final_xf.origin = cab.ball_world_position() - final_xf.basis * Vector3(sgn * HAND_ANCHOR, 0.0, -0.012)
+		elif grab_hand2 == i:
+			final_xf.origin = cab.ball2_world_position() - final_xf.basis * Vector3(sgn * HAND_ANCHOR, 0.0, -0.012)
+		elif pin_hold != null:
+			final_xf.origin = (pin_hold as Vector3) - final_xf.basis * Vector3(0.0, 0.0, -0.15)
 		var idx_c: float = 1.0 if holding else h.trig_val
 		var grip_c: float = 1.0 if holding else h.grip_val
 		var thumb_c: float = h.thumb if h.thumb >= 0.0 else maxf(grip_c * 0.8, idx_c * 0.3)
@@ -877,6 +910,16 @@ func _locomotion(hs: Array, delta: float) -> void:
 		selector.aim(Vector3.ZERO, Vector3.UP)
 		if xr_on or demo:
 			_leave_gesture(hs, ph, delta)
+		# walking away is the quick way out: push the left stick for a moment and you are free again
+		var mvl: Vector2 = hs[0].stick
+		if xr_on and mvl.length() > 0.65 and str(settings.assist) != "on":
+			walk_out_t += delta
+		else:
+			walk_out_t = 0.0
+		if walk_out_t > 0.4:
+			walk_out_t = 0.0
+			audio.ui("toggle")
+			_set_locked(false)
 		for i in range(2):
 			trig_prev[i] = hs[i].trigger
 		return
@@ -1122,6 +1165,13 @@ func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
 	seated = false
 
 
+## A hand that has taken hold of a stick keeps it until the fingers really open (or the hand is pulled well away).
+func _released(h: Dictionary, dist: float) -> bool:
+	if dist > 0.24:
+		return true
+	return not (h.gripping or h.trigger or float(h.grip_val) > 0.3 or float(h.trig_val) > 0.3)
+
+
 func _stick(hs: Array, delta: float) -> void:
 	var ball := cab.ball_world_position()
 	if grab_hand == -1:
@@ -1134,7 +1184,7 @@ func _stick(hs: Array, delta: float) -> void:
 				break
 	if grab_hand >= 0:
 		var h: Dictionary = hs[grab_hand]
-		if not (h.gripping or h.trigger):
+		if _released(h, h.grip.distance_to(ball)):
 			grab_hand = -1
 			audio.sfx("toggle", 0.5)
 		else:
@@ -1142,7 +1192,7 @@ func _stick(hs: Array, delta: float) -> void:
 			var v := local - (Cabinet.STICK_LOCAL + Vector3(0, 0.03, 0))
 			var up := maxf(v.y, 0.06)
 			roll = clampf(atan2(v.x, up), -Cabinet.MAX_TILT, Cabinet.MAX_TILT)
-			pitch = clampf(atan2(v.z, up), -Cabinet.MAX_TILT * 0.7, Cabinet.MAX_TILT * 0.7)
+			pitch = clampf(atan2(v.z, up), -Cabinet.MAX_TILT * 0.7, Cabinet.MAX_TILT * 0.7) if cab.emu else 0.0       # only the emulator stick goes every way
 	if grab_hand == -1:
 		var k := exp(-delta * 22.0)    # spring back to centre
 		roll *= k
@@ -1179,14 +1229,14 @@ func _stick2(hs: Array, delta: float) -> void:
 				break
 	if grab_hand2 >= 0:
 		var h2: Dictionary = hs[grab_hand2]
-		if not (h2.gripping or h2.trigger):
+		if _released(h2, h2.grip.distance_to(ball2)):
 			grab_hand2 = -1
 			audio.sfx("toggle", 0.5)
 		else:
 			var local := cab.to_panel(h2.grip)
 			var v := local - (Cabinet.STICK2_LOCAL + Vector3(0, 0.03, 0))
 			var up := maxf(v.y, 0.06)
-			roll2 = clampf(atan2(v.x, up), -Cabinet.MAX_TILT, Cabinet.MAX_TILT)
+			roll2 = 0.0           # the fire stick only goes forward and back
 			pitch2 = clampf(atan2(v.z, up), -Cabinet.MAX_TILT * 0.7, Cabinet.MAX_TILT * 0.7)
 	if grab_hand2 == -1:
 		var k := exp(-delta * 22.0)
@@ -1220,7 +1270,7 @@ func _buttons(hs: Array) -> void:
 	# the joystick does everything: left and right to move, push it away from you to fire, pull it toward you for a grenade
 	var stick_fp := (pitch2 if cab.dual else pitch) / (Cabinet.MAX_TILT * 0.7)
 	var stick_held: bool = (grab_hand2 >= 0) if cab.dual else (grab_hand >= 0)
-	if locked and stick_held and not cab.emu:
+	if locked and cab.dual and stick_held and not cab.emu:
 		if stick_fp < -0.62:
 			down["fire"] = true
 		elif stick_fp > 0.62:
@@ -1284,11 +1334,12 @@ func _enter_machine(i: int) -> void:
 	var fm := fade_quad.material_override as StandardMaterial3D
 	var tw := create_tween()
 	tw.tween_method(func(v: float): fm.albedo_color.a = v, 0.0, 1.0, 0.14)
+	var target_mat: StandardMaterial3D = (machines[i] as Cabinet).screen_mat
 	tw.tween_callback(func():
 		_select_machine(i)
 		_place_player(cab.stand_world(), cab.look_world(), true)
 		_set_locked(true)
-		cab.screen_mat.albedo_color = Color(0.1, 0.1, 0.1)
+		target_mat.albedo_color = Color(0.1, 0.1, 0.1)
 		audio.sfx("power", 0.6, 0.0, cab.global_position + Vector3(0, 1.3, 0.3)))
 	tw.tween_method(func(v: float): fm.albedo_color.a = v, 1.0, 0.0, 0.3)
 	tw.tween_callback(func():
@@ -1296,10 +1347,9 @@ func _enter_machine(i: int) -> void:
 		tele_busy = false
 		_haptic(-1, 0.35, 0.1))
 	# the monitor warms up from dark to full brightness
-	var sm := cab.screen_mat
 	var tw2 := create_tween()
 	tw2.tween_interval(0.16)
-	tw2.tween_method(func(v: float): sm.albedo_color = Color(v, v, v), 0.1, 1.0, 0.8)
+	tw2.tween_method(func(v: float): target_mat.albedo_color = Color(v, v, v), 0.1, 1.35, 0.8)
 
 
 ## Makes a machine the one in play: the live screen, the sound and the controls move to it.
@@ -1320,7 +1370,7 @@ func _select_machine(i: int) -> void:
 		cab.button_pressed_visual(k, false)
 	cab = m
 	cab.set_live(emu.screen_texture() if cab.emu else cartridge.screen_texture())
-	cab.screen_mat.albedo_color = Color.WHITE
+	cab.screen_mat.albedo_color = Color(1.35, 1.35, 1.35)
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)
 	audio.move_to(cab)

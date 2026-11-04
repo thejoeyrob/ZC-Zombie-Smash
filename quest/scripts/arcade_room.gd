@@ -12,8 +12,8 @@ const ARC_CENTRE := Vector3(0, 0, 2.9)
 const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 # [x, z, yaw in degrees, which boss]: four machines along each side wall, each turned a little toward the lounge so its painted side faces the door
-const SLOTS := [[-3.13, 1.2, 74.0, "zsa"], [-3.13, 3.15, 90.0, "drmantis"], [-3.13, 5.1, 106.0, "debo"],
-	[3.13, 1.2, -74.0, "discoman"], [3.13, 3.15, -90.0, "jw"], [3.13, 5.1, -106.0, "fatamy"]]
+const SLOTS := [[-2.9, 1.35, 52.0, "zsa"], [-2.95, 3.15, 81.0, "drmantis"], [-2.9, 4.95, 114.0, "debo"],
+	[2.9, 1.35, -52.0, "discoman"], [2.95, 3.15, -81.0, "jw"], [2.9, 4.95, -114.0, "fatamy"]]
 const PLAYER_SLOT := 0
 const DUAL_STICK := ["zsa", "debo"]      # these machines have two sticks: the right one pushed away fires, pulled toward you throws a grenade
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
@@ -103,8 +103,8 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.12, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(root_w, Vector3(wall[2], 0.24, 0.06), Vector3(0, 0.12, 0.03), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(wall[2] / 0.7, 0.34), 1.8))   # tall green washed wood skirting
-		VRBuild.box(root_w, Vector3(wall[2], 0.035, 0.085), Vector3(0, 0.2575, 0.0425), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(wall[2] / 0.7, 0.1), 1.8))   # its top moulding
+		VRBuild.box(root_w, Vector3(wall[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(wall[2] / 0.7, 0.34), 1.8))   # tall green washed wood skirting
+		VRBuild.box(root_w, Vector3(wall[2], 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(wall[2] / 0.7, 0.1), 1.8))   # its top moulding
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [1.4, 3.4, 5.4]:
@@ -160,7 +160,7 @@ func _machines(root: Node3D) -> void:
 		c.set_lit(i == player_index)
 		machines.append(c)
 		flickers.append([c.screen_mat, 1.0, 0.7 + i * 0.13, i * 1.7, i])
-		blockers.append([pos.x - sin(yaw) * 0.3, pos.z - cos(yaw) * 0.3, 0.7])
+		blockers.append([pos.x - sin(yaw) * 0.3, pos.z - cos(yaw) * 0.3, 0.5, 0.06])
 	# a round rug and rings of light in the middle of the curve
 	_lounge(root, _font_ref)
 	_active = player_index
@@ -212,10 +212,10 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 	var c := ARC_CENTRE
 	var brushed := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 3), 0.9)                       # brushed steel poles
 	var black_metal := VRBuild.mat(Color(0.025, 0.025, 0.03), 0.38, 0.85)                          # black metal bases
-	var cols := ["pink", "cyan", "amber", "green", "purple", "red"]
+	var cols := ["green", "red", "amber", "purple"]        # the colour of each seat matches its board piece
 	var tints := {"pink": Color(1.0, 0.42, 0.7), "cyan": Color(0.35, 0.85, 1.0), "amber": Color(1.0, 0.62, 0.12), "green": Color(0.5, 0.95, 0.3), "purple": Color(0.7, 0.45, 1.0), "red": Color(1.0, 0.18, 0.18)}
 	# six stools: one each side of the table, two on each long side
-	var spots_xz := [Vector2(-0.95, 0.0), Vector2(0.95, 0.0), Vector2(-0.24, -0.86), Vector2(0.24, -0.86), Vector2(-0.24, 0.86), Vector2(0.24, 0.86)]
+	var spots_xz := [Vector2(0.0, -0.9), Vector2(0.9, 0.0), Vector2(0.0, 0.9), Vector2(-0.9, 0.0)]      # seat i plays piece i
 	for i in range(spots_xz.size()):
 		var sp: Vector2 = spots_xz[i]
 		var stool := Node3D.new()
@@ -244,7 +244,7 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 		var dome := VRBuild.sphere(stool, 0.178, Vector3(0, 0.715, 0), lm, 32)                                    # the padded dome
 		dome.scale = Vector3(1.0, 0.2, 1.0)
 		seats.append(["sit%d" % i, stool.position, c + Vector3(0, 0.9, 0), 0.22])
-		blockers.append([stool.position.x, stool.position.z, 0.22])
+		blockers.append([stool.position.x, stool.position.z, 0.2, 0.05])
 	# the tall table
 	var table := Node3D.new()
 	table.position = c
@@ -264,7 +264,7 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 	board_game.position = c + Vector3(0, 1.028, 0)
 	root.add_child(board_game)
 	board_game.build(font_ref)
-	blockers.append([c.x, c.z, 0.5])
+	blockers.append([c.x, c.z, 0.45, 0.08])
 
 
 # ---- the back wall: prizes, pinball, hall of fame, vending ------------------------------------------------------
@@ -275,20 +275,23 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	hall.build(root, font, progress, Vector3(0, 1.72, BACK_Z - 0.08), PI)
 	hall.scale = Vector3(0.9, 0.9, 1.0)
 	# a pinball machine on each side of it, well apart and each playing on its own
-	pinball = Pinball.new()
-	pinball.position = Vector3(-2.35, 0, BACK_Z - 0.82)
-	pinball.rotation.y = PI
-	root.add_child(pinball)
-	pinball.build(font)
-	blockers.append([-2.35, BACK_Z - 1.05, 0.62])
-	blockers.append([-2.35, BACK_Z - 1.6, 0.25])
-	pinball2 = Pinball.new()
-	pinball2.position = Vector3(2.35, 0, BACK_Z - 0.82)
-	pinball2.rotation.y = PI
-	root.add_child(pinball2)
-	pinball2.build(font)
-	blockers.append([2.35, BACK_Z - 1.05, 0.62])
-	blockers.append([2.35, BACK_Z - 1.6, 0.25])
+	for k in range(2):
+		var sx := -1.0 if k == 0 else 1.0
+		var pb := Pinball.new()
+		var at := Vector3(sx * 1.95, 0, BACK_Z - 1.05)
+		var face := Vector3(0, 0, 3.4) - at                     # turned to face the middle of the room
+		pb.position = at
+		pb.rotation.y = atan2(face.x, face.z)
+		root.add_child(pb)
+		pb.build(font)
+		var fwd := Vector3(sin(pb.rotation.y), 0, cos(pb.rotation.y))
+		# the body only: you can walk right up to the front rail and stand beside the cabinet
+		blockers.append([at.x - fwd.x * 0.05, at.z - fwd.z * 0.05, 0.36, 0.05])
+		blockers.append([at.x + fwd.x * 0.5, at.z + fwd.z * 0.5, 0.3, 0.04])
+		if k == 0:
+			pinball = pb
+		else:
+			pinball2 = pb
 	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.92, BACK_Z - 0.04), PI, Vector2(2.1, 0.62))
 	# the snack machine beside the door
 	vending = VendingMachine.new()
@@ -297,8 +300,6 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	root.add_child(vending)
 	vending.build(font)
 	blockers.append([vending.position.x, vending.position.z, 0.75])
-	blockers.append([0.0, BACK_Z - 1.05, 0.62])
-	blockers.append([0.0, BACK_Z - 1.6, 0.25])
 
 
 func _decor(root: Node3D, font: Font) -> void:
@@ -317,8 +318,6 @@ func _decor(root: Node3D, font: Font) -> void:
 	_signboard(root, Vector3(-HALF_W, 2.0, 4.12), PI / 2.0, "panel-sloth.jpg", Vector2(1.15, 1.725), Color(1.0, 0.45, 0.2), false)
 	_signboard(root, Vector3(HALF_W, 2.0, 2.18), -PI / 2.0, "panel-neon.jpg", Vector2(1.15, 1.725), Color(0.7, 0.3, 1.0), false)
 	_signboard(root, Vector3(HALF_W, 2.0, 4.12), -PI / 2.0, "panel-city.jpg", Vector2(1.15, 1.725), Color(1.0, 0.3, 0.7), false)
-	# Joey Rob, tall, in the back-left corner
-	_signboard(root, Vector3(-3.3, 1.95, BACK_Z), PI, "panel-joey.jpg", Vector2(0.84, 1.68), Color(0.4, 1.0, 0.3), false)
 
 
 ## A picture hung flat on a side wall (side: +1 left wall, -1 right wall): no frame, just the artwork on a thin dark backing with a soft shadow.
@@ -384,14 +383,6 @@ func _signboard(root: Node3D, pos: Vector3, yaw: float, file: String, art_size: 
 		fm.emission_texture = tex
 		fm.emission_energy_multiplier = 0.7
 		VRBuild.quad(holder, art_size, Vector3(0, 0, off + 0.047), fm)
-	var spot := SpotLight3D.new()
-	spot.position = Vector3(0, h / 2.0 + 0.2, 0.55)
-	spot.rotation = Vector3(-1.2, 0, 0)
-	spot.spot_range = 2.4
-	spot.spot_angle = 40.0
-	spot.light_energy = 1.6
-	spot.light_color = Color(1.0, 0.95, 0.85)
-	holder.add_child(spot)
 
 
 ## A life-size cardboard cut-out of Joey Rob: the printed face, a plain cardboard back and edge, a white die-cut border, and a strut behind.
@@ -486,15 +477,11 @@ func collide(p: Vector3) -> Vector3:
 	var out := Vector3(clampf(p.x, -HALF_W + 0.35, HALF_W - 0.35), 0.0, clampf(p.z, FRONT_Z + 0.5, BACK_Z - 0.4))
 	for b in blockers:
 		var d := Vector2(out.x - b[0], out.z - b[1])
-		var r: float = float(b[2]) + 0.2
+		var r: float = float(b[2]) + (float(b[3]) if b.size() > 3 else 0.2)
 		if d.length() < r:
 			var n := d.normalized() if d.length() > 0.001 else Vector2(0, 1)
 			out.x = b[0] + n.x * r
 			out.z = b[1] + n.y * r
-	if out.z > BACK_Z - 0.7 and out.x < -0.8:
-		out.z = BACK_Z - 0.7
-	if out.z > BACK_Z - 0.7 and out.x > 0.8 and out.x < 3.4:
-		out.z = BACK_Z - 0.7
 	return out
 
 

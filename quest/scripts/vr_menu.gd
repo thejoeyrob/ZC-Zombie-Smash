@@ -45,7 +45,8 @@ func build(root: Node3D, ui_font: Font, initial: Dictionary, build_no := 0) -> v
 	_tex_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_tex_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_tex_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_tex_mat.no_depth_test = false
+	_tex_mat.no_depth_test = true          # always drawn over the machine, never hidden inside it
+	_tex_mat.render_priority = 20
 	_tex_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	quad.material_override = _tex_mat
 	add_child(quad)
@@ -73,8 +74,8 @@ func set_open(on: bool) -> void:
 ## Puts the board in front of the player, turned to face them.
 func present(head: Vector3, forward: Vector3) -> void:
 	var f := Vector3(forward.x, 0.0, forward.z).normalized()
-	scale = Vector3.ONE * 0.75      # close in, so the machine's glass is not in the way
-	global_position = Vector3(head.x, head.y - 0.1, head.z) + f * 0.55
+	scale = Vector3.ONE * 0.7      # close in, and drawn over everything
+	global_position = Vector3(head.x, head.y - 0.12, head.z) + f * 0.48
 	look_at(Vector3(head.x, head.y - 0.1, head.z), Vector3.UP)
 	# look_at points -Z at the player; the quad faces +Z, so turn it round
 	rotate_object_local(Vector3.UP, PI)

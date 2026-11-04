@@ -26,6 +26,7 @@ var enabled := false
 var reset_btn: Node3D
 var _reset_prev := false
 var _grab_z := 0.0
+var _latched := [-1, -1]       # which flipper button each hand is holding (-1 = none)
 
 
 func build(font: Font, art_dir := "res://assets/art/") -> void:
@@ -108,7 +109,7 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	for i in range(2):
 		var sx := -1.0 if i == 0 else 1.0
 		var btn := Node3D.new()
-		btn.position = Vector3(sx * 0.31, 0.79, 0.55)
+		btn.position = Vector3(sx * 0.312, 0.83, 0.68)       # near the player's end, where your hands rest on the sides
 		add_child(btn)
 		VRBuild.cylinder(btn, 0.044, 0.016, Vector3(sx * 0.0, 0, 0), chrome, 0.04, Vector3(0, 0, PI / 2), 28)
 		VRBuild.cylinder(btn, 0.048, 0.006, Vector3(-sx * 0.008, 0, 0), black_rubber, -1.0, Vector3(0, 0, PI / 2), 28)
@@ -181,7 +182,7 @@ func set_enabled(on: bool) -> void:
 
 
 func stand_world() -> Vector3:
-	var p := to_global(Vector3(0, 0, 1.12))      # a hand's reach from the front rail
+	var p := to_global(Vector3(0, 0, 1.02))      # right up against the front rail
 	return Vector3(p.x, 0.0, p.z)
 
 
@@ -194,6 +195,47 @@ func _on_table_event(n: String) -> void:
 	sound.emit(n, p)
 
 
+## Hands holding the sides of the cabinet by the flipper buttons. A hand that grips near a button stays on it; pulling that hand's
+## trigger presses the button (the flipper goes up) and letting go of the trigger lets it fall. Returns
+## {"latch": [button per hand or -1], "spot": [world position per hand or null], "left": bool, "right": bool}.
+func latch(hands: Array) -> Dictionary:
+	var out := {"latch": [-1, -1], "spot": [null, null], "left": false, "right": false}
+	for i in range(mini(2, hands.size())):
+		var h: Dictionary = hands[i]
+		var held: bool = h.gripping or h.trigger or float(h.grip_val) > 0.3 or float(h.trig_val) > 0.3
+		var hp: Vector3 = h.grip
+		if _latched[i] >= 0:
+			var cap0: Node3D = _flip_buttons[_latched[i]]
+			if not held or hp.distance_to(cap0.global_position) > 0.3:
+				_latched[i] = -1
+		if _latched[i] < 0 and held:
+			var best := -1
+			var best_d := 0.16
+			for b in range(2):
+				var cap: Node3D = _flip_buttons[b]
+				if cap == null or b == _latched[1 - i]:
+					continue
+				var d: float = minf(hp.distance_to(cap.global_position), (h.palm as Vector3).distance_to(cap.global_position))
+				if d < best_d:
+					best_d = d
+					best = b
+			_latched[i] = best
+		if _latched[i] >= 0:
+			var cap1: Node3D = _flip_buttons[_latched[i]]
+			out.latch[i] = _latched[i]
+			out.spot[i] = cap1.global_position
+			if float(h.trig_val) > 0.5 or (h.trigger and float(h.trig_val) <= 0.0):
+				if _latched[i] == 0:
+					out.left = true
+				else:
+					out.right = true
+	return out
+
+
+func release_hands() -> void:
+	_latched = [-1, -1]
+
+
 ## Hands: tips and palms are world positions; trig_* are the controller triggers (an assist), launch is a button press.
 func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, launch: bool, near: bool) -> void:
 	var left := false
@@ -201,7 +243,7 @@ func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, laun
 	for p in tips:
 		for i in range(2):
 			var cap: Node3D = _flip_buttons[i]
-			if cap != null and cap.global_position.distance_to(p) < 0.055:
+			if cap != null and not (i in _latched) and cap.global_position.distance_to(p) < 0.055:
 				if i == 0:
 					left = true
 				else:
