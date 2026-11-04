@@ -32,21 +32,53 @@ static func _art(file: String) -> Texture2D:
 func build(font: Font) -> void:
 	_font = font
 	var front_tex := _art("jukebox-front.png")
-	var side_tex := _art("jukebox-side.png")
 	var neon_tex := _art("jukebox-neon.png")
 	var size := Vector2(0.9, 1.95)
 	var cy := 0.975
-	if side_tex != null:
-		var sm := VRBuild.tex_mat(side_tex, 0.0, 0.55)
-		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-		sm.alpha_scissor_threshold = 0.5
-		for i in range(26):
-			VRBuild.quad(self, size, Vector3(0, cy, FRONT_Z - 0.012 - float(i) * 0.015), sm)
+	# a solid body: the arch outline (straight sides, a half-round top, a little foot) extruded 0.5 m deep, in chrome and red enamel
+	var pts := PackedVector2Array()
+	var uvs := PackedVector2Array()
+	var hw := size.x / 2.0
+	var arch_r := hw
+	var arch_c := size.y - arch_r                  # the centre of the half-round top
+	pts.append(Vector2(-hw, 0.0)); uvs.append(Vector2(0.0, 1.0))
+	pts.append(Vector2(-hw, arch_c)); uvs.append(Vector2(0.0, 1.0 - arch_c / size.y))
+	for i in range(1, 24):
+		var a2 := PI - PI * float(i) / 24.0
+		var q := Vector2(cos(a2) * arch_r, arch_c + sin(a2) * arch_r)
+		pts.append(q); uvs.append(Vector2((q.x + hw) / size.x, 1.0 - q.y / size.y))
+	pts.append(Vector2(hw, arch_c)); uvs.append(Vector2(1.0, 1.0 - arch_c / size.y))
+	pts.append(Vector2(hw, 0.0)); uvs.append(Vector2(1.0, 1.0))
+	var enamel := VRBuild.pbr("leather-red", Color(0.9, 0.55, 0.6), Vector2(1.2, 2.0), 1.4)
+	enamel.metallic = 0.25
+	enamel.roughness = 0.35
+	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 2), 0.9)
+	chrome.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var body := Node3D.new()
+	body.position = Vector3(0, 0, FRONT_Z - 0.008)
+	body.rotation.y = -PI / 2.0
+	add_child(body)
+	# slab thickness runs along local x, which the rotation turns into depth; two slabs back to back make it 0.5 m deep with the front face textured
+	VRBuild.picture_slab(body, pts, uvs, -0.25, 0.5, -1.0, enamel, enamel, false)
+	var rim := Node3D.new()
+	add_child(rim)
+	# chrome bands round the arch at the front, so the solid reads as a real cabinet and not a cut-out
+	for i in range(0, 24):
+		var a0 := PI - PI * float(i) / 24.0
+		var a1 := PI - PI * float(i + 1) / 24.0
+		var p0 := Vector3(cos(a0) * (arch_r + 0.012), arch_c + sin(a0) * (arch_r + 0.012), FRONT_Z + 0.004)
+		var p1 := Vector3(cos(a1) * (arch_r + 0.012), arch_c + sin(a1) * (arch_r + 0.012), FRONT_Z + 0.004)
+		var mid := (p0 + p1) / 2.0
+		var seg := VRBuild.box(rim, Vector3(p0.distance_to(p1) + 0.004, 0.035, 0.03), mid, chrome, Vector3(0, 0, atan2(p1.y - p0.y, p1.x - p0.x)))
+	for sx in [-1.0, 1.0]:
+		VRBuild.box(rim, Vector3(0.035, arch_c, 0.03), Vector3(sx * (hw + 0.012), arch_c / 2.0, FRONT_Z + 0.004), chrome)
+	# the front picture: only the arch is shown (transparent outside), standing just clear of the body
 	if front_tex != null:
 		var fm := VRBuild.tex_mat(front_tex, 0.18, 0.4)
 		fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 		fm.alpha_scissor_threshold = 0.5
 		fm.metallic_specular = 0.6
+		fm.normal_enabled = false
 		VRBuild.quad(self, size, Vector3(0, cy, FRONT_Z), fm)
 	if neon_tex != null:
 		_neon = VRBuild.tex_mat(neon_tex, 0.0, 0.5, true)

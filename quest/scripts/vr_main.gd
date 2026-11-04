@@ -389,6 +389,8 @@ func _capture_attract() -> void:
 		return
 	var tex := ImageTexture.create_from_image(img)
 	for m in machines:
+		if m.emu:
+			continue
 		m.attract_tex = tex
 		if m != cab:
 			m.set_live(null)

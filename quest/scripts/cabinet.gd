@@ -102,7 +102,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	# lower body: the front is painted in the game's colour, with a chrome coin door and kick plate and glowing edge trim
 	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)    # brushed steel
 	var black_tex := VRBuild.pbr("plate-blue", Color(0.34, 0.34, 0.42), Vector2(1.0, 1.4), 0.9)    # worn, dark blue steel plate
-	var leather := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(1.6, 2.4), 1.2)     # the same black leather as the control deck, down the whole front
+	var leather := VRBuild.pbr("leather-jet", Color(1.5, 1.5, 1.55), Vector2(1.6, 2.4), 1.2)     # the same black leather as the control deck, down the whole front
 	var front_paint := leather
 	var body_h := deck_front_y - 0.05          # the lower body stops just under the control deck's front lip
 	VRBuild.box(self, Vector3(0.67, body_h, 0.03), Vector3(0, body_h / 2.0, front_z - 0.012), front_paint)
@@ -157,10 +157,10 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	panel.rotation = Vector3(PANEL_TILT, 0, 0)
 	add_child(panel)
 	var panel_col := trim_color.darkened(0.48)
-	var pm := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(1.6, 1.0), 1.0)       # the control deck is wrapped in black leather
+	var pm := VRBuild.pbr("leather-jet", Color(1.5, 1.5, 1.55), Vector2(1.6, 1.0), 1.0)       # the control deck is wrapped in black leather
 	VRBuild.box(panel, Vector3(0.66, 0.04, 0.34), Vector3(0, -0.02, 0), pm)
 	# the near edge is a leather roll: the deck curves over and runs straight down the front of the machine in the same leather
-	var roll_m := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(2.0, 0.4), 1.2)
+	var roll_m := VRBuild.pbr("leather-jet", Color(1.5, 1.5, 1.55), Vector2(2.0, 0.4), 1.2)
 	VRBuild.cylinder(panel, 0.026, 0.68, Vector3(0, -0.02, 0.165), roll_m, -1.0, Vector3(0, 0, PI / 2), 28)
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(-0.337, -0.012, 0.0), chrome)           # side lips
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(0.337, -0.012, 0.0), chrome)
@@ -326,6 +326,19 @@ func _build_sides(poly: Array, body: Material) -> void:
 		dark = VRBuild.mat(Color(0.96, 0.96, 0.97), 0.35)       # the white edge of the side panels
 	dark.cull_mode = BaseMaterial3D.CULL_DISABLED
 	# the picture reads the right way round from outside on the left side; it is mirrored on the right
+	if emu:
+		# a thin white edge all round each side panel: a slightly bigger white slab sits just behind the picture
+		var white := VRBuild.mat(Color(0.96, 0.96, 0.97), 0.35)
+		white.cull_mode = BaseMaterial3D.CULL_DISABLED
+		dark = VRBuild.mat(Color(0.02, 0.02, 0.03), 0.6)
+		dark.cull_mode = BaseMaterial3D.CULL_DISABLED
+		var grown: Array = Geometry2D.offset_polygon(pts, 0.014, Geometry2D.JOIN_MITER)
+		if not grown.is_empty():
+			var gp: PackedVector2Array = grown[0]
+			var zero_uv := PackedVector2Array()
+			zero_uv.resize(gp.size())
+			VRBuild.picture_slab(self, gp, zero_uv, -0.335, 0.036, -1.0, white, white, false)
+			VRBuild.picture_slab(self, gp, zero_uv, 0.335, 0.036, 1.0, white, white, false)
 	VRBuild.picture_slab(self, pts, uvs, -0.335, 0.04, -1.0, picture, dark, false)
 	VRBuild.picture_slab(self, pts, uvs, 0.335, 0.04, 1.0, picture, dark, side_text)
 

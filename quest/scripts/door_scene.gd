@@ -50,7 +50,8 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	VRBuild.box(self, Vector3(door_w + 0.24, 0.12, 0.2), Vector3(0, door_h + 0.04, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.2, 0.04, 0.4), Vector3(0, 0.01, 0.05), VRBuild.mat(Color(0.5, 0.45, 0.35), 0.4, 0.5, 0.2, Color(0.5, 0.45, 0.35)))   # brass threshold
 	# two leaves, each with a glass window
-	var leaf := VRBuild.pbr("wood-navy", Color(0.7, 0.72, 0.8), Vector2(1.0, 1.0), 1.4)       # painted wood door leaves
+	var leaf := VRBuild.pbr("wood-green", Color(0.72, 0.8, 0.72), Vector2(1.0, 1.4), 2.2)       # green washed wood door leaves
+	var inset := VRBuild.pbr("wood-green", Color(0.5, 0.56, 0.5), Vector2(1.0, 1.0), 2.6)       # the recessed panels are a shade darker
 	var brass := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 2), 0.9)                     # brushed metal push bars and handles
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.5, 0.65, 0.9, 0.07)
@@ -60,7 +61,23 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	for side in [-1, 1]:
 		var cx: float = side * (door_w / 4.0)
 		var lw := door_w / 2.0 - 0.01
-		VRBuild.box(self, Vector3(lw, 0.9, 0.07), Vector3(cx, 0.45, 0), leaf)                       # bottom panel
+		# the bottom of the door: a recessed panel held in the frame, with raised mouldings round it, and a brushed-metal kick plate
+		VRBuild.box(self, Vector3(lw - 0.2, 0.62, 0.04), Vector3(cx, 0.52, 0), inset)
+		VRBuild.box(self, Vector3(lw, 0.1, 0.07), Vector3(cx, 0.05, 0), leaf)
+		VRBuild.box(self, Vector3(0.1, 0.9, 0.07), Vector3(cx - lw / 2.0 + 0.05, 0.45, 0), leaf)
+		VRBuild.box(self, Vector3(0.1, 0.9, 0.07), Vector3(cx + lw / 2.0 - 0.05, 0.45, 0), leaf)
+		for fz in [1.0, -1.0]:
+			VRBuild.box(self, Vector3(lw - 0.2, 0.025, 0.02), Vector3(cx, 0.835, fz * 0.04), leaf)
+			VRBuild.box(self, Vector3(lw - 0.2, 0.025, 0.02), Vector3(cx, 0.205, fz * 0.04), leaf)
+			VRBuild.box(self, Vector3(0.025, 0.65, 0.02), Vector3(cx - (lw - 0.2) / 2.0, 0.52, fz * 0.04), leaf)
+			VRBuild.box(self, Vector3(0.025, 0.65, 0.02), Vector3(cx + (lw - 0.2) / 2.0, 0.52, fz * 0.04), leaf)
+			VRBuild.box(self, Vector3(lw - 0.06, 0.2, 0.012), Vector3(cx, 0.1, fz * 0.041), brass)           # kick plate
+		# a long brushed-metal pull handle on the street side, and three hinges on the outer edge
+		for hy2 in [1.5, 0.74]:
+			RuinedExterior.rod(self, Vector3(cx - side * (lw / 2.0 - 0.12), hy2, -0.04), Vector3(cx - side * (lw / 2.0 - 0.12), hy2, -0.1), 0.014, brass)
+		RuinedExterior.rod(self, Vector3(cx - side * (lw / 2.0 - 0.12), 0.7, -0.1), Vector3(cx - side * (lw / 2.0 - 0.12), 1.54, -0.1), 0.019, brass)
+		for hy3 in [0.35, 1.2, 2.0]:
+			VRBuild.cylinder(self, 0.016, 0.16, Vector3(cx + side * (lw / 2.0 + 0.004), hy3, 0.0), brass, -1.0, Vector3.ZERO, 12)
 		VRBuild.box(self, Vector3(0.09, door_h - 0.9, 0.07), Vector3(cx - lw / 2.0 + 0.045, 0.9 + (door_h - 0.9) / 2.0, 0), leaf)
 		VRBuild.box(self, Vector3(0.09, door_h - 0.9, 0.07), Vector3(cx + lw / 2.0 - 0.045, 0.9 + (door_h - 0.9) / 2.0, 0), leaf)
 		VRBuild.box(self, Vector3(lw, 0.09, 0.07), Vector3(cx, door_h - 0.045, 0), leaf)
