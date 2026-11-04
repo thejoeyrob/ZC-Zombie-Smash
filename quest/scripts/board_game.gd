@@ -30,6 +30,7 @@ var _die: Node3D
 var _label: Label3D
 var _font: Font
 var _roll_now := false
+var auto_human := false           # the tour video plays the human seat by itself
 
 
 func build(font: Font) -> void:
@@ -133,6 +134,9 @@ func _run() -> void:
 				_say("YOUR TURN  -  POINT AT THE TABLE AND ROLL")
 				waiting_for_roll = true
 				_roll_now = false
+				if auto_human:
+					await get_tree().create_timer(1.3).timeout
+					_roll_now = true
 				while not _roll_now and is_inside_tree():
 					await get_tree().process_frame
 				waiting_for_roll = false

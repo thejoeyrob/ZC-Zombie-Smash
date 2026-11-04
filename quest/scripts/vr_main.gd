@@ -1264,7 +1264,7 @@ func _select_machine(i: int) -> void:
 
 # ---- a camera tour of the room, for a video ----------------------------------------------------------------
 func _run_tour() -> void:
-	room.prize_wall.set_unlocked(7, true)
+	room.board_game.auto_human = true
 	progress.last = {"score": 48210, "wave": 7, "kills": 212, "bosses": 3, "seconds": 400}
 	progress.best = 61500
 	progress.badges = ["first_boss", "score_10k", "wave_10"]
@@ -1284,18 +1284,21 @@ func _run_tour() -> void:
 		[cab.to_global(Vector3(0.0, 1.5, 1.7)), cab.to_global(Vector3(0, 1.1, -0.3)), 3.0, 2.0],
 		[Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5), 3.5, 3.0],
 		[Vector3(-0.8, 1.7, 0.2), Vector3(-3.1, 1.2, 4.2), 3.5, 3.0, "m1"],
-		[Vector3(0.8, 1.7, 0.2), Vector3(3.1, 1.2, 4.2), 5.0, 3.0, "m5"],
+		[Vector3(0.8, 1.7, 0.2), Vector3(3.1, 1.2, 4.2), 5.0, 3.0, "m3"],
 		[Vector3(0, 1.7, 3.0), Vector3(0, 1.9, -0.55), 4.0, 3.0],
-		[Vector3(-1.4, 1.6, 1.8), Vector3(-1.85, 1.2, -0.3), 3.0, 3.0],
-		[Vector3(1.4, 1.6, 1.8), Vector3(1.8, 1.2, -0.05), 3.0, 3.0],
-		[Vector3(0, 1.7, 0.9), Vector3(0, 1.3, -5.0), 3.0, 5.0],
-		[Vector3(-1.6, 1.7, 1.2), Vector3(0, 0.4, 2.9), 3.5, 3.0, "sit1"],
-		[Vector3(1.7, 1.1, 3.9), Vector3(0, 0.4, 2.9), 3.0, 3.5],
-		[Vector3(0, 1.7, 4.6), Vector3(0, 1.1, 6.5), 3.5, 2.0, "pinball"],
-		[Vector3(0, 1.65, 5.38), Vector3(0, 0.8, 6.3), 3.0, 4.0],
-		[Vector3(-2.3, 1.6, 5.6), Vector3(-2.3, 1.6, 7.2), 3.5, 3.0],
-		[Vector3(-2.3, 1.55, 6.3), Vector3(-2.3, 1.45, 7.2), 2.5, 3.0],
-		[Vector3(2.2, 1.65, 5.2), Vector3(2.2, 1.85, 7.2), 3.5, 4.0],
+		[Vector3(-1.4, 1.6, 1.8), Vector3(-1.85, 1.2, -0.3), 3.0, 2.5],
+		[Vector3(1.4, 1.6, 1.8), Vector3(1.8, 1.2, -0.05), 3.0, 2.5],
+		[Vector3(0, 1.7, 0.9), Vector3(0, 1.3, -5.0), 3.0, 4.0],
+		[Vector3(-2.4, 1.5, 3.7), Vector3(-3.1, 1.1, 3.15), 3.5, 2.5],
+		[Vector3(2.4, 1.5, 3.7), Vector3(3.1, 1.1, 3.15), 3.0, 2.5],
+		[Vector3(-1.6, 1.7, 1.2), Vector3(0, 0.6, 2.9), 3.5, 2.5, "sit1"],
+		[Vector3(0.0, 1.75, 4.15), Vector3(0, 1.0, 2.95), 3.0, 20.0, "dice"],
+		[Vector3(1.7, 1.1, 3.9), Vector3(0, 1.0, 2.9), 3.0, 3.0],
+		[Vector3(0.6, 1.7, 4.6), Vector3(-2.4, 1.1, 7.2), 3.5, 4.0],
+		[Vector3(0, 1.65, 5.38), Vector3(0, 0.8, 6.3), 3.0, 3.5],
+		[Vector3(-1.05, 1.65, 5.38), Vector3(-1.05, 0.8, 6.3), 3.0, 3.0],
+		[Vector3(0.2, 1.7, 4.9), Vector3(1.2, 1.35, 7.2), 3.0, 4.0],
+		[Vector3(2.2, 1.65, 5.2), Vector3(2.95, 1.85, 7.2), 3.0, 3.0],
 	]
 	var pos: Vector3 = stops[0][0]
 	var look: Vector3 = stops[0][1]
