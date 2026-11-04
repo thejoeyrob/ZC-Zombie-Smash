@@ -13,9 +13,10 @@ const SYSTEMS := {
 	"nes": "NES", "sfc": "SUPER NES", "smc": "SUPER NES", "gb": "GAME BOY", "gbc": "GAME BOY COLOR", "gba": "GAME BOY ADVANCE",
 	"sms": "MASTER SYSTEM", "gg": "GAME GEAR", "pce": "PC ENGINE",
 }
-const ROM_DIRS := ["user://roms", "/sdcard/ROMs", "/sdcard/Download/ROMs"]
-const COLS := 38
-const ROWS := 15
+const PACKAGE := "com.thejoeyrob.fattysgameshack"
+const ROM_DIRS := ["user://roms", "/storage/emulated/0/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/ROMs"]
+const COLS := 34
+const ROWS := 12
 const GREEN := Color(0.35, 1.0, 0.45)
 const AMBER := Color(1.0, 0.75, 0.2)
 const GREY := Color(0.75, 0.78, 0.8)
@@ -53,8 +54,8 @@ func build(host: Node) -> void:
 	if _font != null:
 		_label.add_theme_font_override("normal_font", _font)
 		_label.add_theme_font_override("bold_font", _font)
-	_label.add_theme_font_size_override("normal_font_size", 19)
-	_label.add_theme_font_size_override("bold_font_size", 19)
+	_label.add_theme_font_size_override("normal_font_size", 21)
+	_label.add_theme_font_size_override("bold_font_size", 21)
 	_label.add_theme_color_override("default_color", GREEN)
 	viewport.add_child(_label)
 	var scan := ColorRect.new()     # faint scanlines
@@ -162,15 +163,15 @@ func _redraw() -> void:
 	t += "C:\\GAMES> DIR\n\n"
 	if files.is_empty():
 		t += "[color=#ffbf33]FILE NOT FOUND[/color]\n\n"
-		t += "PUT YOUR OWN GAME FILES IN THE\nFOLDER:\n[color=#ffffff]%s[/color]\n\n" % rom_folder_hint().replace("/storage/emulated/0/", "")
+		t += "PUT YOUR OWN GAME FILES IN THE\nFOLDER:\n[color=#ffffff]Android/data/%s/\nfiles/roms[/color]\n\n" % PACKAGE
 		t += "SUPPORTED: MD GEN SMD BIN NES SFC SMC\nGB GBC GBA SMS GG PCE\n\n"
 		t += "FILES STAY ON THIS HEADSET.\n"
 	else:
-		t += "[color=#9aa]%s  %s[/color]\n" % [_pad("NAME", 24), "SYSTEM"]
+		t += "[color=#9aa]%s  %s[/color]\n" % [_pad("NAME", 22), "SYSTEM"]
 		var last: int = mini(files.size(), top + ROWS)
 		for i in range(top, last):
 			var f2: Dictionary = files[i]
-			var line := "%s  %s" % [_pad(str(f2.name), 24), str(f2.system)]
+			var line := "%s  %s" % [_pad(str(f2.name), 22), str(f2.system)]
 			if i == index:
 				t += "[bgcolor=#40ff60][color=#001a00]%s[/color][/bgcolor]\n" % _pad(line, COLS)
 			else:
