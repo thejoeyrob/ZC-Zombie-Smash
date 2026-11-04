@@ -19,5 +19,5 @@ Install over the old copy (same package name, same release key). The app name is
 3. Add yourself as a tester.
 
 ## Before a public store release
-- Decide whether the JW EDS game menu stays in. Meta may not accept an app that loads players' own game files. It is easy to switch off (make `EMU_ENABLED` false in `arcade_room.gd`; not yet wired, ask).
+- Decide whether the JW EDS game menu stays in. Meta may not accept an app that loads players' own game files. It is one switch: set `ENABLED := false` at the top of `scripts/emu_launcher.gd`; the machine then shows a plain notice and never looks at any files.
 - Keep real-game artwork out of the app (the retro machines have been removed for this reason).

@@ -13,6 +13,8 @@ const SYSTEMS := {
 	"nes": "NES", "sfc": "SUPER NES", "smc": "SUPER NES", "gb": "GAME BOY", "gbc": "GAME BOY COLOR", "gba": "GAME BOY ADVANCE",
 	"sms": "MASTER SYSTEM", "gg": "GAME GEAR", "pce": "PC ENGINE",
 }
+## Set to false for a store build: the machine then shows a plain notice and never looks at any files.
+const ENABLED := true
 const PACKAGE := "com.thejoeyrob.fattysgameshack"
 const ROM_DIRS := ["user://roms", "/storage/emulated/0/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/ROMs"]
 const COLS := 34
@@ -71,6 +73,9 @@ func screen_texture() -> Texture2D:
 
 func rescan() -> void:
 	files.clear()
+	if not ENABLED:
+		_redraw()
+		return
 	var seen := {}
 	for d in ROM_DIRS:
 		var dir := DirAccess.open(d)
@@ -161,7 +166,9 @@ func _redraw() -> void:
 		_label.text = t
 		return
 	t += "C:\\GAMES> DIR\n\n"
-	if files.is_empty():
+	if not ENABLED:
+		t += "[color=#ffbf33]GAME LIBRARY NOT AVAILABLE\nIN THIS VERSION[/color]\n"
+	elif files.is_empty():
 		t += "[color=#ffbf33]FILE NOT FOUND[/color]\n\n"
 		t += "PUT YOUR OWN GAME FILES IN THE\nFOLDER:\n[color=#ffffff]Android/data/%s/\nfiles/roms[/color]\n\n" % PACKAGE
 		t += "SUPPORTED: MD GEN SMD BIN NES SFC SMC\nGB GBC GBA SMS GG PCE\n\n"
