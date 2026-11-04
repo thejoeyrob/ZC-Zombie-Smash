@@ -398,7 +398,7 @@ static func neon_tube(parent: Node, length: float, pos: Vector3, color: Color, r
 ## A realistic surface from a photographed material set: colour, normal (bumps) and roughness pictures called pbr-<name>-c/n/r in the art folder
 ## (plus -m for metal where the material has one). tint multiplies the colour; uv is how many times it repeats across a unit quad.
 ## How deep each kind of surface reads (Godot height-map scale, a fraction of one texture repeat).
-const DEPTH := {"brick": 2.4, "tiles": 1.2, "wood": 1.6, "leather": 1.0, "carpet": 1.4, "fabric": 1.2, "plate": 1.2}
+const DEPTH := {"brick": 3.2, "tiles": 1.2, "wood": 1.6, "leather": 1.0, "carpet": 1.4, "fabric": 1.2, "plate": 1.2}
 
 
 static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_scale := 1.0, metallic := 0.0) -> StandardMaterial3D:
