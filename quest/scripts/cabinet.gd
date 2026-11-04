@@ -9,6 +9,7 @@ const STICK_LOCAL := Vector3(-0.19, 0.0, 0.03)
 const STICK_LENGTH := 0.125           # pivot to ball centre
 const BALL_RADIUS := 0.029
 const MAX_TILT := 0.40                # radians the stick can lean
+const STICK2_LOCAL := Vector3(0.19, 0.0, 0.03)
 const BUTTONS := {
 	"fire": {"pos": Vector3(0.205, 0.0, 0.02), "radius": 0.052},
 	"grenade": {"pos": Vector3(0.025, 0.0, 0.06), "radius": 0.03},
@@ -27,6 +28,13 @@ var pressed := {}         # name -> bool
 var neon: Array = []
 var theme_color := Color(0.1, 0.85, 0.35)
 var side_art: Texture2D        # picture for the outside of both sides
+var dual := false              # two sticks: the left one moves, the right one pushed away fires and pulled toward you throws a grenade
+var emu := false               # the JW EDS machine: four action buttons, a start button, a multidirectional stick and a 4:3 screen
+var button_defs := {}          # the buttons this machine has: name -> {pos, radius, col, front?}
+var stick2_pivot: Node3D
+var ball2: MeshInstance3D
+var ball2_mat: StandardMaterial3D
+var jw_logo: Texture2D
 var side_text := false         # the side picture has writing on it: keep the writing readable on both sides (otherwise the right side is a true mirror, so the shape lines up)
 var bezel_id := ""            # which boss's ornate screen frame this machine wears
 const ORNATE_BEZELS := false     # off: the plain black glass surround is back
@@ -48,6 +56,7 @@ var _light: OmniLight3D
 
 func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, trim_color: Color, interactive: bool, marquee_text := "", marquee_color := Color(0.1, 0.1, 0.3), detail := true) -> void:
 	detail = detail or interactive
+	button_defs = _make_button_defs()
 	theme_color = trim_color
 	attract_tex = screen_tex
 	var body := VRBuild.mat(body_color, 0.55, 0.1)
@@ -93,10 +102,11 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	# lower body: the front is painted in the game's colour, with a chrome coin door and kick plate and glowing edge trim
 	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)    # brushed steel
 	var black_tex := VRBuild.pbr("plate-blue", Color(0.34, 0.34, 0.42), Vector2(1.0, 1.4), 0.9)    # worn, dark blue steel plate
-	var front_paint := black_tex
+	var leather := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(1.6, 2.4), 1.2)     # the same black leather as the control deck, down the whole front
+	var front_paint := leather
 	var body_h := deck_front_y - 0.05          # the lower body stops just under the control deck's front lip
 	VRBuild.box(self, Vector3(0.67, body_h, 0.03), Vector3(0, body_h / 2.0, front_z - 0.012), front_paint)
-	VRBuild.box(self, Vector3(0.65, 0.12, 0.036), Vector3(0, 0.07, front_z - 0.004), black_tex)             # kick plate
+	VRBuild.box(self, Vector3(0.65, 0.12, 0.036), Vector3(0, 0.07, front_z - 0.004), leather)               # kick plate
 	VRBuild.box(self, Vector3(0.65, 0.02, 0.04), Vector3(0, 0.14, front_z - 0.002), dark)
 	if detail:
 		# the coin slot: a flat black door with an orange, lit coin insert
@@ -149,7 +159,9 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var panel_col := trim_color.darkened(0.48)
 	var pm := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(1.6, 1.0), 1.0)       # the control deck is wrapped in black leather
 	VRBuild.box(panel, Vector3(0.66, 0.04, 0.34), Vector3(0, -0.02, 0), pm)
-	VRBuild.box(panel, Vector3(0.68, 0.026, 0.022), Vector3(0, -0.012, 0.18), chrome)                # front lip
+	# the near edge is a leather roll: the deck curves over and runs straight down the front of the machine in the same leather
+	var roll_m := VRBuild.pbr("leather-black", Color(1.4, 1.4, 1.4), Vector2(2.0, 0.4), 1.2)
+	VRBuild.cylinder(panel, 0.026, 0.68, Vector3(0, -0.02, 0.165), roll_m, -1.0, Vector3(0, 0, PI / 2), 28)
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(-0.337, -0.012, 0.0), chrome)           # side lips
 	VRBuild.box(panel, Vector3(0.016, 0.026, 0.34), Vector3(0.337, -0.012, 0.0), chrome)
 	VRBuild.box(panel, Vector3(0.68, 0.02, 0.012), Vector3(0, -0.012, -0.176), dark)                 # joint with the monitor
@@ -171,7 +183,10 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	sm.albedo_color = Color(1.35, 1.35, 1.35)       # a lit tube: brighter than a plain picture
 	sm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	screen_mat = sm
-	var screen_quad := VRBuild.quad(mon, Vector2(0.53, 0.64), Vector3(0, 0.0, 0.1005), sm)
+	var screen_size := Vector2(0.58, 0.435) if emu else Vector2(0.53, 0.64)
+	if emu:
+		VRBuild.quad(mon, Vector2(0.53, 0.64), Vector3(0, 0.0, 0.1003), VRBuild.unshaded(Color(0.0, 0.0, 0.0)))
+	var screen_quad := VRBuild.quad(mon, screen_size, Vector3(0, 0.0, 0.1005), sm)
 	screen_quad.name = "ScreenQuad"
 	# the black border round the picture, with a bevel, like the glass of a real tube
 	var black := VRBuild.mat(Color(0.004, 0.004, 0.006), 0.22, 0.1)
@@ -199,7 +214,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	glass.uv1_scale = Vector3(1, 220, 1)
 	glass.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
-	VRBuild.quad(mon, Vector2(0.53, 0.64), Vector3(0, 0.0, 0.1012), glass)
+	VRBuild.quad(mon, screen_size, Vector3(0, 0.0, 0.1012), glass)
 	var sheen := StandardMaterial3D.new()
 	sheen.albedo_texture = _sheen()
 	sheen.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -221,6 +236,10 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	else:
 		VRBuild.quad(marq, Vector2(0.64, 0.2), Vector3(0, 0, 0.0605), VRBuild.unshaded(marquee_color))
 		VRBuild.label(marq, marquee_text, 0.075, Vector3(0, 0, 0.062), Color(1, 1, 1), Vector3.ZERO, 6)
+	if emu and jw_logo != null:
+		var top_m := VRBuild.tex_mat(jw_logo, 0.9, 0.4, true)
+		top_m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		VRBuild.quad(marq, Vector2(0.56, 0.236), Vector3(0, 0.1008, 0), top_m, Vector3(-PI / 2, 0, 0))      # the logo on the top
 	if interactive:
 		front_panel = Node3D.new()
 		front_panel.position = Vector3(0, 0, front_z + 0.004)
@@ -303,10 +322,27 @@ func _build_sides(poly: Array, body: Material) -> void:
 	else:
 		picture = body
 	var dark := VRBuild.mat(Color(0.03, 0.03, 0.05), 0.7)
+	if emu:
+		dark = VRBuild.mat(Color(0.96, 0.96, 0.97), 0.35)       # the white edge of the side panels
 	dark.cull_mode = BaseMaterial3D.CULL_DISABLED
 	# the picture reads the right way round from outside on the left side; it is mirrored on the right
 	VRBuild.picture_slab(self, pts, uvs, -0.335, 0.04, -1.0, picture, dark, false)
 	VRBuild.picture_slab(self, pts, uvs, 0.335, 0.04, 1.0, picture, dark, side_text)
+
+
+func _make_button_defs() -> Dictionary:
+	var menu: Dictionary = BUTTONS["menu"]
+	if emu:
+		return {
+			"a": {"pos": Vector3(-0.02, 0.0, 0.075), "radius": 0.027, "col": Color("#e3262a")},
+			"b": {"pos": Vector3(0.07, 0.0, 0.05), "radius": 0.027, "col": Color("#1d6fe0")},
+			"c": {"pos": Vector3(0.16, 0.0, 0.05), "radius": 0.027, "col": Color("#f2c200")},
+			"d": {"pos": Vector3(0.25, 0.0, 0.075), "radius": 0.027, "col": Color("#25b34a")},
+			"start": {"pos": Vector3(0.1, 0.0, -0.1), "radius": 0.017, "col": Color("#f4f4f4")},
+			"menu": menu}
+	if dual:
+		return {"menu": menu}
+	return BUTTONS.duplicate(true)
 
 
 func _sheen() -> GradientTexture2D:
@@ -346,37 +382,58 @@ func look_world() -> Vector3:
 	return to_global(Vector3(0, 1.4, monitor_z))
 
 
+## One joystick at a spot on the deck: mounting plate, dish, dust boot, shaft and a leather-covered ball. Returns [pivot, ball, ball material].
+func _build_stick(at: Vector3, m: Dictionary) -> Array:
+	var steel: Material = m.steel
+	var chrome: Material = m.chrome
+	var brass: Material = m.brass
+	var black: Material = m.black
+	var rubber: Material = m.rubber
+	VRBuild.box(panel, Vector3(0.15, 0.004, 0.15), at + Vector3(0, 0.002, 0), steel)
+	for dx in [-0.062, 0.062]:
+		for dz in [-0.062, 0.062]:
+			VRBuild.cylinder(panel, 0.007, 0.006, at + Vector3(dx, 0.006, dz), black, 0.006, Vector3.ZERO, 6)
+			VRBuild.cylinder(panel, 0.0035, 0.007, at + Vector3(dx, 0.0065, dz), chrome, -1.0, Vector3.ZERO, 6)
+	VRBuild.cylinder(panel, 0.062, 0.008, at + Vector3(0, 0.008, 0), brass, 0.058, Vector3.ZERO, 44)
+	VRBuild.cylinder(panel, 0.052, 0.012, at + Vector3(0, 0.011, 0), chrome, 0.048, Vector3.ZERO, 44)
+	VRBuild.cylinder(panel, 0.044, 0.012, at + Vector3(0, 0.012, 0), black, -1.0, Vector3.ZERO, 44)
+	VRBuild.cylinder(panel, 0.038, 0.034, at + Vector3(0, 0.03, 0), rubber, 0.012, Vector3.ZERO, 28)
+	for k in range(4):
+		VRBuild.cylinder(panel, 0.034 - k * 0.0045, 0.0035, at + Vector3(0, 0.016 + k * 0.0075, 0), VRBuild.mat(Color(0.05, 0.05, 0.06), 0.8), -1.0, Vector3.ZERO, 24)
+	var pivot := Node3D.new()
+	pivot.position = at + Vector3(0, 0.03, 0)
+	panel.add_child(pivot)
+	VRBuild.cylinder(pivot, 0.007, STICK_LENGTH, Vector3(0, STICK_LENGTH / 2.0, 0), steel, -1.0, Vector3.ZERO, 14)
+	VRBuild.cylinder(pivot, 0.016, 0.005, Vector3(0, 0.022, 0), chrome, -1.0, Vector3.ZERO, 20)
+	VRBuild.cylinder(pivot, 0.011, 0.012, Vector3(0, STICK_LENGTH - 0.026, 0), black, 0.009, Vector3.ZERO, 16)
+	var bm := VRBuild.pbr("leather-cream", Color("#f5b800"), Vector2(1.5, 1.5), 0.7)
+	bm.rim_enabled = true
+	bm.rim = 0.3
+	bm.clearcoat_enabled = true
+	bm.clearcoat = 1.0
+	bm.clearcoat_roughness = 0.05
+	var ball_node := VRBuild.sphere(pivot, BALL_RADIUS, Vector3(0, STICK_LENGTH, 0), bm, 40)
+	return [pivot, ball_node, bm]
+
+
 func _build_controls() -> void:
 	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)
 	var brass := VRBuild.mat(Color(0.8, 0.6, 0.22), 0.25, 0.9)
 	var black := VRBuild.mat(Color(0.012, 0.012, 0.016), 0.35, 0.2)
 	var rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
 	var steel := VRBuild.mat(Color(0.88, 0.89, 0.94), 0.15, 0.9)
-	# the joystick: a square steel mounting plate with four screws, a chrome dish, a rubber boot, a polished shaft and a ball
-	VRBuild.box(panel, Vector3(0.15, 0.004, 0.15), STICK_LOCAL + Vector3(0, 0.002, 0), steel)
-	for dx in [-0.062, 0.062]:
-		for dz in [-0.062, 0.062]:
-			VRBuild.cylinder(panel, 0.007, 0.006, STICK_LOCAL + Vector3(dx, 0.006, dz), black, 0.006, Vector3.ZERO, 6)
-			VRBuild.cylinder(panel, 0.0035, 0.007, STICK_LOCAL + Vector3(dx, 0.0065, dz), chrome, -1.0, Vector3.ZERO, 6)
-	VRBuild.cylinder(panel, 0.062, 0.008, STICK_LOCAL + Vector3(0, 0.008, 0), brass, 0.058, Vector3.ZERO, 44)
-	VRBuild.cylinder(panel, 0.052, 0.012, STICK_LOCAL + Vector3(0, 0.011, 0), chrome, 0.048, Vector3.ZERO, 44)
-	VRBuild.cylinder(panel, 0.044, 0.012, STICK_LOCAL + Vector3(0, 0.012, 0), black, -1.0, Vector3.ZERO, 44)
-	VRBuild.cylinder(panel, 0.038, 0.034, STICK_LOCAL + Vector3(0, 0.03, 0), rubber, 0.012, Vector3.ZERO, 28)         # dust boot
-	for k in range(4):
-		VRBuild.cylinder(panel, 0.034 - k * 0.0045, 0.0035, STICK_LOCAL + Vector3(0, 0.016 + k * 0.0075, 0), VRBuild.mat(Color(0.05, 0.05, 0.06), 0.8), -1.0, Vector3.ZERO, 24)   # its ribs
-	stick_pivot = Node3D.new()
-	stick_pivot.position = STICK_LOCAL + Vector3(0, 0.03, 0)
-	panel.add_child(stick_pivot)
-	VRBuild.cylinder(stick_pivot, 0.007, STICK_LENGTH, Vector3(0, STICK_LENGTH / 2.0, 0), steel, -1.0, Vector3.ZERO, 14)
-	VRBuild.cylinder(stick_pivot, 0.016, 0.005, Vector3(0, 0.022, 0), chrome, -1.0, Vector3.ZERO, 20)
-	VRBuild.cylinder(stick_pivot, 0.011, 0.012, Vector3(0, STICK_LENGTH - 0.026, 0), black, 0.009, Vector3.ZERO, 16)    # the ball's collar
-	ball_mat = VRBuild.pbr("leather-cream", Color("#f5b800"), Vector2(1.5, 1.5), 0.7)      # a leather-covered topper, any colour
-	ball_mat.rim_enabled = true
-	ball_mat.rim = 0.3
-	ball_mat.clearcoat_enabled = true
-	ball_mat.clearcoat = 1.0
-	ball_mat.clearcoat_roughness = 0.05
-	ball = VRBuild.sphere(stick_pivot, BALL_RADIUS, Vector3(0, STICK_LENGTH, 0), ball_mat, 40)
+	var mset := {"steel": steel, "chrome": chrome, "brass": brass, "black": black, "rubber": rubber}
+	var first := _build_stick(STICK_LOCAL, mset)
+	stick_pivot = first[0]
+	ball = first[1]
+	ball_mat = first[2]
+	ball_mat.albedo_color = Color("#f5b800") if not emu else Color("#19c3e6")
+	if dual:
+		var second := _build_stick(STICK2_LOCAL, mset)
+		stick2_pivot = second[0]
+		ball2 = second[1]
+		ball2_mat = second[2]
+		ball2_mat.albedo_color = Color("#e3262a")
 	# buttons: a black bezel with a brass ring, a recessed dish, a lit inner lamp under a glossy domed cap
 	var cfg := {
 		"fire": [Color("#e3262a"), 0.03],
@@ -384,10 +441,10 @@ func _build_controls() -> void:
 		"menu": [Color("#d8d8d8"), 0.014],
 		"lock": [Color("#e3262a"), 0.016],
 	}
-	for k in BUTTONS:
-		var b: Dictionary = BUTTONS[k]
+	for k in button_defs:
+		var b: Dictionary = button_defs[k]
 		var r: float = b.radius
-		var col: Color = cfg[k][0]
+		var col: Color = b.col if b.has("col") else cfg[k][0]
 		var panel: Node3D = front_panel if b.get("front", false) else self.panel
 		VRBuild.cylinder(panel, r + 0.016, 0.003, b.pos + Vector3(0, 0.0015, 0), black, -1.0, Vector3.ZERO, 40)         # cut-out in the deck
 		VRBuild.cylinder(panel, r + 0.012, 0.008, b.pos + Vector3(0, 0.005, 0), brass, r + 0.01, Vector3.ZERO, 40)        # brass ring
@@ -395,7 +452,7 @@ func _build_controls() -> void:
 		VRBuild.cylinder(panel, r + 0.001, 0.014, b.pos + Vector3(0, 0.0085, 0), black, -1.0, Vector3.ZERO, 40)           # dark well
 		VRBuild.cylinder(panel, r * 0.97, 0.002, b.pos + Vector3(0, 0.0125, 0), VRBuild.mat(col.darkened(0.2), 0.3, 0.0, 1.2, col), -1.0, Vector3.ZERO, 36)  # the lamp under the cap
 		var cap_mat := VRBuild.mat(col.lightened(0.05), 0.08, 0.0, 0.5, col)
-		if k == "fire":
+		if k == "fire" and not dual:
 			var ft = load("res://assets/art/fire-cap.jpg")
 			if ft != null:
 				cap_mat.albedo_texture = ft
@@ -491,7 +548,7 @@ func _push_box(p: Vector3, c: Vector3, half: Vector3) -> Vector3:
 
 
 func set_topper_color(c: Color) -> void:
-	if ball_mat != null:
+	if ball_mat != null and not emu:
 		ball_mat.albedo_color = c
 
 
@@ -509,6 +566,15 @@ func set_stick(roll: float, pitch: float) -> void:
 	stick_pivot.rotation = Vector3(pitch, 0.0, -roll)
 
 
+func set_stick2(roll: float, pitch: float) -> void:
+	if stick2_pivot != null:
+		stick2_pivot.rotation = Vector3(pitch, 0.0, -roll)
+
+
+func ball2_world_position() -> Vector3:
+	return ball2.global_position if ball2 != null else Vector3(0, -99, 0)
+
+
 func button_pressed_visual(name: String, down: bool) -> void:
 	if not caps.has(name) or pressed[name] == down:
 		return
@@ -520,8 +586,8 @@ func button_pressed_visual(name: String, down: bool) -> void:
 ## Which button (if any) is under a point given in panel-local coordinates. Returns "" when none.
 func button_at(local: Vector3, reach_above := 0.05) -> String:
 	var in_cab := panel.transform * local
-	for k in BUTTONS:
-		var b: Dictionary = BUTTONS[k]
+	for k in button_defs:
+		var b: Dictionary = button_defs[k]
 		var q := local
 		var reach := reach_above
 		if b.get("front", false):

@@ -14,6 +14,7 @@ var hands: Array = []          # [{ctrl, aim, mesh, side}]
 var room: ArcadeRoom
 var cab: Cabinet
 var machines: Array = []
+var emu: EmuLauncher            # the JW EDS machine's text-mode game menu
 var viewport: SubViewport
 var screen: ZSScreen
 var cartridge: Cartridge       # the game every machine runs (Zombie Smash is the first cartridge)
@@ -30,8 +31,11 @@ var calibrated := false
 var calibrate_timer := 0.0
 
 var grab_hand := -1
+var grab_hand2 := -1            # the hand on the second (right) stick of a two-stick machine
 var roll := 0.0
 var pitch := 0.0
+var roll2 := 0.0
+var pitch2 := 0.0
 var axis := 0.0
 var fire_now := false
 var grenade_prev := false
@@ -89,6 +93,13 @@ func _ready() -> void:
 	var banner: Texture2D = load("res://assets/art/game-banner.webp")
 	room.build(self, cartridge.screen_texture(), banner, font, progress)
 	machines = room.machines
+	emu = EmuLauncher.new()
+	add_child(emu)
+	emu.build(self)
+	for m in machines:
+		if m.emu:
+			m.attract_tex = emu.screen_texture()
+			m.set_live(null)
 	cab = machines[room.player_index]
 	cab.set_live(cartridge.screen_texture())
 	room.set_active(room.player_index)
@@ -575,12 +586,16 @@ func _process(delta: float) -> void:
 	_world_inputs(hs)
 	var pg: Array = []
 	for i in range(2):
-		pg.append({"grab": hs[i].gripping and grab_hand != i and not menu.open, "xf": hs[i].vis_xf, "point": hs[i].palm})
+		pg.append({"grab": hs[i].gripping and grab_hand != i and grab_hand2 != i and not menu.open, "xf": hs[i].vis_xf, "point": hs[i].palm})
 	room.prize_wall.update(pg)
 	_locomotion(hs, delta)
 	_stick(hs, delta)
+	_stick2(hs, delta)
 	_buttons(hs)
-	if state == "play" and game != null:
+	emu.tick(delta)
+	if cab.emu:
+		pass
+	elif state == "play" and game != null:
 		acc += minf(delta, 0.1)
 		game.set_input(axis, fire_now)
 		while acc >= TICK:
@@ -727,9 +742,11 @@ func _world_inputs(hs: Array) -> void:
 		if jb != "" and jb != _jb_last[i2] and not menu.open:
 			room.jukebox.press(jb)
 		_jb_last[i2] = jb
-	var near := _head_floor().distance_to(room.pinball.stand_world()) < 1.5 and not menu.open
+	var d1 := _head_floor().distance_to(room.pinball.stand_world())
+	var d2 := _head_floor().distance_to(room.pinball2.stand_world())
+	var near := d1 < 1.5 and d1 <= d2 and not menu.open
 	room.pinball.interact(tips, palms, hs[0].trigger and near, hs[1].trigger and near, (hs[0].a or hs[1].a), near)
-	var near2 := _head_floor().distance_to(room.pinball2.stand_world()) < 1.5 and not menu.open
+	var near2 := d2 < 1.5 and d2 < d1 and not menu.open
 	room.pinball2.interact(tips, palms, hs[0].trigger and near2, hs[1].trigger and near2, (hs[0].a or hs[1].a), near2)
 
 
@@ -758,7 +775,7 @@ func _pose_hands(hs: Array) -> void:
 		var tip2 := _solid(tipw, 0.011)
 		var final_xf := xf
 		final_xf.origin = pos + shift + (tip2 - tipw)
-		var holding := grab_hand == i
+		var holding := grab_hand == i or grab_hand2 == i
 		var idx_c: float = 1.0 if holding else h.trig_val
 		var grip_c: float = 1.0 if holding else h.grip_val
 		var thumb_c: float = h.thumb if h.thumb >= 0.0 else maxf(grip_c * 0.8, idx_c * 0.3)
@@ -1108,7 +1125,7 @@ func _stick(hs: Array, delta: float) -> void:
 	if grab_hand == -1:
 		for i in range(2):
 			var h: Dictionary = hs[i]
-			if (h.gripping or h.trigger) and h.grip.distance_to(ball) < GRAB_RADIUS * cab.scale.x:
+			if (h.gripping or h.trigger) and i != grab_hand2 and h.grip.distance_to(ball) < GRAB_RADIUS * cab.scale.x:
 				grab_hand = i
 				_haptic(i, 0.5, 0.06)
 				audio.sfx("switch", 0.6)
@@ -1145,14 +1162,48 @@ func _stick(hs: Array, delta: float) -> void:
 		_haptic(grab_hand, 0.35, 0.03)
 
 
+## The right-hand stick of a two-stick machine: pushed away from you it fires, pulled toward you it throws a grenade.
+func _stick2(hs: Array, delta: float) -> void:
+	if not cab.dual:
+		return
+	var ball2 := cab.ball2_world_position()
+	if grab_hand2 == -1:
+		for i in range(2):
+			var h: Dictionary = hs[i]
+			if (h.gripping or h.trigger) and i != grab_hand and h.grip.distance_to(ball2) < GRAB_RADIUS * cab.scale.x:
+				grab_hand2 = i
+				_haptic(i, 0.5, 0.06)
+				audio.sfx("switch", 0.6)
+				break
+	if grab_hand2 >= 0:
+		var h2: Dictionary = hs[grab_hand2]
+		if not (h2.gripping or h2.trigger):
+			grab_hand2 = -1
+			audio.sfx("toggle", 0.5)
+		else:
+			var local := cab.to_panel(h2.grip)
+			var v := local - (Cabinet.STICK2_LOCAL + Vector3(0, 0.03, 0))
+			var up := maxf(v.y, 0.06)
+			roll2 = clampf(atan2(v.x, up), -Cabinet.MAX_TILT, Cabinet.MAX_TILT)
+			pitch2 = clampf(atan2(v.z, up), -Cabinet.MAX_TILT * 0.7, Cabinet.MAX_TILT * 0.7)
+	if grab_hand2 == -1:
+		var k := exp(-delta * 22.0)
+		roll2 *= k
+		pitch2 *= k
+	cab.set_stick2(roll2, pitch2)
+
+
 func _buttons(hs: Array) -> void:
 	var down := {"fire": false, "grenade": false, "menu": false, "pause": false}
+	for bk in cab.button_defs:
+		if not down.has(bk):
+			down[bk] = false
 	for i in range(hs.size()):
 		var h: Dictionary = hs[i]
 		for use_tip in [true, false]:
 			var p: Vector3 = h.tip if use_tip else h.palm
 			var hit := cab.button_at(cab.to_panel(p), 0.06 if use_tip else 0.08)
-			if hit != "" and grab_hand != i and (hit != "menu" or use_tip):
+			if hit != "" and grab_hand != i and grab_hand2 != i and (hit != "menu" or use_tip):
 				down[hit] = true
 		if locked and not menu.open and str(settings.assist) == "on" and h.trigger and h.grip.distance_to(cab.ball_world_position()) > 0.2:
 			down["fire"] = true       # assist: any trigger fires (the score is marked with an asterisk)
@@ -1165,14 +1216,21 @@ func _buttons(hs: Array) -> void:
 		if h.get("b", false):
 			down["pause"] = true
 	# the joystick does everything: left and right to move, push it away from you to fire, pull it toward you for a grenade
-	var stick_fp := pitch / (Cabinet.MAX_TILT * 0.7)
-	if locked and grab_hand >= 0:
+	var stick_fp := (pitch2 if cab.dual else pitch) / (Cabinet.MAX_TILT * 0.7)
+	var stick_held: bool = (grab_hand2 >= 0) if cab.dual else (grab_hand >= 0)
+	if locked and stick_held and not cab.emu:
 		if stick_fp < -0.62:
 			down["fire"] = true
 		elif stick_fp > 0.62:
 			down["grenade"] = true
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
+	if cab.emu:
+		var st := Vector2(axis, pitch / (Cabinet.MAX_TILT * 0.7))
+		if locked:
+			emu.set_input(st, down)
+		fire_now = false
+		return
 	var fire_edge: bool = down.fire and not fire_now
 	fire_now = down.fire
 	if fire_edge:
@@ -1248,14 +1306,18 @@ func _select_machine(i: int) -> void:
 	if m == cab:
 		return
 	grab_hand = -1
+	grab_hand2 = -1
 	roll = 0.0
 	pitch = 0.0
+	roll2 = 0.0
+	pitch2 = 0.0
 	cab.set_stick(0.0, 0.0)
+	cab.set_stick2(0.0, 0.0)
 	cab.set_live(null)
 	for k in cab.caps:
 		cab.button_pressed_visual(k, false)
 	cab = m
-	cab.set_live(cartridge.screen_texture())
+	cab.set_live(emu.screen_texture() if cab.emu else cartridge.screen_texture())
 	cab.screen_mat.albedo_color = Color.WHITE
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)
@@ -1341,6 +1403,11 @@ func _run_shots() -> void:
 		"table": [Vector3(0.0, 1.75, 4.15), Vector3(0, 1.0, 2.95)],
 		"backleft": [Vector3(0.6, 1.7, 4.6), Vector3(-2.4, 1.1, 7.2)],
 		"promo": [Vector3(0.2, 1.7, 4.9), Vector3(1.2, 1.35, 7.2)],
+		"backwall": [Vector3(0, 1.7, 3.4), Vector3(0, 1.5, 7.3)],
+		"jw_threeq": [machines[4].to_global(Vector3(-1.3, 1.7, 1.5)), machines[4].to_global(Vector3(0, 1.1, -0.2))],
+		"jw_deck": [machines[4].to_global(Vector3(0.0, 1.55, 0.9)), machines[4].to_global(Vector3(0, 0.95, 0.1))],
+		"zs_deck": [machines[0].to_global(Vector3(0.0, 1.55, 0.9)), machines[0].to_global(Vector3(0, 0.95, 0.1))],
+		"zs_threeq": [machines[0].to_global(Vector3(1.3, 1.7, 1.5)), machines[0].to_global(Vector3(0, 1.1, -0.2))],
 		"cab_sideL": [cab.to_global(Vector3(-1.25, 1.1, -0.3)), cab.to_global(Vector3(0, 1.0, -0.3))],
 		"cab_back": [cab.to_global(Vector3(0.6, 1.4, -1.9)), cab.to_global(Vector3(0, 1.0, -0.4))],
 		"cab_threeq": [cab.to_global(Vector3(1.3, 1.7, 1.5)), cab.to_global(Vector3(0, 1.1, -0.2))],

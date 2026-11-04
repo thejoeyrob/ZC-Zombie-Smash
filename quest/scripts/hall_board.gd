@@ -31,9 +31,15 @@ func build(root: Node3D, ui_font: Font, prog: VRProgress, pos: Vector3, yaw: flo
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(viewport)
 	# frame and screen
-	VRBuild.box(self, Vector3(SIZE.x + 0.18, SIZE.y + 0.18, 0.06), Vector3(0, 0, -0.04), VRBuild.mat(Color(0.05, 0.04, 0.08), 0.5, 0.4))
-	VRBuild.box(self, Vector3(SIZE.x + 0.24, 0.035, 0.07), Vector3(0, (SIZE.y + 0.18) / 2.0, -0.035), VRBuild.mat(Color(1.0, 0.8, 0.2), 0.3, 0.0, 1.6))
-	VRBuild.box(self, Vector3(SIZE.x + 0.24, 0.035, 0.07), Vector3(0, -(SIZE.y + 0.18) / 2.0, -0.035), VRBuild.mat(Color(1.0, 0.8, 0.2), 0.3, 0.0, 1.6))
+	var frame_tex = load("res://assets/art/frame-wide.png")
+	if frame_tex != null:
+		# the original wooden frame, stretched round the screen without squashing its bevel
+		var fm := VRBuild.tex_mat(frame_tex, 0.12, 0.5)
+		fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		fm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		VRBuild.frame9(self, frame_tex, Rect2(0.071, 0.154, 0.858, 0.691), SIZE + Vector2(0.4, 0.4), SIZE, Vector3(0, 0, -0.02), fm)
+	else:
+		VRBuild.box(self, Vector3(SIZE.x + 0.18, SIZE.y + 0.18, 0.06), Vector3(0, 0, -0.04), VRBuild.mat(Color(0.05, 0.04, 0.08), 0.5, 0.4))
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = viewport.get_texture()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

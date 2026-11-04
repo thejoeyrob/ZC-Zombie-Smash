@@ -5,7 +5,7 @@ and the standard outline then crops the picture. Output: vr-art/side-<id>-flat.p
 import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage as ndi
-for k in ["debo", "mantis", "caffeinatedsloth", "disco", "joeyrob", "fatamy", "jordan", "glowinghumanity", "pinball"]:
+for k in ["debo", "mantis", "caffeinatedsloth", "disco", "joeyrob", "fatamy", "jordan", "glowinghumanity", "pinball", "zs", "jw"]:
     try:
         im = Image.open(f"vr-art/side-{k}.png").convert("RGBA")
     except FileNotFoundError:
