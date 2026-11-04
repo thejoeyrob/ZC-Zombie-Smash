@@ -55,7 +55,7 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	root.add_child(we)
 	# real dark brick walls with neon tubes, like a proper old arcade
 	# real dark brick: a photographed medieval brick set (colour, bumps and roughness), darkened for the late-night mood
-	var wood := VRBuild.pbr("brick", Color(0.5, 0.44, 0.5), Vector2.ONE, 2.4)
+	var wood := VRBuild.pbr("brick", Color(0.74, 0.64, 0.68), Vector2.ONE, 2.4)
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -94,10 +94,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.position = wall[0]
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
-		var wm: StandardMaterial3D = wood.duplicate()
-		if k == 0:
-			# the back wall (shelves, pinball, high scores) is lighter, warmer brick so everything on it pops
-			wm = VRBuild.pbr("brick-light", Color(0.85, 0.62, 0.52), Vector2.ONE, 2.4)
+		var wm: StandardMaterial3D = wood.duplicate()      # the same deep-embossed medieval brick on every wall, same size and colour
 		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
 		wm.texture_repeat = true
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
