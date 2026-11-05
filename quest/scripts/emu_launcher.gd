@@ -12,7 +12,7 @@ signal opened(path: String, system: String)
 const SYSTEMS := {
 	"md": "MEGA DRIVE", "gen": "MEGA DRIVE", "smd": "MEGA DRIVE", "bin": "MEGA DRIVE",
 	"nes": "NES", "sfc": "SUPER NES", "smc": "SUPER NES", "gb": "GAME BOY", "gbc": "GAME BOY COLOR", "gba": "GAME BOY ADVANCE",
-	"sms": "MASTER SYSTEM", "gg": "GAME GEAR", "pce": "PC ENGINE", "zip": "ARCHIVE",
+	"sms": "MASTER SYSTEM", "gg": "GAME GEAR", "pce": "PC ENGINE", "a26": "ATARI 2600", "zip": "ARCHIVE",
 }
 ## Set to false for a store build: the machine then shows a plain notice and never looks at any files.
 const ENABLED := true
@@ -120,6 +120,8 @@ func rescan() -> void:
 				var fa := FileAccess.open(path, FileAccess.READ)
 				var size := fa.get_length() if fa != null else 0
 				var sys: String = SYSTEMS[ext]
+				if ext == "bin":
+					sys = "ATARI 2600" if size <= 65536 else "MEGA DRIVE"      # an Atari 2600 cartridge is at most 64 KB; Mega Drive games are bigger
 				if ext == "zip":
 					sys = _zip_system(path)
 				files.append({"name": f.get_basename().to_upper(), "file": f, "path": path, "system": sys, "size": size})
@@ -136,8 +138,11 @@ static func _zip_system(path: String) -> String:
 	for f in z.get_files():
 		var e := f.get_extension().to_lower()
 		if SYSTEMS.has(e) and e != "zip":
+			var sys: String = SYSTEMS[e]
+			if e == "bin":
+				sys = "ATARI 2600" if z.read_file(f).size() <= 65536 else "MEGA DRIVE"
 			z.close()
-			return SYSTEMS[e]
+			return sys
 	z.close()
 	return "ARCHIVE"
 
@@ -348,7 +353,7 @@ func _redraw() -> void:
 	elif files.is_empty():
 		t += "[color=#ffbf33]FILE NOT FOUND[/color]\n\n"
 		t += "ADD YOUR OWN GAME FILES:\n[color=#ffffff]PRESS C  (OVER WI-FI)[/color]\nOR COPY THEM BY CABLE TO\n[color=#ffffff]Android/data/%s/\nfiles/roms[/color]\n\n" % PACKAGE
-		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC SMS GG (AND ZIP)\n"
+		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC SMS GG A26 (AND ZIP)\n"
 	else:
 		t += "[color=#9aa]%s  %s[/color]\n" % [_pad_s("NAME", 22), "SYSTEM"]
 		var last: int = mini(files.size(), top + ROWS)

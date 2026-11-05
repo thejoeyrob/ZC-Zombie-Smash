@@ -7,7 +7,7 @@ extends Node
 
 const CORES := {
 	"NES": "fceumm", "SUPER NES": "snes9x2010", "MEGA DRIVE": "genesis_plus_gx", "MASTER SYSTEM": "genesis_plus_gx",
-	"GAME GEAR": "genesis_plus_gx", "GAME BOY": "gambatte", "GAME BOY COLOR": "gambatte",
+	"GAME GEAR": "genesis_plus_gx", "GAME BOY": "gambatte", "GAME BOY COLOR": "gambatte", "ATARI 2600": "stella2014",
 }
 # libretro joypad bits
 const BTN_B := 0
@@ -236,7 +236,7 @@ static func _unzip(zip_path: String) -> String:
 	var z := ZIPReader.new()
 	if z.open(ProjectSettings.globalize_path(zip_path)) != OK:
 		return ""
-	var wanted := ["md", "gen", "smd", "bin", "nes", "sfc", "smc", "gb", "gbc", "gba", "sms", "gg", "pce"]
+	var wanted := ["md", "gen", "smd", "bin", "nes", "sfc", "smc", "gb", "gbc", "gba", "sms", "gg", "pce", "a26"]
 	for f in z.get_files():
 		if wanted.has(f.get_extension().to_lower()):
 			DirAccess.make_dir_recursive_absolute(CACHE_DIR)

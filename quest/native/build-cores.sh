@@ -15,6 +15,7 @@ CORES=(
   "snes9x2010|https://github.com/libretro/snes9x2010|fe690dd321fa5a46b5234a2bde089d2518c62b0e"
   "genesis_plus_gx|https://github.com/libretro/Genesis-Plus-GX|f27655b592ef43f317272d79883bcaa10d3ac8ad"
   "gambatte|https://github.com/libretro/gambatte-libretro|77f2567d718b8973d02caa2daa8dce4953faf811"
+  "stella2014|https://github.com/libretro/stella2014-libretro|7d1361e407e63f29e52892655069e5fb4096e691"
 )
 built=0
 for entry in "${CORES[@]}"; do

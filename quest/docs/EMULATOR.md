@@ -14,6 +14,7 @@
 | Super NES | snes9x2010 | Snes9x licence (non-commercial) |
 | Mega Drive / Master System / Game Gear | Genesis Plus GX | Non-commercial licence |
 | Game Boy / Game Boy Color | gambatte | GPL v2 |
+| Atari 2600 | stella2014 | GPL v2 |
 
 ## Two versions of the app
 - `FattysGameShack-Quest.apk`: the **store-safe** build. The game-file menu is switched off (`ENABLED := false` in `emu_launcher.gd`) and no cores are included. Use this for Meta uploads.

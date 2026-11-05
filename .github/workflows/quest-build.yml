@@ -126,6 +126,8 @@ jobs:
           # every build gets its own number, so a new install is never mistaken for an old one
           sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"0.${GITHUB_RUN_NUMBER}.0\"/" export_presets.cfg
           echo "{\"build\": ${GITHUB_RUN_NUMBER}}" > build.json
+          # the main APK is the store-safe one: no game-file menu, no emulator (the sideload version with the emulator is built next)
+          sed -i 's/^const ENABLED := true/const ENABLED := false/' scripts/emu_launcher.gd
           godot --headless --import || true
           if [ -n "${RELEASE_KEYSTORE_B64:-}" ]; then
             # the real store key: builds signed like this can go to the Meta store
@@ -138,6 +140,45 @@ jobs:
             godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
           fi
           cp build/zombie-smash-vr.apk "build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk"
+          ls -la build
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+
+      # ---- the sideload version: the same app plus the emulator plug-in and the open-source cores (pinned commits, see quest/native) ----
+      - name: Build the emulator plug-in and cores
+        id: native
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq scons >/dev/null
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          export ANDROID_NDK_ROOT="$SDK/ndk/28.1.13356709"
+          ls "$ANDROID_NDK_ROOT" | head -3
+          cd quest/native
+          ./build-native.sh android
+          ./build-cores.sh android
+          ./make-gdextension.sh
+
+      - name: Export the emulator APK (sideload version)
+        if: steps.native.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd quest
+          git checkout -- scripts/emu_launcher.gd          # the emulator menu back on
+          godot --headless --import || true
+          if [ -n "${RELEASE_KEYSTORE_B64:-}" ]; then
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="fattysgameshack"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
+            godot --headless --verbose --export-release "Meta Quest" build/emulator.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -40
+          else
+            godot --headless --verbose --export-debug "Meta Quest" build/emulator.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -40
+          fi
+          unzip -l build/emulator.apk | grep -E "libretro" || echo "NO EMULATOR LIBRARIES IN THE APK"
           ls -la build
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
@@ -172,4 +213,12 @@ jobs:
           NOTES="Build ${GITHUB_RUN_NUMBER} (commit ${GITHUB_SHA::7}) of the Fatty's Game Shack Quest VR test build. Download FattysGameShack-Quest.apk and install it on a Quest in developer mode."
           gh release view quest-latest >/dev/null 2>&1 || gh release create quest-latest --prerelease --target "$GITHUB_SHA" --title "Fatty's Game Shack - Quest test build" --notes "$NOTES"
           gh release upload quest-latest FattysGameShack-Quest.apk --clobber
+          if [ -f quest/build/emulator.apk ]; then
+            cp quest/build/emulator.apk FattysGameShack-Quest-Emulator.apk
+            gh release upload quest-latest FattysGameShack-Quest-Emulator.apk --clobber
+            NOTES="$NOTES Also FattysGameShack-Quest-Emulator.apk: the same app with the game-file menu and emulators (sideload only; not for the Meta store)."
+          else
+            gh release delete-asset quest-latest FattysGameShack-Quest-Emulator.apk -y 2>/dev/null || true
+            NOTES="$NOTES (The emulator version did not build this time; see the build log.)"
+          fi
           gh release edit quest-latest --notes "$NOTES"
