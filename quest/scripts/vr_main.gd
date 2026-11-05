@@ -112,6 +112,7 @@ func _ready() -> void:
 	emu.build(self)
 	for m in machines:
 		if m.emu:
+			emu.set_audio_position(m)               # the game's sound comes out of the JW EDS machine
 			m.attract_tex = emu.screen_texture()
 			m.set_live(null)
 	cab = machines[room.player_index]
@@ -666,6 +667,8 @@ func _process(delta: float) -> void:
 	_stick(hs, delta)
 	_stick2(hs, delta)
 	_buttons(hs)
+	emu.hold = not (cab.emu and locked and not menu.open)       # the game only runs while somebody is playing at its machine
+	emu.session.set_volume(0.0 if emu.hold else float(settings.effects))
 	emu.tick(delta)
 	if cab.emu:
 		pass

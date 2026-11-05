@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+# Builds the libretro frontend plugin. Expects godot-cpp checked out next to this file (the CI script does that) and libretro.h in include/.
+import os
+env = SConscript(os.environ.get("GODOT_CPP_DIR", "godot-cpp") + "/SConstruct")
+env.Append(CPPPATH=["src/", "include/"])
+sources = Glob("src/*.cpp")
+library = env.SharedLibrary("bin/libretro_frontend{}{}".format(env["suffix"], env["SHLIBSUFFIX"]), source=sources)
+Default(library)
