@@ -20,6 +20,12 @@ fi
 python3 -m pip install -q scons >/dev/null 2>&1 || true
 cd "$HERE/retro"
 ARCH=$([ "$PLATFORM" = "android" ] && echo arm64 || echo x86_64)
-GODOT_CPP_DIR="$WORK/godot-cpp" scons platform="$PLATFORM" arch="$ARCH" target=template_release -j"$(nproc)"
+EXTRA=""
+if [ "$PLATFORM" = "android" ]; then
+  # godot-cpp looks for the NDK at $ANDROID_HOME/ndk/<ndk_version>; point it at the one the build installed
+  export ANDROID_HOME="$(dirname "$(dirname "$ANDROID_NDK_ROOT")")"
+  EXTRA="ndk_version=$(basename "$ANDROID_NDK_ROOT") android_api_level=29"
+fi
+GODOT_CPP_DIR="$WORK/godot-cpp" scons platform="$PLATFORM" arch="$ARCH" target=template_release -j"$(nproc)" $EXTRA
 cp bin/libretro_frontend.*.so "$OUT/"
 ls -la "$OUT"
