@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "survivor", "body": "full", "handmode": "auto", "sharp": 1.3}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "survivor", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -136,6 +136,7 @@ func _ready() -> void:
 	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	_build_hands()
+	room.env.glow_enabled = str(settings.glow) == "on"
 	room.skins.set_equipped(str(settings.skin))
 	room.skins.chosen.connect(func(id):
 		_on_setting("skin", id)
@@ -373,6 +374,8 @@ func _on_setting(key: String, value) -> void:
 			avatar.set_body_mode(str(value))
 		"sharp":
 			_apply_sharpness()
+		"glow":
+			room.env.glow_enabled = value == "on"
 	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
 		audio.ui("click")
 	_save_settings()
@@ -1236,7 +1239,7 @@ func _leave_gesture(hs: Array, ph: int, delta: float) -> void:
 		leave_t = minf(2.0, leave_t + delta)
 	else:
 		leave_t = maxf(0.0, leave_t - delta * 2.0)
-	leave_prompt.visible = away
+	leave_prompt.visible = away and not demo
 	if away:
 		var f := -cam.global_transform.basis.z
 		f.y = 0.0

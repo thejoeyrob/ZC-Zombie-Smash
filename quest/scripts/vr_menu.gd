@@ -344,6 +344,7 @@ func _build_ui() -> void:
 	_heading(dp, "PICTURE")
 	_slider(dp, "sharp", "Sharpness", 0.9, 1.6, 0.1)
 	_hint(dp, "Higher is clearer far away but works the headset harder. Lower it if the picture stutters.")
+	_stepper(dp, "glow", "Soft glow on neon", ["on", "off"], "")
 	_stepper(dp, "hud", "Screen shake", ["on", "off"], "")
 	_heading(dp, "JOYSTICK TOP")
 	var sw := HBoxContainer.new()

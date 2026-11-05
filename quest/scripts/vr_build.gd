@@ -414,20 +414,12 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	if n != null:
 		m.normal_enabled = true
 		m.normal_texture = n
-		m.normal_scale = normal_scale
+		m.normal_scale = minf(normal_scale * 0.5, 1.4)      # gentle relief: strong normal maps sparkle and crawl at a distance in the headset
 	if r != null:
 		m.roughness_texture = r
 		m.roughness = 1.0
 	else:
 		m.roughness = 0.7
-	# surface depth: the photographed height map pushes the pattern in and out as you look across it (mortar sinks between bricks,
-	# grout between tiles, the grain of leather and wood), so surfaces stop looking flat from the side. One cheap lookup, no extra geometry.
-	var hp := "res://assets/art/pbr-%s-h.png" % name
-	if ResourceLoader.exists(hp):
-		m.heightmap_enabled = true
-		m.heightmap_texture = load(hp)
-		m.heightmap_scale = float(DEPTH.get(name.get_slice("-", 0), 1.5))
-		m.heightmap_deep_parallax = false
 	if ao != null:
 		m.ao_enabled = true
 		m.ao_texture = ao

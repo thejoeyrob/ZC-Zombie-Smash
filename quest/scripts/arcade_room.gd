@@ -35,6 +35,7 @@ var board_game: BoardGame
 var vending: VendingMachine
 var jukebox: Jukebox
 var skins: SkinMachine            # the avatar locker in the back right corner
+var env: Environment               # the world's look: haze, colour, bloom (the menu can switch the bloom off)
 var door: DoorScene
 var ball_mat_spin: Node3D
 var blockers: Array = []        # circles [centre x, centre z, radius] the player cannot walk through
@@ -44,13 +45,33 @@ var _active := -1
 func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, prog: VRProgress) -> void:
 	progress = prog
 	_font_ref = font
-	var env := Environment.new()
+	env = Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.5, 0.33, 0.68)
 	env.ambient_light_energy = 0.95
+	env.ambient_light_color = Color(0.52, 0.4, 0.64)
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.0
+	# a softer, more natural picture: a gentle haze that grows with distance (it also hides shimmer far away), slightly relaxed colour and
+	# contrast, and a light bloom so the bright neon rolls off instead of ending in a hard digital edge
+	env.fog_enabled = true
+	env.fog_light_color = Color(0.2, 0.12, 0.3)
+	env.fog_density = 0.035
+	env.fog_sky_affect = 1.0
+	env.adjustment_enabled = true
+	env.adjustment_saturation = 0.9
+	env.adjustment_contrast = 0.97
+	env.glow_enabled = true
+	env.glow_intensity = 0.55
+	env.glow_strength = 0.9
+	env.glow_bloom = 0.0
+	env.glow_hdr_threshold = 1.0
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
+	for lv in [0, 1, 3, 5, 6]:
+		env.set_glow_level(lv, 0.0)                  # only two soft, wide levels: cheap and gentle
+	env.set_glow_level(2, 1.0)
+	env.set_glow_level(4, 0.6)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
