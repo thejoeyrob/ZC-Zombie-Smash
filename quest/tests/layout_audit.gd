@@ -10,7 +10,7 @@ func _bounds(n: Node3D) -> AABB:
 	var first := true
 	for c in n.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
-		if mi.mesh == null or not mi.visible:
+		if mi.mesh == null or not mi.visible or mi.get_viewport() is SubViewport:
 			continue
 		var b: AABB = mi.global_transform * mi.get_aabb()
 		box = b if first else box.merge(b)
@@ -25,7 +25,7 @@ func _footprint(n: Node3D) -> PackedVector2Array:
 	var hi := -lo
 	for c in n.find_children("*", "MeshInstance3D", true, false):
 		var mi := c as MeshInstance3D
-		if mi.mesh == null or not mi.visible:
+		if mi.mesh == null or not mi.visible or mi.get_viewport() is SubViewport:
 			continue
 		var b: AABB = (inv * mi.global_transform) * mi.get_aabb()
 		lo = lo.min(b.position)
@@ -54,6 +54,7 @@ func _initialize() -> void:
 	things.append(["pinball 2", room.pinball2])
 	things.append(["jukebox", room.jukebox])
 	things.append(["vending", room.vending])
+	things.append(["skins", room.skins])
 	var hw := ArcadeRoom.HALF_W - SKIRT
 	var back := ArcadeRoom.BACK_Z - SKIRT
 	var front := ArcadeRoom.FRONT_Z + 0.06 + SKIRT + 0.02    # the door wall is 0.12 thick, its skirting stands out in front

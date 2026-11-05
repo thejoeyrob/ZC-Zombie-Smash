@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "survivor", "body": "full", "handmode": "auto", "sharp": 1.3}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -77,6 +77,13 @@ var demo_t := 0.0
 var shot_plan: Array = []
 var shot_dir := "/tmp/claude-0/qvr"
 var sim_hands: Array = [_blank_hand(), _blank_hand()]
+var avatar: VRAvatar
+var wrist: WristPanel
+var _wrist_last := ""
+var _skin_last := ["", ""]
+var _skin_flick := 0.0
+var _skin_a := false
+var _eye_stand := 1.62
 
 
 func _ready() -> void:
@@ -86,8 +93,14 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	_load_best()
 	progress.load_all()
+	_load_settings()
+	if args.has("skin"):
+		settings.skin = str(args.skin)
+	if args.has("body"):
+		settings.body = str(args.body)
 	font = load("res://assets/fonts/font-barlow-condensed-900.woff2")
 	_setup_xr()
+	cam.cull_mask = 0xFFFFF & ~(1 << (VRAvatar.HEAD_LAYER - 1))      # your own head is not drawn in your own view
 	_build_screen()
 	cartridge = Cartridges.create(Cartridges.default_id(), self)
 	room = ArcadeRoom.new()
@@ -123,6 +136,11 @@ func _ready() -> void:
 	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	_build_hands()
+	room.skins.set_equipped(str(settings.skin))
+	room.skins.chosen.connect(func(id):
+		_on_setting("skin", id)
+		menu.set_value("skin", id))
+	room.skins.sound.connect(func(k): audio.ui(k))
 	selector = Selector.new()
 	selector.accessible = Callable(self, "_floor_ok")
 	selector.build(self, _selector_targets(), font)
@@ -165,7 +183,10 @@ func _ready() -> void:
 		room.hall.rows = [{"username": "SAMPLE ONE", "score": 912340}, {"username": "SAMPLE TWO", "score": 640200}, {"username": "SAMPLE THREE", "score": 233100}, {"username": "SAMPLE FOUR", "score": 98700}]
 		room.hall.refresh()
 	if args.has("menu"):
-		get_tree().create_timer(2.0).timeout.connect(_open_menu)
+		get_tree().create_timer(2.0).timeout.connect(func():
+			_open_menu()
+			if str(args.menu) != "1":
+				menu.show_page(str(args.menu)))
 	if args.has("unlocked"):
 		_set_locked(false)
 	audio = ZSAudio.new()
@@ -203,7 +224,7 @@ func _setup_xr() -> void:
 		get_viewport().use_xr = true
 		get_viewport().msaa_3d = Viewport.MSAA_4X
 		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
-		iface.render_target_size_multiplier = 1.3          # draw each eye 30% sharper than the headset's default, so far-away detail stays clean
+		iface.render_target_size_multiplier = clampf(float(settings.sharp), 0.8, 1.6)          # draw each eye sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
 		cam = XRCamera3D.new()
 		origin.add_child(cam)
@@ -237,10 +258,18 @@ func _build_screen() -> void:
 
 static func _blank_hand() -> Dictionary:
 	return {"xf": Transform3D.IDENTITY, "grip": Vector3.ZERO, "gripping": false, "trigger": false, "grip_val": 0.0, "trig_val": 0.0,
-		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0, "angles": {}}
+		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0, "angles": {}, "idx_touch": false, "palm_up": 0.0}
 
 
 func _build_hands() -> void:
+	avatar = VRAvatar.new()
+	avatar.build(true)
+	add_child(avatar)
+	avatar.apply_skin(str(settings.skin))
+	avatar.set_body_mode(str(settings.body))
+	wrist = WristPanel.new()
+	wrist.build(font)
+	add_child(wrist)
 	for side in range(2):
 		var name := "left_hand" if side == 0 else "right_hand"
 		var grip := XRController3D.new()
@@ -252,13 +281,9 @@ func _build_hands() -> void:
 		aim.pose = "aim"
 		origin.add_child(aim)
 		var vis := VRHand.new()
-		vis.build(side)
+		vis.build(side, avatar.hand_look())
 		origin.add_child(vis)
-		var arm := VRArm.new()
-		arm.build(side)
-		add_child(arm)
-		arm.visible = false
-		hands.append({"ctrl": grip, "aim": aim, "side": side, "vis": vis, "arm": arm})
+		hands.append({"ctrl": grip, "aim": aim, "side": side, "vis": vis})
 		if not xr_on:
 			vis.visible = false
 
@@ -342,9 +367,32 @@ func _on_setting(key: String, value) -> void:
 			settings.snap = int(value)
 		"hud":
 			screen.no_shake = value == "off"
+		"skin":
+			_apply_skin(str(value))
+		"body":
+			avatar.set_body_mode(str(value))
+		"sharp":
+			_apply_sharpness()
 	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
 		audio.ui("click")
 	_save_settings()
+
+
+func _apply_skin(id: String) -> void:
+	settings.skin = id
+	avatar.apply_skin(id)
+	avatar.set_body_mode(str(settings.body))
+	for h in hands:
+		h.vis.rebuild(avatar.hand_look())
+	room.skins.set_equipped(id)
+
+
+func _apply_sharpness() -> void:
+	if not xr_on:
+		return
+	var iface := XRServer.find_interface("OpenXR")
+	if iface != null:
+		iface.render_target_size_multiplier = clampf(float(settings.sharp), 0.8, 1.6)
 
 
 ## The room and the machines are a fixed size; the player is what moves: "lift" raises or lowers the player, "reach" moves them
@@ -418,6 +466,15 @@ func _on_jukebox(cmd: String) -> void:
 
 
 func _on_menu_action(name: String) -> void:
+	if name.begins_with("goto:"):
+		_close_menu()
+		for spot in room.spots:
+			if str(spot[0]) == name.substr(5):
+				if locked:
+					_set_locked(false)
+				teleport_to_spot(spot)
+				return
+		return
 	match name:
 		"resume":
 			_close_menu()
@@ -595,6 +652,7 @@ func _process(delta: float) -> void:
 	_calibrate(delta)
 	var hs := _read_hands(delta)
 	_pose_hands(hs)
+	_update_avatar(hs, delta)
 	_menu_input(hs)
 	_world_inputs(hs)
 	var pg: Array = []
@@ -634,14 +692,83 @@ func recenter() -> void:
 	_place_player(cab.stand_world(), cab.look_world(), true)
 
 
+## The body follows the head and the two hands.
+func _update_avatar(hs: Array, delta: float) -> void:
+	var wr: Array = []
+	var act: Array = []
+	for i in range(2):
+		wr.append((hs[i].vis_xf as Transform3D) * Vector3(0, -0.004, 0.075))
+		act.append(bool(hs[i].active) or demo)
+	var head := cam.global_transform
+	# body size: set from your eye height while you stand upright, so a taller player gets a taller body
+	if not seated and (-head.basis.z).y > -0.4 and head.origin.y > 1.2:
+		_eye_stand = lerpf(_eye_stand, head.origin.y, 1.0 - exp(-delta * 0.6))
+	avatar.scale_k = clampf(_eye_stand / 1.62, 0.8, 1.3)
+	avatar.update(head, wr, act, delta, seated)
+	var gaunt: bool = avatar.show_body == "hands"
+	for h in hands:
+		h.vis.set_gauntlet(gaunt)
+	# the avatar locker: its screen only draws while you are near; fingers press its buttons, the left stick flicks through outfits, A wears one
+	var sm: SkinMachine = room.skins
+	var snear := _head_floor().distance_to(sm.global_position) < 1.9 and not menu.open
+	sm.animate(delta, snear or _head_floor().distance_to(sm.global_position) < 5.0 and not xr_on)
+	if snear:
+		for i in range(2):
+			var kb: String = sm.button_at(hs[i].tip)
+			if kb != "" and kb != _skin_last[i]:
+				sm.press(kb)
+				_haptic(i, 0.3, 0.04)
+			_skin_last[i] = kb
+		_skin_flick = maxf(0.0, _skin_flick - delta)
+		var sx: float = hs[0].stick.x
+		if absf(sx) > 0.7 and _skin_flick <= 0.0:
+			sm.press("next" if sx > 0.0 else "prev")
+			_skin_flick = 0.35
+		if (hs[1].a or hs[0].a) and not _skin_a:
+			sm.press("select")
+		_skin_a = hs[1].a or hs[0].a
+	# the left palm turned up shows the wrist panel (bare hands only)
+	var l: Dictionary = hs[0]
+	wrist.update(l.palm, float(l.palm_up) if l.bare else 0.0, head.origin, bool(l.active) and l.bare, delta)
+	if wrist.shown:
+		var tip: Vector3 = hs[1].tip
+		var b: String = wrist.button_at(tip)
+		if b != "" and b != _wrist_last:
+			wrist.flash(b)
+			audio.ui("click")
+			match b:
+				"menu":
+					if menu.open:
+						_close_menu()
+					else:
+						_open_menu()
+				"turn_l":
+					_turn(deg_to_rad(float(settings.snap)))
+				"turn_r":
+					_turn(-deg_to_rad(float(settings.snap)))
+				"recentre":
+					recenter()
+		_wrist_last = b
+	else:
+		_wrist_last = ""
+
+
 ## Both hands as raw controller data (from the controllers in VR, simulated on the desktop).
 func _read_hands(delta: float) -> Array:
 	if xr_on:
 		var out: Array = []
+		var hm := str(settings.handmode)          # auto: controllers when held, bare hands when put down; or force one of them
 		for h in hands:
 			var c: XRController3D = h.ctrl
 			var a: XRController3D = h.aim
-			if not (c.get_is_active() and c.get_has_tracking_data()):
+			var have_ctrl: bool = c.get_is_active() and c.get_has_tracking_data()
+			if hm == "controllers" and not have_ctrl:
+				var off := _blank_hand()
+				off.active = false
+				off.xf = c.global_transform
+				out.append(off)
+				continue
+			if not have_ctrl or hm == "hands":
 				var ht := XRServer.get_tracker("/user/hand_tracking/" + ("left" if h.side == 0 else "right")) as XRHandTracker
 				if ht != null and ht.has_tracking_data:
 					out.append(_tracked_hand(ht, h.side))
@@ -663,6 +790,10 @@ func _read_hands(delta: float) -> Array:
 			d.a = c.is_button_pressed("ax_button")
 			d.b = c.is_button_pressed("by_button")
 			d.menu = c.is_button_pressed("menu_button")
+			# the controller senses where your fingers rest, so the hand can copy them: thumb on a button or stick, index on the trigger
+			var thumb_on: bool = c.is_button_pressed("ax_touch") or c.is_button_pressed("by_touch") or c.is_button_pressed("primary_touch") or d.a or d.b
+			d.idx_touch = c.is_button_pressed("trigger_touch") or trig_val > 0.05
+			d.thumb = (0.9 if grip_val > 0.5 else 0.6) if thumb_on else (0.0 if grip_val > 0.5 else 0.12)      # lifted thumb with a closed fist = thumbs up
 			d.aim_origin = a.global_position
 			d.aim_dir = -a.global_transform.basis.z
 			out.append(d)
@@ -723,6 +854,9 @@ func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
 	d.aim_dir = (j.call(10) - j.call(7)).normalized()
 	d.thumb = 1.0 - clampf(((j.call(5) as Vector3).distance_to(j.call(7)) - 0.03) / 0.06, 0.0, 1.0)
 	d.bare = true
+	var nrm: Vector3 = ((j.call(7) as Vector3) - (j.call(22) as Vector3)).cross(f) * (1.0 if side == 0 else -1.0)
+	d.palm_up = clampf(nrm.normalized().y, 0.0, 1.0) if nrm.length() > 0.0001 else 0.0
+	d.idx_touch = false
 	# the real bend of every finger joint, so the hand makes the same shape as yours
 	var dir := func(a: int, b: int) -> Vector3: return ((j.call(b) as Vector3) - (j.call(a) as Vector3)).normalized()
 	var bend := func(a: Vector3, b: Vector3) -> float: return acos(clampf(a.dot(b), -1.0, 1.0))
@@ -811,9 +945,11 @@ func _pose_hands(hs: Array) -> void:
 			final_xf.origin = cab.ball2_world_position() - final_xf.basis * Vector3(sgn * HAND_ANCHOR, 0.0, -0.012)
 		elif pin_hold != null:
 			final_xf.origin = (pin_hold as Vector3) - final_xf.basis * Vector3(0.0, 0.0, -0.15)
-		var idx_c: float = 1.0 if holding else h.trig_val
+		var idx_c: float = 1.0 if holding else maxf(h.trig_val, 0.3 if (h.idx_touch and not h.bare) else 0.0)
 		var grip_c: float = 1.0 if holding else h.grip_val
 		var thumb_c: float = h.thumb if h.thumb >= 0.0 else maxf(grip_c * 0.8, idx_c * 0.3)
+		if holding:
+			thumb_c = 0.9
 		if h.bare and not h.angles.is_empty() and not holding:
 			vis.set_tracked(h.angles)
 		else:
@@ -821,16 +957,6 @@ func _pose_hands(hs: Array) -> void:
 		vis.set_pose(idx_c, grip_c, 0.9 if holding else thumb_c)
 		vis.global_transform = final_xf
 		vis.visible = (xr_on and h.active) or demo
-		var arm: VRArm = hands[i].arm
-		arm.visible = false          # no arms: the glove's gauntlet is all that shows
-		if arm.visible:
-			var cg := cam.global_transform
-			var fwd := -cg.basis.z
-			fwd.y = 0.0
-			fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
-			var heading := Basis(Vector3.UP, atan2(-fwd.x, -fwd.z))
-			var shoulder := cg.origin + heading * Vector3(sgn * 0.0 + (-0.19 if i == 0 else 0.19), -0.24, 0.02)
-			arm.update(shoulder, final_xf * Vector3(0, 0, 0.078), heading)
 		h.palm = final_xf.origin
 		h.vis_xf = final_xf
 		h.tip = final_xf * Vector3(0, 0, -0.15 + 0.05 * idx_c)
@@ -893,8 +1019,18 @@ func _menu_input(hs: Array) -> void:
 			_open_menu()
 	menu_prev_btn = pressed
 	if menu.open:
-		var ph := 0 if settings.pointer == "left" else 1
-		menu.point(hs[ph].aim_origin, hs[ph].aim_dir, hs[ph].trigger)
+		var poked := false
+		var mn: Vector3 = menu.global_transform.basis.z.normalized()
+		for i in range(2):
+			# bare hands can simply touch the board with a fingertip
+			if hs[i].bare and hs[i].active:
+				var dz: float = ((hs[i].tip as Vector3) - menu.global_position).dot(mn)
+				if dz > -0.08 and dz < 0.1 and menu.point((hs[i].tip as Vector3) + mn * 0.15, -mn, dz < 0.014, false):
+					poked = true
+					break
+		if not poked:
+			var ph := 0 if settings.pointer == "left" else 1
+			menu.point(hs[ph].aim_origin, hs[ph].aim_dir, hs[ph].trigger)
 
 
 func _locomotion(hs: Array, delta: float) -> void:
@@ -1080,6 +1216,7 @@ func _selector_targets() -> Array:
 	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	for sd in room.seats:
 		out.append({"id": sd[0], "label": "SIT", "xf": Transform3D(Basis.IDENTITY, sd[1]), "box": AABB(Vector3(-0.25, 0.0, -0.25), Vector3(0.5, 0.85, 0.5)), "colour": Color(1.0, 0.45, 0.85), "always": true})
+	out.append({"id": "skins", "label": "AVATARS", "xf": room.skins.global_transform, "box": AABB(Vector3(-0.42, 0.0, -0.3), Vector3(0.84, 2.0, 1.3)), "colour": Color(0.3, 0.9, 1.0), "always": true})
 	out.append({"id": "exit", "label": "EXIT", "xf": Transform3D(Basis.IDENTITY, Vector3(0, 0, ArcadeRoom.FRONT_Z)), "box": AABB(Vector3(-1.15, 0.0, -0.2), Vector3(2.3, 2.55, 0.4)), "colour": Color(0.4, 1.0, 0.55)})
 	return out
 
@@ -1426,6 +1563,10 @@ func _run_tour() -> void:
 		[room.pinball.stand_world() + Vector3(0, 1.65, 0), room.pinball.look_world(), 3.0, 3.5],
 		[room.pinball2.stand_world() + Vector3(0, 1.65, 0), room.pinball2.look_world(), 3.5, 3.5],
 		[Vector3(0, 1.7, 5.2), Vector3(0, 1.75, 7.3), 3.0, 4.0],
+		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 3.5, 2.2, "skins", "next"],
+		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
+		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
+		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "select"],
 	]
 	var pos: Vector3 = stops[0][0]
 	var look: Vector3 = stops[0][1]
@@ -1448,6 +1589,8 @@ func _run_tour() -> void:
 			cam.look_at_from_position(p0.lerp(stop[0], k), l0.lerp(stop[1], k), Vector3.UP)
 		pos = stop[0]
 		look = stop[1]
+		if stop.size() > 5:
+			room.skins.press(str(stop[5]))
 		await get_tree().create_timer(float(stop[3])).timeout
 	get_tree().quit()
 
@@ -1497,6 +1640,7 @@ func _run_shots() -> void:
 		"bobble_b": [Vector3(-2.0, 1.5, 7.3), Vector3(-2.0, 1.4, 8.0)],
 		"bobble_c": [Vector3(-2.65, 1.95, 7.3), Vector3(-2.65, 1.9, 8.0)],
 		"menu": [st + Vector3(0, 1.62, 0.0), cab.look_world()],
+		"menu_far": [st + Vector3(0, 1.55, 0.0) + (st - cab.look_world()).normalized() * Vector3(1, 0, 1) * 0.55, cab.look_world()],
 		"themed": [Vector3(-2.2, 1.6, 2.3), Vector3(-2.7, 1.1, 0.9)],
 		"themed2": [Vector3(2.2, 1.6, 2.3), Vector3(2.7, 1.1, 0.9)],
 	}
@@ -1507,6 +1651,10 @@ func _run_shots() -> void:
 	var jb: Vector3 = room.jukebox.global_position
 	var vd: Vector3 = room.vending.global_position
 	var tc: Vector3 = ArcadeRoom.ARC_CENTRE
+	views["locker"] = [Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.6), Vector3(3.42, 1.2, ArcadeRoom.BACK_Z - 0.4)]
+	views["locker_wide"] = [Vector3(1.2, 1.7, 4.4), Vector3(3.3, 1.0, 7.0)]
+	views["body_down"] = [Vector3(0.3, 1.65, 1.2), Vector3(0.3, 0.0, 1.45)]
+	views["body_fwd"] = [Vector3(0.3, 1.65, 1.2), Vector3(0.3, 1.2, 0.0)]
 	views["juke_side"] = [jb + Vector3(1.3, 1.4, 1.2), jb + Vector3(0, 1.0, 0)]
 	views["vend_top"] = [vd + Vector3(-0.9, 2.3, 1.3), vd + Vector3(0, 1.9, 0)]
 	views["door_in"] = [Vector3(0.9, 1.5, 1.4), Vector3(0, 1.0, ArcadeRoom.FRONT_Z)]

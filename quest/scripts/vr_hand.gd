@@ -21,19 +21,30 @@ var nail_mat: StandardMaterial3D
 var shown := {"index": 0.0, "grip": 0.0, "thumb": 0.0}
 
 
-func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color := Color(0.8, 0.1, 0.15)) -> void:
+var gauntlet: Array = []           # the long sleeve and cuff: hidden when the avatar's own forearm joins the wrist
+var look := {}
+
+
+## look: {glove: Color, gloves: bool (false = bare skin), cuff: Color, tone: Color}, from the chosen skin.
+func build(hand_side: int, hand_look := {}) -> void:
 	side = hand_side
+	look = hand_look
 	s = 1.0 if side == 0 else -1.0
-	# a dark tactical glove (soft fabric, hard knuckle shell, grippy palm), the look of a shooter's gloves rather than bare skin
-	var glove := VRBuild.tex_mat(VRBuild.panel_texture(Color(0.085, 0.09, 0.1), 5), 0.0, 0.82)
-	glove.uv1_scale = Vector3(2.0, 2.0, 1)
-	glove.texture_repeat = true
+	var glove: StandardMaterial3D
+	var cuff_col: Color = look.get("cuff", Color(1.0, 0.32, 0.62))
+	if look.is_empty() or look.get("gloves", true):
+		# a tactical glove (soft fabric, hard knuckle shell, grippy palm) in the skin's glove colour
+		glove = VRBuild.tex_mat(VRBuild.panel_texture(look.get("glove", Color(0.085, 0.09, 0.1)), 5), 0.0, 0.82)
+		glove.uv1_scale = Vector3(2.0, 2.0, 1)
+		glove.texture_repeat = true
+	else:
+		glove = VRBuild.mat(look.get("tone", Color(0.85, 0.65, 0.5)), 0.55)          # bare skin
 	glove.rim_enabled = true
 	glove.rim = 0.35
 	glove.rim_tint = 0.5
 	nail_mat = VRBuild.mat(Color(0.2, 0.2, 0.22), 0.55)        # the grippy pads on the fingertips
 	var stitch := VRBuild.mat(Color(0.62, 0.5, 0.32), 0.7)
-	var cuff := VRBuild.mat(Color(1.0, 0.32, 0.62), 0.5)
+	var cuff := VRBuild.mat(cuff_col, 0.5)
 	var shell := VRBuild.mat(Color(0.17, 0.17, 0.2), 0.35, 0.3)
 	# palm and back of the hand, built from soft overlapping masses so it reads as a hand, not a block
 	var core := MeshInstance3D.new()
@@ -59,8 +70,9 @@ func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color :=
 		var kn := VRBuild.sphere(self, float(f[3]) * 1.12, Vector3(0, f[1], -0.054), glove, 10)   # knuckles
 		kn.scale = Vector3(1.0, 1.0, 1.0)
 	# wrist cuff: a ribbed band and a coloured stripe
-	VRBuild.cylinder(self, 0.037, 0.13, Vector3(0, -0.004, 0.115), glove, 0.042, Vector3(PI / 2, 0, 0), 22)       # the gauntlet runs up the forearm
-	VRBuild.cylinder(self, 0.0435, 0.012, Vector3(0, -0.004, 0.176), cuff, -1.0, Vector3(PI / 2, 0, 0), 22)
+	gauntlet = [
+		VRBuild.cylinder(self, 0.037, 0.13, Vector3(0, -0.004, 0.115), glove, 0.042, Vector3(PI / 2, 0, 0), 22),       # the gauntlet runs up the forearm
+		VRBuild.cylinder(self, 0.0435, 0.012, Vector3(0, -0.004, 0.176), cuff, -1.0, Vector3(PI / 2, 0, 0), 22)]
 	# a stitched line along the back of the hand and a velcro tab
 	VRBuild.box(self, Vector3(0.002, 0.004, 0.07), Vector3(-s * 0.0235, 0, -0.012), stitch)
 	VRBuild.box(self, Vector3(0.012, 0.074, 0.03), Vector3(-s * 0.03, 0.0, -0.05), shell)                        # hard knuckle guard
@@ -73,6 +85,21 @@ func build(hand_side: int, glove_color := Color(0.94, 0.94, 0.97), cuff_color :=
 		add_child(root)
 		joints[f[0]] = _chain(root, f[2], f[3], glove)
 	_build_thumb(glove)
+
+
+## Rebuilds the hand in a new look (a different skin chosen at the skin machine).
+func rebuild(hand_look: Dictionary) -> void:
+	for c in get_children():
+		remove_child(c)
+		c.queue_free()
+	joints = {}
+	thumb = []
+	build(side, hand_look)
+
+
+func set_gauntlet(on: bool) -> void:
+	for g in gauntlet:
+		(g as Node3D).visible = on
 
 
 func _chain(parent: Node3D, lengths: Array, radius: float, mat: Material) -> Array:

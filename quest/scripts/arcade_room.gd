@@ -34,6 +34,7 @@ var pinball2: Pinball
 var board_game: BoardGame
 var vending: VendingMachine
 var jukebox: Jukebox
+var skins: SkinMachine            # the avatar locker in the back right corner
 var door: DoorScene
 var ball_mat_spin: Node3D
 var blockers: Array = []        # circles [centre x, centre z, radius] the player cannot walk through
@@ -311,6 +312,13 @@ func _decor(root: Node3D, font: Font) -> void:
 	root.add_child(jukebox)
 	jukebox.build(font)
 	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
+	# the avatar locker: in the back right corner, flat to the back wall, turned to face the room
+	skins = SkinMachine.new()
+	skins.position = Vector3(3.42, 0, BACK_Z - 0.42)
+	skins.rotation.y = PI
+	root.add_child(skins)
+	skins.build(font, "survivor")
+	blockers.append([skins.position.x, skins.position.z - 0.1, 0.45, 0.05])
 	# four big backlit glass-panel posters, one in each gap between the machines on the side walls
 	_signboard(root, Vector3(-HALF_W, 2.0, 2.18), PI / 2.0, "panel-fire.jpg", Vector2(1.15, 1.725), Color(1.0, 0.55, 0.15), false)
 	_signboard(root, Vector3(-HALF_W, 2.0, 4.12), PI / 2.0, "panel-sloth.jpg", Vector2(1.15, 1.725), Color(1.0, 0.45, 0.2), false)
@@ -393,6 +401,7 @@ func _spots() -> void:
 	spots.append(["hall", "HALL OF FAME", Vector3(0, 0, BACK_Z - 2.4), Vector3(0, 1.7, BACK_Z), Color(1.0, 0.82, 0.25)])
 	spots.append(["vending", "SNACKS", Vector3(1.8, 0, 1.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
 	spots.append(["jukebox", "JUKEBOX", Vector3(-1.85, 0, 1.3), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
+	spots.append(["skins", "AVATAR LOCKER", Vector3(3.42, 0, BACK_Z - 1.45), Vector3(3.42, 1.3, BACK_Z - 0.45), Color(0.3, 0.9, 1.0)])
 	spots.append(["lounge", "LOUNGE", ARC_CENTRE + Vector3(0, 0, -1.7), ARC_CENTRE + Vector3(0, 0.4, 0), Color(1.0, 0.45, 0.85)])
 	spots.append(["exit", "EXIT", Vector3(0, 0, 0.75), Vector3(0, 1.4, FRONT_Z), Color(0.3, 1.0, 0.45)])
 

@@ -88,7 +88,7 @@ func set_value(key: String, v) -> void:
 
 # ---- the pointer -----------------------------------------------------------------------------------
 ## Feeds one hand's beam into the board. Returns true when the beam is over the board.
-func point(origin: Vector3, dir: Vector3, trigger_down: bool) -> bool:
+func point(origin: Vector3, dir: Vector3, trigger_down: bool, with_beam := true) -> bool:
 	if not open:
 		return false
 	var n := global_transform.basis.z
@@ -103,7 +103,12 @@ func point(origin: Vector3, dir: Vector3, trigger_down: bool) -> bool:
 	var hit := origin + dir * t
 	var l := to_local(hit)
 	var over := absf(l.x) <= SIZE.x / 2.0 and absf(l.y) <= SIZE.y / 2.0
-	_show_beam(origin, hit, over)
+	if with_beam:
+		_show_beam(origin, hit, over)
+	else:
+		beam.visible = false
+		dot.visible = over
+		dot.global_position = hit
 	if not over:
 		_release()
 		return false
@@ -187,81 +192,189 @@ func _label(text: String, size := 32, color := Color(0.85, 0.9, 1.0)) -> Label:
 	return l
 
 
+const PAGES := [["play", "PLAY", Color("#1f8f4a")], ["avatar", "AVATAR", Color("#7a3fd0")], ["hands", "HANDS", Color("#2a7fb8")], ["comfort", "COMFORT", Color("#b8782a")], ["display", "DISPLAY", Color("#2a9aa8")], ["sound", "SOUND", Color("#a82a6a")]]
+var LABELS := {
+	"handmode": {"auto": "AUTO", "controllers": "CONTROLLERS", "hands": "BARE HANDS"},
+	"body": {"full": "FULL BODY", "arms": "ARMS ONLY", "hands": "HANDS ONLY"},
+}
+
+var _pages := {}
+var _tabs := {}
+var _page_name := "play"
+
+
+func _page(name: String) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.visible = false
+	_pages[name] = v
+	return v
+
+
+func _heading(parent: Control, text: String) -> void:
+	var l := _label(text, 30, Color(0.4, 1.0, 0.7))
+	parent.add_child(l)
+
+
+func _hint(parent: Control, text: String) -> void:
+	var l := _label(text, 26, Color(0.7, 0.75, 0.9))
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(0, 70)
+	parent.add_child(l)
+
+
+func show_page(name: String) -> void:
+	_page_name = name
+	for k in _pages:
+		_pages[k].visible = k == name
+	for k in _tabs:
+		var b: Button = _tabs[k]
+		var on: bool = k == name
+		var col: Color = PAGES[_page_index(k)][2]
+		b.add_theme_stylebox_override("normal", _style(col if on else Color("#1b1e34"), Color(1, 1, 1, 0.9) if on else Color(1, 1, 1, 0.1)))
+
+
+func _page_index(name: String) -> int:
+	for i in range(PAGES.size()):
+		if PAGES[i][0] == name:
+			return i
+	return 0
+
+
 func _build_ui() -> void:
 	var back := PanelContainer.new()
 	back.size = Vector2(VIEW)
-	back.add_theme_stylebox_override("panel", _style(Color(0.04, 0.03, 0.1, 0.94), Color(0.2, 0.9, 1.0, 0.95), 28))
+	back.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.09, 0.95), Color(0.2, 0.9, 1.0, 0.95), 28))
 	viewport.add_child(back)
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 10)
 	back.add_child(root)
-	var title := _label("OPTIONS      build %d" % build_number if build_number > 0 else "OPTIONS", 60, Color(1.0, 0.85, 0.3))
+	var title := _label("FATTY'S GAME SHACK" + ("      build %d" % build_number if build_number > 0 else ""), 50, Color(1.0, 0.85, 0.3))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(title)
-	var cols := HBoxContainer.new()
-	cols.add_theme_constant_override("separation", 40)
-	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(cols)
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_theme_constant_override("separation", 8)
-	cols.add_child(left)
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.add_theme_constant_override("separation", 8)
-	cols.add_child(right)
-	left.add_child(_label("SOUND", 30, Color(0.4, 1.0, 0.7)))
-	_slider(left, "music", "Music", 0.0, 1.0, 0.05)
-	_slider(left, "effects", "Effects", 0.0, 1.0, 0.05)
-	left.add_child(_label("COMFORT", 30, Color(0.4, 1.0, 0.7)))
-	_slider(left, "lift", "Player height", -0.5, 0.8, 0.02)
-	_slider(left, "reach", "Distance to machine", -0.25, 0.4, 0.02)
-	_stepper(left, "turn", "Turning", ["smooth", "snap"], "")
-	_stepper(left, "turnspeed", "Smooth turn speed", [60, 90, 120, 150], "°/s")
-	_stepper(left, "snap", "Snap turn size", [15, 30, 45, 60, 90], "°")
-	_stepper(left, "walk", "Walk speed", [1.0, 1.5, 2.0, 2.5], " m/s")
-	_slider(left, "haptics", "Vibration", 0.0, 1.0, 0.1)
-	right.add_child(_label("JOYSTICK TOP", 30, Color(0.4, 1.0, 0.7)))
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 20)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(body)
+	# the tabs down the left
+	var tabs := VBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 10)
+	tabs.custom_minimum_size = Vector2(230, 0)
+	body.add_child(tabs)
+	for pg in PAGES:
+		var tb := _button(pg[1], Color("#1b1e34"), 36)
+		tb.custom_minimum_size = Vector2(230, 84)
+		var id: String = pg[0]
+		tb.pressed.connect(func(): show_page(id))
+		tabs.add_child(tb)
+		_tabs[id] = tb
+	var holder := Control.new()
+	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(holder)
+	for pg in PAGES:
+		var pv := _page(pg[0])
+		holder.add_child(pv)
+		pv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# PLAY
+	var play: VBoxContainer = _pages.play
+	_heading(play, "GO TO")
+	var go := GridContainer.new()
+	go.columns = 2
+	go.add_theme_constant_override("h_separation", 12)
+	go.add_theme_constant_override("v_separation", 12)
+	play.add_child(go)
+	for g in [["AVATAR LOCKER", "skins", "#7a3fd0"], ["JUKEBOX", "jukebox", "#b8782a"], ["SNACKS", "vending", "#a8302a"], ["BOARD GAME", "lounge", "#2a9a4a"], ["HALL OF FAME", "hall", "#a88a1a"], ["THE DOOR", "exit", "#2a5fa8"]]:
+		var gb := _button(g[0], Color(g[2]), 30)
+		gb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var gid: String = g[1]
+		gb.pressed.connect(func(): action.emit("goto:" + gid))
+		go.add_child(gb)
+	_heading(play, "BOSS BATTLE")
+	var names: Array = []
+	for b in ZSEngine.BOSSES:
+		names.append(str(b.name))
+	_stepper(play, "battle", "Boss", names, "")
+	var fight := _button("FIGHT THIS BOSS (PRACTICE)", Color("#7a2a8f"), 32)
+	fight.pressed.connect(func(): action.emit("fight"))
+	play.add_child(fight)
+	var story := _button("REPLAY THE STORY (comic intro)", Color("#2a5fa8"), 30)
+	story.pressed.connect(func(): action.emit("story"))
+	play.add_child(story)
+	# AVATAR
+	var av: VBoxContainer = _pages.avatar
+	_heading(av, "YOUR LOOK")
+	var skin_ids: Array = []
+	var skin_labels := {}
+	for sk in VRAvatar.SKINS:
+		skin_ids.append(sk.id)
+		skin_labels[sk.id] = sk.name
+	LABELS["skin"] = skin_labels
+	_stepper(av, "skin", "Outfit", skin_ids, "")
+	_stepper(av, "body", "Show", ["full", "arms", "hands"], "")
+	_hint(av, "Try outfits on at the Avatar Locker, the machine in the back right corner. It shows your character turning on a stand.")
+	var lock := _button("GO TO THE AVATAR LOCKER", Color("#7a3fd0"), 32)
+	lock.pressed.connect(func(): action.emit("goto:skins"))
+	av.add_child(lock)
+	# HANDS
+	var hd: VBoxContainer = _pages.hands
+	_heading(hd, "CONTROLS")
+	_stepper(hd, "handmode", "Input", ["auto", "controllers", "hands"], "")
+	_hint(hd, "AUTO uses controllers when you hold them and your bare hands when you put them down. With bare hands: point and pinch to choose, touch buttons with a finger, turn your left palm up for the wrist panel.")
+	_stepper(hd, "pointer", "Pointer hand", ["right", "left"], "")
+	_stepper(hd, "assist", "Controller assist (marks scores *)", ["off", "on"], "")
+	_slider(hd, "haptics", "Vibration", 0.0, 1.0, 0.1)
+	_heading(hd, "IF HANDS LOOK TWISTED")
+	_stepper(hd, "handroll", "Hand roll", [-90, -60, -30, 0, 30, 60, 90, 180], "°")
+	_stepper(hd, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
+	# COMFORT
+	var cf: VBoxContainer = _pages.comfort
+	_heading(cf, "HEIGHT AND DISTANCE")
+	_slider(cf, "lift", "Player height", -0.5, 0.8, 0.02)
+	_slider(cf, "reach", "Distance to machine", -0.25, 0.4, 0.02)
+	_heading(cf, "MOVING")
+	_stepper(cf, "turn", "Turning", ["smooth", "snap"], "")
+	_stepper(cf, "turnspeed", "Smooth turn speed", [60, 90, 120, 150], "°/s")
+	_stepper(cf, "snap", "Snap turn size", [15, 30, 45, 60, 90], "°")
+	_stepper(cf, "walk", "Walk speed", [1.0, 1.5, 2.0, 2.5], " m/s")
+	# DISPLAY
+	var dp: VBoxContainer = _pages.display
+	_heading(dp, "PICTURE")
+	_slider(dp, "sharp", "Sharpness", 0.9, 1.6, 0.1)
+	_hint(dp, "Higher is clearer far away but works the headset harder. Lower it if the picture stutters.")
+	_stepper(dp, "hud", "Screen shake", ["on", "off"], "")
+	_heading(dp, "JOYSTICK TOP")
 	var sw := HBoxContainer.new()
 	sw.add_theme_constant_override("separation", 10)
-	right.add_child(sw)
+	dp.add_child(sw)
 	for k in TOPPERS:
 		var b := _button("", TOPPERS[k])
-		b.custom_minimum_size = Vector2(72, 72)
+		b.custom_minimum_size = Vector2(88, 80)
 		b.pressed.connect(func():
 			set_value("topper", k)
 			changed.emit("topper", k))
 		sw.add_child(b)
 		_widgets["topper_" + k] = b
-	_stepper(right, "pointer", "Pointer hand", ["right", "left"], "")
-	_stepper(right, "handroll", "Hand roll (if hands look twisted)", [-90, -60, -30, 0, 30, 60, 90, 180], "°")
-	_stepper(right, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
-	_stepper(right, "assist", "Controller assist (marks scores *)", ["off", "on"], "")
-	_stepper(right, "hud", "Screen shake", ["on", "off"], "")
-	right.add_child(_label("BOSS BATTLE", 30, Color(0.4, 1.0, 0.7)))
-	var names: Array = []
-	for b in ZSEngine.BOSSES:
-		names.append(str(b.name))
-	_stepper(right, "battle", "Boss", names, "")
-	var fight := _button("FIGHT THIS BOSS (PRACTICE)", Color("#7a2a8f"), 32)
-	fight.pressed.connect(func(): action.emit("fight"))
-	right.add_child(fight)
-	var story := _button("REPLAY THE STORY (comic intro)", Color("#2a5fa8"), 30)
-	story.pressed.connect(func(): action.emit("story"))
-	right.add_child(story)
-	var sp := Control.new()
-	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right.add_child(sp)
+	# SOUND
+	var sd: VBoxContainer = _pages.sound
+	_heading(sd, "VOLUME")
+	_slider(sd, "music", "Music", 0.0, 1.0, 0.05)
+	_slider(sd, "effects", "Effects", 0.0, 1.0, 0.05)
+	# the buttons that are always there
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	root.add_child(row)
 	for a in [["RESUME", "resume", Color("#1f8f4a")], ["RECENTRE", "recentre", Color("#2a5fa8")], ["END GAME", "end", Color("#a8302a")], ["EXIT ARCADE", "quit", Color("#5a1a1a")]]:
-		var b := _button(a[0], a[2], 38)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.pressed.connect(func(): action.emit(a[1]))
-		row.add_child(b)
+		var bt := _button(a[0], a[2], 36)
+		bt.custom_minimum_size = Vector2(0, 76)
+		bt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bt.pressed.connect(func(): action.emit(a[1]))
+		row.add_child(bt)
 	for k in values:
 		_refresh(k)
+	show_page("play")
 
 
 func _slider(parent: Control, key: String, text: String, lo: float, hi: float, step: float) -> void:
@@ -353,4 +466,7 @@ func _refresh(key: String) -> void:
 		w.set_value_no_signal(float(values[key]))
 	elif w is Dictionary:
 		var v = values[key]
-		w.label.text = ("%s%s" % [str(v), w.suffix]) if v is String or w.suffix != "" else str(v)
+		if LABELS.has(key) and LABELS[key].has(v):
+			w.label.text = str(LABELS[key][v])
+		else:
+			w.label.text = ("%s%s" % [str(v), w.suffix]) if v is String or w.suffix != "" else str(v)
