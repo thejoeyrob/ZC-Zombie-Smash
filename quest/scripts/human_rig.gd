@@ -46,10 +46,12 @@ const FOLDERS := {"human_m01": "male", "human_f02": "female", "human_joeyrob": "
 func build(profile: String, for_self: bool) -> bool:
 	self_view = for_self
 	var folder := "res://avatars/" + str(FOLDERS.get(profile, "male")) + "/"
-	# A release preflight requires complete licensed textures, not an untextured substitute.
-	if not FileAccess.file_exists(folder + "READY.json") or not ResourceLoader.exists(folder + "model.fbx"):
+	# STAGE1_MODEL_SELECTION: preserve the existing rig and legacy-human fallback.
+	var stage1_path: String = preload("res://scripts/stage1_catalog.gd").model_path(profile)
+	var use_stage1: bool = not stage1_path.is_empty() and ResourceLoader.exists(stage1_path)
+	if not use_stage1 and (not FileAccess.file_exists(folder + "READY.json") or not ResourceLoader.exists(folder + "model.fbx")):
 		return false
-	model = load(folder + "model.fbx").instantiate()
+	model = load(stage1_path if use_stage1 else folder + "model.fbx").instantiate()
 	add_child(model)
 	var rigs := model.find_children("*", "Skeleton3D", true, false)
 	if rigs.is_empty():
@@ -78,6 +80,7 @@ func build(profile: String, for_self: bool) -> bool:
 	var rest_head := skeleton.get_bone_global_rest(head_bone)
 	eye_from_head = rest_head.affine_inverse() * ((skeleton.get_bone_global_rest(left_eye).origin + skeleton.get_bone_global_rest(right_eye).origin) * 0.5)
 	for mesh in model.find_children("*", "MeshInstance3D", true, false):
+		if use_stage1: continue # preserve the embedded character materials
 		for surface in range(mesh.mesh.get_surface_count()):
 			var imported: Material = mesh.mesh.surface_get_material(surface)
 			var label := String(imported.resource_name).to_lower() if imported != null else "body"

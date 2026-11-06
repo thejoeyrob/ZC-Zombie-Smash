@@ -29,7 +29,7 @@ export function startServer({port=Number(process.env.PORT||8080),host=process.en
  const error=message=>send(c,{type:'error',message,request:p.request||''});
  if(p.type==='create'||p.type==='join'){
   if(c.room)return error('Leave your current room first.');if(++c.admissions>12)return c.close(1008,'Too many room attempts');if(p.protocol!==1)return error('Please update the game.');
-  c.name=String(p.name||'PLAYER').replace(/[^a-zA-Z0-9 _-]/g,'').trim().slice(0,20)||'PLAYER';c.skin=['human_m01','human_f02'].includes(p.skin)?p.skin:'human_m01';
+  c.name=String(p.name||'PLAYER').replace(/[^a-zA-Z0-9 _-]/g,'').trim().slice(0,20)||'PLAYER';c.skin=['human_m01','human_f02','human_joeyrob','human_discoman','human_fatamy','human_drmantis','human_debo','human_glowing','human_jordan','human_riley','human_caffeinatedsloth'].includes(p.skin)?p.skin:'human_m01';
   let r;if(p.type==='create'){if(rooms.size>=100)return error('Server busy. Try later.');let code;do{code=String(randomInt(10000000,100000000));}while(rooms.has(code));r={code,host:c.id,locked:false,members:new Map(),owners:{},board:newBoard()};rooms.set(code,r);}else{r=rooms.get(String(p.code));if(!r)return error('Room not found.');if(r.locked)return error('Room is locked.');if(r.members.size>=6)return error('Room is full (6 players).');}
   c.room=r.code;r.members.set(c.id,c);send(c,{type:'welcome',id:c.id});roster(r);send(c,{type:'board',state:{...r.board,deck:[]}});return;
  }
@@ -45,7 +45,7 @@ export function startServer({port=Number(process.env.PORT||8080),host=process.en
  case 'roll':if(!roll(r.board,c.id,p.dash===true,random))return error('Wait for your turn.');break;
  case 'pose':if(validPose(p.pose))broadcast(r,{type:'pose',id:c.id,pose:p.pose},c);break;
  case 'pin':if(['pinball','pinball2'].includes(p.station)&&r.owners[p.station]===c.id&&validPin(p.state))broadcast(r,{type:'pin',station:p.station,state:p.state},c);break;
- case 'appearance':if(['human_m01','human_f02'].includes(p.skin)){c.skin=p.skin;roster(r);}break;
+ case 'appearance':if(['human_m01','human_f02','human_joeyrob','human_discoman','human_fatamy','human_drmantis','human_debo','human_glowing','human_jordan','human_riley','human_caffeinatedsloth'].includes(p.skin)){c.skin=p.skin;roster(r);}break;
  default:error('Unknown action.');
  }
  });
