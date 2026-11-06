@@ -26,3 +26,11 @@ version.get_app_store_version_localizations.each do |loc|
     puts "  screenshots #{set.screenshot_display_type}: #{set.app_screenshots.count}"
   end
 end
+
+# Report (booleans and lengths only, never the contact details themselves) what App Review Information now holds.
+begin
+  detail = version.fetch_app_store_review_detail
+  puts "Review information: contact first name #{detail.contact_first_name.to_s.empty? ? 'MISSING' : 'set'}, last name #{detail.contact_last_name.to_s.empty? ? 'MISSING' : 'set'}, phone #{detail.contact_phone.to_s.empty? ? 'MISSING' : 'set'}, email #{detail.contact_email.to_s.empty? ? 'MISSING' : 'set'}, notes #{detail.notes.to_s.length} chars, sign-in required: #{detail.demo_account_required}"
+rescue => e
+  puts "Could not read review information: #{e.message}"
+end
