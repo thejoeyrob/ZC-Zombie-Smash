@@ -67,6 +67,10 @@ jobs:
             --automatic_release false \
             --precheck_include_in_app_purchases false
 
+      - name: Set the App Review notes (Notes box only)
+        shell: bash
+        run: ruby appstore/set_review_notes.rb
+
       - name: Attach the newest build and report what the version contains
         shell: bash
         run: |
