@@ -1,14 +1,8 @@
-# Sending Zombie Smash to Apple (build 142, version 1.0)
+# Sending Zombie Smash to Apple as a fresh app
 
-Everything below is already prepared. You only do the steps marked YOU.
-
-1. **Listing text and screenshots** (done by the "App Store listing" workflow): description, promo text, keywords, subtitle and
-   six screenshots for the 6.9-inch iPhone display.
-2. **Build:** build 142 must show as "Ready to Submit" under TestFlight / the version's Build section. The workflow attaches the
-   newest processed build to the version.
-3. **YOU:** film the screen recording on the iPhone (launch the app from the Home Screen, press FIRE, enter a name, NEW GAME,
-   play a wave, a boss scene, then MENU > Music & Sound, Privacy Policy, High Scores).
-4. **YOU:** App Store Connect > Zombie Smash > App Review > Resolution Center: paste the text from `appstore/REVIEW-NOTES.md`,
-   attach the recording, send.
-5. **YOU:** back on the version page press **Submit for Review** (or "Resubmit to App Review").
-6. Optional, for a Halloween push: App Store Connect > Contact Us > "Request an Expedited App Review".
+1. **YOU:** App Store Connect > My Apps > Zombie Smash > App Information > Remove App (only if you are replacing the old record).
+2. **YOU:** My Apps > + > New App: iOS, name Zombie Smash, English (U.K.), the existing bundle ID com.thejoeyrob.zombiesmash, a new SKU (for example zombiesmash002), full access.
+3. **CLAUDE or YOU:** run GitHub Actions > "iOS TestFlight" (uploads a build). Wait until it shows as processed in TestFlight (5 to 30 minutes).
+4. **CLAUDE or YOU:** run GitHub Actions > "App Store listing" (pushes text, categories and the six screenshots from `appstore/`, then attaches the newest processed build). It never submits.
+5. **YOU, in App Store Connect:** age rating questionnaire, App Privacy answers, pricing (Free) and availability, App Review contact details (name, phone, email), paste `appstore/REVIEW-NOTES-NEW-APP.md` into the review Notes box, EU trader status if asked, export compliance (standard encryption only).
+6. **YOU:** Add for Review, then Submit.
