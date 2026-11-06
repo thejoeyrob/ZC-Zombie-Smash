@@ -44,7 +44,7 @@
     // gap = minimum milliseconds between two buzzes of the same kind, so rapid fire stays a soft patter.
     gate(kind, gap, force) {
       const now = performance.now();
-      if (!this.on || now - (this.last[kind] || 0) < gap || (!force && now - this.lastAny < 28))
+      if (!this.on || now - (this.last[kind] || 0) < gap || (!force && now - this.lastAny < 55))
         return false;
       this.last[kind] = this.lastAny = now;
       return true;
