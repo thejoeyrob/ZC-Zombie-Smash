@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash' }}
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash2' }}
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}

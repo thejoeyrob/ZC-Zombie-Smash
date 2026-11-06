@@ -7,7 +7,7 @@
 #   ASC_ISSUER_ID   App Store Connect issuer ID
 #   ASC_KEY_P8      full contents of the AuthKey_XXXX.p8 file (or the same file base64-encoded)
 # Optional repository variable:
-#   IOS_BUNDLE_ID    bundle ID registered in App Store Connect (default com.thejoeyrob.zombiesmash)
+#   IOS_BUNDLE_ID    bundle ID registered in App Store Connect (default com.thejoeyrob.zombiesmash2)
 #   IOS_APP_VERSION  version shown on the App Store, e.g. 1.0.0 (default 1.0.0). Raise it for each new release.
 #                    The build number is set automatically and always increases.
 name: iOS TestFlight
@@ -24,7 +24,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     env:
-      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash' }}
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash2' }}
       APP_VERSION: ${{ vars.IOS_APP_VERSION || '1.0.0' }}
       TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
