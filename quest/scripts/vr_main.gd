@@ -79,7 +79,7 @@ var shot_dir := "/tmp/claude-0/qvr"
 var sim_hands: Array = [_blank_hand(), _blank_hand()]
 var _pinching := [false, false]
 var _gripping := [false, false]
-var social = null               # the multiplayer session (kept in future/multiplayer, not built in yet): every hook below stays idle while this is null
+var social: ShackSession          # the multiplayer room session; every hook stays idle until a room is joined
 var avatar: VRAvatar
 var wrist: WristPanel
 var _wrist_last := ""
@@ -218,6 +218,13 @@ func _ready() -> void:
 		_run_shots()
 	if args.has("tour"):
 		_run_tour()
+
+	social = ShackSession.new()
+	add_child(social)
+	social.setup(self)
+	var lobby_panel := LobbyPanel.new()
+	menu._pages.friends.add_child(lobby_panel)
+	lobby_panel.setup(social)
 
 
 

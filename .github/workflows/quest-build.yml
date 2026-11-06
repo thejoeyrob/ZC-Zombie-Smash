@@ -56,6 +56,22 @@ jobs:
           quest/tools/sync-assets.sh
           node quest/tools/golden.mjs | tail -3
 
+      - name: Point the game at the room server
+        env:
+          SHACK_ENDPOINT: ${{ vars.SHACK_ENDPOINT }}
+        run: |
+          # the address of the deployed room server (wss://HOST/shack), kept as a repository variable; empty means rooms say "not configured"
+          python3 - <<'PY'
+          import json, os
+          p = "quest/config/shack.json"
+          d = json.load(open(p))
+          d["endpoint"] = os.environ.get("SHACK_ENDPOINT", "").strip()
+          json.dump(d, open(p, "w"))
+          print("room server:", d["endpoint"] or "(not set)")
+          PY
+      - name: Test the room server
+        run: node --test server/tests/*.test.mjs
+
       - name: Import the project
         shell: bash
         run: |

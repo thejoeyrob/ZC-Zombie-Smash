@@ -23,7 +23,7 @@ test('six users, full room, host controls, leases, seats, disconnect',async()=>{
  }finally{for(const c of clients)c.ws.terminate();await server.close();}
 });
 test('board turn, shields, risk, win, round timeout',()=>{
- const b=newBoard();assert.equal(b.players.length,6);sit(b,'a','Alice',0);assert.equal(roll(b,'b'),false);b.players[0].shield=0;roll(b,'a',true,()=>0);assert.equal(b.players[0].pos,0);tickBoard(b,3);assert.equal(b.current,1);
+ const b=newBoard();assert.equal(b.players.length,4);sit(b,'a','Alice',0);assert.equal(roll(b,'b'),false);b.players[0].shield=0;roll(b,'a',true,()=>0);assert.equal(b.players[0].pos,0);tickBoard(b,3);assert.equal(b.current,1);
  b.current=0;b.phase='wait';b.players[0].pos=25;roll(b,'a',false,()=>.99);assert.equal(b.winner,0);assert.equal(b.players[0].wins,1);tickBoard(b,8);assert.equal(b.players[0].pos,0);assert.equal(b.players[0].wins,1);
  b.current=0;b.phase='wait';b.players[0].pos=0;roll(b,'a',false,()=>.34);assert.equal(b.players[0].pos,3);assert.equal(b.again,true);assert.equal(b.players[0].shield,2);
 });

@@ -198,7 +198,7 @@ func _label(text: String, size := 32, color := Color(0.85, 0.9, 1.0)) -> Label:
 	return l
 
 
-const PAGES := [["play", "PLAY", Color("#1f8f4a")], ["avatar", "AVATAR", Color("#7a3fd0")], ["hands", "HANDS", Color("#2a7fb8")], ["comfort", "COMFORT", Color("#b8782a")], ["display", "DISPLAY", Color("#2a9aa8")], ["sound", "SOUND", Color("#a82a6a")]]
+const PAGES := [["friends", "FRIENDS", Color("#268a88")], ["play", "PLAY", Color("#1f8f4a")], ["avatar", "AVATAR", Color("#7a3fd0")], ["hands", "HANDS", Color("#2a7fb8")], ["comfort", "COMFORT", Color("#b8782a")], ["display", "DISPLAY", Color("#2a9aa8")], ["sound", "SOUND", Color("#a82a6a")]]
 var LABELS := {
 	"handmode": {"auto": "AUTO", "controllers": "CONTROLLERS", "hands": "BARE HANDS"},
 	"body": {"full": "FULL BODY", "arms": "ARMS ONLY", "hands": "HANDS ONLY"},

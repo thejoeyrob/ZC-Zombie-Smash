@@ -1,0 +1,12 @@
+# One-click host for the Fatty's Game Shack room server (Render "Blueprint"). The server keeps rooms in memory, so run exactly one instance.
+services:
+  - type: web
+    name: fattys-shack-rooms
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
