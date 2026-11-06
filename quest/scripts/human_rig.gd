@@ -7,6 +7,9 @@ var model: Node3D
 var ready_rig := false
 var self_view := false
 var rest_eye := Vector3.ZERO
+var eye_from_head := Vector3.ZERO       # the eye midpoint in the head bone's own frame (skeleton units)
+var current_mode := "full"
+var tracked := [true, true]
 var head_bone := -1
 var head_rest_basis := Basis.IDENTITY
 var arms: Array = []              # per side: rest data for the two-bone arm solver (skeleton space)
@@ -68,6 +71,8 @@ func build(profile: String, for_self: bool) -> bool:
 	model.scale *= 1.62 / eye.y
 	rest_eye = (((_sx() * skeleton.get_bone_global_rest(left_eye).origin) + (_sx() * skeleton.get_bone_global_rest(right_eye).origin)) * 0.5)
 	head_rest_basis = (_sx().basis * skeleton.get_bone_global_rest(head_bone).basis).orthonormalized()
+	var rest_head := skeleton.get_bone_global_rest(head_bone)
+	eye_from_head = rest_head.affine_inverse() * ((skeleton.get_bone_global_rest(left_eye).origin + skeleton.get_bone_global_rest(right_eye).origin) * 0.5)
 	for mesh in model.find_children("*", "MeshInstance3D", true, false):
 		for surface in range(mesh.mesh.get_surface_count()):
 			var imported: Material = mesh.mesh.surface_get_material(surface)
@@ -113,7 +118,7 @@ func build(profile: String, for_self: bool) -> bool:
 					var axis := skeleton.get_bone_global_rest(id).basis.inverse() * canonical.y
 					fingers.append({"bone": id, "rest": rest.basis.get_rotation_quaternion(), "axis": axis.normalized(), "side": side, "finger": f, "joint": joint})
 	ankle_rest_y = ((_sx() * skeleton.get_bone_global_rest(bone("L Foot")).origin)).y
-	for group in ["body", "arms", "hands", "head"]:
+	for group in ["body", "left_arms", "right_arms", "left_hands", "right_hands", "head"]:
 		if not body_parts.has(group) or body_parts[group].is_empty():
 			push_error("Human mesh partition failed for " + group)
 			return false
@@ -184,6 +189,9 @@ func pose(head: Transform3D, wrists: Array, feet: Array, active: Array, yaw: flo
 	var rot_to_skel := sk_xf.basis.orthonormalized().inverse()
 	var head_pose := skeleton.get_bone_global_pose(head_bone)
 	head_pose.basis = rot_to_skel * head.basis * head_rest_basis
+	head_pose.origin = to_skel * head.origin - head_pose.basis * eye_from_head      # the eyes stay exactly at the headset pose while the head turns and pitches
+	tracked = active
+	set_body_mode(current_mode)
 	skeleton.set_bone_global_pose_override(head_bone, head_pose, 1.0, true)
 	for side in range(2):
 		var sgn := -1.0 if side == 0 else 1.0
@@ -211,14 +219,21 @@ func pose(head: Transform3D, wrists: Array, feet: Array, active: Array, yaw: flo
 
 var body_parts := {}
 func set_body_mode(mode: String) -> void:
+	current_mode = mode
 	for group in body_parts:
+		var side := 0 if group.begins_with("left_") else 1
+		var is_hand: bool = group.ends_with("hands")
+		var is_arm: bool = group.ends_with("arms")
+		var shown: bool = is_hand or (is_arm and mode != "hands") or (group == "body" and mode == "full") or (group == "head" and not self_view)
+		if self_view and (is_hand or is_arm) and not tracked[side]:
+			shown = false                                  # a hand that is not tracked is not drawn (the other side stays)
 		for mesh in body_parts[group]:
-			mesh.visible = group == "hands" or (group == "arms" and mode != "hands") or (group == "body" and mode == "full") or (group == "head" and not self_view)
+			mesh.visible = shown
 
 func _partition(source: MeshInstance3D) -> void:
 	if source.skin == null:
 		return
-	var parts := {"body": ArrayMesh.new(), "arms": ArrayMesh.new(), "hands": ArrayMesh.new(), "head": ArrayMesh.new()}
+	var parts := {"body": ArrayMesh.new(), "left_arms": ArrayMesh.new(), "right_arms": ArrayMesh.new(), "left_hands": ArrayMesh.new(), "right_hands": ArrayMesh.new(), "head": ArrayMesh.new()}
 	for surface in range(source.mesh.get_surface_count()):
 		var arrays: Array = source.mesh.surface_get_arrays(surface)
 		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
@@ -246,17 +261,17 @@ func _partition(source: MeshInstance3D) -> void:
 					group = "head"
 					break
 				if name.ends_with(" Hand"):
-					group = "hands"
+					group = ("left_" if " L " in name else "right_") + "hands"
 					break
 				if name.ends_with(" UpperArm") or name.ends_with(" Forearm") or name.ends_with(" Clavicle"):
-					group = "arms"
+					group = ("left_" if " L " in name else "right_") + "arms"
 					break
 				cursor = skeleton.get_bone_parent(cursor)
 			groups.append(group)
 		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 		if indices.is_empty():
 			indices = PackedInt32Array(range(vertices.size()))
-		var chosen := {"body": PackedInt32Array(), "arms": PackedInt32Array(), "hands": PackedInt32Array(), "head": PackedInt32Array()}
+		var chosen := {"body": PackedInt32Array(), "left_arms": PackedInt32Array(), "right_arms": PackedInt32Array(), "left_hands": PackedInt32Array(), "right_hands": PackedInt32Array(), "head": PackedInt32Array()}
 		for i in range(0, indices.size(), 3):
 			var g: String = groups[indices[i]]
 			if groups[indices[i + 1]] == groups[indices[i + 2]]:

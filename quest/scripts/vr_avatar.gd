@@ -7,8 +7,8 @@ extends Node3D
 ## Looks are data (SKINS): clothes, colours, hair or hat. In your own view the head is hidden (it sits on render layer 2, which your camera skips).
 
 const SKINS := [
-	{"id": "human_m01", "name": "ALEX — REALISTIC", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_f02", "name": "MORGAN — REALISTIC", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
+	{"id": "human_m01", "name": "ALEX", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
+	{"id": "human_f02", "name": "MORGAN", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "survivor", "name": "SURVIVOR", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": true},
 	{"id": "arcadekid", "name": "ARCADE KID", "tone": "#f0c09a", "top": "#ff3d9a", "trim": "#27e0ff", "bottom": "#1b1f3a", "shoes": "#f2f2f4", "glove": "#f0c09a", "style": "tee", "hat": "phones", "hat_col": "#27e0ff", "hair": "#ffcc33", "gloves": false},
 	{"id": "raver", "name": "NEON RAVER", "tone": "#8a5a3c", "top": "#101018", "trim": "#27ffd0", "bottom": "#101018", "shoes": "#0c0c12", "glove": "#101018", "style": "suit", "hat": "visor", "hat_col": "#27ffd0", "hair": "#101018", "gloves": true, "glow": true},

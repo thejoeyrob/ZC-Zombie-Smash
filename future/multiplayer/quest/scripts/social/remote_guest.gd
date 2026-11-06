@@ -12,8 +12,6 @@ func build(display_name: String, skin: String, font: Font) -> void:
 	add_child(avatar)
 	avatar.build(false)
 	avatar.apply_skin(skin)
-	for mitt in avatar._mitts:
-		mitt.visible = false
 	for side in range(2):
 		var h := VRHand.new()
 		add_child(h)
@@ -33,6 +31,15 @@ func receive_pose(data: Dictionary) -> void:
 				return
 	if not data.get("curls") is Array or data.curls.size() != 6 or not data.get("active") is Array or data.active.size() != 2:
 		return
+	if data.has("wrists"):
+		if not data.wrists is Array or data.wrists.size() != 2:
+			return
+		for wrist in data.wrists:
+			if not wrist is Array or wrist.size() != 3:
+				return
+			for n in wrist:
+				if not (n is float or n is int) or not is_finite(float(n)) or absf(float(n)) > 20:
+					return
 	target = data
 	var head := unpack(data.head)
 	if age > 4 or poses[0].origin.distance_to(head.origin) > 1.0:
@@ -59,7 +66,11 @@ func _process(delta: float) -> void:
 		hands[i].transform = poses[i + 1]
 		hands[i].visible = target.active[i]
 		hands[i].set_pose(target.curls[i * 3], target.curls[i * 3 + 1], target.curls[i * 3 + 2])
-		wrists.append(poses[i + 1] * Vector3(0, -0.004, 0.075))
+		var wanted: Vector3 = poses[i + 1] * Vector3(0, -0.004, 0.075)
+		if target.has("wrists"):
+			var raw: Array = target.wrists[i]
+			wanted = (avatar.wrists[i] as Vector3).lerp(Vector3(raw[0], raw[1], raw[2]), amount) if avatar._inited else Vector3(raw[0], raw[1], raw[2])
+		wrists.append(wanted)
 	avatar.scale_k = clampf(float(target.get("scale", 1.0)), 0.8, 1.3)
 	avatar.hand_poses = [poses[1], poses[2]]
 	avatar.finger_curls = target.curls

@@ -234,6 +234,7 @@ func tick(hands: Array, delta: float) -> void:
 	for h in hands:
 		curls.append_array([float(h.trig_val), float(h.grip_val), clampf(float(h.thumb), 0, 1)])
 	send({"type": "pose", "pose": {"head": pack(main.cam.global_transform), "left": pack(hands[0].vis_xf), "right": pack(hands[1].vis_xf),
+		"wrists": [[main.avatar.wrists[0].x, main.avatar.wrists[0].y, main.avatar.wrists[0].z], [main.avatar.wrists[1].x, main.avatar.wrists[1].y, main.avatar.wrists[1].z]],
 		"curls": curls, "active": [bool(hands[0].active), bool(hands[1].active)], "seated": bool(main.seated), "scale": float(main.avatar.scale_k)}})
 	for pair in [["pinball", main.room.pinball], ["pinball2", main.room.pinball2]]:
 		if owns(pair[0]):

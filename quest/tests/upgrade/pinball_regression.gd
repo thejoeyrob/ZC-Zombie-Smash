@@ -5,11 +5,14 @@ func check(ok: bool, message: String) -> void:
 		push_error(message)
 		failed += 1
 func _initialize() -> void:
+	_run.call_deferred()
+
+func _run() -> void:
 	var t := PinTable.new()
 	root.add_child(t)
 	t.set_process(false)
 	t.enabled = true
-	t.reset_game()
+	t.game_over = true
 	t.pull(0.8)
 	t.launch()
 	check(t.in_play, "Launch did not start play")
@@ -37,7 +40,6 @@ func _initialize() -> void:
 	for table in [a, b]:
 		table.set_process(false)
 		table.enabled = true
-		table.reset_game()
 		table.pull(0.7)
 		table.launch()
 	for i in range(72):

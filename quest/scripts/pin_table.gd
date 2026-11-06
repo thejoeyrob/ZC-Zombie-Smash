@@ -160,13 +160,12 @@ func pull(amount: float) -> void:
 func launch() -> void:
 	if not enabled:
 		return
+	var power := maxf(plunger, 0.15)
 	if game_over:
-		reset_game()
-		return
+		reset_game()                       # one pull-and-release starts a new game and launches
 	if in_play or not _launch_ready:
 		plunger = 0.0
 		return
-	var power := maxf(plunger, 0.15)
 	vel = Vector2(0, -(1050.0 + 650.0 * power))
 	in_play = true
 	ball_save = 8.0 if not save_used else 0.0

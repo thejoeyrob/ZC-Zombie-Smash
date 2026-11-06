@@ -723,7 +723,7 @@ func _update_avatar(hs: Array, delta: float) -> void:
 	var wr: Array = []
 	var act: Array = []
 	for i in range(2):
-		wr.append((hs[i].vis_xf as Transform3D) * Vector3(0, -0.004, 0.075))
+		wr.append(hs[i].wrist if hs[i].bare and hs[i].has("wrist") else (hs[i].vis_xf as Transform3D) * Vector3(0, -0.004, 0.075))
 		act.append(bool(hs[i].active) or demo)
 	var head := cam.global_transform
 	# body size: set from your eye height while you stand upright, so a taller player gets a taller body
@@ -737,7 +737,7 @@ func _update_avatar(hs: Array, delta: float) -> void:
 	if avatar.human != null:
 		for i in range(2):
 			hands[i].vis.visible = false
-			if hs[i].active:
+			if hs[i].active and not hs[i].bare:
 				hs[i].tip = avatar.human.fingertip(i)
 				hs[i].palm = avatar.human.palm(i)
 	var gaunt: bool = avatar.show_body == "hands"
@@ -894,6 +894,9 @@ func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
 	d.aim_dir = (j.call(10) - j.call(7)).normalized()
 	d.thumb = 1.0 - clampf(((j.call(5) as Vector3).distance_to(j.call(7)) - 0.03) / 0.06, 0.0, 1.0)
 	d.bare = true
+	d.wrist = wrist
+	d.tracked_tip = j.call(10)
+	d.tracked_palm = palm
 	var nrm: Vector3 = ((j.call(7) as Vector3) - (j.call(22) as Vector3)).cross(f) * (1.0 if side == 0 else -1.0)
 	d.palm_up = clampf(nrm.normalized().y, 0.0, 1.0) if nrm.length() > 0.0001 else 0.0
 	d.idx_touch = false
@@ -1008,6 +1011,10 @@ func _pose_hands(hs: Array) -> void:
 		h.palm = final_xf.origin
 		h.vis_xf = final_xf
 		h.tip = final_xf * Vector3(0, 0, -0.15 + 0.05 * idx_c)
+		if h.bare and h.has("tracked_tip"):
+			# sensor contact points stay exact: a cabinet's visual constraint cannot move a real poke
+			h.tip = h.tracked_tip
+			h.palm = h.tracked_palm
 		if not h.active:
 			h.tip = Vector3(100, 100, 100)
 			h.palm = h.tip

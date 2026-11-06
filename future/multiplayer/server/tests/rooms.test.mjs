@@ -28,7 +28,7 @@ test('board turn, shields, risk, win, round timeout',()=>{
  b.current=0;b.phase='wait';b.players[0].pos=0;roll(b,'a',false,()=>.34);assert.equal(b.players[0].pos,3);assert.equal(b.again,true);assert.equal(b.players[0].shield,2);
 });
 test('reject malformed pose and pin state',()=>{
- const xf=[0,1.6,0,0,0,0,1];const p={head:xf,left:xf,right:xf,curls:[0,0,0,0,0,0],active:[true,true],scale:1,seated:false};assert.ok(validPose(p));assert.ok(!validPose({...p,head:[NaN,1,1,1,1,1,1]}));assert.ok(!validPose({...p,head:[0,0,0,0,0,0,0]}));assert.ok(!validPin({ball:[0,1],angles:[0,0],score:-1,balls:3,play:true,over:false}));
+ const xf=[0,1.6,0,0,0,0,1];const p={head:xf,left:xf,right:xf,curls:[0,0,0,0,0,0],active:[true,true],scale:1,seated:false};assert.ok(validPose(p));assert.ok(validPose({...p,wrists:[[0,1,0],[1,1,0]]}));assert.ok(!validPose({...p,wrists:[[0,1,0],[1,NaN,0]]}));assert.ok(!validPose({...p,wrists:[[0,1,0]]}));assert.ok(!validPose({...p,head:[NaN,1,1,1,1,1,1]}));assert.ok(!validPose({...p,head:[0,0,0,0,0,0,0]}));assert.ok(!validPin({ball:[0,1],angles:[0,0],score:-1,balls:3,play:true,over:false}));
 });
 test('pinball relay accepts the lease owner only, preserving ramp and lights',async()=>{
  const server=startServer({port:0});await once(server.app,'listening');const url=`ws://127.0.0.1:${server.app.address().port}/shack`;const a=await client(url),b=await client(url);try{
