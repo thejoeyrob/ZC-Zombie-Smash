@@ -7,6 +7,15 @@ extends Node3D
 ## Looks are data (SKINS): clothes, colours, hair or hat. In your own view the head is hidden (it sits on render layer 2, which your camera skips).
 
 const SKINS := [
+	# the game's own characters: the player and the bosses (outfits drawn from their art)
+	{"id": "joeyrob", "name": "JOEY ROB", "tone": "#d9a07a", "top": "#4d5a3a", "trim": "#2b2f26", "bottom": "#4a5337", "shoes": "#1a1a1a", "glove": "#151517", "style": "vest", "hat": "helmet", "hat_col": "#3c4a33", "hair": "#3a2a1c", "gloves": true},
+	{"id": "boss_discoman", "name": "DISCO MAN", "tone": "#e0b08c", "top": "#7a2bd6", "trim": "#ffd23f", "bottom": "#7a2bd6", "shoes": "#f5f5f5", "glove": "#f2f2f2", "style": "suit", "hat": "silver", "hat_col": "#e8e8ee", "hair": "#e8e8ee", "gloves": false, "glow": true, "shades": true, "chain": true},
+	{"id": "boss_fatamy", "name": "FATAMY", "tone": "#c9906c", "top": "#5d6b3e", "trim": "#8a5a2c", "bottom": "#55603a", "shoes": "#2a2018", "glove": "#151517", "style": "tee", "hat": "ponytail", "hat_col": "#8a4a22", "hair": "#8a4a22", "gloves": true},
+	{"id": "boss_drmantis", "name": "DR MANTIS", "tone": "#d8b090", "top": "#1f7a3a", "trim": "#e8c24a", "bottom": "#1a1a22", "shoes": "#17171a", "glove": "#17171a", "style": "coat", "hat": "crown", "hat_col": "#e8c24a", "hair": "#2a1c12", "gloves": true, "glow": true},
+	{"id": "boss_debo", "name": "DEBO", "tone": "#a8553a", "top": "#1a1a1d", "trim": "#e8c24a", "bottom": "#2a2a2e", "shoes": "#f4f4f4", "glove": "#a8553a", "style": "jacket", "hat": "cap_back", "hat_col": "#1a1a1d", "hair": "#1a1210", "gloves": false, "chain": true},
+	{"id": "boss_sloth", "name": "CAFFEINATED SLOTH", "tone": "#8a6a4a", "top": "#6a5a3a", "trim": "#3a2f1f", "bottom": "#5a4c33", "shoes": "#3a2c22", "glove": "#8a6a4a", "style": "vest", "hat": "sloth", "hat_col": "#8a6a4a", "hair": "#6a5a3a", "gloves": false},
+	{"id": "boss_glowing", "name": "GLOWING HUMANITY", "tone": "#8fd35a", "top": "#d64bb8", "trim": "#27ffd0", "bottom": "#2b6bd6", "shoes": "#f2f2f2", "glove": "#8fd35a", "style": "tee", "hat": "headband", "hat_col": "#ff4bd0", "hair": "#9b2bd6", "gloves": false, "glow": true, "eyes": "#7aff3a"},
+	{"id": "boss_jordan", "name": "JORDAN", "tone": "#c46a3a", "top": "#d8652a", "trim": "#f2e14a", "bottom": "#b8501f", "shoes": "#1a1a1a", "glove": "#1a1a1a", "style": "vest", "hat": "firehat", "hat_col": "#c4261f", "hair": "#2a1c12", "gloves": true, "glow": true},
 	{"id": "human_m01", "name": "ALEX", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "human_f02", "name": "MORGAN", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "survivor", "name": "SURVIVOR", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": true},
@@ -252,7 +261,7 @@ func _build_head() -> void:
 	_box(_head, Vector3(0.01, 0.01, 0.01), _mats.dark, Vector3(-0.024, -0.047, -0.086), Vector3(0, 0, 0.6))
 	_box(_head, Vector3(0.01, 0.01, 0.01), _mats.dark, Vector3(0.024, -0.047, -0.086), Vector3(0, 0, -0.6))
 	var hat: String = _skin.hat
-	var hair_ok := hat in ["none", "cap", "phones", "visor", "hood"]
+	var hair_ok := hat in ["none", "cap", "phones", "visor", "hood", "silver", "ponytail", "crown", "cap_back", "headband"]
 	if hair_ok and _skin.id != "zombie":
 		_sph(_hat_root, 0.1, _mats.hair, Vector3(0, 0.022, 0.018), Vector3(1.0, 0.92, 1.0))
 	if _skin.id == "zombie":
@@ -283,11 +292,46 @@ func _build_head() -> void:
 			_cyl(_hat_root, 0.12, 0.12, 0.04, _mats.trim, Vector3(0, -0.13, 0.02))
 		"afro":
 			_sph(_hat_root, 0.15, _mats.hat, Vector3(0, 0.055, 0.035), Vector3(1.0, 0.95, 1.0))
+		"silver":
+			_sph(_hat_root, 0.1, _mats.hair, Vector3(0, 0.06, -0.02), Vector3(1.0, 0.8, 1.2))        # a swept-up silver quiff
+		"ponytail":
+			_sph(_hat_root, 0.04, _mats.hair, Vector3(0, 0.05, 0.1))
+			_sph(_hat_root, 0.036, _mats.hair, Vector3(0, 0.0, 0.14), Vector3(0.9, 1.4, 0.9))
+			_sph(_hat_root, 0.03, _mats.hair, Vector3(0, -0.07, 0.15), Vector3(0.9, 1.6, 0.9))
+			_sph(_hat_root, 0.024, _mats.hair, Vector3(0, -0.14, 0.15), Vector3(0.9, 1.5, 0.9))
+		"crown":
+			_cyl(_hat_root, 0.1, 0.1, 0.045, _mats.hat, Vector3(0, 0.1, 0.0))
+			for k in range(6):
+				var a := TAU * float(k) / 6.0
+				_box(_hat_root, Vector3(0.022, 0.06, 0.022), _mats.hat, Vector3(cos(a) * 0.095, 0.15, sin(a) * 0.095))
+		"cap_back":
+			_sph(_hat_root, 0.1, _mats.hat, Vector3(0, 0.04, 0.005), Vector3(1.0, 0.75, 1.05))
+			_cyl(_hat_root, 0.1, 0.1, 0.008, _mats.hat, Vector3(0, 0.035, 0.09), Vector3(-0.1, 0, 0)).scale = Vector3(1.0, 1.0, 0.55)   # the peak turned to the back
+		"headband":
+			_box(_hat_root, Vector3(0.205, 0.035, 0.205), _mats.hat, Vector3(0, 0.03, 0.0))
+			for k in range(7):
+				var dx := -0.08 + 0.027 * float(k)
+				_sph(_hat_root, 0.022, _mats.hair, Vector3(dx, -0.05 - 0.01 * float(k % 3), 0.085), Vector3(0.8, 3.4, 0.8))       # dreadlocks down the back
+		"sloth":
+			_sph(_hat_root, 0.11, _mats.hat, Vector3(0, 0.0, 0.0), Vector3(1.05, 1.1, 1.1))
+			for sx in [-1.0, 1.0]:
+				_sph(_hat_root, 0.03, _mats.dark, Vector3(sx * 0.035, 0.022, -0.088), Vector3(1.25, 0.9, 0.4))   # dark eye patches
+			_sph(_hat_root, 0.04, _mats.white, Vector3(0, -0.03, -0.095), Vector3(1.2, 0.8, 0.5))
+		"firehat":
+			_sph(_hat_root, 0.108, _mats.hat, Vector3(0, 0.03, 0.012), Vector3(1.0, 0.85, 1.05))
+			_cyl(_hat_root, 0.15, 0.15, 0.012, _mats.hat, Vector3(0, 0.0, 0.03), Vector3(0.12, 0, 0))
+			_box(_hat_root, Vector3(0.05, 0.05, 0.012), _mats.trim, Vector3(0, 0.1, -0.1))
+			_box(_hat_root, Vector3(0.02, 0.03, 0.16), _mats.hat, Vector3(0, 0.125, 0.0))
 		"robot":
 			_sph(_hat_root, 0.102, _mats.hat, Vector3(0, 0.005, 0.01), Vector3(1.0, 1.1, 1.06))
 			_cyl(_hat_root, 0.006, 0.006, 0.1, _mats.hat, Vector3(0.05, 0.19, 0.0))
 			_sph(_hat_root, 0.014, _mats.trim, Vector3(0.05, 0.245, 0.0))
 			_box(_hat_root, Vector3(0.15, 0.04, 0.02), _mats.eye, Vector3(0, 0.022, -0.1))
+	if _skin.get("shades", false):
+		_box(_head, Vector3(0.17, 0.03, 0.012), _mats.dark, Vector3(0, 0.022, -0.097))
+		for sx in [-1.0, 1.0]:
+			_box(_head, Vector3(0.065, 0.045, 0.014), _mats.dark, Vector3(sx * 0.037, 0.022, -0.1))
+			_box(_head, Vector3(0.012, 0.012, 0.15), _mats.dark, Vector3(sx * 0.092, 0.022, -0.02))
 
 
 func _build_torso() -> void:
@@ -319,6 +363,17 @@ func _build_torso() -> void:
 				_box(_detail, Vector3(0.01, 0.3, 0.006), _mats.trim, Vector3(sx * 0.14, -0.04, -0.07))
 		"tee":
 			_box(_detail, Vector3(0.1, 0.1, 0.01), _mats.trim, Vector3(0, -0.02, -0.103))         # a print on the front
+		"coat":
+			_cyl(_detail, 0.08, 0.07, 0.05, _mats.trim, Vector3(0, 0.15, 0.0))
+			_box(_detail, Vector3(0.42, 0.62, 0.02), _mats.top, Vector3(0, -0.5, 0.1))              # the long coat tails hang behind and in front
+			_box(_detail, Vector3(0.1, 0.6, 0.02), _mats.top, Vector3(-0.09, -0.5, -0.1))
+			_box(_detail, Vector3(0.1, 0.6, 0.02), _mats.top, Vector3(0.09, -0.5, -0.1))
+			_box(_detail, Vector3(0.02, 0.6, 0.012), _mats.trim, Vector3(-0.05, -0.5, -0.112))      # gold trim down the front edges
+			_box(_detail, Vector3(0.02, 0.6, 0.012), _mats.trim, Vector3(0.05, -0.5, -0.112))
+	if _skin.get("chain", false):
+		for k in range(9):
+			var a := PI * (0.12 + 0.76 * float(k) / 8.0)
+			_sph(_detail, 0.014, _mats.trim, Vector3(-cos(a) * 0.1, 0.1 - sin(a) * 0.14, -0.1))
 	_box(_detail, Vector3(0.22, 0.04, 0.15), _mats.dark, Vector3(0, -0.25, 0.0))                  # belt
 
 
