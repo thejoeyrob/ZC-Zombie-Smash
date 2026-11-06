@@ -120,6 +120,19 @@ func build(profile: String, for_self: bool) -> bool:
 				if id >= 0:
 					var rest := skeleton.get_bone_rest(id)
 					var axis := skeleton.get_bone_global_rest(id).basis.inverse() * canonical.y
+					if f == 0:
+						# thumb opposition closes toward the index/middle pad, not around the finger curl axis
+						var next_id := bone(prefix + "Finger0" + str(joint + 1))
+						var here := skeleton.get_bone_global_rest(id).origin
+						var direction: Vector3
+						if next_id >= 0:
+							direction = skeleton.get_bone_global_rest(next_id).origin - here
+						else:
+							direction = here - skeleton.get_bone_global_rest(skeleton.get_bone_parent(id)).origin
+						var pad := skeleton.get_bone_global_rest(index).origin.lerp(skeleton.get_bone_global_rest(middle).origin, 0.35)
+						var opposition := direction.cross(pad - here).normalized()
+						if opposition.length_squared() > 0.5:
+							axis = skeleton.get_bone_global_rest(id).basis.inverse() * opposition
 					fingers.append({"bone": id, "rest": rest.basis.get_rotation_quaternion(), "axis": axis.normalized(), "side": side, "finger": f, "joint": joint})
 	ankle_rest_y = ((_sx() * skeleton.get_bone_global_rest(bone("L Foot")).origin)).y
 	for group in ["body", "left_arms", "right_arms", "left_hands", "right_hands", "head"]:
@@ -212,12 +225,13 @@ func pose(head: Transform3D, wrists: Array, feet: Array, active: Array, yaw: flo
 	for finger in fingers:
 		var curl_index: int = finger.side * 3 + (2 if finger.finger == 0 else (0 if finger.finger == 1 else 1))
 		var curl: float = clampf(finger_curls[curl_index], 0, 1)
-		var angle := curl * (0.65 if finger.finger == 0 else 1.25)
+		var angle := curl * (float([0.35, 0.65, 0.4][finger.joint]) if finger.finger == 0 else 1.25)
 		var name: String = ["thumb", "index", "middle", "ring", "pinky"][finger.finger]
 		if tracked_fingers.size() == 2 and tracked_fingers[finger.side].has(name):
 			var values: Array = tracked_fingers[finger.side][name]
 			angle = clampf(float(values[mini(finger.joint, values.size() - 1)]), 0, 1.65)
-		angle *= -1.0 if finger.side == 0 else 1.0
+		if finger.finger != 0:
+			angle *= -1.0 if finger.side == 0 else 1.0
 		skeleton.set_bone_pose_rotation(finger.bone, finger.rest * Quaternion(finger.axis, angle))
 
 

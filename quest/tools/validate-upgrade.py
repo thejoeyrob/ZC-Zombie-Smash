@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse,subprocess,json,sys,re
 p=argparse.ArgumentParser();p.add_argument('--godot',default='godot');p.add_argument('--logs',type=Path,default=Path('upgrade-validation'));args=p.parse_args()
 root=Path(__file__).resolve().parents[1];args.logs.mkdir(parents=True,exist_ok=True)
-checks={'compile_all':'0 failures','pinball_regression':'PINBALL REGRESSION PASS','menu_release_test':'MENU RELEASE PASS','human_rig_test':'HUMAN RIG PASS','avatar_pose_matrix':'AVATAR POSE PASS'}
+checks={'compile_all':'0 failures','pinball_regression':'PINBALL REGRESSION PASS','menu_release_test':'MENU RELEASE PASS','human_rig_test':'HUMAN RIG PASS','avatar_pose_matrix':'AVATAR POSE PASS','hand_pose_geometry':'HAND GEOMETRY PASS'}
 results=[]
 for name,marker in checks.items():
  try:
