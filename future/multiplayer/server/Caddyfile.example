@@ -1,0 +1,5 @@
+# Replace this example domain with YOUR deployed server domain.
+# Caddy obtains the TLS certificate. Keep port8080 private.
+lobby.example.com {
+    reverse_proxy 127.0.0.1:8080
+}

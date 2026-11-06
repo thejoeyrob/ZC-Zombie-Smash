@@ -1,12 +1,14 @@
 class_name VRAvatar
 extends Node3D
-## A full-body player avatar built from simple shapes and driven by only three things the headset knows: where the head is and where the
-## two hands are. Arms reach from the shoulders to the hands with two-bone inverse kinematics (shoulders lean toward a reaching hand); the torso
+## A player avatar: two skinned, textured humans (Microsoft Rocketbox, MIT) and a set of stylised outfits built from simple shapes. It is driven by the head and
+## two hands. The stylised body is built like this:  Arms reach from the shoulders to the hands with two-bone inverse kinematics (shoulders lean toward a reaching hand); the torso
 ## follows the head with a lag and leans when you bow or crouch; the legs hang from the hips and the feet are planted on the floor, stepping
 ## when you walk or turn on the spot and folding when you sit. It sits at the world origin; every position it is given is a world position.
 ## Looks are data (SKINS): clothes, colours, hair or hat. In your own view the head is hidden (it sits on render layer 2, which your camera skips).
 
 const SKINS := [
+	{"id": "human_m01", "name": "ALEX — REALISTIC", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
+	{"id": "human_f02", "name": "MORGAN — REALISTIC", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "survivor", "name": "SURVIVOR", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": true},
 	{"id": "arcadekid", "name": "ARCADE KID", "tone": "#f0c09a", "top": "#ff3d9a", "trim": "#27e0ff", "bottom": "#1b1f3a", "shoes": "#f2f2f4", "glove": "#f0c09a", "style": "tee", "hat": "phones", "hat_col": "#27e0ff", "hair": "#ffcc33", "gloves": false},
 	{"id": "raver", "name": "NEON RAVER", "tone": "#8a5a3c", "top": "#101018", "trim": "#27ffd0", "bottom": "#101018", "shoes": "#0c0c12", "glove": "#101018", "style": "suit", "hat": "visor", "hat_col": "#27ffd0", "hair": "#101018", "gloves": true, "glow": true},
@@ -26,6 +28,10 @@ const ANKLE := 0.075
 const SPINE := 0.5
 const HEAD_LAYER := 2
 
+var tracked_fingers: Array = [{}, {}]
+var human: HumanRig
+var hand_poses: Array = []
+var finger_curls: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 var self_view := false             # your own avatar: the head is hidden from your camera
 var scale_k := 1.0                 # body size relative to a 1.75 m person
 var skin_id := ""
@@ -152,6 +158,24 @@ func apply_skin(id: String) -> void:
 		_cyl(mitt, 0.04, 0.04, 0.018, _mats.trim, Vector3(0, 0, 0.015), Vector3(PI / 2, 0, 0))
 		mitt.visible = not self_view
 	_apply_layers()
+	if human != null:
+		remove_child(human)
+		human.queue_free()
+		human = null
+	if id.begins_with("human_"):
+		var candidate := HumanRig.new()
+		add_child(candidate)
+		if candidate.build(id, self_view):
+			human = candidate
+		else:
+			remove_child(candidate)
+			candidate.queue_free()
+			push_warning("Realistic avatar assets incomplete: run quest/tools/fetch-human-assets.py before building")
+	if human == null:
+		set_body_mode(show_body)                    # a stylised outfit: show its shapes again (a human skin had hidden them)
+		for side in range(2):
+			(_mitts[side] as Node3D).visible = not self_view
+	_refresh_human_visibility()
 
 
 func hand_look() -> Dictionary:
@@ -325,6 +349,7 @@ func set_body_mode(mode: String) -> void:
 	_chest.visible = mode == "full"
 	_head.visible = mode == "full" or not self_view
 	_neck.visible = mode == "full"
+	_refresh_human_visibility()
 
 
 # ---- movement ---------------------------------------------------------------------------------------------
@@ -463,7 +488,7 @@ func update(head: Transform3D, wrist_pos: Array, active: Array, delta: float, se
 			want = wrist_pos[s]
 		else:
 			want = sh + bb * Vector3(sgn * 0.1, -(L_UPPER + L_FORE) * k * 0.97, -0.05 * k)      # arms hang when the hand is not tracked
-		wrists[s] = (wrists[s] as Vector3).lerp(want, 1.0 - exp(-delta * 30.0)) if _inited else want
+		wrists[s] = want if self_view or not _inited else (wrists[s] as Vector3).lerp(want, 1.0 - exp(-delta * 20.0))
 		var to_hand: Vector3 = (wrists[s] as Vector3) - sh
 		sh += to_hand.normalized() * clampf(to_hand.length() - 0.3 * k, 0.0, 0.25 * k) * 0.22          # the shoulder shrugs toward a reaching hand
 		var pole: Vector3 = bb * Vector3(sgn * 0.6, -0.85, 0.45)
@@ -479,6 +504,12 @@ func update(head: Transform3D, wrist_pos: Array, active: Array, delta: float, se
 		var yax: Vector3 = zax.cross(xax)
 		(_mitts[s] as Node3D).transform = Transform3D(Basis(xax, yax, zax).scaled(Vector3.ONE * k), wrists[s])
 
+	if human != null:
+		human.tracked_fingers = tracked_fingers
+		human.hand_poses = hand_poses
+		human.finger_curls = finger_curls
+		human.pose(head, wrists, feet, active, body_yaw, scale_k)
+
 
 ## A relaxed standing pose, for the preview on the skin machine and the tests.
 func pose_idle(root: Vector3, yaw: float, delta: float) -> void:
@@ -490,3 +521,12 @@ func pose_idle(root: Vector3, yaw: float, delta: float) -> void:
 	var rw: Vector3 = root + b * Vector3(0.27 + wave * 0.1, 0.95 * scale_k + wave * 0.5, -0.12 - wave * 0.15)
 	var lw: Vector3 = root + b * Vector3(-0.27, 0.92 * scale_k, -0.08)
 	update(head, [lw, rw], [true, true], delta, false)
+
+
+func _refresh_human_visibility() -> void:
+	if human == null:
+		return
+	for child in get_children():
+		if child is Node3D and child != human:
+			child.visible = false
+	human.set_body_mode(show_body)

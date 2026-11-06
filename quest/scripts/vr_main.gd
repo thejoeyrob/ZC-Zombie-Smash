@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "survivor", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_m01", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -77,6 +77,9 @@ var demo_t := 0.0
 var shot_plan: Array = []
 var shot_dir := "/tmp/claude-0/qvr"
 var sim_hands: Array = [_blank_hand(), _blank_hand()]
+var _pinching := [false, false]
+var _gripping := [false, false]
+var social = null               # the multiplayer session (kept in future/multiplayer, not built in yet): every hook below stays idle while this is null
 var avatar: VRAvatar
 var wrist: WristPanel
 var _wrist_last := ""
@@ -94,6 +97,8 @@ func _ready() -> void:
 	_load_best()
 	progress.load_all()
 	_load_settings()
+	if VRAvatar.skin_index(str(settings.skin)) == 0 and str(settings.skin) != VRAvatar.SKINS[0].id:
+		settings.skin = VRAvatar.SKINS[0].id            # an unknown saved outfit: start from the first
 	if args.has("skin"):
 		settings.skin = str(args.skin)
 	if args.has("body"):
@@ -215,6 +220,7 @@ func _ready() -> void:
 		_run_tour()
 
 
+
 # ---- set-up -------------------------------------------------------------------------------------
 func _setup_xr() -> void:
 	origin = XROrigin3D.new()
@@ -265,8 +271,8 @@ static func _blank_hand() -> Dictionary:
 
 func _build_hands() -> void:
 	avatar = VRAvatar.new()
-	avatar.build(true)
 	add_child(avatar)
+	avatar.build(true)
 	avatar.apply_skin(str(settings.skin))
 	avatar.set_body_mode(str(settings.body))
 	wrist = WristPanel.new()
@@ -383,6 +389,8 @@ func _on_setting(key: String, value) -> void:
 
 
 func _apply_skin(id: String) -> void:
+	if social != null and social.online:
+		social.send({"type": "appearance", "skin": id})
 	settings.skin = id
 	avatar.apply_skin(id)
 	avatar.set_body_mode(str(settings.body))
@@ -652,21 +660,30 @@ func _process(delta: float) -> void:
 		_fix_poses()
 	room.animate(clock)
 	room.prize_wall.animate(delta)
-	selector.relabel("dice", room.board_game.hint())
+	selector.relabel("dice", "STEADY" if room.board_game.hint() != "" else "")
+	selector.relabel("dash", "DASH +2" if room.board_game.hint() != "" else "")
 	_calibrate(delta)
 	var hs := _read_hands(delta)
 	_pose_hands(hs)
 	_update_avatar(hs, delta)
 	_menu_input(hs)
 	_world_inputs(hs)
+	if social != null:
+		social.tick(hs, delta)
 	var pg: Array = []
 	for i in range(2):
 		pg.append({"grab": hs[i].gripping and grab_hand != i and grab_hand2 != i and not menu.open, "xf": hs[i].vis_xf, "point": hs[i].palm})
 	room.prize_wall.update(pg)
 	_locomotion(hs, delta)
-	_stick(hs, delta)
-	_stick2(hs, delta)
-	_buttons(hs)
+	if locked and not menu.open:
+		_stick(hs, delta)
+		_stick2(hs, delta)
+		_buttons(hs)
+	else:
+		axis = 0.0
+		fire_now = false
+		grab_hand = -1
+		grab_hand2 = -1
 	emu.hold = not (cab.emu and locked and not menu.open)       # the game only runs while somebody is playing at its machine
 	emu.session.set_volume(0.0 if emu.hold else float(settings.effects))
 	emu.tick(delta)
@@ -693,6 +710,9 @@ func _calibrate(delta: float) -> void:
 ## Stands the player in front of the machine wherever they happened to be standing, facing it, and sizes the machine to their height.
 func recenter() -> void:
 	calibrated = true
+	if xr_on and not seated:
+		_eye_stand = clampf(cam.position.y, 1.2, 2.1)
+	avatar._inited = false
 	if not xr_on:
 		return
 	_place_player(cab.stand_world(), cab.look_world(), true)
@@ -708,9 +728,18 @@ func _update_avatar(hs: Array, delta: float) -> void:
 	var head := cam.global_transform
 	# body size: set from your eye height while you stand upright, so a taller player gets a taller body
 	if not seated and (-head.basis.z).y > -0.4 and head.origin.y > 1.2:
-		_eye_stand = lerpf(_eye_stand, head.origin.y, 1.0 - exp(-delta * 0.6))
+		pass # Body size is calibrated explicitly; looking down or height lift must not resize the body.
 	avatar.scale_k = clampf(_eye_stand / 1.62, 0.8, 1.3)
+	avatar.tracked_fingers = [hs[0].angles, hs[1].angles]
+	avatar.hand_poses = [hs[0].vis_xf, hs[1].vis_xf]
+	avatar.finger_curls = [float(hs[0].trig_val), float(hs[0].grip_val), clampf(float(hs[0].thumb), 0, 1), float(hs[1].trig_val), float(hs[1].grip_val), clampf(float(hs[1].thumb), 0, 1)]
 	avatar.update(head, wr, act, delta, seated)
+	if avatar.human != null:
+		for i in range(2):
+			hands[i].vis.visible = false
+			if hs[i].active:
+				hs[i].tip = avatar.human.fingertip(i)
+				hs[i].palm = avatar.human.palm(i)
 	var gaunt: bool = avatar.show_body == "hands"
 	for h in hands:
 		h.vis.set_gauntlet(gaunt)
@@ -788,7 +817,8 @@ func _read_hands(delta: float) -> Array:
 			var trig_val := c.get_float("trigger")
 			var d := _blank_hand()
 			d.xf = c.global_transform
-			d.gripping = c.is_button_pressed("grip_click") or grip_val > 0.6
+			_gripping[h.side] = c.is_button_pressed("grip_click") or grip_val > (0.38 if _gripping[h.side] else 0.65)
+			d.gripping = _gripping[h.side]
 			d.trigger = c.is_button_pressed("trigger_click") or trig_val > 0.6
 			d.grip_val = grip_val
 			d.trig_val = trig_val
@@ -848,14 +878,18 @@ func _tracked_hand(ht: XRHandTracker, side: int) -> Dictionary:
 	var t: Vector3 = j.call(7) - j.call(22)
 	t = (t - f * t.dot(f)).normalized()
 	var d := _blank_hand()
-	d.xf = Transform3D(Basis(f.cross(t), t, -f), palm)
+	if f.length_squared() < 0.5 or t.length_squared() < 0.5:
+		d.active = false
+		return d
+	d.xf = Transform3D(Basis(f.cross(t), t, -f).orthonormalized(), palm)
 	var curl := func(tip: int) -> float: return 1.0 - clampf((palm.distance_to(j.call(tip)) - 0.055) / 0.115, 0.0, 1.0)
 	var idx: float = curl.call(10)
 	var grip := (float(curl.call(15)) + float(curl.call(20)) + float(curl.call(25))) / 3.0
 	d.trig_val = idx
 	d.grip_val = grip
 	d.gripping = grip > 0.6
-	d.trigger = (j.call(5) as Vector3).distance_to(j.call(10)) < 0.028     # a pinch
+	_pinching[side] = (j.call(5) as Vector3).distance_to(j.call(10)) < (0.036 if _pinching[side] else 0.023)
+	d.trigger = _pinching[side]
 	d.aim_origin = j.call(10)
 	d.aim_dir = (j.call(10) - j.call(7)).normalized()
 	d.thumb = 1.0 - clampf(((j.call(5) as Vector3).distance_to(j.call(7)) - 0.03) / 0.06, 0.0, 1.0)
@@ -897,8 +931,8 @@ func _world_inputs(hs: Array) -> void:
 		_jb_last[i2] = jb
 	var d1 := _head_floor().distance_to(room.pinball.stand_world())
 	var d2 := _head_floor().distance_to(room.pinball2.stand_world())
-	var near := d1 < 1.5 and d1 <= d2 and not menu.open
-	var near2 := d2 < 1.5 and d2 < d1 and not menu.open
+	var near: bool = d1 < 1.5 and d1 <= d2 and not menu.open and not locked and (social == null or social.owns("pinball"))
+	var near2: bool = d2 < 1.5 and d2 < d1 and not menu.open and not locked and (social == null or social.owns("pinball2"))
 	# only the machine you are standing at listens to you; hands that hold its sides by the flipper buttons stay on them
 	pin_latch = [null, null]
 	var flips := [false, false, false, false]
@@ -914,8 +948,8 @@ func _world_inputs(hs: Array) -> void:
 				pin_latch[i] = res.spot[i]
 		flips[k * 2] = res.left
 		flips[k * 2 + 1] = res.right
-	room.pinball.interact(tips, palms, flips[0], flips[1], (hs[0].a or hs[1].a), near)
-	room.pinball2.interact(tips, palms, flips[2], flips[3], (hs[0].a or hs[1].a), near2)
+	room.pinball.interact(tips, palms, flips[0], flips[1], (hs[0].a or hs[1].a), near, hs)
+	room.pinball2.interact(tips, palms, flips[2], flips[3], (hs[0].a or hs[1].a), near2, hs)
 
 
 func _solid(p: Vector3, r: float) -> Vector3:
@@ -931,18 +965,26 @@ func _pose_hands(hs: Array) -> void:
 		var h: Dictionary = hs[i]
 		var vis: VRHand = hands[i].vis
 		var xf: Transform3D = h.xf
+		if not h.active:
+			_pinching[i] = false
+			_gripping[i] = false
+			if grab_hand == i:
+				grab_hand = -1
+			if grab_hand2 == i:
+				grab_hand2 = -1
+			pin_latch[i] = null
 		if not h.bare and (int(settings.handroll) != 0 or int(settings.handtilt) != 0):
-			xf.basis = xf.basis * Basis.from_euler(Vector3(deg_to_rad(float(settings.handtilt)), 0.0, deg_to_rad(float(settings.handroll))))
+			xf.basis = xf.basis * Basis.from_euler(Vector3(deg_to_rad(float(settings.handtilt)), 0.0, deg_to_rad(float(settings.handroll)) * (1.0 if i == 0 else -1.0)))
 		var sgn := vis.s
 		h.grip = xf * Vector3(sgn * HAND_ANCHOR, 0.0, -0.012)      # where the stick ball is held
 		# keep palm and finger out of the cabinet
 		var pos := xf.origin
 		var palm := _solid(pos, 0.04)
-		var shift := palm - pos
+		var shift := (palm - pos).limit_length(0.04)
 		var tipw: Vector3 = xf * Vector3(0, 0, -0.15) + shift
 		var tip2 := _solid(tipw, 0.011)
 		var final_xf := xf
-		final_xf.origin = pos + shift + (tip2 - tipw)
+		final_xf.origin = pos + shift + (tip2 - tipw).limit_length(0.02)
 		var holding := grab_hand == i or grab_hand2 == i
 		var pin_hold: Variant = pin_latch[i]
 		if grab_hand == i:
@@ -966,10 +1008,15 @@ func _pose_hands(hs: Array) -> void:
 		h.palm = final_xf.origin
 		h.vis_xf = final_xf
 		h.tip = final_xf * Vector3(0, 0, -0.15 + 0.05 * idx_c)
+		if not h.active:
+			h.tip = Vector3(100, 100, 100)
+			h.palm = h.tip
 
 
 # ---- moving about the room (green light) --------------------------------------------------------------
 func _set_locked(on: bool) -> void:
+	if not on and locked and social != null and social.online and not social.granted and social.owns("m%d" % machines.find(cab)):
+		social.send({"type": "release"})
 	locked = on
 	if on:
 		room.set_active(machines.find(cab))
@@ -1036,7 +1083,12 @@ func _menu_input(hs: Array) -> void:
 					break
 		if not poked:
 			var ph := 0 if settings.pointer == "left" else 1
-			menu.point(hs[ph].aim_origin, hs[ph].aim_dir, hs[ph].trigger)
+			if hs[ph].active:
+				menu.point(hs[ph].aim_origin, hs[ph].aim_dir, hs[ph].trigger)
+			else:
+				menu._release()
+				menu.beam.visible = false
+				menu.dot.visible = false
 
 
 func _locomotion(hs: Array, delta: float) -> void:
@@ -1066,6 +1118,9 @@ func _locomotion(hs: Array, delta: float) -> void:
 			trig_prev[i] = hs[i].trigger
 		return
 	if not xr_on and not demo:
+		return
+	if not hs[ph].active:
+		selector.aim(Vector3.ZERO, Vector3.UP)
 		return
 	var hover := selector.aim(hs[ph].aim_origin, hs[ph].aim_dir)
 	for i in range(2):
@@ -1111,6 +1166,9 @@ func _turn(angle: float) -> void:
 
 ## Walks to a spot beside something (a jukebox, the pinball machine...), facing it. The screen fades briefly so it is comfortable.
 func teleport_to_spot(spot: Array, machine := false) -> void:
+	if social != null and social.online and str(spot[0]) in ["pinball", "pinball2"] and not social.granted:
+		social.claim(str(spot[0]))
+		return
 	tele_busy = true
 	audio.ui("switch")
 	fade_quad.visible = true
@@ -1148,9 +1206,12 @@ var seated := false
 ## Sit on a stool: you take that seat's board game piece (or your old seat back, if it is free), and the view moves in over the table:
 ## shuffled forward off the stool and lowered to seated eye height.
 func _sit(sd_in: Array) -> void:
+	if social != null and social.online and not social.granted:
+		social.sit(int(str(sd_in[0]).substr(3)))
+		return
 	var bg: BoardGame = room.board_game
 	var want := int(str(sd_in[0]).substr(3))
-	var seat := bg.seat_for("local", want)
+	var seat := want if social != null and social.online else bg.seat_for("local", want)
 	var sd: Array = room.seats[seat] if seat < room.seats.size() else sd_in
 	tele_busy = true
 	audio.ui("switch")
@@ -1161,8 +1222,9 @@ func _sit(sd_in: Array) -> void:
 	tw.tween_callback(func():
 		var stool: Vector3 = sd[1]
 		var to_table: Vector3 = Vector3(sd[2].x, 0.0, sd[2].z) - Vector3(stool.x, 0.0, stool.z)
-		_place_player(stool + to_table.normalized() * 0.28, sd[2])     # leaning in over the table
-		bg.take_seat(seat, "local")
+		_place_player(stool + to_table.normalized() * 0.28, sd[2], false, true)     # leaning in over the table
+		if social == null or not social.online:
+			bg.take_seat(seat, "local")
 		seated = true
 		origin.position.y = float(settings.lift) - float(sd[3]) if sd.size() > 3 else float(settings.lift) - 0.55)
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
@@ -1174,7 +1236,10 @@ func _sit(sd_in: Array) -> void:
 func _stand_up() -> void:
 	if seated:
 		seated = false
-		room.board_game.leave_seat("local")
+		if social != null and social.online:
+			social.send({"type": "stand"})
+		else:
+			room.board_game.leave_seat("local")
 		origin.position.y = float(settings.lift)
 
 
@@ -1193,8 +1258,11 @@ func _choose(id: String) -> void:
 		audio.ui("switch")
 		_open_menu()
 		return
-	if id == "dice":
-		room.board_game.roll_human()
+	if id in ["dice", "dash"]:
+		if social != null and social.online:
+			social.send({"type": "roll", "dash": id == "dash"})
+		else:
+			room.board_game.roll_human(id == "dash")
 		return
 	if id.begins_with("sit"):
 		for sd in room.seats:
@@ -1217,7 +1285,8 @@ func _selector_targets() -> Array:
 		var zf := maxf(m.front_z, m.deck_front_z) + 0.1
 		var box := AABB(Vector3(-0.35, 0.0, m.back_z), Vector3(0.7, 2.05, zf - m.back_z))
 		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color, "always": true})
-	out.append({"id": "dice", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-0.42, 0.92, -0.42), Vector3(0.84, 0.3, 0.84)), "colour": Color(0.4, 1.0, 0.3), "always": true})
+	out.append({"id": "dice", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-0.42, 1.03, -0.42), Vector3(0.42, 0.1, 0.84)), "colour": Color(0.4, 1.0, 0.3), "always": true})
+	out.append({"id": "dash", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(0, 1.03, -0.42), Vector3(0.42, 0.1, 0.84)), "colour": Color(1, 0.65, 0.2), "always": true})
 	out.append({"id": "pinball2", "label": "PLAY", "xf": room.pinball2.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	for sd in room.seats:
@@ -1298,7 +1367,11 @@ func _build_leave_prompt() -> void:
 	leave_label.render_priority = 5
 
 
-func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
+func _place_player(pos: Vector3, look: Vector3, machine := false, preserve_seat := false) -> void:
+	avatar._inited = false
+	grab_hand = -1
+	grab_hand2 = -1
+	pin_latch = [null, null]
 	if not xr_on:
 		return
 	var dir := look - pos
@@ -1314,14 +1387,17 @@ func _place_player(pos: Vector3, look: Vector3, machine := false) -> void:
 	var head := Vector3(cam.position.x, 0.0, cam.position.z)
 	origin.position = pos - Basis(Vector3.UP, origin.rotation.y) * head
 	origin.position.y = float(settings.lift)
-	if seated:
-		room.board_game.leave_seat("local")      # the computer carries on with your piece
+	if seated and not preserve_seat:
+		if social != null and social.online:
+			social.send({"type": "stand"})
+		else:
+			room.board_game.leave_seat("local")
 	seated = false
 
 
 ## A hand that has taken hold of a stick keeps it until the fingers really open (or the hand is pulled well away).
 func _released(h: Dictionary, dist: float) -> bool:
-	if dist > 0.24:
+	if not h.active or dist > 0.24:
 		return true
 	return not (h.gripping or h.trigger or float(h.grip_val) > 0.3 or float(h.trig_val) > 0.3)
 
@@ -1331,7 +1407,7 @@ func _stick(hs: Array, delta: float) -> void:
 	if grab_hand == -1:
 		for i in range(2):
 			var h: Dictionary = hs[i]
-			if (h.gripping or h.trigger) and i != grab_hand2 and h.grip.distance_to(ball) < GRAB_RADIUS * cab.scale.x:
+			if h.gripping and i != grab_hand2 and h.active and h.grip.distance_to(ball) < GRAB_RADIUS * cab.scale.x:
 				grab_hand = i
 				_haptic(i, 0.5, 0.06)
 				audio.sfx("switch", 0.6)
@@ -1483,6 +1559,9 @@ func _buttons(hs: Array) -> void:
 
 ## Settling in at a machine: a quick fade, the player is placed exactly in front of it, then the screen powers up and the controls light.
 func _enter_machine(i: int) -> void:
+	if social != null and social.online and not social.granted and not social.owns("m%d" % i):
+		social.claim("m%d" % i)
+		return
 	tele_busy = true
 	fade_quad.visible = true
 	var fm := fade_quad.material_override as StandardMaterial3D

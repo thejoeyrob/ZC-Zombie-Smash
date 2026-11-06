@@ -9,7 +9,7 @@ const W := 400.0
 const H := 800.0
 const BALL_R := 9.0
 const GRAVITY := 980.0
-const SUBSTEPS := 8
+const SUBSTEPS := 2
 const MAX_SPEED := 1500.0
 const LANE_X := 366.0
 const BUMPERS := [Vector2(195, 169), Vector2(160, 212), Vector2(238, 212)]       # the three brain bumpers in the artwork
@@ -26,6 +26,18 @@ const RAMPS := [
 	{"entry": Vector2(250, 62), "r": 20.0, "dir": Vector2(1, 0.2), "path": [Vector2(250, 62), Vector2(300, 60), Vector2(346, 96), Vector2(366, 160), Vector2(358, 232), Vector2(336, 290), Vector2(326, 300)], "exit_vel": Vector2(-110, 150), "col": Color(1, 0.6, 0.1), "name": "ORANGE RAMP"},
 ]
 
+var physical_view := false
+var network_remote := false
+var _accumulator := 0.0
+var multiplier := 1
+var combo := 0
+var combo_time := 0.0
+var ball_save := 0.0
+var save_used := false
+var skill_time := 0.0
+var tilt_heat := 0.0
+var tilted := false
+var nudge_cool := 0.0
 var bonus_balls := false
 var enabled := false              # the machine only works once the code has been keyed in at the snack machine
 var art: Texture2D
@@ -102,6 +114,12 @@ func _build_segments() -> void:
 
 
 func reset_game() -> void:
+	multiplier = 1
+	combo = 0
+	combo_time = 0.0
+	target_lit.fill(false)
+	insert_t.resize(INSERTS.size())
+	insert_t.fill(0.0)
 	score = 0
 	balls_left = 5 if bonus_balls else 3
 	game_over = false
@@ -110,6 +128,14 @@ func reset_game() -> void:
 
 
 func _new_ball() -> void:
+	tilted = false
+	tilt_heat = 0.0
+	nudge_cool = 0.0
+	ball_save = 0.0
+	save_used = false
+	left_up = false
+	right_up = false
+	_slow_t = 0.0
 	on_ramp = -1
 	ball = Vector2(LANE_X, 700.0)
 	vel = Vector2.ZERO
@@ -140,16 +166,18 @@ func launch() -> void:
 	if in_play or not _launch_ready:
 		plunger = 0.0
 		return
-	var power := maxf(plunger, 0.55)
+	var power := maxf(plunger, 0.15)
 	vel = Vector2(0, -(1050.0 + 650.0 * power))
 	in_play = true
+	ball_save = 8.0 if not save_used else 0.0
+	skill_time = 4.0
 	_launch_ready = false
 	plunger = 0.0
 	event.emit("launch")
 
 
 func flippers(left: bool, right: bool) -> void:
-	if not enabled:
+	if not enabled or tilted:
 		left = false
 		right = false
 	if left and not left_up:
@@ -161,6 +189,22 @@ func flippers(left: bool, right: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	if network_remote:
+		queue_redraw()
+		return
+	_accumulator = minf(_accumulator + delta, 0.1)
+	while _accumulator >= 1.0 / 120.0:
+		_simulate(1.0 / 120.0)
+		_accumulator -= 1.0 / 120.0
+	queue_redraw()
+
+
+func _simulate(delta: float) -> void:
+	ball_save = maxf(0, ball_save - delta)
+	skill_time = maxf(0, skill_time - delta)
+	combo_time = maxf(0, combo_time - delta)
+	nudge_cool = maxf(0, nudge_cool - delta)
+	tilt_heat = maxf(0, tilt_heat - delta * 0.14)
 	clock += delta
 	message_t = maxf(0.0, message_t - delta)
 	for i in range(3):
@@ -206,8 +250,10 @@ func _step(dt: float) -> void:
 			ramp_d = 0.0
 			ramp_hits += 1
 			event.emit("ramp")
-			_score(1000, "ramp")
-			flash(str(rp.name) + "  +1000")
+			combo = mini(combo + 1, 5) if combo_time > 0.0 else 1
+			combo_time = 8.0
+			_score(1000 * combo, "ramp")
+			flash(str(rp.name) + "  COMBO x%d" % combo)
 			return
 	for seg in segments:
 		_hit_segment(seg[0], seg[1], seg[2], seg[3])
@@ -227,6 +273,10 @@ func _step(dt: float) -> void:
 			vel += n * maxf(520.0, -vn * 1.1)
 			bump_flash[i] = 1.0
 			_score(100, "bump")
+			if skill_time > 0.0:
+				_score(1500, "target")
+				flash("SKILL SHOT +1500")
+				skill_time = 0.0
 	for i in range(TARGETS.size()):
 		var d2: Vector2 = ball - TARGETS[i]
 		var minr2: float = TARGET_R + BALL_R
@@ -244,7 +294,8 @@ func _step(dt: float) -> void:
 						done = false
 				if done:
 					_score(2500, "clear")
-					flash("BANK COMPLETE  +2500")
+					multiplier = mini(multiplier + 1, 5)
+					flash("BANK COMPLETE  x%d" % multiplier)
 					for k in range(bank, bank + 4):
 						target_lit[k] = false
 			else:
@@ -349,13 +400,23 @@ func _hit_flipper(pivot: Vector2, tip: Vector2, omega: float, side: float) -> vo
 
 
 func _score(points: int, kind: String) -> void:
-	score += points
+	if tilted:
+		return
+	score += points * multiplier
 	if score > best:
 		best = score
 	event.emit(kind)
 
 
 func _drain() -> void:
+	if ball_save > 0.0 and not save_used and not tilted:
+		_new_ball()
+		save_used = true
+		pull(0.7)
+		launch()
+		ball_save = 0.0
+		flash("BALL SAVED")
+		return
 	in_play = false
 	balls_left -= 1
 	event.emit("drain")
@@ -365,7 +426,7 @@ func _drain() -> void:
 		event.emit("over")
 	else:
 		_new_ball()
-		flash("BALL %d" % (4 - balls_left))
+		flash("BALL %d" % ((6 if bonus_balls else 4) - balls_left))
 
 
 static func _commas(n: int) -> String:
@@ -382,8 +443,10 @@ static func _commas(n: int) -> String:
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, W, H), Color(0.02, 0.01, 0.06))
 	if art != null:
-		draw_texture_rect(art, Rect2(0, 0, W, H), false, Color(1.22, 1.2, 1.25))      # vibrant: the artwork at full brightness
+		draw_texture_rect(art, Rect2(0, 0, W, H), false, Color.WHITE)      # vibrant: the artwork at full brightness
 	_draw_inserts()
+	if physical_view:
+		return
 	# plunger lane and rails
 	draw_rect(Rect2(352, 270, 28, 530), Color(0.0, 0.0, 0.0, 0.5))
 	for seg in segments:
@@ -480,3 +543,47 @@ func _text(s: String, pos: Vector2, size: int, col: Color, align := HORIZONTAL_A
 		x = pos.x - w
 	draw_string(font, Vector2(x + 1.5, pos.y + 1.5), s, align, w, size, Color(0, 0, 0, 0.8))
 	draw_string(font, Vector2(x, pos.y), s, align, w, size, col)
+
+
+func nudge(direction := 1.0) -> void:
+	if not in_play or network_remote or nudge_cool > 0.0 or tilted:
+		return
+	nudge_cool = 0.65
+	tilt_heat += 1.0
+	if tilt_heat >= 2.8:
+		tilted = true
+		ball_save = 0.0
+		flippers(false, false)
+		flash("TILT — scoring disabled for this ball")
+	else:
+		vel += Vector2(clampf(direction, -1, 1) * 100.0, -160.0)
+		flash("CAREFUL" if tilt_heat > 1.8 else "NUDGE")
+
+
+func snapshot() -> Dictionary:
+	return {"ball": [ball.x, ball.y], "angles": [left_ang, right_ang], "score": score,
+		"balls": balls_left, "play": in_play, "over": game_over, "ramp": on_ramp, "ramp_d": ramp_d,
+		"multiplier": multiplier, "save": ball_save, "bumps": bump_flash.duplicate(), "targets": target_lit.duplicate()}
+
+
+func apply_snapshot(d: Dictionary) -> void:
+	if not d.get("ball") is Array or d.ball.size() != 2 or not d.get("angles") is Array or d.angles.size() != 2:
+		return
+	for value in d.ball + d.angles:
+		if not (value is float or value is int) or not is_finite(float(value)):
+			return
+	ball = Vector2(clampf(d.ball[0], -100, 1500), clampf(d.ball[1], -100, 1500))
+	left_ang = clampf(d.angles[0], -4, 4)
+	right_ang = clampf(d.angles[1], -4, 4)
+	score = clampi(int(d.get("score", 0)), 0, 1000000000)
+	balls_left = clampi(int(d.get("balls", 0)), 0, 5)
+	in_play = bool(d.get("play", false))
+	game_over = bool(d.get("over", false))
+	on_ramp = clampi(int(d.get("ramp", -1)), -1, 1)
+	ramp_d = clampf(float(d.get("ramp_d", 0)), 0, 2000)
+	multiplier = clampi(int(d.get("multiplier", 1)), 1, 5)
+	ball_save = clampf(float(d.get("save", 0)), 0, 8)
+	if d.get("bumps") is Array and d.bumps.size() == 3:
+		bump_flash = d.bumps.duplicate()
+	if d.get("targets") is Array and d.targets.size() == 8:
+		target_lit = d.targets.duplicate()

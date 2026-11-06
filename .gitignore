@@ -10,3 +10,4 @@ quest/android/
 quest/addons/
 quest/tests/golden.json
 quest/vr-art/*.import
+avatars/source-cache/

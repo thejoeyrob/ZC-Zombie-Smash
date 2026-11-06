@@ -49,15 +49,15 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_energy = 0.95
-	env.ambient_light_color = Color(0.52, 0.4, 0.64)
+	env.ambient_light_energy = 0.58
+	env.ambient_light_color = Color(0.58, 0.61, 0.68)
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 1.0
 	# a softer, more natural picture: a gentle haze that grows with distance (it also hides shimmer far away), slightly relaxed colour and
 	# contrast, and a light bloom so the bright neon rolls off instead of ending in a hard digital edge
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.2, 0.12, 0.3)
-	env.fog_density = 0.035
+	env.fog_light_color = Color(0.08, 0.10, 0.14)
+	env.fog_density = 0.008
 	env.fog_sky_affect = 1.0
 	env.adjustment_enabled = true
 	env.adjustment_saturation = 0.9
@@ -127,7 +127,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [1.4, 3.4, 5.4]:
-		var tube_col := Color(1.0, 0.2, 0.7) if int(z * 10.0) % 2 == 0 else Color(0.1, 0.9, 1.0)
+		var tube_col := Color(1.0, 0.2, 0.7) if int(round(z)) % 2 == 0 else Color(0.1, 0.9, 1.0)
 		VRBuild.neon_tube(root, w, Vector3(0, HEIGHT - 0.05, z), tube_col, Vector3.ZERO, 0.02)
 
 
@@ -284,6 +284,7 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 	board_game.rotation.y = PI                       # the printed rules read the right way up from the stool nearest the door
 	root.add_child(board_game)
 	board_game.build(font_ref)
+	_rules_card(root, c, font_ref)
 	blockers.append([c.x, c.z, 0.45, 0.08])
 
 
@@ -452,3 +453,29 @@ func animate(t: float) -> void:
 	for l in sign_labels:
 		var on := 0.75 + 0.25 * (1.0 if int(t * 3.0) % 11 != 0 else 0.4)
 		l.modulate.a = on
+
+
+func _rules_card(root: Node3D, centre: Vector3, font: Font) -> void:
+	var card := Node3D.new()
+	root.add_child(card)
+	card.position = centre + Vector3(0, 1.034, 0)
+	VRBuild.box(card, Vector3(0.42, 0.004, 0.21), Vector3.ZERO, VRBuild.mat(Color(0.035, 0.055, 0.07), 0.65))
+	VRBuild.label(card, "RACE TO THE LAB", 0.03, Vector3(0, 0.005, 0.06), Color(0.9, 0.75, 0.4), Vector3(-PI / 2, PI, 0), 2, font)
+	VRBuild.label(card, "STEADY: roll 1–6   •   DASH: +2", 0.018, Vector3(0, 0.006, 0.02), Color.WHITE, Vector3(-PI / 2, PI, 0), 0, font)
+	VRBuild.label(card, "Dash a 1: lose shield or go back 2", 0.016, Vector3(0, 0.006, -0.01), Color(0.8, 0.9, 0.95), Vector3(-PI / 2, PI, 0), 0, font)
+	VRBuild.label(card, "Hearts: shield + extra roll  •  ? = event", 0.016, Vector3(0, 0.006, -0.045), Color(0.8, 0.9, 0.95), Vector3(-PI / 2, PI, 0), 0, font)
+	for i in [2, 10, 16, 23]:
+		var mark := board_game.square_pos(i) + Vector3(0, 0.002, 0)
+		VRBuild.label(board_game, "?", 0.028, mark, Color(1, 0.85, 0.4), Vector3(-PI / 2, 0, 0), 3, font)
+	for side in [-1, 1]:
+		VRBuild.label(root, "STEADY" if side < 0 else "DASH +2", 0.022, centre + Vector3(side * 0.23, 1.043, -0.39), Color(0.6, 0.95, 0.85), Vector3(-PI / 2, PI, 0), 1, font)
+	# One local key light supplies readable faces/table pieces; no six-player per-avatar lights.
+	var key := SpotLight3D.new()
+	root.add_child(key)
+	key.position = centre + Vector3(0, 2.75, 0)
+	key.rotation.x = -PI / 2
+	key.light_color = Color(1, 0.88, 0.72)
+	key.light_energy = 1.6
+	key.spot_range = 3.1
+	key.spot_angle = 58
+	key.shadow_enabled = false

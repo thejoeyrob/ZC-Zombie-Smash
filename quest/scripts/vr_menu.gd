@@ -64,6 +64,8 @@ func build(root: Node3D, ui_font: Font, initial: Dictionary, build_no := 0) -> v
 
 
 func set_open(on: bool) -> void:
+	if not on:
+		_release()
 	open = on
 	visible = on
 	beam.visible = false
@@ -94,10 +96,14 @@ func point(origin: Vector3, dir: Vector3, trigger_down: bool, with_beam := true)
 	var n := global_transform.basis.z
 	var denom := dir.dot(n)
 	if absf(denom) < 0.0001:
+		_release()
+		dot.visible = false
 		beam.visible = false
 		return false
 	var t := (global_position - origin).dot(n) / denom
 	if t < 0.05 or t > 6.0:
+		_release()
+		dot.visible = false
 		beam.visible = false
 		return false
 	var hit := origin + dir * t
@@ -246,7 +252,7 @@ func _page_index(name: String) -> int:
 func _build_ui() -> void:
 	var back := PanelContainer.new()
 	back.size = Vector2(VIEW)
-	back.add_theme_stylebox_override("panel", _style(Color(0.035, 0.03, 0.09, 0.95), Color(0.2, 0.9, 1.0, 0.95), 28))
+	back.add_theme_stylebox_override("panel", _style(Color(0.035, 0.05, 0.065, 0.98), Color(0.32, 0.52, 0.58, 0.9), 18))
 	viewport.add_child(back)
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 10)
@@ -265,7 +271,7 @@ func _build_ui() -> void:
 	body.add_child(tabs)
 	for pg in PAGES:
 		var tb := _button(pg[1], Color("#1b1e34"), 36)
-		tb.custom_minimum_size = Vector2(230, 84)
+		tb.custom_minimum_size = Vector2(230, 72)
 		var id: String = pg[0]
 		tb.pressed.connect(func(): show_page(id))
 		tabs.add_child(tb)
@@ -286,7 +292,7 @@ func _build_ui() -> void:
 	go.add_theme_constant_override("h_separation", 12)
 	go.add_theme_constant_override("v_separation", 12)
 	play.add_child(go)
-	for g in [["AVATAR LOCKER", "skins", "#7a3fd0"], ["JUKEBOX", "jukebox", "#b8782a"], ["SNACKS", "vending", "#a8302a"], ["BOARD GAME", "lounge", "#2a9a4a"], ["HALL OF FAME", "hall", "#a88a1a"], ["THE DOOR", "exit", "#2a5fa8"]]:
+	for g in [["PINBALL LEFT", "pinball", "#356c78"], ["PINBALL RIGHT", "pinball2", "#356c78"], ["AVATAR LOCKER", "skins", "#7a3fd0"], ["JUKEBOX", "jukebox", "#b8782a"], ["SNACKS", "vending", "#a8302a"], ["BOARD GAME", "lounge", "#2a9a4a"], ["HALL OF FAME", "hall", "#a88a1a"], ["THE DOOR", "exit", "#2a5fa8"]]:
 		var gb := _button(g[0], Color(g[2]), 30)
 		gb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var gid: String = g[1]

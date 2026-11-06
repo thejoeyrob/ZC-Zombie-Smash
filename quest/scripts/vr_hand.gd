@@ -40,7 +40,7 @@ func build(hand_side: int, hand_look := {}) -> void:
 	else:
 		glove = VRBuild.mat(look.get("tone", Color(0.85, 0.65, 0.5)), 0.55)          # bare skin
 	glove.rim_enabled = true
-	glove.rim = 0.35
+	glove.rim = 0.1
 	glove.rim_tint = 0.5
 	nail_mat = VRBuild.mat(Color(0.2, 0.2, 0.22), 0.55)        # the grippy pads on the fingertips
 	var stitch := VRBuild.mat(Color(0.62, 0.5, 0.32), 0.7)
@@ -61,9 +61,6 @@ func build(hand_side: int, hand_look := {}) -> void:
 	var mound := VRBuild.sphere(self, 0.024, Vector3(s * 0.006, 0.027, 0.002), glove, 14)     # thumb mound
 	mound.scale = Vector3(0.8, 1.0, 1.15)
 	VRBuild.sphere(self, 0.03, Vector3(-s * 0.002, -0.004, 0.018), glove, 14)                # heel of the hand
-	for f in FINGERS:
-		var kn := VRBuild.sphere(self, float(f[3]) * 1.12, Vector3(0, f[1], -0.054), glove, 10)   # knuckles
-		kn.scale = Vector3(1.0, 1.0, 1.0)
 	# the wrist: a short bare section that disappears into the sleeve of the arm
 	VRBuild.cylinder(self, 0.029, 0.05, Vector3(0, -0.002, 0.075), glove, 0.03, Vector3(PI / 2, 0, 0), 20)
 	for f in FINGERS:

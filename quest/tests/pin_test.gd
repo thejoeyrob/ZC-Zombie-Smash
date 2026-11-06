@@ -21,7 +21,8 @@ func _init() -> void:
 		if log_t >= 2.0:
 			log_t = 0.0
 			print("t=%d ball=(%.0f,%.0f) vel=(%.0f,%.0f) in_play=%s score=%d left=%d" % [i / 60, t.ball.x, t.ball.y, t.vel.x, t.vel.y, str(t.in_play), t.score, t.balls_left])
-		if t.game_over:
+		if t.game_over or (not t.in_play and t._launch_ready):
+			t.pull(0.8)
 			t.launch()
 	print("DONE score ", t.score, " best ", t.best)
 	quit()

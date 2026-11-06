@@ -192,7 +192,8 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	VRBuild.box(mon, Vector3(0.58, 0.012, 0.02), Vector3(0, -0.322, 0.098), black, Vector3(-0.5, 0, 0))
 	VRBuild.box(mon, Vector3(0.012, 0.64, 0.02), Vector3(-0.268, 0, 0.098), black, Vector3(0, 0.5, 0))
 	VRBuild.box(mon, Vector3(0.012, 0.64, 0.02), Vector3(0.268, 0, 0.098), black, Vector3(0, -0.5, 0))
-	var bz = load("res://assets/art/bezel-%s.jpg" % bezel_id) if bezel_id != "" else null
+	var bezel_path := "res://assets/art/bezel-%s.jpg" % bezel_id
+	var bz = load(bezel_path) if bezel_id != "" and ResourceLoader.exists(bezel_path) else null
 	var bzd := _bezel_data()
 	if ORNATE_BEZELS and bz != null and bzd.has(bezel_id):
 		var d: Dictionary = bzd[bezel_id]

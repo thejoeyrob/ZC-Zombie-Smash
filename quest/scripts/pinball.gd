@@ -26,6 +26,9 @@ var enabled := false
 var reset_btn: Node3D
 var _reset_prev := false
 var _grab_z := 0.0
+var _plunger_hand := -1
+var _reset_hold := 0.0
+var playfield: PinballPlayfield
 var _latched := [-1, -1]       # which flipper button each hand is holding (-1 = none)
 
 
@@ -154,6 +157,9 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	VRBuild.box(self, Vector3(0.64, 0.02, 0.2), Vector3(0, 1.955, -0.66), glow)
 	VRBuild.merge_static(self)
 	VRBuild.merge_static(pf)
+	playfield = PinballPlayfield.new()
+	pf.add_child(playfield)
+	playfield.build(table)
 
 
 ## Keeps a sphere (world position) out of the cabinet and backbox.
@@ -202,7 +208,7 @@ func latch(hands: Array) -> Dictionary:
 	var out := {"latch": [-1, -1], "spot": [null, null], "left": false, "right": false}
 	for i in range(mini(2, hands.size())):
 		var h: Dictionary = hands[i]
-		var held: bool = h.gripping or h.trigger or float(h.grip_val) > 0.3 or float(h.trig_val) > 0.3
+		var held: bool = h.active and (h.gripping or (_latched[i] >= 0 and float(h.grip_val) > 0.3))
 		var hp: Vector3 = h.grip
 		if _latched[i] >= 0:
 			var cap0: Node3D = _flip_buttons[_latched[i]]
@@ -237,71 +243,77 @@ func release_hands() -> void:
 
 
 ## Hands: tips and palms are world positions; trig_* are the controller triggers (an assist), launch is a button press.
-func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, launch: bool, near: bool) -> void:
-	var left := false
-	var right := false
-	for p in tips:
-		for i in range(2):
-			var cap: Node3D = _flip_buttons[i]
-			if cap != null and not (i in _latched) and cap.global_position.distance_to(p) < 0.055:
-				if i == 0:
-					left = true
-				else:
-					right = true
-	if near:
-		left = left or trig_left
-		right = right or trig_right
-	table.flippers(left, right)
+func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, launch: bool, near: bool, hands: Array = []) -> void:
+	if not near or table.network_remote:
+		release_hands()
+		_held = false
+		_plunger_hand = -1
+		_reset_hold = 0.0
+		_reset_prev = false
+		_launch_prev = launch
+		if not table.network_remote:
+			table.flippers(false, false)
+			table.pull(0.0)
+		return
+	var flips := [trig_left, trig_right]
 	for i in range(2):
-		var down: bool = left if i == 0 else right
-		var cap2: Node3D = _flip_buttons[i]
-		if cap2 != null and down != _flip_down[i]:
-			_flip_down[i] = down
-			var push := 0.012 if i == 0 else -0.012
-			cap2.position.x += push if down else -push
+		for tip in tips:
+			if tip.distance_to(_flip_buttons[i].global_position) < 0.035:
+				flips[i] = true
+	table.flippers(flips[0], flips[1])
+	for i in range(2):
+		if flips[i] != _flip_down[i]:
+			_flip_down[i] = flips[i]
+			_flip_buttons[i].position.x += (0.012 if i == 0 else -0.012) * (1.0 if flips[i] else -1.0)
 	var on_reset := false
-	for tp in tips:
-		if reset_btn != null and reset_btn.global_position.distance_to(tp) < 0.05:
-			on_reset = true
-	if on_reset and not _reset_prev and enabled:
+	for tip in tips:
+		on_reset = on_reset or tip.distance_to(reset_btn.global_position) < 0.035
+	_reset_hold = _reset_hold + get_process_delta_time() if on_reset else 0.0
+	if _reset_hold >= 0.9 and not _reset_prev:
 		table.reset_game()
-		sound.emit("launch", reset_btn.global_position)
-	_reset_prev = on_reset
-	if reset_btn != null:
-		reset_btn.get_child(1).position.z = 0.004 if on_reset else 0.01
-	# plunger: close a hand on the red knob and draw it back toward you; the further you pull, the harder it launches. Let go to fire.
-	var knob := to_global(plunger_rest + Vector3(0, 0, (_charge if _held else 0.0) * 0.1))
-	var best_p := Vector3.ZERO
-	var best_d := 99.0
-	for p2 in tips + palms:
-		var dd: float = p2.distance_to(knob)
-		if dd < best_d:
-			best_d = dd
-			best_p = p2
-	if not _held and best_d < 0.09:
-		_held = true
-		_charge = 0.0
-		_grab_z = to_local(best_p).z
-	elif _held:
-		if best_d < 0.22:
-			_charge = clampf((to_local(best_p).z - _grab_z) / 0.1, 0.0, 1.0)
-			table.pull(_charge)
-		else:
+		_reset_prev = true
+	if not on_reset:
+		_reset_prev = false
+	var knob := to_global(plunger_rest + Vector3(0, 0, _charge * 0.1))
+	if _plunger_hand < 0:
+		for i in range(hands.size()):
+			if hands[i].active and hands[i].gripping and palms[i].distance_to(knob) < 0.11:
+				_plunger_hand = i
+				_grab_z = to_local(palms[i]).z
+				_held = true
+				_charge = 0.0
+				break
+	else:
+		var i := _plunger_hand
+		if i >= hands.size() or not hands[i].active:
+			_plunger_hand = -1 # Tracking loss cancels; never launches.
 			_held = false
+			_charge = 0.0
+			table.pull(0.0)
+		elif not hands[i].gripping:
 			if _charge > 0.1:
 				table.launch()
 			else:
 				table.pull(0.0)
+			_plunger_hand = -1
+			_held = false
 			_charge = 0.0
-	if launch and not _launch_prev and near:
+		elif palms[i].distance_to(knob) > 0.3:
+			_plunger_hand = -1
+			_held = false
+			_charge = 0.0
+			table.pull(0.0)
+		else:
+			_charge = clampf((to_local(palms[i]).z - _grab_z) / 0.1, 0, 1)
+			table.pull(_charge)
+	if launch and not _launch_prev:
 		table.pull(0.8)
 		table.launch()
 	_launch_prev = launch
-	var pulled := _charge if _held else table.plunger
-	plunger_knob.position = plunger_rest + Vector3(0, 0, pulled * 0.1)
+	plunger_knob.position = plunger_rest + Vector3(0, 0, _charge * 0.1)
 
 
 func _process(_delta: float) -> void:
 	if score_label != null:
 		score_label.text = PinTable._commas(table.score) if enabled else "- - -"
-		best_label.text = ("BEST " + PinTable._commas(table.best)) if enabled else "OUT OF ORDER"
+		best_label.text = ("BEST %s  •  BALLS %d  •  x%d%s" % [PinTable._commas(table.best), table.balls_left, table.multiplier, "  SAVE" if table.ball_save > 0 else ""]) if enabled else "OUT OF ORDER"

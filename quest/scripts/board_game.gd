@@ -35,6 +35,14 @@ var _die: Node3D
 var _label: Label3D
 var _font: Font
 var _roll_now := false
+var authority := true
+var local_id := "local"
+var phase := "wait"
+var remaining := 1.6
+var again := false
+var round_number := 1
+var die_value := 1
+var deck: Array = []
 var auto_human := false           # the tour video plays the human seat by itself
 
 
@@ -44,7 +52,7 @@ func build(font: Font) -> void:
 	for i in range(NAMES.size()):
 		var tok := _make_token(i)
 		add_child(tok)
-		players.append({"name": NAMES[i], "pos": 0, "skip": false, "token": tok, "human": false, "occupant": ""})
+		players.append({"name": NAMES[i], "pos": 0, "skip": false, "token": tok, "human": false, "occupant": "", "shield": 1, "wins": 0})
 	_die = _make_die()
 	_die.visible = false
 	add_child(_die)
@@ -53,7 +61,7 @@ func build(font: Font) -> void:
 	_label.no_depth_test = true
 	_label.render_priority = 6
 	_reset_game()
-	_run()
+
 
 
 # ---- squares ----------------------------------------------------------------------------------------
@@ -74,7 +82,7 @@ func square_pos(i: int, slot := 0) -> Vector3:
 	var px := MARGIN + (float(c.x) + 0.5) * CELL
 	var pz := MARGIN + (float(c.y) + 0.5) * CELL
 	var k := BOARD_M / PIC
-	var off := Vector2(float(slot % 2) - 0.5, float(slot / 2) - 0.5) * 0.034
+	var off := Vector2(float(slot % 3) - 1.0, float(slot / 3) - 0.5) * 0.018
 	if i >= SQUARES:
 		c = _cell_of(0)
 		px = MARGIN + 0.5 * CELL
@@ -93,6 +101,8 @@ func take_seat(seat: int, occupant: String, display_name := "YOU") -> bool:
 	leave_seat(occupant)                     # one seat per person
 	p.occupant = occupant
 	p.human = true
+	if current == seat and phase == "wait":
+		remaining = 25.0
 	p.name = display_name
 	last_occupant[seat] = occupant
 	_say("%s TAKES THE %s" % [display_name, PIECES[seat]])
@@ -108,7 +118,7 @@ func leave_seat(occupant: String) -> void:
 			p.human = false
 			p.name = NAMES[i]
 			if waiting_for_roll and current == i:
-				_roll_now = true
+				remaining = minf(remaining, 1.6)
 
 
 ## The seat this person should get: the one they had before if it is free, otherwise the given one.
@@ -128,14 +138,12 @@ func seat_of(occupant: String) -> int:
 
 # ---- the game ---------------------------------------------------------------------------------------
 func hint() -> String:
-	if winner >= 0:
-		return ""
-	return "ROLL" if waiting_for_roll and current == seat_of("local") else ""
+	return "STEADY / DASH" if waiting_for_roll and current == seat_of(local_id) else ""
 
 
-func roll_human() -> void:
-	if waiting_for_roll and not busy:
-		_roll_now = true
+func roll_human(dash := false) -> void:
+	if authority and phase == "wait" and players[current].occupant == local_id:
+		_resolve(dash)
 
 
 func _reset_game() -> void:
@@ -144,6 +152,7 @@ func _reset_game() -> void:
 	for i in range(players.size()):
 		players[i].pos = 0
 		players[i].skip = false
+		players[i].shield = 1
 		players[i].token.position = square_pos(0, i)
 	_say("RACE TO THE LAB!  SIT ON A STOOL TO PLAY")
 	_place_all()
@@ -161,109 +170,131 @@ func _say(t: String) -> void:
 		_label.text = t
 
 
-func _run() -> void:
-	await get_tree().create_timer(1.0).timeout
-	while is_inside_tree():
-		if winner >= 0:
-			await get_tree().create_timer(6.0).timeout
-			_reset_game()
-			continue
-		var p: Dictionary = players[current]
-		if p.skip:
-			p.skip = false
-			_say("%s MISSES A TURN" % p.name)
-			event.emit("boss")
-			await get_tree().create_timer(1.4).timeout
+func _process(delta: float) -> void:
+	for i in range(players.size()):
+		var token: Node3D = players[i].token
+		token.position = token.position.lerp(square_pos(players[i].pos, i), 1.0 - exp(-delta * 8.0))
+	waiting_for_roll = phase == "wait"
+	busy = phase != "wait"
+	_die.visible = phase == "result"
+	if _die.visible:
+		_die.position = Vector3(0, 0.04, 0)
+		if remaining > 1.4:
+			_die.rotation = Vector3(2.2 - remaining, 2.2 - remaining, 2.2 - remaining) * 12.0
+			_die.position.y = 0.04 + absf(sin((2.2 - remaining) * 10.0)) * 0.05
+		else:
+			_die.basis = _face_up(die_value)
+	if _label != null and phase == "wait":
+		_label.text = "%s  •  %ds\nSHIELDS %d  •  WINS %d" % [message, ceili(remaining), players[current].shield, players[current].wins]
+	if not authority:
+		return
+	remaining -= delta
+	if remaining > 0.0:
+		return
+	if phase == "win":
+		round_number += 1
+		_reset_game()
+		current = (round_number - 1) % players.size()
+		_begin_turn()
+	elif phase == "result":
+		if not again:
 			current = (current + 1) % players.size()
-			continue
-		var again := true
-		while again and winner < 0:
-			again = false
-			if p.human:
-				_say("YOUR TURN  -  POINT AT THE TABLE AND ROLL" if p.occupant == "local" else "%s'S TURN" % p.name)
-				waiting_for_roll = true
-				_roll_now = false
-				if auto_human:
-					await get_tree().create_timer(1.3).timeout
-					_roll_now = true
-				while not _roll_now and is_inside_tree():
-					await get_tree().process_frame
-				waiting_for_roll = false
-				if not p.human:                   # they stood up while it was their turn: the computer rolls instead
-					_say("%s ROLLS..." % p.name)
-			else:
-				_say("%s ROLLS..." % p.name)
-				await get_tree().create_timer(1.1).timeout
-			busy = true
-			var n := rng.randi_range(1, 6)
-			await _roll_die(n)
-			_say("%s ROLLED %d" % [p.name, n])
-			await get_tree().create_timer(0.5).timeout
-			await _move(p, n)
-			var heart: bool = await _land(p)
-			busy = false
-			if heart and winner < 0:
+		_begin_turn()
+	else:
+		_resolve(false)
+
+
+func _begin_turn() -> void:
+	phase = "wait"
+	remaining = 25.0 if players[current].human and not auto_human else 1.6
+	_say("%s — STEADY or DASH" % players[current].name)
+
+
+func _resolve(dash: bool) -> void:
+	var p: Dictionary = players[current]
+	phase = "result"
+	remaining = 2.2
+	again = false
+	if p.skip:
+		p.skip = false
+		_say("%s MISSES A TURN" % p.name)
+		return
+	die_value = rng.randi_range(1, 6)
+	var steps := die_value + (2 if dash else 0)
+	var detail := ""
+	if dash and die_value == 1:
+		if p.shield > 0:
+			p.shield -= 1
+			detail = "SHIELD SAVED DASH"
+		else:
+			steps = -2
+			detail = "DASH FAILED — BACK 2"
+	p.pos = clampi(p.pos + steps, 0, 28)
+	if p.pos < 28 and steps > 0:
+		match KIND.get(p.pos, ""):
+			"grenade":
+				p.pos = mini(28, p.pos + 3)
+				detail = "GRENADE +3"
+			"heart":
+				p.shield = mini(2, p.shield + 1)
 				again = true
-				await get_tree().create_timer(0.6).timeout
-		current = (current + 1) % players.size()
-		await get_tree().create_timer(0.6).timeout
-
-
-func _move(p: Dictionary, n: int) -> void:
-	for s in range(n):
-		p.pos = mini(int(p.pos) + 1, SQUARES)
-		await _hop(p)
-		if int(p.pos) >= SQUARES:
-			break
-
-
-func _hop(p: Dictionary) -> void:
-	var tok: Node3D = p.token
-	var idx := players.find(p)
-	var a := tok.position
-	var b := square_pos(int(p.pos), idx)
-	var tw := create_tween()
-	tw.tween_method(func(t: float): tok.position = a.lerp(b, t) + Vector3(0, sin(t * PI) * 0.045, 0), 0.0, 1.0, 0.24)
-	event.emit("hop")
-	await tw.finished
-
-
-## What the square the player landed on does. Returns true when they get another roll.
-func _land(p: Dictionary) -> bool:
-	if int(p.pos) >= SQUARES:
-		winner = players.find(p)
-		_say("%s WINS!  BACK TO THE LAB FIRST" % p.name)
+				detail = "HEART: SHIELD + ROLL AGAIN"
+			"boss", "zombie":
+				if p.shield > 0:
+					p.shield -= 1
+					detail = "SHIELD BLOCKED ATTACK"
+				elif KIND.get(p.pos) == "boss":
+					p.skip = true
+					detail = "BOSS: MISS NEXT TURN"
+				else:
+					p.pos = maxi(0, p.pos - 2)
+					detail = "ZOMBIE: BACK 2"
+			_:
+				if p.pos in [2, 10, 16, 23]:
+					if deck.is_empty():
+						deck = [0, 1, 2, 3, 4, 5]
+						for i in range(5, 0, -1):
+							var j := rng.randi_range(0, i)
+							var saved: int = deck[i]
+							deck[i] = deck[j]
+							deck[j] = saved
+					var card: int = deck.pop_back()
+					if card in [0, 3]:
+						p.shield = mini(2, p.shield + 1)
+					else:
+						p.pos = clampi(p.pos + [0, 2, -1, 0, 1, 3][card], 0, 28)
+					detail = ["SUPPLY: SHIELD", "SHORTCUT +2", "AMBUSH -1", "MEDKIT: SHIELD", "RESCUE +1", "POWER SURGE +3"][card]
+	_say("%s: %s %d  %s" % [p.name, "DASH" if dash else "STEADY", die_value, detail])
+	event.emit("roll")
+	if p.pos >= 28:
+		winner = current
+		p.wins += 1
+		phase = "win"
+		remaining = 7.0
+		_say("%s WINS!" % p.name)
 		event.emit("win")
-		return false
-	var kind: String = KIND.get(int(p.pos), "")
-	match kind:
-		"grenade":
-			_say("%s: GRENADE!  JUMP FORWARD 3" % p.name)
-			event.emit("grenade")
-			await get_tree().create_timer(0.7).timeout
-			await _move(p, 3)
-			if int(p.pos) >= SQUARES:
-				winner = players.find(p)
-				_say("%s WINS!" % p.name)
-				event.emit("win")
-		"zombie":
-			_say("%s: ZOMBIE ATTACK!  BACK 2" % p.name)
-			event.emit("zombie")
-			await get_tree().create_timer(0.7).timeout
-			for s in range(2):
-				p.pos = maxi(int(p.pos) - 1, 0)
-				await _hop(p)
-		"boss":
-			_say("%s: %s BLOCKS THE WAY  -  MISS A TURN" % [p.name, BOSS_NAME.get(int(p.pos), "BOSS")])
-			event.emit("boss")
-			p.skip = true
-			await get_tree().create_timer(0.9).timeout
-		"heart":
-			_say("%s: HEART!  ROLL AGAIN" % p.name)
-			event.emit("heart")
-			await get_tree().create_timer(0.6).timeout
-			return true
-	return false
+
+
+func apply_snapshot(data: Dictionary) -> void:
+	var ps: Array = data.get("players", [])
+	if ps.size() != players.size() or not data.get("phase", "") in ["wait", "result", "win"]:
+		return
+	for q in ps:
+		if not q is Dictionary or not q.get("pos", -1) is float and not q.get("pos", -1) is int:
+			return
+		if q.pos < 0 or q.pos > 28:
+			return
+	authority = false
+	current = clampi(int(data.get("current", 0)), 0, players.size() - 1)
+	winner = clampi(int(data.get("winner", -1)), -1, players.size() - 1)
+	phase = data.phase
+	remaining = clampf(float(data.get("remaining", 0)), 0, 25)
+	die_value = clampi(int(data.get("die", 1)), 1, 6)
+	for i in range(players.size()):
+		for key in ["name", "occupant", "pos", "skip", "shield", "wins"]:
+			players[i][key] = ps[i].get(key, players[i][key])
+		players[i].human = players[i].occupant != ""
+	_say(str(data.get("message", "")).left(120))
 
 
 # ---- the die ----------------------------------------------------------------------------------------
@@ -362,4 +393,7 @@ func _make_token(i: int) -> Node3D:
 			var dark := VRBuild.mat(Color(0.02, 0.02, 0.03), 0.4)
 			for sx in [-1.0, 1.0]:
 				VRBuild.sphere(t, 0.0045, Vector3(sx * 0.0068, 0.038, 0.0135), dark, 8)
+		4, 5:
+			VRBuild.cylinder(t, 0.012, 0.05, Vector3(0, 0.034, 0), glossy, 0.009, Vector3.ZERO, 16)
+			VRBuild.sphere(t, 0.015, Vector3(0, 0.063, 0), glossy, 14)
 	return t
