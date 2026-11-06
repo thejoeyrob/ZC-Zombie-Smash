@@ -1,4 +1,5 @@
-# Sets ONLY the Notes box of App Review Information (never the contact details) from appstore/REVIEW-NOTES-NEW-APP.md.
+# Sets the Notes box of App Review Information from appstore/REVIEW-NOTES-NEW-APP.md and turns "Sign-in required" off
+# (the app has no login). Contact details are never touched.
 require 'spaceship'
 
 key = ENV.fetch('ASC_KEY_P8')
@@ -14,5 +15,5 @@ notes = File.read(File.join(__dir__, 'REVIEW-NOTES-NEW-APP.md')).strip
 abort("Notes are #{notes.length} characters; App Store Connect allows 4000") if notes.length > 4000
 detail = version.fetch_app_store_review_detail
 abort('App Review Information does not exist yet: save it once in App Store Connect first') unless detail
-detail.update(attributes: { notes: notes })
-puts "Set review notes (#{notes.length} characters). Contact details and sign-in settings were not touched."
+detail.update(attributes: { notes: notes, demoAccountRequired: false })
+puts "Set review notes (#{notes.length} characters) and sign-in required = false. Contact details were not touched."
