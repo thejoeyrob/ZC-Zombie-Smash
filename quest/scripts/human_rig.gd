@@ -39,9 +39,13 @@ func _sx() -> Transform3D:
 	return t
 
 
+const FOLDERS := {"human_m01": "male", "human_f02": "female", "human_joeyrob": "m11", "human_discoman": "m03", "human_fatamy": "f09", "human_drmantis": "m09",
+	"human_debo": "m04", "human_glowing": "m16", "human_jordan": "m06", "human_riley": "f04"}
+
+
 func build(profile: String, for_self: bool) -> bool:
 	self_view = for_self
-	var folder := "res://avatars/" + ("female" if profile == "human_f02" else "male") + "/"
+	var folder := "res://avatars/" + str(FOLDERS.get(profile, "male")) + "/"
 	# A release preflight requires complete licensed textures, not an untextured substitute.
 	if not FileAccess.file_exists(folder + "READY.json") or not ResourceLoader.exists(folder + "model.fbx"):
 		return false

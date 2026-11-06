@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib,json,sys
 root=Path(__file__).resolve().parents[1]/'avatars'
 errors=[]
-for profile in ['male','female']:
+for profile in sorted(d.name for d in root.iterdir() if (d/'READY.json').exists() or d.is_dir() and d.name!='source-cache'):
  marker=root/profile/'READY.json'
  if not marker.exists():errors.append(profile+': textures missing; run fetch-human-assets.py');continue
  data=json.loads(marker.read_text())

@@ -1,0 +1,14 @@
+{
+  "source": "microsoft/Microsoft-Rocketbox",
+  "commit": "0943055db6ec570bcef9f2c8b41c9e5467c808f9",
+  "maps": 1024,
+  "normal_y": "OpenGL",
+  "files": {
+    "model.fbx": "fe0d026bc59e7d7ea8f4049edf77ee8040e050224b44a10fb4727b9b3d6efba0",
+    "body_color.png": "d33b462cd1dc260a163e0c1880e19d109b634ce31acdc239d85c58f96623e695",
+    "head_color.png": "137de1a5f4bcbb7707bdf5f47c55c6ce49c038945af4802bcd862f5c95d1f892",
+    "opacity_color.png": "261cab0744f7196a25117042b271786632e5ca129a4c42bdd5cbffe006a5b634",
+    "body_normal.png": "5664c2b671ae8d71886e68403b593e756664cc11e145a638316a49a412d17207",
+    "head_normal.png": "16b576fc735d3fd0bf1a0678fef257e453adf039e8f90eb30ffda16fa7943f6b"
+  }
+}
