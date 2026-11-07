@@ -314,6 +314,8 @@ func _back_wall(root: Node3D, font: Font) -> void:
 		else:
 			pinball2 = pb
 	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.92, BACK_Z - 0.04), PI, Vector2(2.1, 0.62))
+	# the wedding poster, left of the left pinball machine on the back wall
+	_signboard(root, Vector3(-3.25, 1.85, BACK_Z), PI, "panel-wedding.jpg", Vector2(1.2, 1.6), Color(1.0, 0.25, 0.65), false)
 	# the snack machine beside the door
 	vending = VendingMachine.new()
 	vending.position = Vector3(1.8, 0, 0.02)        # beside the door, inside on the right
