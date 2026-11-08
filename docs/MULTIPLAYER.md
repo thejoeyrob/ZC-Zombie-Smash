@@ -12,3 +12,8 @@ Voice is not included (use a Quest party call).
 
 Test locally: `node --test server/tests/*.test.mjs`, and the game client against the real server: `tests/lobby_client_test.gd`.
 Health check: `https://HOST/health`.
+
+## Live server
+The room server runs on Render at `https://fattys-shack-rooms.onrender.com` (health check `/health`). The game connects to
+`wss://fattys-shack-rooms.onrender.com/shack`, set as the repository variable `SHACK_ENDPOINT`. The free plan sleeps when unused:
+open the health address a minute before a session to wake it.
