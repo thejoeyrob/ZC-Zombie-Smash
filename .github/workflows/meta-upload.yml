@@ -5,6 +5,9 @@ name: Upload to Meta
 # (secrets RELEASE_KEYSTORE_B64 / RELEASE_KEYSTORE_PASSWORD, used by the build workflow).
 # "Dry run" (the default) installs the tool and checks the APK, then stops before uploading.
 on:
+  push:
+    branches: [quest-build]
+    paths: [".github/workflows/meta-upload.yml"]     # changing this file runs a dry run (never an upload)
   workflow_dispatch:
     inputs:
       channel:
@@ -61,7 +64,7 @@ jobs:
           & $found help 2>&1 | Out-String | Write-Host
           & $found upload-quest-build --help 2>&1 | Out-String | Write-Host
       - name: Upload
-        if: ${{ !inputs.dry_run }}
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
         env:
           META_APP_ID: ${{ secrets.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
