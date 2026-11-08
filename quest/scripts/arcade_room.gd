@@ -34,7 +34,7 @@ var pinball2: Pinball
 var board_game: BoardGame
 var vending: VendingMachine
 var jukebox: Jukebox
-var skins: SkinMachine            # the avatar locker in the back right corner
+var skins: SkinMachine            # the avatar locker, left of the door
 var env: Environment               # the world's look: haze, colour, bloom (the menu can switch the bloom off)
 var door: DoorScene
 var ball_mat_spin: Node3D
@@ -301,14 +301,14 @@ func _back_wall(root: Node3D, font: Font) -> void:
 		var pb := Pinball.new()
 		var at := Vector3(sx * 1.95, 0, BACK_Z - 1.05)
 		var face := Vector3(0, 0, 3.4) - at                     # turned to face the middle of the room
-		pb.position = at
+		pb.position = at + Vector3(0, Pinball.LIFT, 0)
 		pb.rotation.y = atan2(face.x, face.z)
 		root.add_child(pb)
 		pb.build(font)
 		var fwd := Vector3(sin(pb.rotation.y), 0, cos(pb.rotation.y))
 		# the body only: you can walk right up to the front rail and stand beside the cabinet
-		blockers.append([at.x - fwd.x * 0.05, at.z - fwd.z * 0.05, 0.36, 0.05])
-		blockers.append([at.x + fwd.x * 0.5, at.z + fwd.z * 0.5, 0.3, 0.04])
+		# only the back half (backbox and legs) is solid: you can walk right up to the front rail and lean over the glass
+		blockers.append([at.x - fwd.x * 0.1, at.z - fwd.z * 0.1, 0.4, 0.02])
 		if k == 0:
 			pinball = pb
 		else:
@@ -329,20 +329,22 @@ func _decor(root: Node3D, font: Font) -> void:
 	# beside the door: the Zombie Smash poster on the left and the JW Eds sign on the right, both standing proud of the brick with a glow behind
 	_signboard(root, Vector3(2.95, 2.6, FRONT_Z), 0.0, "jw-logo.png", Vector2(1.26, 0.53), Color(0.2, 0.85, 1.0), true)
 	_signboard(root, Vector3(-2.95, 2.6, FRONT_Z), 0.0, "zs-poster.png", Vector2(1.42, 0.7), Color(0.6, 1.0, 0.2), false)
-	# the jukebox against the left wall
+	# the jukebox in the back right corner, turned to face the room
 	jukebox = Jukebox.new()
-	jukebox.position = Vector3(-1.85, 0, -0.12)     # beside the door, inside on the left
-	jukebox.rotation.y = 0.0
+	jukebox.position = Vector3(3.3, 0, BACK_Z - 0.4)
+	jukebox.rotation.y = PI
 	root.add_child(jukebox)
 	jukebox.build(font)
-	blockers.append([jukebox.position.x, jukebox.position.z, 0.65])
-	# the avatar locker: in the back right corner, flat to the back wall, turned to face the room
+	blockers.append([jukebox.position.x, jukebox.position.z - 0.1, 0.55, 0.05])
+	# the avatar locker: a machine in its own right, right beside the door on the left as you come in, facing the room with a glowing patch of floor in front
 	skins = SkinMachine.new()
-	skins.position = Vector3(3.42, 0, BACK_Z - 0.42)
-	skins.rotation.y = PI
+	skins.position = Vector3(-1.85, 0, -0.07)
 	root.add_child(skins)
-	skins.build(font, "survivor")
-	blockers.append([skins.position.x, skins.position.z - 0.1, 0.45, 0.05])
+	skins.build(font, "human_joeyrob")
+	blockers.append([skins.position.x, skins.position.z + 0.05, 0.45, 0.05])
+	var locker_glow := _pool(Color(0.3, 0.9, 1.0))
+	locker_glow.albedo_color = Color(0.3, 0.9, 1.0, 0.5)
+	VRBuild.quad(root, Vector2(1.7, 1.5), Vector3(skins.position.x, 0.014, skins.position.z + 0.95), locker_glow, Vector3(-PI / 2, 0, 0))
 	# four big backlit glass-panel posters, one in each gap between the machines on the side walls
 	_signboard(root, Vector3(-HALF_W, 2.0, 2.18), PI / 2.0, "panel-fire.jpg", Vector2(1.15, 1.725), Color(1.0, 0.55, 0.15), false)
 	_signboard(root, Vector3(-HALF_W, 2.0, 4.12), PI / 2.0, "panel-sloth.jpg", Vector2(1.15, 1.725), Color(1.0, 0.45, 0.2), false)
@@ -424,8 +426,8 @@ func _spots() -> void:
 	spots.append(["pinball2", "PINBALL", pinball2.stand_world(), pinball2.look_world(), Color(1.0, 0.85, 0.2)])
 	spots.append(["hall", "HALL OF FAME", Vector3(0, 0, BACK_Z - 2.4), Vector3(0, 1.7, BACK_Z), Color(1.0, 0.82, 0.25)])
 	spots.append(["vending", "SNACKS", Vector3(1.8, 0, 1.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
-	spots.append(["jukebox", "JUKEBOX", Vector3(-1.85, 0, 1.3), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
-	spots.append(["skins", "AVATAR LOCKER", Vector3(3.42, 0, BACK_Z - 1.45), Vector3(3.42, 1.3, BACK_Z - 0.45), Color(0.3, 0.9, 1.0)])
+	spots.append(["jukebox", "JUKEBOX", Vector3(3.3, 0, BACK_Z - 1.5), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
+	spots.append(["skins", "AVATAR LOCKER", Vector3(-1.85, 0, 1.0), Vector3(-1.85, 1.3, -0.1), Color(0.3, 0.9, 1.0)])
 	spots.append(["lounge", "LOUNGE", ARC_CENTRE + Vector3(0, 0, -1.7), ARC_CENTRE + Vector3(0, 0.4, 0), Color(1.0, 0.45, 0.85)])
 	spots.append(["exit", "EXIT", Vector3(0, 0, 0.75), Vector3(0, 1.4, FRONT_Z), Color(0.3, 1.0, 0.45)])
 

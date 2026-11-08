@@ -18,15 +18,6 @@ const SKINS := [
 	{"id": "human_riley", "name": "RILEY", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "human_m01", "name": "ALEX", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "human_f02", "name": "MORGAN", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "survivor", "name": "SURVIVOR", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": true},
-	{"id": "arcadekid", "name": "ARCADE KID", "tone": "#f0c09a", "top": "#ff3d9a", "trim": "#27e0ff", "bottom": "#1b1f3a", "shoes": "#f2f2f4", "glove": "#f0c09a", "style": "tee", "hat": "phones", "hat_col": "#27e0ff", "hair": "#ffcc33", "gloves": false},
-	{"id": "raver", "name": "NEON RAVER", "tone": "#8a5a3c", "top": "#101018", "trim": "#27ffd0", "bottom": "#101018", "shoes": "#0c0c12", "glove": "#101018", "style": "suit", "hat": "visor", "hat_col": "#27ffd0", "hair": "#101018", "gloves": true, "glow": true},
-	{"id": "hazmat", "name": "HAZMAT", "tone": "#d9a07a", "top": "#f2c31b", "trim": "#2a2a2a", "bottom": "#f2c31b", "shoes": "#222222", "glove": "#2f8f3a", "style": "suit", "hat": "bubble", "hat_col": "#9fd8ff", "hair": "#3a2a1a", "gloves": true},
-	{"id": "hunter", "name": "ZOMBIE HUNTER", "tone": "#c58b6a", "top": "#2c3036", "trim": "#8d9199", "bottom": "#3b3f33", "shoes": "#17171a", "glove": "#151517", "style": "vest", "hat": "helmet", "hat_col": "#3c4a33", "hair": "#2a1c12", "gloves": true},
-	{"id": "crew", "name": "FATTY'S CREW", "tone": "#e2b08a", "top": "#1fa24a", "trim": "#f2f2f2", "bottom": "#23242b", "shoes": "#f2f2f2", "glove": "#e2b08a", "style": "hoodie", "hat": "hood", "hat_col": "#1fa24a", "hair": "#4a2c18", "gloves": false},
-	{"id": "disco", "name": "DISCO FEVER", "tone": "#7a4a30", "top": "#7a2bd6", "trim": "#ffd23f", "bottom": "#7a2bd6", "shoes": "#ffd23f", "glove": "#f2f2f2", "style": "suit", "hat": "afro", "hat_col": "#1a1210", "hair": "#1a1210", "gloves": true},
-	{"id": "zombie", "name": "ZOMBIE", "tone": "#8fb56a", "top": "#5a4a52", "trim": "#3a2f35", "bottom": "#3a4252", "shoes": "#2a2420", "glove": "#8fb56a", "style": "tee", "hat": "none", "hat_col": "#5a4a52", "hair": "#3a3a2a", "gloves": false, "eyes": "#ff3a2a"},
-	{"id": "robot", "name": "CHROME BOT", "tone": "#b9c0c8", "top": "#aeb6c0", "trim": "#27a8ff", "bottom": "#8d949e", "shoes": "#5f656e", "glove": "#aeb6c0", "style": "suit", "hat": "robot", "hat_col": "#aeb6c0", "hair": "#aeb6c0", "gloves": true, "metal": true, "eyes": "#27a8ff"},
 ]
 
 const L_UPPER := 0.29

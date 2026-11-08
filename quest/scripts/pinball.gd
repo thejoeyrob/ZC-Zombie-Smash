@@ -9,6 +9,7 @@ const TILT := 0.113
 const PF_W := 0.56
 const PF_H := 1.12
 const SPOT_Y := 0.0
+const LIFT := 0.17            # the room stands the machine this much higher (legs reach down to the floor), so the playfield is at a comfortable height to lean over
 
 var table: PinTable
 var viewport: SubViewport
@@ -44,13 +45,13 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	var black_rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
 	for sx in [-0.26, 0.26]:
 		for sz in [-0.58, 0.74]:
-			VRBuild.cylinder(self, 0.034, 0.58, Vector3(sx, 0.34, sz), chrome, 0.024, Vector3.ZERO, 24)
+			VRBuild.cylinder(self, 0.034, 0.58 + LIFT, Vector3(sx, 0.34 - LIFT / 2.0, sz), chrome, 0.024, Vector3.ZERO, 24)
 			VRBuild.box(self, Vector3(0.09, 0.02, 0.09), Vector3(sx, 0.615, sz), chrome)                  # the bracket under the cabinet
 			for bx in [-0.03, 0.03]:
 				for bz in [-0.03, 0.03]:
 					VRBuild.cylinder(self, 0.006, 0.008, Vector3(sx + bx, 0.628, sz + bz), black_rubber, -1.0, Vector3.ZERO, 8)
-			VRBuild.cylinder(self, 0.011, 0.05, Vector3(sx, 0.04, sz), chrome, -1.0, Vector3.ZERO, 12)    # the leveller
-			VRBuild.cylinder(self, 0.034, 0.02, Vector3(sx, 0.01, sz), black_rubber, 0.032, Vector3.ZERO, 20)
+			VRBuild.cylinder(self, 0.011, 0.05, Vector3(sx, 0.04 - LIFT, sz), chrome, -1.0, Vector3.ZERO, 12)    # the leveller
+			VRBuild.cylinder(self, 0.034, 0.02, Vector3(sx, 0.01 - LIFT, sz), black_rubber, 0.032, Vector3.ZERO, 20)
 	for sx in [-0.26, 0.26]:
 		VRBuild.cylinder(self, 0.011, 1.32, Vector3(sx, 0.2, 0.08), chrome, -1.0, Vector3(PI / 2, 0, 0), 12)  # a bar between the legs on each side
 	VRBuild.cylinder(self, 0.011, 0.52, Vector3(0, 0.2, -0.58), chrome, -1.0, Vector3(0, 0, PI / 2), 12)

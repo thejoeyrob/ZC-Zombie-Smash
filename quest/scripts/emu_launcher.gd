@@ -19,7 +19,7 @@ const ENABLED := true
 const PACKAGE := "com.thejoeyrob.fattysgameshack"
 const ROM_DIRS := ["user://roms", "/storage/emulated/0/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/ROMs"]
 const COLS := 34
-const ROWS := 11
+const ROWS := 15
 const GREEN := Color(0.35, 1.0, 0.45)
 const AMBER := Color(1.0, 0.75, 0.2)
 const GREY := Color(0.75, 0.78, 0.8)
@@ -52,13 +52,13 @@ func build(host: Node) -> void:
 	_host = host
 	_font = load("res://assets/fonts/DejaVuSansMono-Bold.ttf")
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(640, 480)
+	viewport.size = Vector2i(576, 692)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.transparent_bg = false
 	host.add_child(viewport)
 	var bg := ColorRect.new()
 	bg.color = Color(0.0, 0.02, 0.0)
-	bg.size = Vector2(640, 480)
+	bg.size = Vector2(576, 692)
 	viewport.add_child(bg)
 	_picture = TextureRect.new()
 	_picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -68,19 +68,19 @@ func build(host: Node) -> void:
 	viewport.add_child(_picture)
 	_shade = ColorRect.new()
 	_shade.color = Color(0, 0, 0, 0.72)
-	_shade.size = Vector2(640, 480)
+	_shade.size = Vector2(576, 692)
 	_shade.visible = false
 	viewport.add_child(_shade)
 	_label = RichTextLabel.new()
 	_label.bbcode_enabled = true
 	_label.scroll_active = false
-	_label.size = Vector2(620, 460)
+	_label.size = Vector2(556, 672)
 	_label.position = Vector2(14, 10)
 	if _font != null:
 		_label.add_theme_font_override("normal_font", _font)
 		_label.add_theme_font_override("bold_font", _font)
-	_label.add_theme_font_size_override("normal_font_size", 21)
-	_label.add_theme_font_size_override("bold_font_size", 21)
+	_label.add_theme_font_size_override("normal_font_size", 23)
+	_label.add_theme_font_size_override("bold_font_size", 23)
 	_label.add_theme_color_override("default_color", GREEN)
 	viewport.add_child(_label)
 	session = EmuSession.new()
@@ -236,14 +236,18 @@ func _launch(f: Dictionary) -> void:
 
 
 func _fit_picture() -> void:
+	# the screen has the same shape as the Zombie Smash screen on the other machines (the phone app's 343 x 412): the game's picture fills the width
+	# and is centred up and down, with black above and below
 	var asp := clampf(session.aspect, 0.8, 2.4)
-	var w := 640.0
-	var h := 640.0 / asp
-	if h > 480.0:
-		h = 480.0
-		w = 480.0 * asp
+	var vw := 576.0
+	var vh := 692.0
+	var w := vw
+	var h := vw / asp
+	if h > vh:
+		h = vh
+		w = vh * asp
 	_picture.size = Vector2(w, h)
-	_picture.position = Vector2((640.0 - w) / 2.0, (480.0 - h) / 2.0)
+	_picture.position = Vector2((vw - w) / 2.0, (vh - h) / 2.0)
 
 
 func _pause_choice(i: int) -> void:

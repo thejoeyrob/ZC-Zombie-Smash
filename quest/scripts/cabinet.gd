@@ -177,9 +177,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	sm.albedo_color = Color(1.35, 1.35, 1.35)       # a lit tube: brighter than a plain picture
 	sm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	screen_mat = sm
-	var screen_size := Vector2(0.58, 0.435) if emu else Vector2(0.53, 0.64)
-	if emu:
-		VRBuild.quad(mon, Vector2(0.53, 0.64), Vector3(0, 0.0, 0.1003), VRBuild.unshaded(Color(0.0, 0.0, 0.0)))
+	var screen_size := Vector2(0.53, 0.64)          # every machine, the emulator one too, has the phone game's screen shape
 	var screen_quad := VRBuild.quad(mon, screen_size, Vector3(0, 0.0, 0.1005), sm)
 	screen_quad.name = "ScreenQuad"
 	# the black border round the picture, with a bevel, like the glass of a real tube

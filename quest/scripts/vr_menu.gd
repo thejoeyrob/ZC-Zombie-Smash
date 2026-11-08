@@ -286,18 +286,6 @@ func _build_ui() -> void:
 		pv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# PLAY
 	var play: VBoxContainer = _pages.play
-	_heading(play, "GO TO")
-	var go := GridContainer.new()
-	go.columns = 2
-	go.add_theme_constant_override("h_separation", 12)
-	go.add_theme_constant_override("v_separation", 12)
-	play.add_child(go)
-	for g in [["PINBALL LEFT", "pinball", "#356c78"], ["PINBALL RIGHT", "pinball2", "#356c78"], ["AVATAR LOCKER", "skins", "#7a3fd0"], ["JUKEBOX", "jukebox", "#b8782a"], ["SNACKS", "vending", "#a8302a"], ["BOARD GAME", "lounge", "#2a9a4a"], ["HALL OF FAME", "hall", "#a88a1a"], ["THE DOOR", "exit", "#2a5fa8"]]:
-		var gb := _button(g[0], Color(g[2]), 30)
-		gb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var gid: String = g[1]
-		gb.pressed.connect(func(): action.emit("goto:" + gid))
-		go.add_child(gb)
 	_heading(play, "BOSS BATTLE")
 	var names: Array = []
 	for b in ZSEngine.BOSSES:
@@ -320,10 +308,7 @@ func _build_ui() -> void:
 	LABELS["skin"] = skin_labels
 	_stepper(av, "skin", "Outfit", skin_ids, "")
 	_stepper(av, "body", "Show", ["full", "arms", "hands"], "")
-	_hint(av, "Try outfits on at the Avatar Locker, the machine in the back right corner. It shows your character turning on a stand.")
-	var lock := _button("GO TO THE AVATAR LOCKER", Color("#7a3fd0"), 32)
-	lock.pressed.connect(func(): action.emit("goto:skins"))
-	av.add_child(lock)
+	_hint(av, "Try looks on at the Avatar Locker, the machine just left of the door as you come in. Walk up and press its buttons.")
 	# HANDS
 	var hd: VBoxContainer = _pages.hands
 	_heading(hd, "CONTROLS")

@@ -36,7 +36,7 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	for side in [-1, 1]:
 		var cx: float = side * (door_w / 2.0 + wall_w / 2.0)
 		var wmat: StandardMaterial3D = wood.duplicate()
-		wmat.uv1_scale = Vector3(wall_w / 2.4, height / 2.4, 1)
+		wmat.uv1_scale = Vector3(3.0 * wall_w / 2.4, 2.0 * height / 2.4, 1)      # a box lays its six faces out in a 3 x 2 sheet, so scale up to keep the brick the same size as the other walls
 		wmat.texture_repeat = true
 		VRBuild.box(self, Vector3(wall_w, height, 0.12), Vector3(cx, height / 2.0, 0), wmat)
 		# the same low green skirting as the other three walls, stopping at the door frame
@@ -45,7 +45,7 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		VRBuild.box(self, Vector3(sk_w, 0.13, 0.05), Vector3(sk_x, 0.065, 0.085), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(sk_w / 0.7, 0.34), 1.8))
 		VRBuild.box(self, Vector3(sk_w, 0.025, 0.065), Vector3(sk_x, 0.1425, 0.0925), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(sk_w / 0.7, 0.1), 1.8))
 	var tmat: StandardMaterial3D = wood.duplicate()
-	tmat.uv1_scale = Vector3(door_w / 2.4, (height - door_h) / 2.4, 1)
+	tmat.uv1_scale = Vector3(3.0 * door_w / 2.4, 2.0 * (height - door_h) / 2.4, 1)
 	tmat.texture_repeat = true
 	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), tmat)
 	# frame

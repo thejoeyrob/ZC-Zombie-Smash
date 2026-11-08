@@ -2,7 +2,7 @@ extends SceneTree
 ## One avatar from four sides (and standing, seated, crouched, leaning) so the body shape and joints can be checked. Args: --skin=id --out=dir
 func _initialize() -> void:
 	var out := "/tmp/claude-0/avatars"
-	var skin := "survivor"
+	var skin := "human_joeyrob"
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="): out = a.substr(6)
 		if a.begins_with("--skin="): skin = a.substr(7)

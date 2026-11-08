@@ -485,15 +485,6 @@ func _on_jukebox(cmd: String) -> void:
 
 
 func _on_menu_action(name: String) -> void:
-	if name.begins_with("goto:"):
-		_close_menu()
-		for spot in room.spots:
-			if str(spot[0]) == name.substr(5):
-				if locked:
-					_set_locked(false)
-				teleport_to_spot(spot)
-				return
-		return
 	match name:
 		"resume":
 			_close_menu()
@@ -956,8 +947,8 @@ func _world_inputs(hs: Array) -> void:
 		for i in range(2):
 			if res.spot[i] != null:
 				pin_latch[i] = res.spot[i]
-		flips[k * 2] = res.left
-		flips[k * 2 + 1] = res.right
+		flips[k * 2] = res.left or (hs[0].active and not hs[0].bare and hs[0].trigger)         # standing at the table, the controller triggers are the flippers
+		flips[k * 2 + 1] = res.right or (hs[1].active and not hs[1].bare and hs[1].trigger)
 	room.pinball.interact(tips, palms, flips[0], flips[1], (hs[0].a or hs[1].a), near, hs)
 	room.pinball2.interact(tips, palms, flips[2], flips[3], (hs[0].a or hs[1].a), near2, hs)
 
@@ -1140,10 +1131,9 @@ func _locomotion(hs: Array, delta: float) -> void:
 	for i in range(2):
 		var down: bool = hs[i].trigger
 		if down and not trig_prev[i] and i == ph and not tele_busy:
-			if hover >= 0:
+			# free movement only: pointing never moves you anywhere. It only starts the thing you are standing at.
+			if hover >= 0 and _within_reach(str(selector.targets[hover].id)):
 				_choose(str(selector.targets[hover].id))
-			elif selector.floor_ok:
-				_move_to(selector.floor_pos)
 		trig_prev[i] = down
 	if not xr_on:
 		return
@@ -1257,8 +1247,8 @@ func _stand_up() -> void:
 		origin.position.y = float(settings.lift)
 
 
-func _floor_ok(p: Vector3) -> bool:
-	return room.collide(p).distance_to(Vector3(p.x, 0.0, p.z)) < 0.06
+func _floor_ok(_p: Vector3) -> bool:
+	return false                     # no point-and-move landing ring: you walk
 
 
 ## What the player chose by pointing and pulling the trigger.
@@ -1283,10 +1273,25 @@ func _choose(id: String) -> void:
 			if sd[0] == id:
 				_sit(sd)
 				return
-	for spot in room.spots:
-		if str(spot[0]) == id:
-			teleport_to_spot(spot)
-			return
+	if id in ["pinball", "pinball2"] and social != null and social.online and not social.granted:
+		social.claim(id)
+
+
+## You can only start something by pointing at it when you have walked up to it yourself.
+func _within_reach(id: String) -> bool:
+	var hp := _head_floor()
+	if id.begins_with("m") and id.substr(1).is_valid_int():
+		return hp.distance_to((machines[int(id.substr(1))] as Cabinet).stand_world()) < 1.5
+	if id == "pinball":
+		return hp.distance_to(room.pinball.stand_world()) < 2.2
+	if id == "pinball2":
+		return hp.distance_to(room.pinball2.stand_world()) < 2.2
+	if id.begins_with("sit"):
+		for sd in room.seats:
+			if sd[0] == id:
+				return hp.distance_to(Vector3(sd[1].x, 0.0, sd[1].z)) < 1.8
+		return false
+	return true
 
 
 ## The things in the room that can be pointed at: each machine, the pinball table, the jukebox, the snack machine, the shelves,
@@ -1576,30 +1581,17 @@ func _enter_machine(i: int) -> void:
 	if social != null and social.online and not social.granted and not social.owns("m%d" % i):
 		social.claim("m%d" % i)
 		return
-	tele_busy = true
-	fade_quad.visible = true
-	var fm := fade_quad.material_override as StandardMaterial3D
-	var tw := create_tween()
-	tw.tween_method(func(v: float): fm.albedo_color.a = v, 0.0, 1.0, 0.14)
+	# you are already standing at the machine: no fade, no move. It just switches on.
+	_select_machine(i)
+	_set_locked(true)
 	var target_mat: StandardMaterial3D = (machines[i] as Cabinet).screen_mat
-	tw.tween_callback(func():
-		_select_machine(i)
-		_place_player(cab.stand_world(), cab.look_world(), true)
-		_set_locked(true)
-		target_mat.albedo_color = Color(0.1, 0.1, 0.1)
-		audio.sfx("power", 0.6, 0.0, cab.global_position + Vector3(0, 1.3, 0.3)))
-	tw.tween_method(func(v: float): fm.albedo_color.a = v, 1.0, 0.0, 0.3)
-	tw.tween_callback(func():
-		fade_quad.visible = false
-		tele_busy = false
-		_haptic(-1, 0.35, 0.1))
-	# the monitor warms up from dark to full brightness
+	target_mat.albedo_color = Color(0.1, 0.1, 0.1)
+	audio.sfx("power", 0.6, 0.0, cab.global_position + Vector3(0, 1.3, 0.3))
+	_haptic(-1, 0.35, 0.1)
 	var tw2 := create_tween()
-	tw2.tween_interval(0.16)
 	tw2.tween_method(func(v: float): target_mat.albedo_color = Color(v, v, v), 0.1, 1.35, 0.8)
 
 
-## Makes a machine the one in play: the live screen, the sound and the controls move to it.
 func _select_machine(i: int) -> void:
 	var m: Cabinet = machines[i]
 	if m == cab:
@@ -1648,7 +1640,7 @@ func _run_tour() -> void:
 		[Vector3(-0.8, 1.7, 0.2), Vector3(-3.1, 1.2, 4.2), 3.5, 3.0, "m1"],
 		[Vector3(0.8, 1.7, 0.2), Vector3(3.1, 1.2, 4.2), 5.0, 3.0, "m3"],
 		[Vector3(0, 1.7, 3.0), Vector3(0, 1.9, -0.55), 4.0, 3.0],
-		[Vector3(-1.3, 1.6, 1.6), room.jukebox.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
+		[Vector3(3.0, 1.6, 5.1), room.jukebox.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
 		[Vector3(1.3, 1.6, 1.6), room.vending.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
 		[Vector3(0.9, 1.5, 1.4), Vector3(0, 1.0, ArcadeRoom.FRONT_Z), 3.0, 2.5],
 		[Vector3(0, 1.7, 0.9), Vector3(0, 1.3, -5.0), 3.0, 3.0],
@@ -1663,10 +1655,10 @@ func _run_tour() -> void:
 		[room.pinball2.stand_world() + Vector3(0, 1.65, 0), room.pinball2.look_world(), 3.5, 3.5],
 		[Vector3(0, 1.7, 5.2), Vector3(0, 1.75, 7.3), 3.0, 4.0],
 		[Vector3(-1.3, 1.7, 5.4), Vector3(-3.25, 1.85, ArcadeRoom.BACK_Z), 3.0, 4.0],
-		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 3.5, 2.2, "skins", "next"],
-		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
-		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
-		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "select"],
+		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 3.5, 2.2, "skins", "next"],
+		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 0.1, 2.2, "skins", "next"],
+		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 0.1, 2.2, "skins", "next"],
+		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 0.1, 2.2, "skins", "select"],
 	]
 	if args.has("tourpart"):                         # render only some of the stops, e.g. --tourpart=5-8 (long renders are made in pieces)
 		var ab: PackedStringArray = str(args.tourpart).split("-")
@@ -1725,7 +1717,7 @@ func _run_shots() -> void:
 		"cab_front": [cab.to_global(Vector3(0.0, 1.6, 1.6)), cab.to_global(Vector3(0, 1.1, -0.2))],
 		"cab_top": [cab.to_global(Vector3(0.9, 2.2, 0.7)), cab.to_global(Vector3(0, 1.2, -0.3))],
 		"logo": [Vector3(2.0, 1.7, 1.6), Vector3(3.0, 2.0, -0.55)],
-		"jukebox": [Vector3(-2.7, 1.6, 4.3), Vector3(-4.2, 1.3, 5.2)],
+		"jukebox": [Vector3(3.0, 1.6, 5.1), Vector3(3.3, 1.2, 6.9)],
 		"scare": [Vector3(0.6, 1.65, 2.2), Vector3(0, 1.1, -0.55)],
 		"arc_l": [Vector3(0.3, 1.7, 2.6), Vector3(-3.0, 1.3, 2.0)],
 		"arc_r": [Vector3(-0.3, 1.7, 2.6), Vector3(3.0, 1.3, 2.0)],
@@ -1754,7 +1746,7 @@ func _run_shots() -> void:
 	var jb: Vector3 = room.jukebox.global_position
 	var vd: Vector3 = room.vending.global_position
 	var tc: Vector3 = ArcadeRoom.ARC_CENTRE
-	views["locker"] = [Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.6), Vector3(3.42, 1.2, ArcadeRoom.BACK_Z - 0.4)]
+	views["locker"] = [Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.2, -0.1)]
 	views["locker_wide"] = [Vector3(1.2, 1.7, 4.4), Vector3(3.3, 1.0, 7.0)]
 	views["body_down"] = [Vector3(0.3, 1.65, 1.2), Vector3(0.3, 0.0, 1.45)]
 	views["body_fwd"] = [Vector3(0.3, 1.65, 1.2), Vector3(0.3, 1.2, 0.0)]
