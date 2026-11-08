@@ -1668,6 +1668,9 @@ func _run_tour() -> void:
 		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
 		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "select"],
 	]
+	if args.has("tourpart"):                         # render only some of the stops, e.g. --tourpart=5-8 (long renders are made in pieces)
+		var ab: PackedStringArray = str(args.tourpart).split("-")
+		stops = stops.slice(int(ab[0]), int(ab[1]) + 1)
 	var pos: Vector3 = stops[0][0]
 	var look: Vector3 = stops[0][1]
 	for stop in stops:
