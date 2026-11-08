@@ -1,8 +1,9 @@
 name: Upload to Meta
-# Manual: Actions, "Upload to Meta", Run workflow. Sends the store-safe APK of the chosen build to a Meta release channel.
-# Needs repository secrets META_APP_ID and META_APP_SECRET, and the repository variable OVR_PLATFORM_UTIL_URL (the Linux download of
-# Meta's ovr-platform-util, from the developer dashboard's tools page). The APK must be signed with the release key (secrets
-# RELEASE_KEYSTORE_B64 / RELEASE_KEYSTORE_PASSWORD in the build workflow), or Meta will refuse it.
+# Manual: Actions, "Upload to Meta", Run workflow. Sends the store-safe APK to a Meta release channel.
+# Runs on Windows because Meta's ovr-platform-util is a Windows program.
+# Needs repository secrets META_APP_ID and META_APP_SECRET. The APK must be signed with the release key
+# (secrets RELEASE_KEYSTORE_B64 / RELEASE_KEYSTORE_PASSWORD, used by the build workflow).
+# "Dry run" (the default) installs the tool and checks the APK, then stops before uploading.
 on:
   workflow_dispatch:
     inputs:
@@ -15,40 +16,54 @@ on:
         description: "Release notes"
         type: string
         default: "Test build"
+      dry_run:
+        description: "Dry run: check everything but do not upload"
+        type: boolean
+        default: true
 jobs:
   upload:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - name: Get the latest store APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          gh release download quest-latest --repo "$GITHUB_REPOSITORY" --pattern FattysGameShack-Quest.apk --dir .
-          ls -l FattysGameShack-Quest.apk
-      - name: Refuse a debug-signed or debuggable build
+          gh release download quest-latest --repo "$env:GITHUB_REPOSITORY" --pattern FattysGameShack-Quest.apk --dir .
+          Get-Item FattysGameShack-Quest.apk | Select-Object Name, Length
+      - name: Check the signing key and debug flag
         run: |
-          set -euo pipefail
-          sudo apt-get install -y -qq apksigner aapt >/dev/null
-          apksigner verify --print-certs FattysGameShack-Quest.apk | tee signer.txt
-          if grep -qi "Android Debug" signer.txt; then echo "This APK is signed with the shared test key. Set the release key secrets and rebuild."; exit 1; fi
-          if aapt dump badging FattysGameShack-Quest.apk | grep -q "application-debuggable"; then echo "This APK is debuggable."; exit 1; fi
-      - name: Get Meta's upload tool
-        env:
-          UTIL_URL: ${{ vars.OVR_PLATFORM_UTIL_URL }}
+          $bt = Get-ChildItem "$env:ANDROID_HOME\build-tools" | Sort-Object Name | Select-Object -Last 1
+          Write-Host "build-tools $($bt.Name)"
+          $signer = & "$($bt.FullName)\apksigner.bat" verify --print-certs FattysGameShack-Quest.apk 2>&1 | Out-String
+          Write-Host $signer
+          if ($signer -match "Android Debug") { Write-Error "This APK is signed with the shared test key. Set the release key secrets and rebuild."; exit 1 }
+          $badging = & "$($bt.FullName)\aapt.exe" dump badging FattysGameShack-Quest.apk | Out-String
+          if ($badging -match "application-debuggable") { Write-Error "This APK is debuggable."; exit 1 }
+          ($badging -split "`n" | Select-String -Pattern "^package:|sdkVersion|targetSdkVersion|uses-feature") | ForEach-Object { Write-Host $_ }
+      - name: Install Meta's upload tool
         run: |
-          set -euo pipefail
-          if [ -z "$UTIL_URL" ]; then echo "Set the repository variable OVR_PLATFORM_UTIL_URL first."; exit 1; fi
-          curl -sSL -o ovr-platform-util "$UTIL_URL"
-          chmod +x ovr-platform-util
-          ./ovr-platform-util help | head -20
+          $found = $null
+          foreach ($id in @("Meta.OculusPlatformUtility", "Meta.OVRPlatformUtility", "Oculus.OVRPlatformUtility")) {
+            winget install --id $id -e --silent --accept-source-agreements --accept-package-agreements 2>&1 | Out-String | Write-Host
+            $c = Get-Command ovr-platform-util -ErrorAction SilentlyContinue
+            if ($c) { $found = $c.Source; break }
+          }
+          if (-not $found) {
+            $f = Get-ChildItem -Path "$env:LOCALAPPDATA","$env:ProgramFiles","${env:ProgramFiles(x86)}" -Recurse -Filter "ovr-platform-util*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($f) { $found = $f.FullName }
+          }
+          if (-not $found) { Write-Error "Could not install ovr-platform-util with winget. Send this log to Claude."; exit 1 }
+          Write-Host "tool: $found"
+          "OVR_UTIL=$found" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          & $found help 2>&1 | Out-String | Write-Host
+          & $found upload-quest-build --help 2>&1 | Out-String | Write-Host
       - name: Upload
+        if: ${{ !inputs.dry_run }}
         env:
           META_APP_ID: ${{ secrets.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
-          CHANNEL: ${{ inputs.channel }}
-          NOTES: ${{ inputs.notes }}
         run: |
-          set -euo pipefail
-          ./ovr-platform-util upload-quest-build --app-id "$META_APP_ID" --app-secret "$META_APP_SECRET" \
-            --apk FattysGameShack-Quest.apk --channel "$CHANNEL" --notes "$NOTES"
+          & $env:OVR_UTIL upload-quest-build --app-id $env:META_APP_ID --app-secret $env:META_APP_SECRET --apk FattysGameShack-Quest.apk --channel ${{ inputs.channel }} --notes "${{ inputs.notes }}"
