@@ -7,8 +7,8 @@ name: Upload to Meta
 on:
   push:
     branches: [quest-build]
-    paths: [".github/workflows/meta-upload.yml"]     # changing this file runs a check only (never an upload)
-    tags: ["meta-upload-*"]                           # pushing a tag named meta-upload-<anything> uploads to the ALPHA channel
+    paths: [".github/workflows/meta-upload.yml", ".github/meta-upload-request.txt"]
+    # changing this workflow runs a check only. Changing meta-upload-request.txt (first line: ALPHA, BETA or RC; second line: release notes) uploads.
   workflow_dispatch:
     inputs:
       channel:
@@ -36,6 +36,24 @@ jobs:
       run:
         shell: pwsh
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Was an upload requested?
+        run: |
+          $want = "false"; $channel = "ALPHA"; $notes = "Test build"
+          if ("${{ github.event_name }}" -eq "push") {
+            $changed = git diff --name-only HEAD~1 HEAD
+            if ($changed -contains ".github/meta-upload-request.txt") {
+              $lines = Get-Content .github/meta-upload-request.txt
+              if ($lines.Count -ge 1 -and $lines[0].Trim() -ne "") { $channel = $lines[0].Trim().ToUpper(); $want = "true" }
+              if ($lines.Count -ge 2) { $notes = $lines[1].Trim() }
+            }
+          }
+          Write-Host "upload requested: $want ($channel)"
+          "UPLOAD_REQUESTED=$want" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "REQ_CHANNEL=$channel" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "REQ_NOTES=$notes" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Get the latest store APK
         env:
           GH_TOKEN: ${{ github.token }}
@@ -77,13 +95,13 @@ jobs:
           & $env:OVR_UTIL upload-quest-build --app-id $env:META_APP_ID --app-secret $env:META_APP_SECRET --apk FattysGameShack-Quest.apk --channel ALPHA --age-group TEENS_AND_ADULTS --validate
           Write-Host "validate exit code: $LASTEXITCODE"
       - name: Upload
-        if: ${{ (github.event_name == 'workflow_dispatch' && !inputs.dry_run) || startsWith(github.ref, 'refs/tags/meta-upload-') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && !inputs.dry_run) || env.UPLOAD_REQUESTED == 'true' }}
         env:
           META_APP_ID: ${{ secrets.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
-          CHANNEL: ${{ inputs.channel || 'ALPHA' }}
+          CHANNEL: ${{ inputs.channel || env.REQ_CHANNEL }}
           AGE_GROUP: ${{ inputs.age_group || 'TEENS_AND_ADULTS' }}
-          NOTES: ${{ inputs.notes || 'Test build' }}
+          NOTES: ${{ inputs.notes || env.REQ_NOTES }}
         run: |
           & $env:OVR_UTIL upload-quest-build --app-id $env:META_APP_ID --app-secret $env:META_APP_SECRET --apk FattysGameShack-Quest.apk --channel $env:CHANNEL --age-group $env:AGE_GROUP --notes $env:NOTES --wait-for-postprocessing
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
