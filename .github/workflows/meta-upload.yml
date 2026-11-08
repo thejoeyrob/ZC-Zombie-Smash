@@ -1,0 +1,54 @@
+name: Upload to Meta
+# Manual: Actions, "Upload to Meta", Run workflow. Sends the store-safe APK of the chosen build to a Meta release channel.
+# Needs repository secrets META_APP_ID and META_APP_SECRET, and the repository variable OVR_PLATFORM_UTIL_URL (the Linux download of
+# Meta's ovr-platform-util, from the developer dashboard's tools page). The APK must be signed with the release key (secrets
+# RELEASE_KEYSTORE_B64 / RELEASE_KEYSTORE_PASSWORD in the build workflow), or Meta will refuse it.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release channel"
+        type: choice
+        options: [ALPHA, BETA, RC]
+        default: ALPHA
+      notes:
+        description: "Release notes"
+        type: string
+        default: "Test build"
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the latest store APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download quest-latest --repo "$GITHUB_REPOSITORY" --pattern FattysGameShack-Quest.apk --dir .
+          ls -l FattysGameShack-Quest.apk
+      - name: Refuse a debug-signed or debuggable build
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq apksigner aapt >/dev/null
+          apksigner verify --print-certs FattysGameShack-Quest.apk | tee signer.txt
+          if grep -qi "Android Debug" signer.txt; then echo "This APK is signed with the shared test key. Set the release key secrets and rebuild."; exit 1; fi
+          if aapt dump badging FattysGameShack-Quest.apk | grep -q "application-debuggable"; then echo "This APK is debuggable."; exit 1; fi
+      - name: Get Meta's upload tool
+        env:
+          UTIL_URL: ${{ vars.OVR_PLATFORM_UTIL_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$UTIL_URL" ]; then echo "Set the repository variable OVR_PLATFORM_UTIL_URL first."; exit 1; fi
+          curl -sSL -o ovr-platform-util "$UTIL_URL"
+          chmod +x ovr-platform-util
+          ./ovr-platform-util help | head -20
+      - name: Upload
+        env:
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          CHANNEL: ${{ inputs.channel }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          ./ovr-platform-util upload-quest-build --app-id "$META_APP_ID" --app-secret "$META_APP_SECRET" \
+            --apk FattysGameShack-Quest.apk --channel "$CHANNEL" --notes "$NOTES"
