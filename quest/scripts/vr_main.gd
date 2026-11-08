@@ -1662,6 +1662,7 @@ func _run_tour() -> void:
 		[room.pinball.stand_world() + Vector3(0, 1.65, 0), room.pinball.look_world(), 3.0, 3.5],
 		[room.pinball2.stand_world() + Vector3(0, 1.65, 0), room.pinball2.look_world(), 3.5, 3.5],
 		[Vector3(0, 1.7, 5.2), Vector3(0, 1.75, 7.3), 3.0, 4.0],
+		[Vector3(-1.3, 1.7, 5.4), Vector3(-3.25, 1.85, ArcadeRoom.BACK_Z), 3.0, 4.0],
 		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 3.5, 2.2, "skins", "next"],
 		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
 		[Vector3(3.42, 1.6, ArcadeRoom.BACK_Z - 1.55), Vector3(3.42, 1.3, ArcadeRoom.BACK_Z - 0.4), 0.1, 2.2, "skins", "next"],
