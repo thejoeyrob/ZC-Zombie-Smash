@@ -7,7 +7,8 @@ name: Upload to Meta
 on:
   push:
     branches: [quest-build]
-    paths: [".github/workflows/meta-upload.yml"]     # changing this file runs a dry run (never an upload)
+    paths: [".github/workflows/meta-upload.yml"]     # changing this file runs a check only (never an upload)
+    tags: ["meta-upload-*"]                           # pushing a tag named meta-upload-<anything> uploads to the ALPHA channel
   workflow_dispatch:
     inputs:
       channel:
@@ -19,6 +20,11 @@ on:
         description: "Release notes"
         type: string
         default: "Test build"
+      age_group:
+        description: "Age group of the build"
+        type: choice
+        options: [TEENS_AND_ADULTS, MIXED_AGES, CHILDREN]
+        default: TEENS_AND_ADULTS
       dry_run:
         description: "Dry run: check everything but do not upload"
         type: boolean
@@ -63,10 +69,21 @@ jobs:
           "OVR_UTIL=$found" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           & $found help 2>&1 | Out-String | Write-Host
           & $found upload-quest-build --help 2>&1 | Out-String | Write-Host
-      - name: Upload
-        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+      - name: Ask Meta to check the build (no upload)
         env:
           META_APP_ID: ${{ secrets.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
         run: |
-          & $env:OVR_UTIL upload-quest-build --app-id $env:META_APP_ID --app-secret $env:META_APP_SECRET --apk FattysGameShack-Quest.apk --channel ${{ inputs.channel }} --notes "${{ inputs.notes }}"
+          & $env:OVR_UTIL upload-quest-build --app-id $env:META_APP_ID --app-secret $env:META_APP_SECRET --apk FattysGameShack-Quest.apk --channel ALPHA --age-group TEENS_AND_ADULTS --validate
+          Write-Host "validate exit code: $LASTEXITCODE"
+      - name: Upload
+        if: ${{ (github.event_name == 'workflow_dispatch' && !inputs.dry_run) || startsWith(github.ref, 'refs/tags/meta-upload-') }}
+        env:
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          CHANNEL: ${{ inputs.channel || 'ALPHA' }}
+          AGE_GROUP: ${{ inputs.age_group || 'TEENS_AND_ADULTS' }}
+          NOTES: ${{ inputs.notes || 'Test build' }}
+        run: |
+          & $env:OVR_UTIL upload-quest-build --app-id $env:META_APP_ID --app-secret $env:META_APP_SECRET --apk FattysGameShack-Quest.apk --channel $env:CHANNEL --age-group $env:AGE_GROUP --notes $env:NOTES --wait-for-postprocessing
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
