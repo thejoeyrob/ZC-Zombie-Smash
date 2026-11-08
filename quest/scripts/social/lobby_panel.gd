@@ -53,8 +53,9 @@ func refresh() -> void:
 				button(row, "REMOVE", func(): session.send({"type": "kick", "id": id}), 36)
 		if session.self_id == session.host_id:
 			button(content, "UNLOCK ROOM" if session.locked else "LOCK ROOM", func(): session.send({"type": "lock", "locked": not session.locked}))
+		button(content, "VOICE: ON  (TAP TO MUTE)" if session.voice.enabled else "VOICE: OFF  (TAP TO TALK)", func(): session.voice.enabled = not session.voice.enabled; refresh())
 		button(content, "LEAVE ROOM", session.leave)
-		text(content, "Point at a free machine or stool to claim it.\nVoice: use a Quest party call. In-game voice is not included.")
+		text(content, "Point at a free machine or stool to claim it.\nVoice: you hear people from where they stand. Your microphone is only used while you are in a room.")
 		return
 	button(content, "NAME: " + name_value + ("  ✓ DONE" if editing_name else "  EDIT"), func(): editing_name = not editing_name; refresh())
 	if editing_name:

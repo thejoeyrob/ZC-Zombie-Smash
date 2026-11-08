@@ -23,6 +23,16 @@ var send_elapsed := 0.0
 var last_rx := 0.0
 var nudge_prev := [false, false]
 var endpoint := ""
+var voice: VoiceChat
+var vid := 0
+var vids := {}                    # voice id -> member id
+
+func _init() -> void:
+	voice = VoiceChat.new()
+	voice.session = self
+
+func _ready() -> void:
+	add_child(voice)
 
 func setup(owner_node: Node3D) -> void:
 	main = owner_node
@@ -55,6 +65,14 @@ func connect_room(room_code: String, player_name: String) -> void:
 	status = "Connecting…"
 	changed.emit()
 
+func send_binary(data: PackedByteArray) -> void:
+	if socket != null and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		socket.send(data, WebSocketPeer.WRITE_MODE_BINARY)
+
+func guest_for_vid(v: int):
+	var id = vids.get(v, "")
+	return guests.get(id)
+
 func send(data: Dictionary) -> void:
 	if socket != null and socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		socket.send_text(JSON.stringify(data))
@@ -71,6 +89,10 @@ func _disconnect(message: String) -> void:
 	connecting = false
 	status = message
 	self_id = ""
+	vid = 0
+	vids.clear()
+	if voice != null:
+		voice.reset()
 	members.clear()
 	owners.clear()
 	pending_station = ""
@@ -110,6 +132,9 @@ func _process(delta: float) -> void:
 		var raw := socket.get_packet()
 		if raw.size() > 16384:
 			continue
+		if not socket.was_string_packet():
+			voice.receive(raw)
+			continue
 		var data = JSON.parse_string(raw.get_string_from_utf8())
 		if data is Dictionary:
 			last_rx = 0
@@ -119,6 +144,7 @@ func _receive(d: Dictionary) -> void:
 	match d.get("type", ""):
 		"welcome":
 			self_id = str(d.id)
+			vid = int(d.get("vid", 0))
 			online = true
 			connecting = false
 			main._set_locked(false)
@@ -131,6 +157,9 @@ func _receive(d: Dictionary) -> void:
 			host_id = str(d.host)
 			locked = bool(d.locked)
 			members = d.members
+			vids.clear()
+			for m in members:
+				vids[int(m.get("vid", 0))] = str(m.id)
 			owners = d.owners
 			status = "ROOM %s  •  %d / 6" % [code, members.size()]
 			if awaiting_spawn:

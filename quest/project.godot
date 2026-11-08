@@ -31,3 +31,7 @@ openxr/foveation_level=1
 openxr/foveation_dynamic=true
 openxr/extensions/hand_tracking=true
 shaders/enabled=true
+
+[audio]
+
+driver/enable_input=true

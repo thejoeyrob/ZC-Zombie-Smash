@@ -78,6 +78,30 @@ func _run() -> void:
 		push_error("second client did not join: " + b.status)
 		failures += 1
 	print("room ", a.code, " members ", a.members.size(), " status ", a.status)
+	# voice: the sound codec round-trips, and a piece sent by one client is heard by the other
+	var tone := PackedFloat32Array()
+	for i in range(640):
+		tone.append(0.4 * sin(TAU * 440.0 * float(i) / 16000.0))
+	var back := VoiceChat.decode(VoiceChat.encode(tone))
+	var worst := 0.0
+	for i in range(640):
+		worst = maxf(worst, absf(back[i].x - tone[i]))
+	print("voice codec worst error ", worst)
+	if worst > 0.03:
+		push_error("voice codec too lossy")
+		failures += 1
+	ok = await _wait(func(): return b.guest_for_vid(a.vid) != null and a.guest_for_vid(b.vid) != null)
+	if not ok:
+		push_error("guests were not made for voice")
+		failures += 1
+	for i in range(5):
+		a.voice.send_pcm(tone)
+		await create_timer(0.05).timeout
+	ok = await _wait(func(): return b.voice.received > 0)
+	print("voice pieces sent ", a.voice.sent, " heard ", b.voice.received, " speakers ", b.voice.players.size())
+	if not ok or b.voice.players.size() != 1:
+		push_error("voice was not heard")
+		failures += 1
 	a.leave()
 	b.leave()
 	OS.kill(pid)
