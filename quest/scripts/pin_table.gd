@@ -22,10 +22,27 @@ const INSERTS := [Vector2(203, 79), Vector2(203, 98), Vector2(203, 275), Vector2
 const INSERT_COL := [Color(1, 0.7, 0.15), Color(1, 0.7, 0.15), Color(1, 0.6, 0.1), Color(1, 0.6, 0.1), Color(1, 0.6, 0.1), Color(1, 0.6, 0.1), Color(0.5, 1, 0.2), Color(0.5, 1, 0.2), Color(1, 0.3, 0.8), Color(0.2, 0.9, 1.0), Color(0.5, 1, 0.2), Color(0.5, 1, 0.2)]
 # the two ramps drawn in the artwork: the ball can run up them, travel along (above everything else) and drop back onto the table
 const RAMPS := [
-	{"entry": Vector2(104, 364), "r": 20.0, "dir": Vector2(-0.35, -0.94), "path": [Vector2(104, 364), Vector2(86, 322), Vector2(48, 282), Vector2(30, 222), Vector2(58, 162), Vector2(112, 124), Vector2(140, 76), Vector2(150, 70)], "exit_vel": Vector2(40, 120), "col": Color(1, 0.2, 0.7), "name": "PINK RAMP"},
-	{"entry": Vector2(250, 62), "r": 20.0, "dir": Vector2(1, 0.2), "path": [Vector2(250, 62), Vector2(300, 60), Vector2(346, 96), Vector2(366, 160), Vector2(358, 232), Vector2(336, 290), Vector2(326, 300)], "exit_vel": Vector2(-110, 150), "col": Color(1, 0.6, 0.1), "name": "ORANGE RAMP"},
+	{"entry": Vector2(104, 364), "r": 20.0, "dir": Vector2(-0.35, -0.94), "path": [Vector2(112, 368), Vector2(108, 321), Vector2(90, 291), Vector2(71, 270), Vector2(45, 245), Vector2(30, 217), Vector2(30, 185), Vector2(38, 150), Vector2(60, 118), Vector2(95, 92), Vector2(135, 74), Vector2(150, 70)], "exit_vel": Vector2(40, 120), "col": Color(1, 0.2, 0.7), "name": "PINK RAMP"},
+	{"entry": Vector2(250, 62), "r": 20.0, "dir": Vector2(1, 0.2), "path": [Vector2(250, 62), Vector2(298, 63), Vector2(345, 95), Vector2(375, 150), Vector2(382, 205), Vector2(368, 248), Vector2(345, 285), Vector2(326, 303)], "exit_vel": Vector2(-110, 150), "col": Color(1, 0.6, 0.1), "name": "ORANGE RAMP"},
 ]
 
+# a small stone door in the left wall swallows the ball; it comes out of a hole on the other side of the table a moment later
+const DOOR_POS := Vector2(33, 384)
+const DOOR_R := 15.0
+const EXIT_POS := Vector2(268, 352)
+const EXIT_VEL := Vector2(-70, 250)
+const PORTAL_TIME := 1.15
+# a one-way flap at the top of the plunger lane: a ball can leave the lane but never fall back down it
+const GATE_Y := 252.0
+static var _ramp_cache := {}
+
+var in_portal := false
+var portal_t := 0.0
+var portal_cool := 0.0
+var door_open := 0.0               # 0 closed .. 1 wide open (the 3D door follows it)
+var exit_flash := 0.0
+var gate_flash := 0.0
+var launched := false
 var physical_view := false
 var network_remote := false
 var _accumulator := 0.0
@@ -137,6 +154,10 @@ func _new_ball() -> void:
 	right_up = false
 	_slow_t = 0.0
 	on_ramp = -1
+	in_portal = false
+	portal_t = 0.0
+	portal_cool = 0.0
+	launched = false
 	ball = Vector2(LANE_X, 700.0)
 	vel = Vector2.ZERO
 	in_play = false
@@ -160,7 +181,7 @@ func pull(amount: float) -> void:
 func launch() -> void:
 	if not enabled:
 		return
-	var power := maxf(plunger, 0.15)
+	var power := maxf(plunger, 0.35)
 	if game_over:
 		reset_game()                       # one pull-and-release starts a new game and launches
 	if in_play or not _launch_ready:
@@ -171,6 +192,7 @@ func launch() -> void:
 	ball_save = 8.0 if not save_used else 0.0
 	skill_time = 4.0
 	_launch_ready = false
+	launched = true
 	plunger = 0.0
 	event.emit("launch")
 
@@ -203,6 +225,10 @@ func _simulate(delta: float) -> void:
 	skill_time = maxf(0, skill_time - delta)
 	combo_time = maxf(0, combo_time - delta)
 	nudge_cool = maxf(0, nudge_cool - delta)
+	portal_cool = maxf(0.0, portal_cool - delta)
+	exit_flash = maxf(0.0, exit_flash - delta * 2.0)
+	gate_flash = maxf(0.0, gate_flash - delta * 3.0)
+	door_open = move_toward(door_open, 1.0 if in_portal else 0.0, delta * 3.0)
 	tilt_heat = maxf(0, tilt_heat - delta * 0.14)
 	clock += delta
 	message_t = maxf(0.0, message_t - delta)
@@ -235,6 +261,17 @@ func _step(dt: float) -> void:
 	var r_omega := (right_ang - r_prev) / dt
 	if not in_play:
 		return
+	if in_portal:
+		portal_t -= dt
+		if portal_t <= 0.0:
+			in_portal = false
+			ball = EXIT_POS
+			vel = EXIT_VEL
+			portal_cool = 1.0
+			exit_flash = 1.0
+			event.emit("portal_out")
+			_score(500, "insert")
+		return
 	if on_ramp >= 0:
 		_ride_ramp(dt)
 		return
@@ -254,6 +291,22 @@ func _step(dt: float) -> void:
 			_score(1000 * combo, "ramp")
 			flash(str(rp.name) + "  COMBO x%d" % combo)
 			return
+	# the stone door: the ball rolls in and is gone for a moment
+	if portal_cool <= 0.0 and ball.distance_to(DOOR_POS) < DOOR_R and ball.x > 14.0:
+		in_portal = true
+		portal_t = PORTAL_TIME
+		vel = Vector2.ZERO
+		ball = DOOR_POS
+		event.emit("portal_in")
+		_score(1500, "ramp")
+		flash("ZOMBIE DOOR  +1500")
+		return
+	# the one-way flap: moving down the plunger lane from above is not allowed
+	if launched and ball.x > 352.0 and ball.y > GATE_Y - BALL_R and ball.y < GATE_Y + BALL_R and vel.y > 0.0:
+		vel = Vector2(-absf(vel.x) - 140.0, -absf(vel.y) * 0.25)
+		ball.y = GATE_Y - BALL_R
+		gate_flash = 1.0
+		event.emit("wall")
 	for seg in segments:
 		_hit_segment(seg[0], seg[1], seg[2], seg[3])
 	# the two flippers (their near end is the pivot; angles measured down from horizontal toward the middle)
@@ -332,10 +385,37 @@ func _step(dt: float) -> void:
 		trail.pop_front()
 
 
+## The ramp's path smoothed into many short steps (the same points drive the ball and the 3D ramp, so they always agree).
+static func ramp_points(ri: int) -> Array:
+	if _ramp_cache.has(ri):
+		return _ramp_cache[ri]
+	var src: Array = RAMPS[ri].path
+	var out: Array = []
+	for i in range(src.size() - 1):
+		var p0: Vector2 = src[maxi(i - 1, 0)]
+		var p1: Vector2 = src[i]
+		var p2: Vector2 = src[i + 1]
+		var p3: Vector2 = src[mini(i + 2, src.size() - 1)]
+		for s in range(6):
+			var t := float(s) / 6.0
+			out.append(0.5 * ((2.0 * p1) + (-p0 + p2) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t * t + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t * t * t))
+	out.append(src[src.size() - 1])
+	_ramp_cache[ri] = out
+	return out
+
+
+static func ramp_length(ri: int) -> float:
+	var pts := ramp_points(ri)
+	var total := 0.0
+	for i in range(pts.size() - 1):
+		total += (pts[i] as Vector2).distance_to(pts[i + 1])
+	return total
+
+
 ## While on a ramp the ball runs along its path above the table: nothing else can touch it. At the end it drops back onto the playfield.
 func _ride_ramp(dt: float) -> void:
 	var rp: Dictionary = RAMPS[on_ramp]
-	var pts: Array = rp.path
+	var pts: Array = ramp_points(on_ramp)
 	ramp_d += 420.0 * dt
 	var d := ramp_d
 	for i in range(pts.size() - 1):
@@ -440,6 +520,8 @@ static func _commas(n: int) -> String:
 
 # ---- drawing -----------------------------------------------------------------------------------
 func _draw() -> void:
+	if physical_view:
+		return                                 # the machine builds the table out of real parts; nothing is drawn flat
 	draw_rect(Rect2(0, 0, W, H), Color(0.02, 0.01, 0.06))
 	if art != null:
 		draw_texture_rect(art, Rect2(0, 0, W, H), false, Color.WHITE)      # vibrant: the artwork at full brightness
@@ -562,7 +644,7 @@ func nudge(direction := 1.0) -> void:
 func snapshot() -> Dictionary:
 	return {"ball": [ball.x, ball.y], "angles": [left_ang, right_ang], "score": score,
 		"balls": balls_left, "play": in_play, "over": game_over, "ramp": on_ramp, "ramp_d": ramp_d,
-		"multiplier": multiplier, "save": ball_save, "bumps": bump_flash.duplicate(), "targets": target_lit.duplicate()}
+		"portal": in_portal, "multiplier": multiplier, "save": ball_save, "bumps": bump_flash.duplicate(), "targets": target_lit.duplicate()}
 
 
 func apply_snapshot(d: Dictionary) -> void:
@@ -581,6 +663,7 @@ func apply_snapshot(d: Dictionary) -> void:
 	on_ramp = clampi(int(d.get("ramp", -1)), -1, 1)
 	ramp_d = clampf(float(d.get("ramp_d", 0)), 0, 2000)
 	multiplier = clampi(int(d.get("multiplier", 1)), 1, 5)
+	in_portal = bool(d.get("portal", false))
 	ball_save = clampf(float(d.get("save", 0)), 0, 8)
 	if d.get("bumps") is Array and d.bumps.size() == 3:
 		bump_flash = d.bumps.duplicate()

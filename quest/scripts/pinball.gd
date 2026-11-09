@@ -28,8 +28,12 @@ var reset_btn: Node3D
 var _reset_prev := false
 var _grab_z := 0.0
 var _plunger_hand := -1
+var _spring_t := 0.0
 var _reset_hold := 0.0
 var playfield: PinballPlayfield
+var msg_label: Label3D
+var hint_label: Label3D
+var dead_panel: Node3D
 var _latched := [-1, -1]       # which flipper button each hand is holding (-1 = none)
 
 
@@ -40,6 +44,7 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	var glow := VRBuild.mat(Color(1.0, 0.3, 0.7), 0.4, 0.0, 2.6)
 	var side = load(art_dir + "side-pinball.png")
 	var field = load(art_dir + "playfield-pinball.jpg")
+	var field_clean = load(art_dir + "playfield-clean.jpg") if ResourceLoader.exists(art_dir + "playfield-clean.jpg") else field   # the flippers are painted out: they are real parts now
 	var head = load(art_dir + "marquee-pinball.jpg")
 	# legs: tapered chrome tubes with a bolted bracket at the top, a screw leveller and a rubber foot, tied together with stretcher bars
 	var black_rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
@@ -87,9 +92,9 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	pf.rotation = Vector3(-PI / 2.0 + TILT, 0, 0)
 	add_child(pf)
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(512, 1024)
+	viewport.size = Vector2i(16, 16)                 # the table only needs a home in the tree; it draws nothing (the parts are 3D)
 	viewport.transparent_bg = false
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(viewport)
 	table = PinTable.new()
 	table.scale = Vector2(1.28, 1.28)
@@ -98,10 +103,19 @@ func build(font: Font, art_dir := "res://assets/art/") -> void:
 	viewport.add_child(table)
 	table.event.connect(_on_table_event)
 	var fm := StandardMaterial3D.new()
-	fm.albedo_texture = viewport.get_texture()
-	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fm.albedo_texture = field_clean
+	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED          # the painted board at full brightness, as before
 	fm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	VRBuild.quad(pf, Vector2(PF_W, PF_H), Vector3.ZERO, fm)
+	# words on the glass: messages from the table, "pull the plunger", and the out-of-order sign
+	msg_label = VRBuild.label(pf, "", 0.034, Vector3(0, -0.16, 0.062), Color(1.0, 0.9, 0.3), Vector3.ZERO, 6, font, true)
+	hint_label = VRBuild.label(pf, "", 0.024, Vector3(0, -0.2, 0.062), Color(0.4, 1.0, 0.6), Vector3.ZERO, 5, font, true)
+	dead_panel = Node3D.new()
+	pf.add_child(dead_panel)
+	VRBuild.quad(dead_panel, Vector2(PF_W, PF_H), Vector3(0, 0, 0.058), VRBuild.unshaded(Color(0, 0, 0, 0.72)))
+	(dead_panel.get_child(0) as MeshInstance3D).material_override.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	VRBuild.label(dead_panel, "OUT OF ORDER", 0.09, Vector3(0, 0.05, 0.062), Color(1.0, 0.25, 0.2), Vector3.ZERO, 8, font, true)
+	VRBuild.label(dead_panel, "TRY THE SNACK MACHINE\nKEY IN THE CODE", 0.045, Vector3(0, -0.08, 0.062), Color(1.0, 0.85, 0.3), Vector3.ZERO, 6, font, true)
 	var glass := VRBuild.mat(Color(0.7, 0.9, 1.0, 0.07), 0.05)
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	VRBuild.quad(pf, Vector2(PF_W + 0.04, PF_H + 0.04), Vector3(0, 0, 0.055), glass)
@@ -299,22 +313,40 @@ func interact(tips: Array, palms: Array, trig_left: bool, trig_right: bool, laun
 			_plunger_hand = -1
 			_held = false
 			_charge = 0.0
-		elif palms[i].distance_to(knob) > 0.3:
-			_plunger_hand = -1
-			_held = false
-			_charge = 0.0
-			table.pull(0.0)
 		else:
-			_charge = clampf((to_local(palms[i]).z - _grab_z) / 0.1, 0, 1)
+			var pulled := (to_local(palms[i]).z - _grab_z) / 0.1
+			_charge = clampf(pulled, 0, 1)
 			table.pull(_charge)
+			# pulled all the way back (or further): the plunger lets go of the hand AND strikes the ball at full power
+			if pulled >= 1.0:
+				table.pull(1.0)
+				table.launch()
+				_plunger_hand = -1
+				_held = false
+				_charge = 0.0
+				_spring_t = 0.12
 	if launch and not _launch_prev:
 		table.pull(0.8)
 		table.launch()
 	_launch_prev = launch
-	plunger_knob.position = plunger_rest + Vector3(0, 0, _charge * 0.1)
+	_spring_t = maxf(0.0, _spring_t - get_process_delta_time())
+	plunger_knob.position = plunger_rest + Vector3(0, 0, _charge * 0.1 - _spring_t * 0.35)       # a quick snap forward when it fires
 
 
 func _process(_delta: float) -> void:
+	if msg_label != null:
+		dead_panel.visible = not enabled
+		msg_label.text = table.message if (enabled and table.message_t > 0.0) else ""
+		msg_label.modulate.a = minf(1.0, table.message_t)
+		if not enabled:
+			hint_label.text = ""
+		elif table.game_over:
+			hint_label.text = "PULL THE PLUNGER TO PLAY"
+		elif not table.in_play:
+			hint_label.text = "PULL THE PLUNGER"
+		else:
+			hint_label.text = ""
+		hint_label.modulate.a = 0.6 + 0.4 * sin(Time.get_ticks_msec() / 160.0)
 	if score_label != null:
 		score_label.text = PinTable._commas(table.score) if enabled else "- - -"
 		best_label.text = ("BEST %s  •  BALLS %d  •  x%d%s" % [PinTable._commas(table.best), table.balls_left, table.multiplier, "  SAVE" if table.ball_save > 0 else ""]) if enabled else "OUT OF ORDER"

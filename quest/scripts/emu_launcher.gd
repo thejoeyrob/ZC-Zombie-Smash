@@ -53,7 +53,7 @@ func build(host: Node) -> void:
 	_font = load("res://assets/fonts/DejaVuSansMono-Bold.ttf")
 	viewport = SubViewport.new()
 	viewport.size = Vector2i(576, 692)
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	viewport.transparent_bg = false
 	host.add_child(viewport)
 	var bg := ColorRect.new()
@@ -282,6 +282,12 @@ func tick(delta: float) -> void:
 	_t += delta
 	if _select_t > 0.0:
 		_select_t -= delta
+	# the screen only redraws every frame while a game is running at the machine; the menu just redraws when it changes (twice a second)
+	var live := (_view == "play" and session.running and not hold) or (_view == "pause" and session.running)
+	if live:
+		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	elif viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS:
+		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	if (_view == "play" or _view == "pause") and session.running:
 		if _view == "play" and not hold:
 			session.tick(delta, _pad)
@@ -293,6 +299,7 @@ func tick(delta: float) -> void:
 	_shade.visible = false
 	if int(_t * 2.0) != int((_t - delta) * 2.0):
 		_redraw()
+		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func _notification(what: int) -> void:
