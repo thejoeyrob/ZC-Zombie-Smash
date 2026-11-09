@@ -22,6 +22,7 @@ var door_leaf: Node3D
 var door_glow: StandardMaterial3D
 var exit_ring: StandardMaterial3D
 var gate_flap: Node3D
+var extra_meshes: Array = []
 var _statics: Node3D
 var _t := 0.0
 
@@ -313,6 +314,10 @@ func build(source: PinTable) -> void:
 	# the ball: polished steel
 	var ball_mat := VRBuild.mat(Color(0.86, 0.89, 0.96), 0.16, 0.85, 0.5, Color(0.28, 0.32, 0.4))
 	ball_mesh = VRBuild.sphere(self, PinTable.BALL_R * U, point(table.ball, BALL_Z), ball_mat, 24)
+	for k in range(2):                       # the extra balls of multiball
+		var eb := VRBuild.sphere(self, PinTable.BALL_R * U, Vector3.ZERO, ball_mat, 24)
+		eb.visible = false
+		extra_meshes.append(eb)
 	VRBuild.merge_static(_statics)
 
 
@@ -330,6 +335,16 @@ func _process(delta: float) -> void:
 	else:
 		ball_mesh.position = target
 	ball_mesh.visible = not table.game_over and not table.in_portal
+	for k in range(extra_meshes.size()):
+		var em: MeshInstance3D = extra_meshes[k]
+		em.visible = k < table.extra.size() and not table.game_over
+		if em.visible:
+			var e: Dictionary = table.extra[k]
+			var ep := point(e.ball, BALL_Z)
+			if int(e.on_ramp) >= 0:
+				ep.z = ramp_floor_z(int(e.on_ramp), float(e.ramp_d), PinTable.ramp_length(int(e.on_ramp))) + BALL_Z
+			em.visible = not bool(e.in_portal)
+			em.position = ep
 	flippers[0].rotation.z = -table.left_ang
 	flippers[1].rotation.z = PI + table.right_ang
 	for i in range(3):

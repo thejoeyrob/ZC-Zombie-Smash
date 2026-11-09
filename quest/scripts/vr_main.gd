@@ -443,13 +443,20 @@ func _on_code(action: String) -> void:
 
 
 func _on_pinball_sound(n: String, pos: Vector3) -> void:
-	var map := {"flip": ["click", 0.8], "flipper_hit": ["hit", 0.5], "launch": ["throw", 0.8], "bump": ["target", 0.8], "sling": ["hit", 0.6], "target": ["pickup", 0.7], "clear": ["clear", 0.9], "drain": ["hurt", 0.7], "over": ["doom", 0.8], "wall": ["ricochet", 0.25]}
+	var map := {"flip": ["click", 0.8], "flipper_hit": ["hit", 0.5], "launch": ["throw", 0.8], "bump": ["target", 0.8], "sling": ["hit", 0.6], "target": ["pickup", 0.7], "clear": ["clear", 0.9], "drain": ["hurt", 0.7], "over": ["doom", 0.8], "wall": ["ricochet", 0.25],
+		"ramp": ["pickup", 0.9], "portal_in": ["switch", 0.9], "portal_out": ["throw", 0.7], "multiball": ["clear", 1.0], "drain_lite": ["hurt", 0.4], "save": ["switch", 0.7]}
 	if map.has(n):
 		audio.sfx(map[n][0], map[n][1], 0.04, pos)
 	if n == "flip":
 		_haptic(-1, 0.25, 0.03)
 	elif n == "bump":
 		_haptic(-1, 0.4, 0.05)
+	elif n == "sling" or n == "flipper_hit":
+		_haptic(-1, 0.3, 0.04)
+	elif n == "launch" or n == "ramp" or n == "portal_in" or n == "portal_out":
+		_haptic(-1, 0.5, 0.07)
+	elif n == "multiball":
+		_haptic(-1, 1.0, 0.4)
 	elif n == "over":
 		progress.pinball_best = maxi(progress.pinball_best, maxi(room.pinball.table.best, room.pinball2.table.best))
 		progress.save()

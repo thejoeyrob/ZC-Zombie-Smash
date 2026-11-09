@@ -94,5 +94,50 @@ func _run() -> void:
 		w._step(1.0 / 120.0)
 		top = minf(top, w.ball.y)
 	check(top < PinTable.GATE_Y - 40.0, "The weakest plunger shot must reach past the lane's flap (reached y=%d)" % int(top))
+	# multiball: two balls locked behind the door, the next trip through the door releases three balls on the table
+	var m := PinTable.new()
+	root.add_child(m)
+	m.set_process(false)
+	m.enabled = true
+	m.game_over = true
+	m.pull(1.0)
+	m.launch()
+	for round in range(3):
+		m.ball = PinTable.DOOR_POS + Vector2(8, 0)
+		m.vel = Vector2(-40, 20)
+		m.portal_cool = 0.0
+		m.on_ramp = -1
+		for i in range(400):
+			m._step(1.0 / 120.0)
+			if round < 2 and not m.in_portal and i > 20:
+				break
+			if m.multiball:
+				break
+	check(m.multiball and m.extra.size() == 2, "Third trip through the door should start multiball (balls: %d)" % m.extra.size())
+	var before := m.balls_left
+	# lose the main ball while others are alive: no life is lost
+	m.ball_save = 0.0
+	m.ball = Vector2(200, 900)
+	m._step(1.0 / 120.0)
+	check(m.balls_left == before and m.extra.size() == 1 and m.in_play, "Losing one ball of several must not cost a life (left %d/%d extra %d play %s ball %s portal %s ramp %d)" % [m.balls_left, before, m.extra.size(), m.in_play, m.ball, m.in_portal, m.on_ramp])
+	m.ball = Vector2(200, 900)
+	m._step(1.0 / 120.0)
+	check(m.balls_left == before and not m.multiball and m.in_play, "Down to the last ball the game goes on as normal")
+	for i in range(1200):
+		m._step(1.0 / 120.0)
+		check(is_finite(m.ball.x) and is_finite(m.ball.y), "Ball position went bad")
+	# a hard shot cannot tunnel through a wall
+	var f := PinTable.new()
+	root.add_child(f)
+	f.set_process(false)
+	f.enabled = true
+	f.game_over = true
+	f.pull(1.0)
+	f.launch()
+	f.ball = Vector2(200, 400)
+	f.vel = Vector2(2400, 0)
+	for i in range(30):
+		f._step(1.0 / 120.0)
+		check(f.ball.x < 392.0 and f.ball.x > 4.0, "A fast ball went through a wall (x=%d)" % int(f.ball.x))
 	print("PINBALL REGRESSION PASS" if failed == 0 else "PINBALL REGRESSION FAILED")
 	quit(failed)

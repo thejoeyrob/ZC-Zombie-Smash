@@ -9,8 +9,8 @@ const W := 400.0
 const H := 800.0
 const BALL_R := 9.0
 const GRAVITY := 980.0
-const SUBSTEPS := 2
-const MAX_SPEED := 1500.0
+const SUBSTEPS := 4
+const MAX_SPEED := 2600.0
 const LANE_X := 366.0
 const BUMPERS := [Vector2(195, 169), Vector2(160, 212), Vector2(238, 212)]       # the three brain bumpers in the artwork
 const BUMPER_R := 21.0
@@ -36,6 +36,14 @@ const PORTAL_TIME := 1.15
 const GATE_Y := 252.0
 static var _ramp_cache := {}
 
+var extra: Array = []              # the other balls during multiball: {ball, vel, on_ramp, ramp_d, in_portal, portal_t, portal_cool, slow}
+var multiball := false
+var portal_locks := 0              # balls locked behind the stone door; two of them start multiball
+var _l_omega := 0.0
+var _r_omega := 0.0
+var _extra_ctx := false            # true while an extra ball is being stepped
+var _dead := false
+var _mb_pending := false
 var in_portal := false
 var portal_t := 0.0
 var portal_cool := 0.0
@@ -158,6 +166,10 @@ func _new_ball() -> void:
 	portal_t = 0.0
 	portal_cool = 0.0
 	launched = false
+	extra.clear()
+	multiball = false
+	portal_locks = 0
+	_mb_pending = false
 	ball = Vector2(LANE_X, 700.0)
 	vel = Vector2.ZERO
 	in_play = false
@@ -257,10 +269,50 @@ func _step(dt: float) -> void:
 	var r_prev := right_ang
 	left_ang = move_toward(left_ang, l_target, (24.0 if left_up else 12.0) * dt)
 	right_ang = move_toward(right_ang, r_target, (24.0 if right_up else 12.0) * dt)
-	var l_omega := (left_ang - l_prev) / dt
-	var r_omega := (right_ang - r_prev) / dt
+	_l_omega = (left_ang - l_prev) / dt
+	_r_omega = (right_ang - r_prev) / dt
 	if not in_play:
 		return
+	_extra_ctx = false
+	_ball_step(dt)
+	# multiball: swap each other ball into the working fields, step it, swap it back
+	var i := extra.size() - 1
+	while i >= 0 and in_play:
+		var main_state := _pack()
+		_unpack(extra[i])
+		_extra_ctx = true
+		_dead = false
+		_ball_step(dt)
+		_extra_ctx = false
+		if _dead or i >= extra.size():
+			if i < extra.size():
+				extra.remove_at(i)
+		else:
+			extra[i] = _pack()
+		_unpack(main_state)
+		i -= 1
+	if multiball and extra.is_empty():
+		multiball = false
+		flash("MULTIBALL OVER")
+
+
+func _pack() -> Dictionary:
+	return {"ball": ball, "vel": vel, "on_ramp": on_ramp, "ramp_d": ramp_d, "in_portal": in_portal, "portal_t": portal_t, "portal_cool": portal_cool, "slow": _slow_t}
+
+
+func _unpack(d: Dictionary) -> void:
+	ball = d.ball
+	vel = d.vel
+	on_ramp = d.on_ramp
+	ramp_d = d.ramp_d
+	in_portal = d.in_portal
+	portal_t = d.portal_t
+	portal_cool = d.portal_cool
+	_slow_t = d.slow
+
+
+## One ball's physics for one small step (the main ball, or an extra ball swapped in).
+func _ball_step(dt: float) -> void:
 	if in_portal:
 		portal_t -= dt
 		if portal_t <= 0.0:
@@ -271,6 +323,9 @@ func _step(dt: float) -> void:
 			exit_flash = 1.0
 			event.emit("portal_out")
 			_score(500, "insert")
+			if _mb_pending and not _extra_ctx and not multiball:
+				_mb_pending = false
+				_start_multiball()
 		return
 	if on_ramp >= 0:
 		_ride_ramp(dt)
@@ -288,8 +343,8 @@ func _step(dt: float) -> void:
 			event.emit("ramp")
 			combo = mini(combo + 1, 5) if combo_time > 0.0 else 1
 			combo_time = 8.0
-			_score(1000 * combo, "ramp")
-			flash(str(rp.name) + "  COMBO x%d" % combo)
+			_score((3000 if multiball else 1000) * combo, "ramp")
+			flash(("JACKPOT  " if multiball else "") + str(rp.name) + "  COMBO x%d" % combo)
 			return
 	# the stone door: the ball rolls in and is gone for a moment
 	if portal_cool <= 0.0 and ball.distance_to(DOOR_POS) < DOOR_R and ball.x > 14.0:
@@ -299,7 +354,15 @@ func _step(dt: float) -> void:
 		ball = DOOR_POS
 		event.emit("portal_in")
 		_score(1500, "ramp")
-		flash("ZOMBIE DOOR  +1500")
+		if not _extra_ctx and not multiball:
+			if portal_locks >= 2:
+				_mb_pending = true
+				flash("BALLS RELEASED  -  MULTIBALL")
+			else:
+				portal_locks += 1
+				flash("ZOMBIE LOCK %d / 2" % portal_locks if portal_locks < 2 else "LOCK 2 / 2  -  ONE MORE TRIP THROUGH THE DOOR")
+		else:
+			flash("ZOMBIE DOOR  +1500")
 		return
 	# the one-way flap: moving down the plunger lane from above is not allowed
 	if launched and ball.x > 352.0 and ball.y > GATE_Y - BALL_R and ball.y < GATE_Y + BALL_R and vel.y > 0.0:
@@ -312,8 +375,8 @@ func _step(dt: float) -> void:
 	# the two flippers (their near end is the pivot; angles measured down from horizontal toward the middle)
 	var l_tip := LEFT_PIVOT + Vector2(cos(left_ang), sin(left_ang)) * FLIP_LEN
 	var r_tip := RIGHT_PIVOT + Vector2(-cos(right_ang), sin(right_ang)) * FLIP_LEN
-	_hit_flipper(LEFT_PIVOT, l_tip, l_omega, 1.0)
-	_hit_flipper(RIGHT_PIVOT, r_tip, r_omega, -1.0)
+	_hit_flipper(LEFT_PIVOT, l_tip, _l_omega, 1.0)
+	_hit_flipper(RIGHT_PIVOT, r_tip, _r_omega, -1.0)
 	for i in range(BUMPERS.size()):
 		var d: Vector2 = ball - BUMPERS[i]
 		var minr: float = BUMPER_R + BALL_R
@@ -363,7 +426,7 @@ func _step(dt: float) -> void:
 				for k in range(2, 6):
 					insert_t[k] = 0.0
 	# a ball that rolls back down the lane and settles can be launched again
-	if ball.x > 352.0 and ball.y > 690.0 and vel.length() < 40.0:
+	if ball.x > 352.0 and ball.y > 690.0 and vel.length() < 40.0 and not _extra_ctx:
 		in_play = false
 		_launch_ready = true
 		vel = Vector2.ZERO
@@ -380,9 +443,22 @@ func _step(dt: float) -> void:
 	# lost down the middle, or out the bottom
 	if ball.y > H + 40.0:
 		_drain()
-	trail.append(ball)
-	if trail.size() > 7:
-		trail.pop_front()
+	if not _extra_ctx:
+		trail.append(ball)
+		if trail.size() > 7:
+			trail.pop_front()
+
+
+func _start_multiball() -> void:
+	portal_locks = 0
+	multiball = true
+	ball_save = 14.0
+	save_used = true                       # the multiball save is its own timer
+	for k in range(2):
+		extra.append({"ball": EXIT_POS, "vel": Vector2(-120 + 240 * k, 200 + 60 * k), "on_ramp": -1, "ramp_d": 0.0, "in_portal": false, "portal_t": 0.0, "portal_cool": 1.0, "slow": 0.0})
+	flash("ZOMBIE HORDE  -  MULTIBALL")
+	event.emit("multiball")
+	_score(5000, "clear")
 
 
 ## The ramp's path smoothed into many short steps (the same points drive the ball and the 3D ramp, so they always agree).
@@ -422,9 +498,10 @@ func _ride_ramp(dt: float) -> void:
 		var seg_len: float = pts[i].distance_to(pts[i + 1])
 		if d <= seg_len:
 			ball = pts[i].lerp(pts[i + 1], d / maxf(seg_len, 0.001))
-			trail.append(ball)
-			if trail.size() > 7:
-				trail.pop_front()
+			if not _extra_ctx:
+				trail.append(ball)
+				if trail.size() > 7:
+					trail.pop_front()
 			return
 		d -= seg_len
 	ball = pts[pts.size() - 1]
@@ -488,6 +565,21 @@ func _score(points: int, kind: String) -> void:
 
 
 func _drain() -> void:
+	if _extra_ctx:
+		if ball_save > 0.0:                # during the multiball save a lost ball drops straight back in
+			ball = Vector2(200, 130)
+			vel = Vector2(randf_range(-90.0, 90.0), 140.0)
+			event.emit("save")
+			return
+		_dead = true
+		return
+	if not extra.is_empty():               # the main ball is lost but others are still alive: carry on with one of them
+		_unpack(extra.pop_front())
+		event.emit("drain_lite")
+		if extra.is_empty():
+			multiball = false
+			flash("MULTIBALL OVER")
+		return
 	if ball_save > 0.0 and not save_used and not tilted:
 		_new_ball()
 		save_used = true
@@ -644,7 +736,7 @@ func nudge(direction := 1.0) -> void:
 func snapshot() -> Dictionary:
 	return {"ball": [ball.x, ball.y], "angles": [left_ang, right_ang], "score": score,
 		"balls": balls_left, "play": in_play, "over": game_over, "ramp": on_ramp, "ramp_d": ramp_d,
-		"portal": in_portal, "multiplier": multiplier, "save": ball_save, "bumps": bump_flash.duplicate(), "targets": target_lit.duplicate()}
+		"portal": in_portal, "extra": extra.map(func(e): return [e.ball.x, e.ball.y]), "multiplier": multiplier, "save": ball_save, "bumps": bump_flash.duplicate(), "targets": target_lit.duplicate()}
 
 
 func apply_snapshot(d: Dictionary) -> void:
@@ -664,6 +756,12 @@ func apply_snapshot(d: Dictionary) -> void:
 	ramp_d = clampf(float(d.get("ramp_d", 0)), 0, 2000)
 	multiplier = clampi(int(d.get("multiplier", 1)), 1, 5)
 	in_portal = bool(d.get("portal", false))
+	if d.get("extra") is Array:
+		extra.clear()
+		for e in d.extra:
+			if e is Array and e.size() == 2 and (e[0] is float or e[0] is int) and (e[1] is float or e[1] is int):
+				extra.append({"ball": Vector2(clampf(e[0], -100, 1500), clampf(e[1], -100, 1500)), "vel": Vector2.ZERO, "on_ramp": -1, "ramp_d": 0.0, "in_portal": false, "portal_t": 0.0, "portal_cool": 0.0, "slow": 0.0})
+		extra = extra.slice(0, 2)
 	ball_save = clampf(float(d.get("save", 0)), 0, 8)
 	if d.get("bumps") is Array and d.bumps.size() == 3:
 		bump_flash = d.bumps.duplicate()
