@@ -1,2 +1,2 @@
 ALPHA
-Build 124: rooms, voice, free movement, raised pinballs, human characters
+Build 128: pinball rebuilt from real parts, multiball, plunger fix, stone door and hole, lighter on the headset, rooms and voice
