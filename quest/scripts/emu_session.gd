@@ -51,8 +51,31 @@ static func _make_native():
 	return ClassDB.instantiate("RetroCore") if ClassDB.class_exists("RetroCore") else null
 
 
+const EXTENSION_PATH := "res://bin/retro.gdextension"
+static var _ext_tried := false
+static var _ext_status := "NOT TRIED"
+
+
+## Whether the emulator plug-in is in the app and running. If the app did not load it by itself at start-up, this tries once to load it,
+## and remembers what happened (plugin_status) so the menu can say why when it is not there.
 static func supported() -> bool:
+	if ClassDB.class_exists("RetroCore"):
+		return true
+	if not _ext_tried:
+		_ext_tried = true
+		if not FileAccess.file_exists(EXTENSION_PATH):
+			_ext_status = "FILE MISSING FROM THE APP"
+		else:
+			var st := GDExtensionManager.load_extension(EXTENSION_PATH)
+			var names := ["LOADED", "FAILED TO LOAD", "ALREADY LOADED", "NOT LOADED", "NEEDS A RESTART"]
+			_ext_status = names[st] if st >= 0 and st < names.size() else "STATUS %d" % st
 	return ClassDB.class_exists("RetroCore")
+
+
+static func plugin_status() -> String:
+	if supported():
+		return "READY"
+	return "PLUG-IN " + _ext_status
 
 
 static func core_for(sys: String) -> String:

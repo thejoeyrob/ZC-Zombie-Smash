@@ -49,7 +49,7 @@ func _initialize() -> void:
 	cam.current = true
 	var cab: Cabinet = room.machines[idx]
 	cab.set_live(vp.get_texture())
-	cab.screen_mat.albedo_color = Color(1.35, 1.35, 1.35)
+	cab.screen_mat.albedo_color = Color(Cabinet.SCREEN_LEVEL, Cabinet.SCREEN_LEVEL, Cabinet.SCREEN_LEVEL)
 
 func _view(k: int) -> void:
 	var cab: Cabinet = room.machines[idx]

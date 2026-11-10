@@ -54,6 +54,7 @@ var back_z := -0.79
 var front_z := 0.02
 ## The picture window of every machine (metres): the phone's whole screen, which is taller than the field alone. 343 x 522 game units.
 const SCREEN_SIZE := Vector2(0.46, 0.70)
+const SCREEN_LEVEL := 0.95
 var monitor_z := -0.30
 var deck_front_z := 0.28
 var deck_front_y := 0.82
@@ -181,7 +182,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var sm := StandardMaterial3D.new()
 	sm.albedo_texture = screen_tex
 	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	sm.albedo_color = Color(1.35, 1.35, 1.35)       # a lit tube: brighter than a plain picture
+	sm.albedo_color = Color(SCREEN_LEVEL, SCREEN_LEVEL, SCREEN_LEVEL)       # the picture as it is: no extra brightness (above 1.0 it blooms and washes out)
 	sm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	screen_mat = sm
 	var screen_size := SCREEN_SIZE          # every machine, the emulator one too, shows the whole phone screen: bars of numbers, the field and the weapon rack
@@ -382,7 +383,7 @@ func set_lit(on: bool) -> void:
 		_light.light_color = Color(0.7, 0.95, 0.8)
 		_light.omni_range = 2.0
 		add_child(_light)
-	_light.light_energy = 0.9 if on else 0.0
+	_light.light_energy = 0.55 if on else 0.0
 	_light.visible = on
 
 

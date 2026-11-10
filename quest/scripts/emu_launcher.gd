@@ -443,7 +443,10 @@ func _redraw() -> void:
 		if f.has("error"):
 			t += "[color=#ffbf33]%s[/color]\n\n" % str(f.error)
 		else:
-			t += "[color=#ffbf33]NO EMULATOR FOR THIS FILE.[/color]\n\n"
+			if EmuSession.core_for(str(f.system)) == "":
+				t += "[color=#ffbf33]NO EMULATOR FOR %s.[/color]\n\n" % str(f.system)
+			else:
+				t += "[color=#ffbf33]EMULATOR %s[/color]\n\n" % EmuSession.plugin_status()
 		t += "PRESS ANY BUTTON TO RETURN%s" % cursor
 		_label.text = t
 		return
@@ -453,7 +456,7 @@ func _redraw() -> void:
 	elif files.is_empty():
 		t += "[color=#ffbf33]FILE NOT FOUND[/color]\n\n"
 		t += "ADD YOUR OWN GAME FILES:\n[color=#ffffff]PRESS C  (OVER WI-FI)[/color]\nOR COPY THEM BY CABLE TO\n[color=#ffffff]Android/data/%s/\nfiles/roms[/color]\n\n" % PACKAGE
-		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC GBA SMS GG PCE A26 A78 LNX\n(AND ZIP)\n"
+		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC GBA SMS GG PCE A26 A78 LNX\n(AND ZIP)\n\n[color=#9aa]EMULATOR: %s[/color]\n" % EmuSession.plugin_status()
 	else:
 		t += "[color=#9aa]%s  %s[/color]\n" % [_pad_s("NAME", 22), "SYSTEM"]
 		var last: int = mini(files.size(), top + ROWS)
@@ -465,7 +468,7 @@ func _redraw() -> void:
 				t += "[bgcolor=#40ff60][color=#001a00]%s[/color][/bgcolor]\n" % _pad_s(line, COLS)
 			else:
 				t += line + "\n"
-		t += "\n[color=#9aa]%d FILE(S)   * = NO EMULATOR[/color]\n" % files.size()
+		t += "\n[color=#9aa]%d FILE(S)   * = NO EMULATOR\nEMULATOR: %s[/color]\n" % [files.size(), EmuSession.plugin_status()]
 	t += "[color=#ffbf33]%s[/color]\n" % status if status != "" else "\n"
 	t += "[color=#9aa]STICK PICK  A OPEN  B RESCAN\nC WI-FI TRANSFER[/color]\nC:\\GAMES>%s" % cursor
 	_label.text = t

@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "auto": "on", "fps": "off"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "smooth": "off", "fps": "off"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -395,8 +395,8 @@ func _on_setting(key: String, value) -> void:
 			_apply_sharpness()
 		"glow":
 			room.env.glow_enabled = value == "on"
-		"auto":
-			q_tier = 1
+		"smooth":
+			q_tier = 0
 			_apply_tier()
 		"fps":
 			_show_fps(str(value) == "on")
@@ -424,10 +424,10 @@ func _apply_sharpness() -> void:
 ## The headset must draw a new picture every 1/72 of a second. If it falls behind, the picture judders. So the game watches how long
 ## frames take and, when they run long, steps the picture quality down a notch (a little less sharp, then lighter edge smoothing);
 ## when there is plenty of room it steps back up, never past the player's own Sharpness setting.
-const TIERS := [
-	{"sharp": 1.6, "msaa": 4}, {"sharp": 1.3, "msaa": 4}, {"sharp": 1.15, "msaa": 4}, {"sharp": 1.0, "msaa": 4},
-	{"sharp": 0.9, "msaa": 2}, {"sharp": 0.8, "msaa": 2}, {"sharp": 0.7, "msaa": 0}]
-var q_tier := 1
+## Off unless the player turns it on. It only ever softens the picture a little (never below 1.0 and the edge smoothing stays at 4x), because a
+## clear picture matters more than a perfect frame rate. Left on automatically it once spiralled down to a blurry, jagged picture.
+const TIERS := [{"sharp": 1.3, "msaa": 4}, {"sharp": 1.15, "msaa": 4}, {"sharp": 1.0, "msaa": 4}]
+var q_tier := 0
 var fps_now := 0.0
 var _perf_sum := 0.0
 var _perf_n := 0
@@ -441,7 +441,7 @@ var fps_label: Label3D
 
 func _tier_sharp() -> float:
 	var want := clampf(float(settings.sharp), 0.7, 1.6)
-	if str(settings.auto) != "on":
+	if str(settings.smooth) != "on":
 		return want
 	return minf(want, float(TIERS[clampi(q_tier, 0, TIERS.size() - 1)].sharp))
 
@@ -453,7 +453,7 @@ func _apply_tier() -> void:
 	if iface != null:
 		iface.render_target_size_multiplier = _tier_sharp()
 	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
-	var msaa := int(t.msaa) if str(settings.auto) == "on" else 4
+	var msaa := int(t.msaa) if str(settings.smooth) == "on" else 4
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
 
 
@@ -485,7 +485,7 @@ func _perf_tick(delta: float) -> void:
 	_perf_t = 0.0
 	if fps_label != null and fps_label.visible:
 		fps_label.text = "%d fps  q%d  x%.2f" % [int(round(fps_now)), q_tier, _tier_sharp()]
-	if not xr_on or str(settings.auto) != "on" or _perf_age < 6.0:
+	if not xr_on or str(settings.smooth) != "on" or _perf_age < 8.0:
 		return
 	if avg > 0.0158 and q_tier < TIERS.size() - 1:       # slower than about 63 frames a second
 		_slow_s += 1.0
@@ -1713,7 +1713,7 @@ func _enter_machine(i: int) -> void:
 	audio.sfx("power", 0.6, 0.0, cab.global_position + Vector3(0, 1.3, 0.3))
 	_haptic(-1, 0.35, 0.1)
 	var tw2 := create_tween()
-	tw2.tween_method(func(v: float): target_mat.albedo_color = Color(v, v, v), 0.1, 1.35, 0.8)
+	tw2.tween_method(func(v: float): target_mat.albedo_color = Color(v, v, v), 0.1, Cabinet.SCREEN_LEVEL, 0.8)
 
 
 func _select_machine(i: int) -> void:
@@ -1733,7 +1733,7 @@ func _select_machine(i: int) -> void:
 		cab.button_pressed_visual(k, false)
 	cab = m
 	cab.set_live(emu.screen_texture() if cab.emu else cartridge.screen_texture())
-	cab.screen_mat.albedo_color = Color(1.35, 1.35, 1.35)
+	cab.screen_mat.albedo_color = Color(Cabinet.SCREEN_LEVEL, Cabinet.SCREEN_LEVEL, Cabinet.SCREEN_LEVEL)
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)
 	audio.move_to(cab)
