@@ -1,2 +1,2 @@
 ALPHA
-Build 128: pinball rebuilt from real parts, multiball, plunger fix, stone door and hole, lighter on the headset, rooms and voice
+Build 132: whole phone screen on the machines, weapon buttons, resume a paused game, your own music tracks, smoother picture, emulators (NES SNES Mega Drive GBA PC Engine Atari), play the host games in a room
