@@ -11,3 +11,11 @@ quest/addons/
 quest/tests/golden.json
 quest/vr-art/*.import
 avatars/source-cache/
+
+# emulator plug-in and cores built locally or in CI (never committed)
+quest/bin/
+quest/native/_work/
+quest/native/retro/bin/
+quest/native/retro/include/
+quest/native/retro/.sconsign.dblite
+quest/native/retro/src/*.os
