@@ -89,6 +89,25 @@ func build(host: Node) -> void:
 	_label.add_theme_font_size_override("bold_font_size", 23)
 	_label.add_theme_color_override("default_color", GREEN)
 	viewport.add_child(_label)
+	_legend_bg = ColorRect.new()
+	_legend_bg.color = Color(0, 0.03, 0, 0.82)
+	_legend_bg.size = Vector2(556, 200)
+	_legend_bg.position = Vector2(10, VIEW_H - 218)
+	_legend_bg.visible = false
+	viewport.add_child(_legend_bg)
+	_legend = RichTextLabel.new()
+	_legend.bbcode_enabled = true
+	_legend.scroll_active = false
+	_legend.size = Vector2(540, 190)
+	_legend.position = Vector2(18, VIEW_H - 212)
+	if _font != null:
+		_legend.add_theme_font_override("normal_font", _font)
+		_legend.add_theme_font_override("bold_font", _font)
+	_legend.add_theme_font_size_override("normal_font_size", 19)
+	_legend.add_theme_color_override("default_color", GREEN)
+	_legend.text = LEGEND
+	_legend.visible = false
+	viewport.add_child(_legend)
 	session = EmuSession.new()
 	host.add_child(session)
 	local_session = session
@@ -173,7 +192,18 @@ func rom_folder_hint() -> String:
 	return ProjectSettings.globalize_path("user://roms")
 
 
-## stick: -1..1 each way (y: up is negative); a/b/c/d/start/menu are the machine's buttons.
+## Whether a game is on screen (or about to be): the VR controllers' sticks, triggers and menu button then belong to the game.
+func in_game() -> bool:
+	return _view == "play" or _view == "pause" or _view == "remote_wait"
+
+
+const LEGEND := "[color=#ffffff]CONTROLLERS[/color]\nTHUMBSTICK ...... MOVE\nA  B  X  Y ...... BUTTONS\nGRIPS ........... L  AND  R\nTHUMBSTICK PRESS  SELECT (LEFT)\n                  START  (RIGHT)\n[color=#ffbf33]LEFT MENU BUTTON  PAUSE MENU[/color]"
+var _legend: RichTextLabel
+var _legend_bg: ColorRect
+var _legend_t := 0.0
+
+
+## stick: -1..1 each way (y: up is negative); a/b/c/d/start/menu are the machine's buttons (and the Quest controllers' buttons, see vr_main).
 func set_input(stick: Vector2, buttons: Dictionary) -> void:
 	var up := stick.y < -0.55 and _stick_prev.y >= -0.55
 	var down := stick.y > 0.55 and _stick_prev.y <= 0.55
@@ -255,6 +285,7 @@ func _launch(f: Dictionary) -> void:
 		_picture.texture = session.texture
 		_label.visible = false
 		_fit_picture()
+		_legend_t = 8.0
 	else:
 		_info = f.duplicate()
 		_info["error"] = err
@@ -344,6 +375,12 @@ func tick(delta: float) -> void:
 	_t += delta
 	if _select_t > 0.0:
 		_select_t -= delta
+	if _legend_t > 0.0 and _view == "play" and not hold:
+		_legend_t -= delta
+	var show_legend := _legend_t > 0.0 and _view == "play"
+	if _legend != null and (_legend.visible != show_legend):
+		_legend.visible = show_legend
+		_legend_bg.visible = show_legend
 	# the screen only redraws every frame while a game is running at the machine; the menu just redraws when it changes (twice a second)
 	var live := (_view == "play" and session.running and not hold) or (_view == "pause" and session.running)
 	if live:
@@ -359,6 +396,7 @@ func tick(delta: float) -> void:
 			_picture.texture = session.texture
 			_label.visible = false
 			_fit_picture()
+			_legend_t = 8.0
 		elif rs == null or (not rs.waiting and not rs.running) or _wait_t > 10.0:
 			var why := rs.ended_message if (rs != null and rs.ended_message != "") else "THE HOST DID NOT ANSWER"
 			if rs != null:
@@ -410,7 +448,7 @@ func _redraw() -> void:
 				t += "[bgcolor=#40ff60][color=#001a00]%s[/color][/bgcolor]\n" % line
 			else:
 				t += line + "\n"
-		t += "\n[color=#9aa]STICK UP/DOWN  A CHOOSE\nMENU/B  BACK TO THE GAME[/color]\n"
+		t += "\n[color=#9aa]THUMBSTICK UP/DOWN, THEN A  CHOOSE\nB OR LEFT MENU BUTTON  BACK TO GAME[/color]\n"
 		if status != "":
 			t += "\n[color=#ffbf33]%s[/color]" % status
 		_label.text = t
@@ -470,7 +508,7 @@ func _redraw() -> void:
 				t += line + "\n"
 		t += "\n[color=#9aa]%d FILE(S)   * = NO EMULATOR\nEMULATOR: %s[/color]\n" % [files.size(), EmuSession.plugin_status()]
 	t += "[color=#ffbf33]%s[/color]\n" % status if status != "" else "\n"
-	t += "[color=#9aa]STICK PICK  A OPEN  B RESCAN\nC WI-FI TRANSFER[/color]\nC:\\GAMES>%s" % cursor
+	t += "[color=#9aa]STICK PICK  A OPEN  B RESCAN\nX (OR C) WI-FI TRANSFER[/color]\nC:\\GAMES>%s" % cursor
 	_label.text = t
 
 

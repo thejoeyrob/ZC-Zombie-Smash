@@ -279,7 +279,7 @@ func _build_screen() -> void:
 
 static func _blank_hand() -> Dictionary:
 	return {"xf": Transform3D.IDENTITY, "grip": Vector3.ZERO, "gripping": false, "trigger": false, "grip_val": 0.0, "trig_val": 0.0,
-		"stick": Vector2.ZERO, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0, "angles": {}, "idx_touch": false, "palm_up": 0.0}
+		"stick": Vector2.ZERO, "click": false, "a": false, "b": false, "menu": false, "aim_origin": Vector3.ZERO, "aim_dir": Vector3.FORWARD, "active": true, "bare": false, "thumb": -1.0, "angles": {}, "idx_touch": false, "palm_up": 0.0}
 
 
 func _build_hands() -> void:
@@ -941,6 +941,7 @@ func _read_hands(delta: float) -> Array:
 			d.a = c.is_button_pressed("ax_button")
 			d.b = c.is_button_pressed("by_button")
 			d.menu = c.is_button_pressed("menu_button")
+			d.click = c.is_button_pressed("primary_click")
 			# the controller senses where your fingers rest, so the hand can copy them: thumb on a button or stick, index on the trigger
 			var thumb_on: bool = c.is_button_pressed("ax_touch") or c.is_button_pressed("by_touch") or c.is_button_pressed("primary_touch") or d.a or d.b
 			d.idx_touch = c.is_button_pressed("trigger_touch") or trig_val > 0.05
@@ -1187,6 +1188,8 @@ func _head_floor() -> Vector3:
 
 func _menu_input(hs: Array) -> void:
 	var pressed: bool = hs[0].menu or hs[1].menu
+	if cab.emu and locked and emu.in_game():
+		pressed = false                           # in a game on the emulator machine this button is its pause menu (see _emu_controller)
 	if pressed and not menu_prev_btn:
 		if menu.open:
 			_close_menu()
@@ -1224,11 +1227,12 @@ func _locomotion(hs: Array, delta: float) -> void:
 		ph = 1 - ph
 	if locked:
 		selector.aim(Vector3.ZERO, Vector3.UP)
-		if xr_on or demo:
+		var emu_busy: bool = cab.emu and emu.in_game()          # the thumbsticks and triggers are the game's controls: no leaving by them mid-game
+		if (xr_on or demo) and not emu_busy:
 			_leave_gesture(hs, ph, delta)
 		# walking away is the quick way out: push the left stick for a moment and you are free again
 		var mvl: Vector2 = hs[0].stick
-		if xr_on and mvl.length() > 0.65 and str(settings.assist) != "on":
+		if xr_on and mvl.length() > 0.65 and str(settings.assist) != "on" and not emu_busy:
 			walk_out_t += delta
 		else:
 			walk_out_t = 0.0
@@ -1611,8 +1615,35 @@ func _stick2(hs: Array, delta: float) -> void:
 	cab.set_stick2(roll2, pitch2)
 
 
+## The emulator machine can be played with the Quest controllers themselves (the machine's own stick and buttons still work too):
+##   either thumbstick ..... the D-pad            right A ... the game's bottom button (B on a Nintendo pad)
+##   right B ............... the right button     left X ... the left button      left Y ... the top button
+##   either grip ........... L (left grip) and R (right grip) shoulder buttons          either trigger ... the same as right A
+##   left stick press ...... SELECT              right stick press ... START          left menu button (three lines) ... pause menu
+func _emu_controller(hs: Array) -> Dictionary:
+	var st := Vector2.ZERO
+	for i in [0, 1]:
+		var v: Vector2 = hs[i].stick
+		if v.length() > 0.3 and v.length() > st.length():
+			st = Vector2(v.x, -v.y)
+	var b := {"a": false, "b": false, "c": false, "d": false, "l": false, "r": false, "select": false, "start": false, "menu": false}
+	if not hs[1].bare:
+		b.a = hs[1].a or hs[0].trigger or hs[1].trigger
+		b.b = hs[1].b
+		b.r = hs[1].gripping
+		b.start = hs[1].click
+	if not hs[0].bare:
+		b.c = hs[0].a
+		b.d = hs[0].b
+		b.l = hs[0].gripping
+		b.select = hs[0].click
+		b.menu = hs[0].menu
+	return {"stick": st, "buttons": b}
+
+
 const WEAPON_BUTTONS := {"w_smg": "smg", "w_shotgun": "shotgun", "w_dmr": "dmr", "w_burst": "burst"}
 var weapon_prev := {}
+var controller_stick := Vector2.ZERO
 
 
 func _buttons(hs: Array) -> void:
@@ -1645,10 +1676,19 @@ func _buttons(hs: Array) -> void:
 			down["fire"] = true
 		elif stick_fp > 0.62:
 			down["grenade"] = true
+	if cab.emu and locked and not menu.open:
+		var ec := _emu_controller(hs)
+		for k in ec.buttons:
+			down[k] = bool(down.get(k, false)) or bool(ec.buttons[k])
+		controller_stick = ec.stick
+	else:
+		controller_stick = Vector2.ZERO
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
 	if cab.emu:
 		var st := Vector2(axis, pitch / (Cabinet.MAX_TILT * 0.7))
+		if controller_stick.length() > 0.3:
+			st = controller_stick
 		if locked:
 			emu.set_input(st, down)
 		fire_now = false

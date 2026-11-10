@@ -301,5 +301,7 @@ static func pad_from(stick: Vector2, b: Dictionary, select_now: bool, sys: Strin
 	if b.get("c", false): m |= 1 << BTN_Y
 	if b.get("d", false): m |= 1 << BTN_X
 	if start and not shoulder: m |= 1 << BTN_START
-	if select_now: m |= 1 << BTN_SELECT
+	if select_now or b.get("select", false): m |= 1 << BTN_SELECT
+	if b.get("l", false): m |= 1 << BTN_L
+	if b.get("r", false): m |= 1 << BTN_R
 	return m
