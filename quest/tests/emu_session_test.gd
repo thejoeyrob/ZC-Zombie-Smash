@@ -101,7 +101,7 @@ func _initialize() -> void:
 		await process_frame
 	print("paused: view=", emu._view, " frames moved while paused: ", fc.frames - before)
 	if emu._view != "pause" or fc.frames != before: bad += 1
-	emu._pause_index = 3
+	emu._pause_index = 1
 	emu.set_input(Vector2.ZERO, {"a": true})
 	emu.set_input(Vector2.ZERO, {})
 	print("save state: ", emu.status, "  has_state=", emu.session.has_state())
@@ -118,7 +118,7 @@ func _initialize() -> void:
 	if fc.frames != h0: bad += 1
 	emu.hold = false
 	# exit the game from the pause menu (it is still open from the step above)
-	emu._pause_index = 5
+	emu._pause_index = 4
 	emu.set_input(Vector2.ZERO, {"a": true})
 	emu.set_input(Vector2.ZERO, {})
 	print("after exit: view=", emu._view, " running=", emu.session.running)

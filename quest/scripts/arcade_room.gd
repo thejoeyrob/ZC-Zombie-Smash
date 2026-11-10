@@ -49,22 +49,22 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.01, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_energy = 0.58
+	env.ambient_light_energy = 0.53
 	env.ambient_light_color = Color(0.58, 0.61, 0.68)
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.0
+	env.tonemap_exposure = 1.08
 	# a softer, more natural picture: a gentle haze that grows with distance (it also hides shimmer far away), slightly relaxed colour and
 	# contrast, and a light bloom so the bright neon rolls off instead of ending in a hard digital edge
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.08, 0.10, 0.14)
-	env.fog_density = 0.008
+	env.fog_density = 0.003
 	env.fog_sky_affect = 1.0
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 0.9
-	env.adjustment_contrast = 0.97
+	env.adjustment_saturation = 1.04
+	env.adjustment_contrast = 1.055
 	env.glow_enabled = true
-	env.glow_intensity = 0.55
-	env.glow_strength = 0.9
+	env.glow_intensity = 0.35
+	env.glow_strength = 0.68
 	env.glow_bloom = 0.0
 	env.glow_hdr_threshold = 1.0
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
@@ -103,6 +103,7 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var cz := (BACK_Z + FRONT_Z) / 2.0
 	var carpet := VRBuild.pbr("tiles-bw", Color(0.86, 0.86, 0.9), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
+	VRSurfaceRelief.tile_floor(root, w, d, cz, carpet)
 	var ceiling := VRBuild.pbr("tiles", Color(0.22, 0.22, 0.3), Vector2(w / 2.4, d / 2.4), 0.8)      # dark ceiling tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
 	# the back wall and the two side walls (the front wall, with the door, belongs to the door scene)
@@ -120,6 +121,8 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
 		wm.texture_repeat = true
 		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
+		# True low-profile brick edges: static geometry instead of flat bump-map illusion.
+		VRSurfaceRelief.brick_wall(root_w, float(wall[2]), HEIGHT, wm)
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
 		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.2, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
 		VRBuild.box(root_w, Vector3(wall[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(wall[2] / 0.7, 0.34), 1.8))   # tall green washed wood skirting

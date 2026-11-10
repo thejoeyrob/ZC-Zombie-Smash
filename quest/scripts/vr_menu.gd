@@ -198,7 +198,7 @@ func _label(text: String, size := 32, color := Color(0.85, 0.9, 1.0)) -> Label:
 	return l
 
 
-const PAGES := [["friends", "FRIENDS", Color("#268a88")], ["play", "PLAY", Color("#1f8f4a")], ["avatar", "AVATAR", Color("#7a3fd0")], ["hands", "HANDS", Color("#2a7fb8")], ["comfort", "COMFORT", Color("#b8782a")], ["display", "DISPLAY", Color("#2a9aa8")], ["sound", "SOUND", Color("#a82a6a")]]
+const PAGES := [["play", "PLAY", Color("#1f8f4a")], ["friends", "FRIENDS", Color("#268a88")], ["avatar", "CHARACTER", Color("#7a3fd0")], ["comfort", "CONTROLS", Color("#b8782a")], ["display", "PICTURE + SOUND", Color("#2a9aa8")]]
 var LABELS := {
 	"handmode": {"auto": "AUTO", "controllers": "CONTROLLERS", "hands": "BARE HANDS"},
 	"body": {"full": "FULL BODY", "arms": "ARMS ONLY", "hands": "HANDS ONLY"},
@@ -252,26 +252,25 @@ func _page_index(name: String) -> int:
 func _build_ui() -> void:
 	var back := PanelContainer.new()
 	back.size = Vector2(VIEW)
-	back.add_theme_stylebox_override("panel", _style(Color(0.035, 0.05, 0.065, 0.98), Color(0.32, 0.52, 0.58, 0.9), 18))
+	back.add_theme_stylebox_override("panel", _style(Color(0.025, 0.040, 0.057, 0.98), Color(0.26, 0.64, 0.58, 0.85), 18))
 	viewport.add_child(back)
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 10)
+	root.add_theme_constant_override("separation", 14)
 	back.add_child(root)
-	var title := _label("FATTY'S GAME SHACK" + ("      build %d" % build_number if build_number > 0 else ""), 50, Color(1.0, 0.85, 0.3))
+	var title := _label("FATTY'S GAME SHACK" + ("	 %d" % build_number if build_number > 0 else ""), 45, Color("#f5c968"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(title)
 	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 20)
+	body.add_theme_constant_override("separation", 16)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(body)
-	# the tabs down the left
 	var tabs := VBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 10)
-	tabs.custom_minimum_size = Vector2(230, 0)
+	tabs.add_theme_constant_override("separation", 12)
+	tabs.custom_minimum_size = Vector2(255, 0)
 	body.add_child(tabs)
 	for pg in PAGES:
-		var tb := _button(pg[1], Color("#1b1e34"), 36)
-		tb.custom_minimum_size = Vector2(230, 72)
+		var tb := _button(pg[1], Color("#1b2531"), 30)
+		tb.custom_minimum_size = Vector2(255, 94)
 		var id: String = pg[0]
 		tb.pressed.connect(func(): show_page(id))
 		tabs.add_child(tb)
@@ -284,93 +283,81 @@ func _build_ui() -> void:
 		var pv := _page(pg[0])
 		holder.add_child(pv)
 		pv.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# PLAY
+	# PLAY: primary action first; practice options are secondary.
 	var play: VBoxContainer = _pages.play
-	_heading(play, "BOSS BATTLE")
+	_heading(play, "READY TO PLAY?")
+	var resume := _button("CONTINUE PLAYING", Color("#267e59"), 36)
+	resume.pressed.connect(func(): action.emit("resume"))
+	play.add_child(resume)
 	var names: Array = []
-	for b in ZSEngine.BOSSES:
-		names.append(str(b.name))
-	_stepper(play, "battle", "Boss", names, "")
-	var fight := _button("FIGHT THIS BOSS (PRACTICE)", Color("#7a2a8f"), 32)
+	for boss in ZSEngine.BOSSES:
+		names.append(str(boss.name))
+	_stepper(play, "battle", "Practice boss", names, "")
+	var fight := _button("PRACTICE THIS BOSS", Color("#663586"), 30)
 	fight.pressed.connect(func(): action.emit("fight"))
 	play.add_child(fight)
-	var story := _button("REPLAY THE STORY (comic intro)", Color("#2a5fa8"), 30)
+	var story := _button("REPLAY STORY", Color("#275c80"), 30)
 	story.pressed.connect(func(): action.emit("story"))
 	play.add_child(story)
-	# AVATAR
+	var end := _button("END CURRENT GAME", Color("#813939"), 28)
+	end.pressed.connect(func(): action.emit("end"))
+	play.add_child(end)
+	# FRIENDS panel populated by LobbyPanel in vr_main.gd after menu.build().
+	var friends: VBoxContainer = _pages.friends
+	_heading(friends, "PLAY TOGETHER")
+	# CHARACTER: only the five existing bespoke game-character GLB rigs.
 	var av: VBoxContainer = _pages.avatar
-	_heading(av, "YOUR LOOK")
-	var skin_ids: Array = []
-	var skin_labels := {}
-	for sk in VRAvatar.SKINS:
-		skin_ids.append(sk.id)
-		skin_labels[sk.id] = sk.name
-	LABELS["skin"] = skin_labels
-	_stepper(av, "skin", "Outfit", skin_ids, "")
-	_stepper(av, "body", "Show", ["full", "arms", "hands"], "")
-	_hint(av, "Try looks on at the Avatar Locker, the machine just left of the door as you come in. Walk up and press its buttons.")
-	# HANDS
-	var hd: VBoxContainer = _pages.hands
-	_heading(hd, "CONTROLS")
-	_stepper(hd, "handmode", "Input", ["auto", "controllers", "hands"], "")
-	_hint(hd, "AUTO uses controllers when you hold them and your bare hands when you put them down. With bare hands: point and pinch to choose, touch buttons with a finger, turn your left palm up for the wrist panel.")
-	_stepper(hd, "pointer", "Pointer hand", ["right", "left"], "")
-	_stepper(hd, "assist", "Controller assist (marks scores *)", ["off", "on"], "")
-	_slider(hd, "haptics", "Vibration", 0.0, 1.0, 0.1)
-	_heading(hd, "IF HANDS LOOK TWISTED")
-	_stepper(hd, "handroll", "Hand roll", [-90, -60, -30, 0, 30, 60, 90, 180], "°")
-	_stepper(hd, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
-	# COMFORT
+	_heading(av, "CHOOSE A GAME CHARACTER")
+	var ids: Array = []
+	var names_by_id := {}
+	for skin in VRAvatar.SKINS:
+		ids.append(skin.id)
+		names_by_id[skin.id] = skin.name
+	LABELS["skin"] = names_by_id
+	_stepper(av, "skin", "Character", ids, "")
+	_stepper(av, "body", "Visible body", ["full", "arms", "hands"], "")
+	_hint(av, "You can also change characters at the locker by the entrance.")
+	# CONTROLS: the normal player sees basic comfort and hand controls.
 	var cf: VBoxContainer = _pages.comfort
-	_heading(cf, "HEIGHT AND DISTANCE")
+	_heading(cf, "HEADSET AND HANDS")
 	_slider(cf, "lift", "Player height", -0.5, 0.8, 0.02)
-	_slider(cf, "reach", "Distance to machine", -0.25, 0.4, 0.02)
-	_heading(cf, "MOVING")
+	_slider(cf, "reach", "Machine distance", -0.25, 0.4, 0.02)
+	_stepper(cf, "handmode", "Hands", ["auto", "controllers", "hands"], "")
+	_stepper(cf, "pointer", "Menu pointer", ["right", "left"], "")
 	_stepper(cf, "turn", "Turning", ["smooth", "snap"], "")
-	_stepper(cf, "turnspeed", "Smooth turn speed", [60, 90, 120, 150], "°/s")
-	_stepper(cf, "snap", "Snap turn size", [15, 30, 45, 60, 90], "°")
-	_stepper(cf, "walk", "Walk speed", [1.0, 1.5, 2.0, 2.5], " m/s")
-	# DISPLAY
+	_stepper(cf, "snap", "Snap angle", [30, 45, 60], "°")
+	var advanced := VBoxContainer.new()
+	advanced.visible = false
+	cf.add_child(advanced)
+	_stepper(advanced, "handroll", "Hand roll", [-90, -60, -30, 0, 30, 60, 90, 180], "°")
+	_stepper(advanced, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
+	_slider(advanced, "haptics", "Vibration", 0.0, 1.0, 0.1)
+	var advanced_button := _button("ADVANCED HAND ALIGNMENT", Color("#303848"), 26)
+	advanced_button.pressed.connect(func():
+		advanced.visible = not advanced.visible
+		advanced_button.text = "HIDE ADVANCED CONTROLS" if advanced.visible else "ADVANCED HAND ALIGNMENT")
+	cf.add_child(advanced_button)
+	# VIDEO: preserve eye resolution; never offer silent adaptive blur.
 	var dp: VBoxContainer = _pages.display
 	_heading(dp, "PICTURE")
-	_slider(dp, "sharp", "Sharpness", 0.9, 1.6, 0.1)
-	_hint(dp, "Higher is clearer far away but works the headset harder. Lower it if the picture stutters.")
-	_slider(dp, "screenlight", "Game screen brightness", 0.5, 1.2, 0.05)
-	_hint(dp, "How bright the picture on the arcade machines is. Turn it down if it looks washed out.")
-	_stepper(dp, "smooth", "Soften picture if it stutters", ["off", "on"], "")
-	_hint(dp, "Off keeps the picture as clear as your Sharpness setting. On: it softens a little (never below 1.0) when the headset falls behind.")
-	_stepper(dp, "fps", "Show frame rate", ["off", "on"], "")
-	_stepper(dp, "glow", "Soft glow on neon", ["on", "off"], "")
-	_stepper(dp, "hud", "Screen shake", ["on", "off"], "")
-	_heading(dp, "JOYSTICK TOP")
-	var sw := HBoxContainer.new()
-	sw.add_theme_constant_override("separation", 10)
-	dp.add_child(sw)
-	for k in TOPPERS:
-		var b := _button("", TOPPERS[k])
-		b.custom_minimum_size = Vector2(88, 80)
-		b.pressed.connect(func():
-			set_value("topper", k)
-			changed.emit("topper", k))
-		sw.add_child(b)
-		_widgets["topper_" + k] = b
-	# SOUND
-	var sd: VBoxContainer = _pages.sound
-	_heading(sd, "VOLUME")
-	_slider(sd, "music", "Music", 0.0, 1.0, 0.05)
-	_slider(sd, "effects", "Effects", 0.0, 1.0, 0.05)
-	# the buttons that are always there
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	root.add_child(row)
-	for a in [["RESUME", "resume", Color("#1f8f4a")], ["RECENTRE", "recentre", Color("#2a5fa8")], ["END GAME", "end", Color("#a8302a")], ["EXIT ARCADE", "quit", Color("#5a1a1a")]]:
-		var bt := _button(a[0], a[2], 36)
-		bt.custom_minimum_size = Vector2(0, 76)
-		bt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		bt.pressed.connect(func(): action.emit(a[1]))
-		row.add_child(bt)
-	for k in values:
-		_refresh(k)
+	_slider(dp, "sharp", "Image sharpness", 1.0, 1.6, 0.1)
+	_slider(dp, "screenlight", "Arcade screens", 0.5, 1.15, 0.05)
+	_stepper(dp, "glow", "Neon bloom", ["on", "off"], "")
+	_stepper(dp, "fps", "Show FPS", ["off", "on"], "")
+	_heading(dp, "SOUND")
+	_slider(dp, "music", "Music", 0.0, 1.0, 0.05)
+	_slider(dp, "effects", "Effects", 0.0, 1.0, 0.05)
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", 20)
+	root.add_child(footer)
+	for entry in [["RESUME", "resume", Color("#267e59")], ["RECENTRE", "recentre", Color("#325e8b")], ["EXIT ARCADE", "quit", Color("#73393b")]]:
+		var b := _button(entry[0], entry[2], 32)
+		b.custom_minimum_size = Vector2(0, 72)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(func(): action.emit(entry[1]))
+		footer.add_child(b)
+	for key in values:
+		_refresh(key)
 	show_page("play")
 
 

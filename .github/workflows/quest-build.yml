@@ -136,7 +136,8 @@ jobs:
       # ---- the emulator: a plug-in and the open-source cores (pinned commits, see quest/native), built first so the main app can carry them ----
       - name: Build the emulator plug-in and cores
         id: native
-        continue-on-error: true
+        # A successful APK must not conceal a broken or zero-core emulator build.
+        continue-on-error: false
         shell: bash
         run: |
           set -euo pipefail
@@ -147,6 +148,7 @@ jobs:
           cd quest/native
           ./build-native.sh android
           ./build-cores.sh android
+          test -s ../bin/cores/libfceumm_libretro.so
           ./make-gdextension.sh
 
       - name: Export the APK (with the emulators when they built)
@@ -176,7 +178,8 @@ jobs:
             godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
           fi
           cp build/zombie-smash-vr.apk "build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk"
-          unzip -l build/zombie-smash-vr.apk | grep -E "libretro" || echo "(no emulator libraries in the main app)"
+          unzip -l build/zombie-smash-vr.apk | grep -E "libretro" || true
+          python3 tools/check-emulator-apk.py build/zombie-smash-vr.apk
           ls -la build
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}

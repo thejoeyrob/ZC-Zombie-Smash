@@ -414,7 +414,7 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	if n != null:
 		m.normal_enabled = true
 		m.normal_texture = n
-		m.normal_scale = minf(normal_scale * 0.5, 1.4)      # gentle relief: strong normal maps sparkle and crawl at a distance in the headset
+		m.normal_scale = clampf(normal_scale, 0.85, 1.8)     # preserve authored embossed relief; clamp for Quest stability
 	if r != null:
 		m.roughness_texture = r
 		m.roughness = 1.0

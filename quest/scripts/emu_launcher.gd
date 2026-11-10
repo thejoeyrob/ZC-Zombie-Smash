@@ -25,7 +25,7 @@ const ROWS := 15
 const GREEN := Color(0.35, 1.0, 0.45)
 const AMBER := Color(1.0, 0.75, 0.2)
 const GREY := Color(0.75, 0.78, 0.8)
-const PAUSE_ITEMS := ["RESUME", "RESET GAME", "PRESS SELECT", "SAVE STATE", "LOAD STATE", "EXIT GAME"]
+const PAUSE_ITEMS := ["RESUME GAME", "SAVE STATE", "LOAD STATE", "RESTART GAME", "EXIT TO LIBRARY"]
 
 var viewport: SubViewport
 var files: Array = []          # {name, file, path, system, size}
@@ -197,7 +197,7 @@ func in_game() -> bool:
 	return _view == "play" or _view == "pause" or _view == "remote_wait"
 
 
-const LEGEND := "[color=#ffffff]CONTROLLERS[/color]\nTHUMBSTICK ...... MOVE\nA  B  X  Y ...... BUTTONS\nGRIPS ........... L  AND  R\nTHUMBSTICK PRESS  SELECT (LEFT)\n                  START  (RIGHT)\n[color=#ffbf33]LEFT MENU BUTTON  PAUSE MENU[/color]"
+const LEGEND := "[color=#ffffff]CLASSIC CONTROLS[/color]\nLEFT STICK   MOVE / D-PAD\nA  B  X  Y   GAME BUTTONS\nGRIPS  L / R\nLEFT STICK CLICK  SELECT\nRIGHT STICK CLICK  START\n[color=#ffbf33]LEFT MENU  PAUSE / EXIT[/color]"
 var _legend: RichTextLabel
 var _legend_bg: ColorRect
 var _legend_t := 0.0
@@ -347,18 +347,15 @@ func _pause_choice(i: int) -> void:
 		0:
 			_view = "play"
 		1:
-			session.reset()
+			status = "STATE SAVED" if session.save_state() else "SAVE FAILED"
 			_view = "play"
 		2:
-			_select_t = 0.25
-			_view = "play"
-		3:
-			status = "STATE SAVED" if session.save_state() else "COULD NOT SAVE"
-			_view = "play"
-		4:
 			status = "STATE LOADED" if session.load_state() else "NO SAVED STATE"
 			_view = "play"
-		5:
+		3:
+			session.reset()
+			_view = "play"
+		4:
 			_end_game()
 
 
@@ -438,77 +435,63 @@ func _pad_s(s: String, n: int) -> String:
 func _redraw() -> void:
 	if _label == null:
 		return
-	var cursor := "_" if int(_t * 2.0) % 2 == 0 else " "
-	var t := ""
+	var t := "[color=#e7fff0]FATTY'S CLASSIC ARCADE[/color]\n"
+	t += "[color=#83bca1]JW EDS	GAME LIBRARY[/color]\n\n"
 	if _view == "pause":
-		t += "[color=#ffffff]GAME PAUSED[/color]\n[color=#9aa]%s[/color]\n\n" % str(session.rom_name).to_upper().substr(0, 32)
+		t += "[color=#ffffff]PAUSED[/color]\n%s\n\n" % str(session.rom_name).to_upper().substr(0, 30)
 		for i in range(PAUSE_ITEMS.size()):
-			var line := _pad_s(PAUSE_ITEMS[i], COLS)
-			if i == _pause_index:
-				t += "[bgcolor=#40ff60][color=#001a00]%s[/color][/bgcolor]\n" % line
-			else:
-				t += line + "\n"
-		t += "\n[color=#9aa]THUMBSTICK UP/DOWN, THEN A  CHOOSE\nB OR LEFT MENU BUTTON  BACK TO GAME[/color]\n"
+			var line: String = PAUSE_ITEMS[i]
+			t += ("[bgcolor=#33d884][color=#04190e]> %s[/color][/bgcolor]\n" if i == _pause_index else "  %s\n") % line
+		t += "\n[color=#b4dac5]STICK = MOVE   A = SELECT\nB / MENU = RESUME[/color]"
 		if status != "":
-			t += "\n[color=#ffbf33]%s[/color]" % status
+			t += "\n[color=#ffcf77]%s[/color]" % status
 		_label.text = t
 		return
-	t += "[color=#ffffff]JW EDS ARCADE OS  Version 1.1[/color]\n"
-	t += "[color=#9aa]Copyright (c) JW EDS. All rights reserved.[/color]\n\n"
 	if _view == "remote_wait":
-		t += "[color=#ffffff]CONNECTING TO THE HOST'S MACHINE[/color]\n\n%s\n\nASKING THE HOST TO START THE GAME%s\n" % [str(_info.get("name", "")), ".".repeat(1 + int(_t * 2.0) % 3)]
-		_label.text = t
+		_label.text = t + "[color=#ffffff]CONNECTING TO ROOM HOST...[/color]\n\n%s" % str(_info.get("name", ""))
 		return
 	if _view == "wifi":
 		var addr := server.address()
-		t += "[color=#ffffff]WI-FI GAME TRANSFER[/color]\n\n"
+		t += "[color=#ffffff]ADD GAMES BY WI-FI[/color]\n\n"
 		if addr == "":
-			t += "[color=#ffbf33]NOT CONNECTED TO A NETWORK.\nJOIN WI-FI IN THE QUEST SETTINGS.[/color]\n\n"
+			t += "[color=#ffcf77]CONNECT THE QUEST TO WI-FI.[/color]\n"
 		else:
-			t += "ON A PHONE OR COMPUTER ON THE\nSAME WI-FI, OPEN:\n\n[color=#ffffff]%s[/color]\n\nTHEN TYPE THE PIN:\n\n[color=#ffffff]       %s[/color]\n\n" % [addr, server.pin]
-		t += "RECEIVED THIS TIME: %d\n" % server.received
-		if server.last_name != "":
-			t += "[color=#9aa]LAST: %s[/color]\n" % server.last_name.to_upper().substr(0, 30)
-		t += "\n[color=#9aa]ANY BUTTON  STOP AND GO BACK%s[/color]" % cursor
+			t += "OPEN THIS ON YOUR PHONE\n(SAME WI-FI NETWORK):\n\n[color=#ffffff]%s[/color]\n\n" % addr
+			t += "ENTER PIN: [color=#ffffff]%s[/color]\n" % server.pin
+		t += "\nRECEIVED: %d\n\n[color=#b4dac5]A / B / X TO FINISH[/color]" % server.received
 		_label.text = t
 		return
 	if _view == "info":
-		var f: Dictionary = _info
-		t += "C:\\GAMES\\%s\n\n" % str(f.file).to_upper()
-		t += "[color=#ffffff]TITLE ......  %s[/color]\n" % str(f.name).substr(0, 24)
-		t += "SYSTEM ....  %s\n" % str(f.system)
-		t += "SIZE ......  %s\n\n" % _size_text(int(f.size))
-		if f.has("error"):
-			t += "[color=#ffbf33]%s[/color]\n\n" % str(f.error)
-		else:
-			if EmuSession.core_for(str(f.system)) == "":
-				t += "[color=#ffbf33]NO EMULATOR FOR %s.[/color]\n\n" % str(f.system)
-			else:
-				t += "[color=#ffbf33]EMULATOR %s[/color]\n\n" % EmuSession.plugin_status()
-		t += "PRESS ANY BUTTON TO RETURN%s" % cursor
+		t += "[color=#ffffff]%s[/color]\n%s\n\n" % [str(_info.get("name", "GAME")).substr(0, 26), str(_info.get("system", ""))]
+		t += "[color=#ffcf77]%s[/color]\n\n" % str(_info.get("error", EmuSession.plugin_status()))
+		t += "[color=#b4dac5]ANY BUTTON = BACK[/color]"
 		_label.text = t
 		return
-	t += "C:\\GAMES> DIR\n\n"
 	if not ENABLED:
-		t += "[color=#ffbf33]GAME LIBRARY NOT AVAILABLE\nIN THIS VERSION[/color]\n"
-	elif files.is_empty():
-		t += "[color=#ffbf33]FILE NOT FOUND[/color]\n\n"
-		t += "ADD YOUR OWN GAME FILES:\n[color=#ffffff]PRESS C  (OVER WI-FI)[/color]\nOR COPY THEM BY CABLE TO\n[color=#ffffff]Android/data/%s/\nfiles/roms[/color]\n\n" % PACKAGE
-		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC GBA SMS GG PCE A26 A78 LNX\n(AND ZIP)\n\n[color=#9aa]EMULATOR: %s[/color]\n" % EmuSession.plugin_status()
+		t += "[color=#ffcf77]EMULATOR UNAVAILABLE IN THIS BUILD.\nREINSTALL AN EMULATOR-ENABLED APK.[/color]"
+		_label.text = t
+		return
+	t += "[color=#b4dac5]LEFT STICK = CHOOSE  A = PLAY[/color]\n\n"
+	if files.is_empty():
+		t += "[color=#ffcf77]NO GAMES INSTALLED[/color]\n\n"
+		t += "PRESS X TO TRANSFER YOUR\nOWN GAME FILES OVER WI-FI\n\n"
+		t += "OR COPY FILES TO THE QUEST\nAPP'S ROMS FOLDER.\n\n"
 	else:
-		t += "[color=#9aa]%s  %s[/color]\n" % [_pad_s("NAME", 22), "SYSTEM"]
 		var last: int = mini(files.size(), top + ROWS)
 		for i in range(top, last):
-			var f2: Dictionary = files[i]
-			var mark := "" if (f2.get("remote", false) or EmuSession.has_core(str(f2.system))) else "*"
-			var line := "%s  %s%s" % [_pad_s(str(f2.name), 22), str(f2.system), mark]
+			var f: Dictionary = files[i]
+			var title := str(f.name).substr(0, 25)
+			var available := bool(f.get("remote", false)) or EmuSession.has_core(str(f.system))
+			var line := "%s%s" % [title, "" if available else "  [NO CORE]"]
 			if i == index:
-				t += "[bgcolor=#40ff60][color=#001a00]%s[/color][/bgcolor]\n" % _pad_s(line, COLS)
+				t += "[bgcolor=#33d884][color=#04190e]> %s[/color][/bgcolor]\n" % line
 			else:
-				t += line + "\n"
-		t += "\n[color=#9aa]%d FILE(S)   * = NO EMULATOR\nEMULATOR: %s[/color]\n" % [files.size(), EmuSession.plugin_status()]
-	t += "[color=#ffbf33]%s[/color]\n" % status if status != "" else "\n"
-	t += "[color=#9aa]STICK PICK  A OPEN  B RESCAN\nX (OR C) WI-FI TRANSFER[/color]\nC:\\GAMES>%s" % cursor
+				t += "  %s\n" % line
+		t += "\n[color=#b4dac5]%d GAMES FOUND[/color]\n" % files.size()
+	t += "\n[color=#b4dac5]X = ADD GAMES   B = REFRESH[/color]\n"
+	t += "[color=#b4dac5]EMULATOR: %s[/color]" % EmuSession.plugin_status()
+	if status != "":
+		t += "\n[color=#ffcf77]%s[/color]" % status
 	_label.text = t
 
 

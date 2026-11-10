@@ -367,6 +367,8 @@ func _load_settings() -> void:
 			settings.snap = int(settings.snap)
 			settings.handroll = int(settings.handroll)
 			settings.handtilt = int(settings.handtilt)
+	# Preserve headset clarity: a previously saved adaptive quality value must not silently downgrade the image.
+	settings.smooth = "off"
 
 
 func _save_settings() -> void:
@@ -1615,14 +1617,14 @@ func _stick2(hs: Array, delta: float) -> void:
 ##   either grip ........... L (left grip) and R (right grip) shoulder buttons          either trigger ... the same as right A
 ##   left stick press ...... SELECT              right stick press ... START          left menu button (three lines) ... pause menu
 func _emu_controller(hs: Array) -> Dictionary:
-	var st := Vector2.ZERO
-	for i in [0, 1]:
-		var v: Vector2 = hs[i].stick
-		if v.length() > 0.3 and v.length() > st.length():
-			st = Vector2(v.x, -v.y)
+	# Left stick is primary D-pad; right stick works only if left is neutral.
+	# This prevents simultaneous hand motion from fighting over the menu.
+	var st := Vector2(hs[0].stick.x, -hs[0].stick.y)
+	if st.length() < 0.25:
+		st = Vector2(hs[1].stick.x, -hs[1].stick.y)
 	var b := {"a": false, "b": false, "c": false, "d": false, "l": false, "r": false, "select": false, "start": false, "menu": false}
 	if not hs[1].bare:
-		b.a = hs[1].a or hs[0].trigger or hs[1].trigger
+		b.a = hs[1].a or hs[1].trigger
 		b.b = hs[1].b
 		b.r = hs[1].gripping
 		b.start = hs[1].click

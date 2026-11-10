@@ -63,7 +63,7 @@ func _run() -> void:
 	stage.add_child(camera)
 	camera.current = true
 	camera.fov = 34
-	for id in ["human_m01", "human_f02"]:
+	for id in ["human_joeyrob", "human_fatamy"]:
 		var avatar := VRAvatar.new()
 		stage.add_child(avatar)
 		avatar.build(false)
@@ -72,7 +72,7 @@ func _run() -> void:
 	var label := Label.new()
 	label.position = Vector2(32, 25)
 	label.add_theme_font_size_override("font_size", 24)
-	label.text = "FATTY'S GAME SHACK  /  ACTUAL GODOT RENDER  /  TWO LICENSED HUMAN PROFILES"
+	label.text = "FATTY'S GAME SHACK  /  ACTUAL GODOT RENDER  /  TWO GAME CHARACTERS"
 	root.add_child(label)
 	camera.look_at_from_position(Vector3(0, 1.35, -4.7), Vector3(0, 0.95, 0))
 	await capture("01-full-body.png")

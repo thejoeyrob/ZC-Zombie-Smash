@@ -9,16 +9,11 @@ extends Node3D
 const SKINS := [
 	{"id": "human_joeyrob", "name": "JOEY ROB", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "human_caffeinatedsloth", "name": "CAFFEINATED SLOTH", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_discoman", "name": "DISCO MAN", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_fatamy", "name": "FATAMY", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
+	{"id": "human_fatamy", "name": "FAT AMY", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "human_drmantis", "name": "DR MANTIS", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_debo", "name": "DEBO", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 	{"id": "human_glowing", "name": "GLOWING HUMANITY", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_jordan", "name": "JORDAN", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_riley", "name": "RILEY", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_m01", "name": "ALEX", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
-	{"id": "human_f02", "name": "MORGAN", "tone": "#d9a07a", "top": "#53603c", "trim": "#c9a24a", "bottom": "#2d3d5a", "shoes": "#3a2c22", "glove": "#26262a", "style": "jacket", "hat": "cap", "hat_col": "#b3262a", "hair": "#2a1c12", "gloves": false},
 ]
+
 
 const L_UPPER := 0.29
 const L_FORE := 0.26
