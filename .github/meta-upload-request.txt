@@ -1,2 +1,2 @@
 ALPHA
-Build 132: whole phone screen on the machines, weapon buttons, resume a paused game, your own music tracks, smoother picture, emulators (NES SNES Mega Drive GBA PC Engine Atari), play the host games in a room
+Build 136: picture quality restored (no automatic softening), game screens at normal brightness with a brightness slider, emulator status shown on the JW EDS menu
