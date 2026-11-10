@@ -14,7 +14,7 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	ZSEngine.setup()
 	vp = SubViewport.new()
-	vp.size = Vector2i(686, 824)
+	vp.size = Vector2i(686, int(ZSScreen.FULL_H * 2.0))
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
 	screen = ZSScreen.new()
@@ -30,6 +30,11 @@ func _ready() -> void:
 	game = ZSEngine.new(11, Callable())
 	game.invincible = true
 	game.start()
+	game.player.inventory.smg = 38.0
+	game.player.inventory.dmr = 12.0
+	game.player.lives = 3
+	game.breaches = 2
+	screen.best = 61500
 	screen.g = game
 	screen.mode = "play"
 	var jump := 1

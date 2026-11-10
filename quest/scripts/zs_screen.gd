@@ -52,8 +52,21 @@ var ss := 1.0                 # supersampling: the game is drawn this many times
 var no_shake := false
 
 
+## The picture on the machine is the whole phone screen: a bar of numbers on top (wave, zombies left, score, best), the playing field,
+## the boost meter, and under it the hearts, the weapon you hold, the stored weapons and the zombies let through.
+const TOP_H := 36.0
+const BOOST_H := 18.0
+const BOT_H := 56.0
+const FULL_H := 412.0 + TOP_H + BOOST_H + BOT_H
+var _origin := Vector2.ZERO          # where the playing field starts inside the whole screen
+
+
+func _root_xf() -> Transform2D:
+	return Transform2D(0.0, Vector2(ss, ss), 0.0, _origin * ss)
+
+
 func set_xf(pos: Vector2, rot: float) -> void:
-	_base = Transform2D(0.0, Vector2(ss, ss), 0.0, Vector2.ZERO) * Transform2D(rot, pos)
+	_base = _root_xf() * Transform2D(rot, pos)
 	draw_set_transform_matrix(_base)
 
 
@@ -199,10 +212,14 @@ func hc(s: String) -> Color:
 
 # ---- the whole frame ----------------------------------------------------------------------------
 func _draw() -> void:
-	_base = Transform2D(0.0, Vector2(ss, ss), 0.0, Vector2.ZERO)
-	draw_set_transform_matrix(_base)
 	if W == 0.0:
 		return
+	var playing := g != null and mode != "jw" and mode != "story" and mode != "title"
+	# the intro films and title are shown whole in the middle of the tall screen; the game sits between its bars
+	_origin = Vector2(0.0, TOP_H) if playing else Vector2(0.0, (FULL_H - H) / 2.0)
+	_base = _root_xf()
+	draw_set_transform_matrix(_base)
+	draw_rect(Rect2(0, -_origin.y, W, FULL_H), Color(0.01, 0.015, 0.014))
 	if mode == "jw":
 		draw_jw()
 		return
@@ -215,7 +232,7 @@ func _draw() -> void:
 	if g == null:
 		return
 	draw_world()
-	draw_hud()
+	set_xf(Vector2.ZERO, 0.0)
 	if g.scene != null:
 		draw_scene_overlay()
 	if mode == "paused":
@@ -224,6 +241,7 @@ func _draw() -> void:
 		text("PRESS MENU TO RESUME", W / 2.0, H / 2.0 + 18.0, 12, Color.WHITE)
 	if mode == "over":
 		draw_over()
+	draw_hud()                                  # the bars go on last, so nothing from the field spills over them
 
 
 func draw_jw() -> void:
@@ -446,24 +464,72 @@ func gun_art(gun: String) -> String:
 
 
 func draw_hud() -> void:
-	if g.boss != null:
-		return
 	var p: Dictionary = g.player
-	draw_rect(Rect2(0, H - 30, W, 30), Color(0.02, 0.04, 0.035, 0.78))
-	text("WAVE %d" % g.wave, 10.0, H - 11.0, 13, hc("#f5da98"), HORIZONTAL_ALIGNMENT_LEFT)
-	text(ZSEngine.commas(g.score), W / 2.0, H - 11.0, 15, Color.WHITE)
-	for i in range(p.lives):
-		var hx := W - 14.0 - i * 15.0
-		draw_heart(Vector2(hx, H - 15.0), 5.5, hc("#ff4a5a") if i < 5 else hc("#ffd24a"))
+	_origin = Vector2.ZERO
+	_base = _root_xf()
+	draw_set_transform_matrix(_base)
+	var gold := hc("#f5da98")
+	var dim := hc("#9fb3a6")
+	var y0 := TOP_H + H                                   # where the boost meter starts
+	# ---- top bar: wave, zombies left, score, best ----
+	draw_rect(Rect2(0, 0, W, TOP_H), hc("#06100cf5"))
+	draw_rect(Rect2(0, TOP_H - 1.5, W, 1.5), hc("#2d4a3a"))
+	text("WAVE", 10.0, 12.0, 9, gold, HORIZONTAL_ALIGNMENT_LEFT)
+	text(str(g.wave), 10.0, 30.0, 18, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	text("LEFT", 66.0, 12.0, 9, gold, HORIZONTAL_ALIGNMENT_LEFT)
+	text("BOSS" if g.boss != null else str(maxi(0, g.target - g.resolved)), 66.0, 30.0, 18, hc("#ff8a7a") if g.boss != null else Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	text("SCORE", 186.0, 12.0, 9, gold, HORIZONTAL_ALIGNMENT_CENTER)
+	text(ZSEngine.commas(g.score), 186.0, 30.0, 18, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+	text("BEST", W - 10.0, 12.0, 9, gold, HORIZONTAL_ALIGNMENT_RIGHT)
+	text(ZSEngine.commas(maxi(best, g.score)), W - 10.0, 30.0, 14, hc("#cfe7c8"), HORIZONTAL_ALIGNMENT_RIGHT)
+	# ---- boost meter ----
+	draw_rect(Rect2(0, y0, W, BOOST_H), hc("#06100cf5"))
+	text("BOOST ×%d" % g.multiplier, 10.0, y0 + 13.0, 9, hc("#ffe467") if g.multiplier > 1 else gold, HORIZONTAL_ALIGNMENT_LEFT)
+	draw_rect(Rect2(80, y0 + 6.0, 118, 5), hc("#26332c"))
+	draw_rect(Rect2(80, y0 + 6.0, 118.0 * clampf(g.combo_left / 7.0, 0.0, 1.0), 5), hc("#ffc93c"))
+	var need := ("×10 · KEEP IT GOING" if g.combo >= 30 else "%d KILLS TO ×%d" % [(10 if g.combo < 10 else (20 if g.combo < 20 else 30)) - g.combo, 2 if g.combo < 10 else (4 if g.combo < 20 else 10)])
+	text(need, W - 10.0, y0 + 13.0, 8, dim, HORIZONTAL_ALIGNMENT_RIGHT)
+	# ---- bottom panel ----
+	var y1 := y0 + BOOST_H
+	draw_rect(Rect2(0, y1, W, BOT_H), hc("#06100cf5"))
+	draw_rect(Rect2(0, y1, W, 1.5), hc("#2d4a3a"))
+	var maxl: int = g.max_lives
+	var lives := maxi(0, int(p.lives))
+	for i in range(maxl):                                   # hearts, the ones after the fifth in gold
+		var hx := 13.0 + i * (12.0 if maxl > 5 else 16.0)
+		var col := hc("#ff4a5a") if i < 5 else hc("#ffd24a")
+		draw_heart(Vector2(hx, y1 + 12.0), 5.5, col if i < lives else Color(col.r, col.g, col.b, 0.22))
 	var gun_name: String = ZSEngine.GUNS[p.gun].name
-	var ammo := "" if not is_finite(p.ammo) else " " + str(int(p.ammo))
+	var ammo: String = "∞" if (not is_finite(p.ammo) or g.infinite_ammo) else str(int(p.ammo))
 	if p.special != null:
-		gun_name = g.special_def(p.special.id).name + " %d" % int(ceil(p.special.left))
-		ammo = ""
-	text(gun_name + ammo, 10.0, H - 36.0, 10, hc("#cfe7c8"), HORIZONTAL_ALIGNMENT_LEFT)
-	text("GRENADES %d" % p.grenades, W - 10.0, H - 36.0, 10, hc("#8fd0ff"), HORIZONTAL_ALIGNMENT_RIGHT)
-	if g.multiplier > 1:
-		text("x%d" % g.multiplier, W - 10.0, 100.0, 22, hc("#ffe467"), HORIZONTAL_ALIGNMENT_RIGHT)
+		gun_name = g.special_def(p.special.id).name
+		ammo = "%ds" % int(ceil(p.special.left))
+	text(gun_name + "  " + ammo, W - 10.0, y1 + 14.0, 10, hc("#cfe7c8"), HORIZONTAL_ALIGNMENT_RIGHT)
+	text("LET THROUGH", 10.0, y1 + 31.0, 8, dim, HORIZONTAL_ALIGNMENT_LEFT)
+	var through := mini(10, g.breaches)
+	for i in range(10):                                     # ten faces; each zombie that gets past lights one red, ten ends the game
+		var fc := Vector2(78.0 + i * 12.0, y1 + 27.0)
+		draw_circle(fc, 4.6, hc("#d8352f") if i < through else hc("#35453b"))
+		draw_circle(fc + Vector2(-1.4, -0.5), 0.8, hc("#0a0f0c"))
+		draw_circle(fc + Vector2(1.4, -0.5), 0.8, hc("#0a0f0c"))
+	text("GRENADES", W - 44.0, y1 + 31.0, 8, dim, HORIZONTAL_ALIGNMENT_RIGHT)
+	for i in range(3):
+		draw_circle(Vector2(W - 12.0 - i * 11.0, y1 + 27.0), 4.2, hc("#8fd0ff") if i < p.grenades else hc("#26323a"))
+	if p.grenades > 3:
+		text("+%d" % (p.grenades - 3), W - 50.0, y1 + 30.0, 8, hc("#8fd0ff"), HORIZONTAL_ALIGNMENT_LEFT)
+	# the stored weapons: the ringed one is in your hand, lit ones are ready to use (a button each on the machine)
+	var names := {"smg": "SMG", "shotgun": "SCAT", "dmr": "DMR", "burst": "PULSE"}
+	var x := 7.0
+	for gun in ["smg", "shotgun", "dmr", "burst"]:
+		var active: bool = p.gun == gun
+		var rounds: float = p.ammo if active else float(p.inventory.get(gun, 0.0))
+		var ready := rounds > 0.0
+		var box := Rect2(x, y1 + 37.0, 78.0, 16.0)
+		draw_rect(box, hc("#1f4d3a") if active else (hc("#17261f") if ready else hc("#0c1410")))
+		draw_rect(box, hc("#ffc93c") if active else (hc("#4f8f6a") if ready else hc("#26332c")), false, 1.0)
+		text(names[gun], x + 6.0, y1 + 48.5, 9, Color.WHITE if ready else hc("#4d5c53"), HORIZONTAL_ALIGNMENT_LEFT)
+		text(str(int(rounds)) if ready and is_finite(rounds) else "—", x + 72.0, y1 + 48.5, 9, gold if ready else hc("#4d5c53"), HORIZONTAL_ALIGNMENT_RIGHT)
+		x += 83.0
 
 
 func draw_heart(c: Vector2, r: float, col: Color) -> void:

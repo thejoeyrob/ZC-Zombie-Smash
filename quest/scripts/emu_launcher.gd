@@ -18,6 +18,8 @@ const SYSTEMS := {
 const ENABLED := true
 const PACKAGE := "com.thejoeyrob.fattysgameshack"
 const ROM_DIRS := ["user://roms", "/storage/emulated/0/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/Android/data/com.thejoeyrob.fattysgameshack/files/roms", "/sdcard/ROMs"]
+## The machine screen is the phone's whole screen (343 x 522), so the emulator picture and its menu sit in the middle of that shape.
+const VIEW_H := 576.0 * 522.0 / 343.0
 const COLS := 34
 const ROWS := 15
 const GREEN := Color(0.35, 1.0, 0.45)
@@ -52,13 +54,13 @@ func build(host: Node) -> void:
 	_host = host
 	_font = load("res://assets/fonts/DejaVuSansMono-Bold.ttf")
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(576, 692)
+	viewport.size = Vector2i(576, int(VIEW_H))
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	viewport.transparent_bg = false
 	host.add_child(viewport)
 	var bg := ColorRect.new()
 	bg.color = Color(0.0, 0.02, 0.0)
-	bg.size = Vector2(576, 692)
+	bg.size = Vector2(576, VIEW_H)
 	viewport.add_child(bg)
 	_picture = TextureRect.new()
 	_picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -68,14 +70,14 @@ func build(host: Node) -> void:
 	viewport.add_child(_picture)
 	_shade = ColorRect.new()
 	_shade.color = Color(0, 0, 0, 0.72)
-	_shade.size = Vector2(576, 692)
+	_shade.size = Vector2(576, VIEW_H)
 	_shade.visible = false
 	viewport.add_child(_shade)
 	_label = RichTextLabel.new()
 	_label.bbcode_enabled = true
 	_label.scroll_active = false
 	_label.size = Vector2(556, 672)
-	_label.position = Vector2(14, 10)
+	_label.position = Vector2(14, 10 + (VIEW_H - 692.0) / 2.0)
 	if _font != null:
 		_label.add_theme_font_override("normal_font", _font)
 		_label.add_theme_font_override("bold_font", _font)
@@ -240,7 +242,7 @@ func _fit_picture() -> void:
 	# and is centred up and down, with black above and below
 	var asp := clampf(session.aspect, 0.8, 2.4)
 	var vw := 576.0
-	var vh := 692.0
+	var vh := VIEW_H
 	var w := vw
 	var h := vw / asp
 	if h > vh:

@@ -13,6 +13,11 @@ const STICK2_LOCAL := Vector3(0.19, 0.0, 0.03)
 const BUTTONS := {
 	"fire": {"pos": Vector3(0.205, 0.0, 0.02), "radius": 0.052},
 	"grenade": {"pos": Vector3(0.025, 0.0, 0.06), "radius": 0.03},
+	# four small buttons put a stored weapon in your hand: SMG, scatter gun, DMR, pulse gun (the screen's bottom bar shows which are loaded)
+	"w_smg": {"pos": Vector3(-0.105, 0.0, -0.09), "radius": 0.016, "col": Color("#3ccf6a")},
+	"w_shotgun": {"pos": Vector3(-0.045, 0.0, -0.09), "radius": 0.016, "col": Color("#ff9a2e")},
+	"w_dmr": {"pos": Vector3(0.015, 0.0, -0.09), "radius": 0.016, "col": Color("#2ec8f0")},
+	"w_burst": {"pos": Vector3(0.075, 0.0, -0.09), "radius": 0.016, "col": Color("#e04bd8")},
 	# these two sit on the front of the lower cabinet either side of the coin door (their pos is (x, 0, -height) in that face's frame)
 	"menu": {"pos": Vector3(0.155, 0.0, -0.56), "radius": 0.02, "front": true},
 }
@@ -47,6 +52,8 @@ var lamp_green: StandardMaterial3D
 var lock_cap_mat: StandardMaterial3D
 var back_z := -0.79
 var front_z := 0.02
+## The picture window of every machine (metres): the phone's whole screen, which is taller than the field alone. 343 x 522 game units.
+const SCREEN_SIZE := Vector2(0.46, 0.70)
 var monitor_z := -0.30
 var deck_front_z := 0.28
 var deck_front_y := 0.82
@@ -177,19 +184,21 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	sm.albedo_color = Color(1.35, 1.35, 1.35)       # a lit tube: brighter than a plain picture
 	sm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	screen_mat = sm
-	var screen_size := Vector2(0.53, 0.64)          # every machine, the emulator one too, has the phone game's screen shape
+	var screen_size := SCREEN_SIZE          # every machine, the emulator one too, shows the whole phone screen: bars of numbers, the field and the weapon rack
 	var screen_quad := VRBuild.quad(mon, screen_size, Vector3(0, 0.0, 0.1005), sm)
 	screen_quad.name = "ScreenQuad"
 	# the black border round the picture, with a bevel, like the glass of a real tube
 	var black := VRBuild.mat(Color(0.004, 0.004, 0.006), 0.22, 0.1)
-	for off in [Vector3(0, 0.34, 0.1), Vector3(0, -0.34, 0.1)]:
-		VRBuild.box(mon, Vector3(0.66, 0.12, 0.012), off, black)
-	for off in [Vector3(-0.31, 0, 0.1), Vector3(0.31, 0, 0.1)]:
-		VRBuild.box(mon, Vector3(0.06, 0.8, 0.012), off, black)
-	VRBuild.box(mon, Vector3(0.58, 0.012, 0.02), Vector3(0, 0.322, 0.098), black, Vector3(0.5, 0, 0))
-	VRBuild.box(mon, Vector3(0.58, 0.012, 0.02), Vector3(0, -0.322, 0.098), black, Vector3(-0.5, 0, 0))
-	VRBuild.box(mon, Vector3(0.012, 0.64, 0.02), Vector3(-0.268, 0, 0.098), black, Vector3(0, 0.5, 0))
-	VRBuild.box(mon, Vector3(0.012, 0.64, 0.02), Vector3(0.268, 0, 0.098), black, Vector3(0, -0.5, 0))
+	var hy := screen_size.y / 2.0
+	var hx := screen_size.x / 2.0
+	for off in [Vector3(0, hy + 0.05, 0.1), Vector3(0, -hy - 0.05, 0.1)]:
+		VRBuild.box(mon, Vector3(0.66, 0.1, 0.012), off, black)
+	for off in [Vector3(-hx - 0.07, 0, 0.1), Vector3(hx + 0.07, 0, 0.1)]:
+		VRBuild.box(mon, Vector3(0.14, 0.8, 0.012), off, black)
+	VRBuild.box(mon, Vector3(screen_size.x + 0.05, 0.012, 0.02), Vector3(0, hy + 0.002, 0.098), black, Vector3(0.5, 0, 0))
+	VRBuild.box(mon, Vector3(screen_size.x + 0.05, 0.012, 0.02), Vector3(0, -hy - 0.002, 0.098), black, Vector3(-0.5, 0, 0))
+	VRBuild.box(mon, Vector3(0.012, screen_size.y, 0.02), Vector3(-hx - 0.003, 0, 0.098), black, Vector3(0, 0.5, 0))
+	VRBuild.box(mon, Vector3(0.012, screen_size.y, 0.02), Vector3(hx + 0.003, 0, 0.098), black, Vector3(0, -0.5, 0))
 	var bezel_path := "res://assets/art/bezel-%s.jpg" % bezel_id
 	var bz = load(bezel_path) if bezel_id != "" and ResourceLoader.exists(bezel_path) else null
 	var bzd := _bezel_data()
@@ -199,7 +208,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		var win_uv := Rect2(float(w[0]) / float(d.w), float(w[1]) / float(d.h), float(w[2] - w[0]) / float(d.w), float(w[3] - w[1]) / float(d.h))
 		var bm := VRBuild.tex_mat(bz, 0.12, 0.45)
 		bm.cull_mode = BaseMaterial3D.CULL_DISABLED
-		VRBuild.frame9(mon, bz, win_uv, Vector2(0.66, 0.80), Vector2(0.53, 0.64), Vector3(0, 0, 0.1125), bm)
+		VRBuild.frame9(mon, bz, win_uv, Vector2(0.66, 0.80), screen_size, Vector3(0, 0, 0.1125), bm)
 	# the glass over all of it: a faint scanline mesh and a soft diagonal reflection
 	var glass := StandardMaterial3D.new()
 	glass.albedo_texture = VRBuild.scanline_texture()
@@ -347,7 +356,10 @@ func _make_button_defs() -> Dictionary:
 			"start": {"pos": Vector3(0.1, 0.0, -0.1), "radius": 0.017, "col": Color("#f4f4f4")},
 			"menu": menu}
 	if dual:
-		return {"menu": menu}
+		var d := {"menu": menu}
+		for k in ["w_smg", "w_shotgun", "w_dmr", "w_burst"]:
+			d[k] = BUTTONS[k]
+		return d
 	return BUTTONS.duplicate(true)
 
 

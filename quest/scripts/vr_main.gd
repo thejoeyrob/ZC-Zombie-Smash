@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "auto": "on", "fps": "off"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -143,6 +143,8 @@ func _ready() -> void:
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	_build_hands()
 	room.env.glow_enabled = str(settings.glow) == "on"
+	_show_fps(str(settings.fps) == "on")
+	_apply_tier()
 	room.skins.set_equipped(str(settings.skin))
 	room.skins.chosen.connect(func(id):
 		_on_setting("skin", id)
@@ -239,7 +241,7 @@ func _setup_xr() -> void:
 		get_viewport().use_xr = true
 		get_viewport().msaa_3d = Viewport.MSAA_4X
 		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
-		iface.render_target_size_multiplier = clampf(float(settings.sharp), 0.8, 1.6)          # draw each eye sharper than the headset's default, so far-away detail stays clean
+		iface.render_target_size_multiplier = _tier_sharp()          # draw each eye sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
 		cam = XRCamera3D.new()
 		origin.add_child(cam)
@@ -257,8 +259,8 @@ func _setup_desktop_camera() -> void:
 
 func _build_screen() -> void:
 	viewport = SubViewport.new()
-	viewport.size = Vector2i(1029, 1236)         # the 343 x 412 game, drawn three times sharper than on the phone
-	viewport.msaa_2d = Viewport.MSAA_2X
+	viewport.size = Vector2i(1029, int(ZSScreen.FULL_H * 3.0))         # the whole 343 x 522 phone screen, drawn three times sharper than on the phone
+	viewport.msaa_2d = Viewport.MSAA_DISABLED       # already drawn three times sharper than it is shown, so edge smoothing here is wasted work
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.transparent_bg = false
 	add_child(viewport)
@@ -390,6 +392,11 @@ func _on_setting(key: String, value) -> void:
 			_apply_sharpness()
 		"glow":
 			room.env.glow_enabled = value == "on"
+		"auto":
+			q_tier = 1
+			_apply_tier()
+		"fps":
+			_show_fps(str(value) == "on")
 	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
 		audio.ui("click")
 	_save_settings()
@@ -407,11 +414,98 @@ func _apply_skin(id: String) -> void:
 
 
 func _apply_sharpness() -> void:
+	_apply_tier()
+
+
+## ---- keeping the picture smooth ---------------------------------------------------------------------------------------------
+## The headset must draw a new picture every 1/72 of a second. If it falls behind, the picture judders. So the game watches how long
+## frames take and, when they run long, steps the picture quality down a notch (a little less sharp, then lighter edge smoothing);
+## when there is plenty of room it steps back up, never past the player's own Sharpness setting.
+const TIERS := [
+	{"sharp": 1.6, "msaa": 4}, {"sharp": 1.3, "msaa": 4}, {"sharp": 1.15, "msaa": 4}, {"sharp": 1.0, "msaa": 4},
+	{"sharp": 0.9, "msaa": 2}, {"sharp": 0.8, "msaa": 2}, {"sharp": 0.7, "msaa": 0}]
+var q_tier := 1
+var fps_now := 0.0
+var _perf_sum := 0.0
+var _perf_n := 0
+var _perf_t := 0.0
+var _fast_s := 0.0
+var _slow_s := 0.0
+var _perf_age := 0.0
+var _rate_set := false
+var fps_label: Label3D
+
+
+func _tier_sharp() -> float:
+	var want := clampf(float(settings.sharp), 0.7, 1.6)
+	if str(settings.auto) != "on":
+		return want
+	return minf(want, float(TIERS[clampi(q_tier, 0, TIERS.size() - 1)].sharp))
+
+
+func _apply_tier() -> void:
 	if not xr_on:
 		return
 	var iface := XRServer.find_interface("OpenXR")
 	if iface != null:
-		iface.render_target_size_multiplier = clampf(float(settings.sharp), 0.8, 1.6)
+		iface.render_target_size_multiplier = _tier_sharp()
+	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
+	var msaa := int(t.msaa) if str(settings.auto) == "on" else 4
+	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
+
+
+func _show_fps(on: bool) -> void:
+	if on and fps_label == null and cam != null:
+		fps_label = VRBuild.label(cam, "", 0.03, Vector3(-0.17, -0.19, -0.6), Color(0.6, 1.0, 0.7), Vector3.ZERO, 6, font, true)
+	if fps_label != null:
+		fps_label.visible = on
+
+
+func _perf_tick(delta: float) -> void:
+	_perf_age += delta
+	_perf_sum += delta
+	_perf_n += 1
+	_perf_t += delta
+	if _perf_age > 2.0 and not _rate_set and xr_on:
+		_rate_set = true
+		var iface := XRServer.find_interface("OpenXR")
+		if iface != null and iface.has_method("get_available_display_refresh_rates"):
+			var rates = iface.get_available_display_refresh_rates()
+			if rates is Array and rates.has(72.0):
+				iface.display_refresh_rate = 72.0        # a steady 72 beats an unsteady 90 or 120
+	if _perf_t < 1.0:
+		return
+	var avg := _perf_sum / float(_perf_n)
+	fps_now = 1.0 / maxf(avg, 0.0001)
+	_perf_sum = 0.0
+	_perf_n = 0
+	_perf_t = 0.0
+	if fps_label != null and fps_label.visible:
+		fps_label.text = "%d fps  q%d  x%.2f" % [int(round(fps_now)), q_tier, _tier_sharp()]
+	if not xr_on or str(settings.auto) != "on" or _perf_age < 6.0:
+		return
+	if avg > 0.0158 and q_tier < TIERS.size() - 1:       # slower than about 63 frames a second
+		_slow_s += 1.0
+		_fast_s = 0.0
+		if _slow_s >= 2.0:
+			_slow_s = 0.0
+			q_tier += 1
+			_apply_tier()
+	elif avg < 0.0128:                                    # comfortably faster than 72
+		_slow_s = 0.0
+		_fast_s += 1.0
+		var ceiling := 0
+		for i in range(TIERS.size()):
+			if float(TIERS[i].sharp) <= float(settings.sharp) + 0.001:
+				ceiling = i
+				break
+		if _fast_s >= 12.0 and q_tier > ceiling:
+			_fast_s = 0.0
+			q_tier -= 1
+			_apply_tier()
+	else:
+		_slow_s = 0.0
+		_fast_s = 0.0
 
 
 ## The room and the machines are a fixed size; the player is what moves: "lift" raises or lowers the player, "reach" moves them
@@ -661,6 +755,7 @@ func _fix_poses() -> void:
 
 func _process(delta: float) -> void:
 	clock += delta
+	_perf_tick(delta)
 	if xr_on and int(clock * 2.0) != int((clock - delta) * 2.0):
 		_fix_poses()
 	room.animate(clock)
@@ -1501,6 +1596,10 @@ func _stick2(hs: Array, delta: float) -> void:
 	cab.set_stick2(roll2, pitch2)
 
 
+const WEAPON_BUTTONS := {"w_smg": "smg", "w_shotgun": "shotgun", "w_dmr": "dmr", "w_burst": "burst"}
+var weapon_prev := {}
+
+
 func _buttons(hs: Array) -> void:
 	var down := {"fire": false, "grenade": false, "menu": false, "pause": false}
 	for bk in cab.button_defs:
@@ -1551,6 +1650,16 @@ func _buttons(hs: Array) -> void:
 		elif state == "over" and clock - over_at > 1.5:
 			audio.ui("chime")
 			start_game()
+	# the four weapon buttons: each puts that stored weapon in your hand (what is loaded shows in the screen's bottom bar)
+	for wk in WEAPON_BUTTONS:
+		var wd: bool = down.get(wk, false)
+		if wd and not weapon_prev.get(wk, false):
+			if state == "play" and game != null and game.use_stored(WEAPON_BUTTONS[wk]):
+				audio.sfx("pickup", 0.7, 0.0, cab.global_position + Vector3(0, 1.1, 0.3))
+				_haptic(-1, 0.35, 0.06)
+			else:
+				audio.ui("click")
+		weapon_prev[wk] = wd
 	if down.grenade and not grenade_prev:
 		_haptic(-1, 0.3, 0.05)
 		if state == "play" and game != null:
