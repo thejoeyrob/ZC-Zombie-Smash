@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "smooth": "off", "fps": "off"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -145,6 +145,7 @@ func _ready() -> void:
 	room.env.glow_enabled = str(settings.glow) == "on"
 	_show_fps(str(settings.fps) == "on")
 	_apply_tier()
+	_apply_screen_level()
 	room.skins.set_equipped(str(settings.skin))
 	room.skins.chosen.connect(func(id):
 		_on_setting("skin", id)
@@ -398,6 +399,8 @@ func _on_setting(key: String, value) -> void:
 		"smooth":
 			q_tier = 0
 			_apply_tier()
+		"screenlight":
+			_apply_screen_level()
 		"fps":
 			_show_fps(str(value) == "on")
 	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
@@ -455,6 +458,14 @@ func _apply_tier() -> void:
 	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
 	var msaa := int(t.msaa) if str(settings.smooth) == "on" else 4
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
+
+
+## The brightness of the game screens on every machine (the Display page's slider). 1.0 shows the picture as drawn; above that it washes out.
+func _apply_screen_level() -> void:
+	var v := clampf(float(settings.screenlight), 0.4, 1.2)
+	for m in machines:
+		if m.screen_mat != null:
+			m.screen_mat.albedo_color = Color(v, v, v)
 
 
 func _show_fps(on: bool) -> void:
@@ -1713,7 +1724,7 @@ func _enter_machine(i: int) -> void:
 	audio.sfx("power", 0.6, 0.0, cab.global_position + Vector3(0, 1.3, 0.3))
 	_haptic(-1, 0.35, 0.1)
 	var tw2 := create_tween()
-	tw2.tween_method(func(v: float): target_mat.albedo_color = Color(v, v, v), 0.1, Cabinet.SCREEN_LEVEL, 0.8)
+	tw2.tween_method(func(v: float): target_mat.albedo_color = Color(v, v, v), 0.1, float(settings.screenlight), 0.8)
 
 
 func _select_machine(i: int) -> void:
@@ -1733,7 +1744,7 @@ func _select_machine(i: int) -> void:
 		cab.button_pressed_visual(k, false)
 	cab = m
 	cab.set_live(emu.screen_texture() if cab.emu else cartridge.screen_texture())
-	cab.screen_mat.albedo_color = Color(Cabinet.SCREEN_LEVEL, Cabinet.SCREEN_LEVEL, Cabinet.SCREEN_LEVEL)
+	cab.screen_mat.albedo_color = Color(float(settings.screenlight), float(settings.screenlight), float(settings.screenlight))
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)
 	audio.move_to(cab)

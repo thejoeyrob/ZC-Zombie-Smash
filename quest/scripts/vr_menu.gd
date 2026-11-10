@@ -335,6 +335,8 @@ func _build_ui() -> void:
 	_heading(dp, "PICTURE")
 	_slider(dp, "sharp", "Sharpness", 0.9, 1.6, 0.1)
 	_hint(dp, "Higher is clearer far away but works the headset harder. Lower it if the picture stutters.")
+	_slider(dp, "screenlight", "Game screen brightness", 0.5, 1.2, 0.05)
+	_hint(dp, "How bright the picture on the arcade machines is. Turn it down if it looks washed out.")
 	_stepper(dp, "smooth", "Soften picture if it stutters", ["off", "on"], "")
 	_hint(dp, "Off keeps the picture as clear as your Sharpness setting. On: it softens a little (never below 1.0) when the headset falls behind.")
 	_stepper(dp, "fps", "Show frame rate", ["off", "on"], "")
