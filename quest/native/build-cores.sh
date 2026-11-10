@@ -16,6 +16,10 @@ CORES=(
   "genesis_plus_gx|https://github.com/libretro/Genesis-Plus-GX|f27655b592ef43f317272d79883bcaa10d3ac8ad"
   "gambatte|https://github.com/libretro/gambatte-libretro|77f2567d718b8973d02caa2daa8dce4953faf811"
   "stella2014|https://github.com/libretro/stella2014-libretro|7d1361e407e63f29e52892655069e5fb4096e691"
+  "gpsp|https://github.com/libretro/gpsp|5819380c2ffb0900219d700a382ee68c464ebb99"
+  "mednafen_pce_fast|https://github.com/libretro/beetle-pce-fast-libretro|2de1ce1c3f237b161c126c54ba407990bb86d1e9"
+  "prosystem|https://github.com/libretro/prosystem-libretro|8a88014287c7a01cd568067e5a557d0a2b2a051f"
+  "handy|https://github.com/libretro/libretro-handy|bc55d462f0b2d6b073ea93dc552ebd73cec60fd1"
 )
 built=0
 for entry in "${CORES[@]}"; do

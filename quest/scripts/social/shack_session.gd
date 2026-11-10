@@ -24,6 +24,7 @@ var last_rx := 0.0
 var nudge_prev := [false, false]
 var endpoint := ""
 var voice: VoiceChat
+var remote: RemotePlay
 var vid := 0
 var vids := {}                    # voice id -> member id
 
@@ -33,6 +34,9 @@ func _init() -> void:
 
 func _ready() -> void:
 	add_child(voice)
+	remote = RemotePlay.new()
+	remote.session = self
+	add_child(remote)
 
 func setup(owner_node: Node3D) -> void:
 	main = owner_node
@@ -93,6 +97,8 @@ func _disconnect(message: String) -> void:
 	vids.clear()
 	if voice != null:
 		voice.reset()
+	if remote != null:
+		remote.reset()
 	members.clear()
 	owners.clear()
 	pending_station = ""
@@ -133,7 +139,10 @@ func _process(delta: float) -> void:
 		if raw.size() > 16384:
 			continue
 		if not socket.was_string_packet():
-			voice.receive(raw)
+			if raw.size() > 0 and int(raw[0]) >= 0xE1 and int(raw[0]) <= 0xE3:
+				remote.on_binary(raw)                  # remote play: a picture, a piece of sound, or a guest's buttons
+			else:
+				voice.receive(raw)
 			continue
 		var data = JSON.parse_string(raw.get_string_from_utf8())
 		if data is Dictionary:
@@ -210,6 +219,8 @@ func _receive(d: Dictionary) -> void:
 				changed.emit()
 		"ended":
 			_disconnect(str(d.get("message", "Room ended")))
+		"library", "emu_play", "emu_stop", "emu_ok", "emu_no", "emu_end":
+			remote.on_message(d)
 
 func _sync_guests() -> void:
 	var ids: Array = []

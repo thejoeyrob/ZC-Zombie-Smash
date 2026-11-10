@@ -8,6 +8,7 @@ extends Node
 const CORES := {
 	"NES": "fceumm", "SUPER NES": "snes9x2010", "MEGA DRIVE": "genesis_plus_gx", "MASTER SYSTEM": "genesis_plus_gx",
 	"GAME GEAR": "genesis_plus_gx", "GAME BOY": "gambatte", "GAME BOY COLOR": "gambatte", "ATARI 2600": "stella2014",
+	"GAME BOY ADVANCE": "gpsp", "PC ENGINE": "mednafen_pce_fast", "ATARI 7800": "prosystem", "ATARI LYNX": "handy",
 }
 # libretro joypad bits
 const BTN_B := 0
@@ -36,6 +37,10 @@ var rom_name := ""
 var system := ""
 var aspect := 4.0 / 3.0
 var volume := 1.0
+## Remote play taps: when set, each finished picture (w, h, RGBA bytes) and each piece of sound (stereo samples, sample rate) is also handed to these.
+var frame_tap: Callable
+var audio_tap: Callable
+var _rate := 32000.0
 var _gen: AudioStreamGeneratorPlayback
 var _acc := 0.0
 var _save_t := 0.0
@@ -118,6 +123,7 @@ func start(rom_path: String, sys: String) -> String:
 
 
 func _setup_audio(rate: float) -> void:
+	_rate = rate
 	if audio_player == null:
 		return
 	var gen := AudioStreamGenerator.new()
@@ -148,6 +154,8 @@ func tick(delta: float, pad: int) -> void:
 		var bytes: PackedByteArray = core.get_frame()
 		if w > 0 and h > 0 and bytes.size() == w * h * 4:
 			texture.set_image(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, bytes))
+			if frame_tap.is_valid():
+				frame_tap.call(w, h, bytes)
 	_push_audio()
 	_save_t += delta
 	if _save_t > 20.0:
@@ -157,6 +165,8 @@ func tick(delta: float, pad: int) -> void:
 
 func _push_audio() -> void:
 	var a: PackedVector2Array = core.take_audio()
+	if audio_tap.is_valid() and not a.is_empty():
+		audio_tap.call(a, _rate)
 	if _gen == null or a.is_empty():
 		return
 	var room := _gen.get_frames_available()
@@ -236,7 +246,7 @@ static func _unzip(zip_path: String) -> String:
 	var z := ZIPReader.new()
 	if z.open(ProjectSettings.globalize_path(zip_path)) != OK:
 		return ""
-	var wanted := ["md", "gen", "smd", "bin", "nes", "sfc", "smc", "gb", "gbc", "gba", "sms", "gg", "pce", "a26"]
+	var wanted := ["md", "gen", "smd", "bin", "nes", "sfc", "smc", "gb", "gbc", "gba", "sms", "gg", "pce", "sgx", "a26", "a78", "lnx"]
 	for f in z.get_files():
 		if wanted.has(f.get_extension().to_lower()):
 			DirAccess.make_dir_recursive_absolute(CACHE_DIR)

@@ -128,7 +128,9 @@ func _read_mic(delta: float) -> void:
 func send_pcm(samples: PackedFloat32Array) -> void:
 	if session == null or not session.online:
 		return
-	session.send_binary(encode(samples))
+	var pkt := PackedByteArray([1])                  # kind 1 = voice (the room server tells voice from remote-play pictures by this first byte)
+	pkt.append_array(encode(samples))
+	session.send_binary(pkt)
 	sent += 1
 
 

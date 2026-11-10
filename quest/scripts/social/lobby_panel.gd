@@ -18,6 +18,8 @@ func setup(value: ShackSession) -> void:
 	content.add_theme_constant_override("separation", 8)
 	add_child(content)
 	session.changed.connect(refresh)
+	if session.remote != null:
+		session.remote.library_changed.connect(refresh)
 	refresh()
 
 func button(parent: Control, text: String, callback: Callable, height := 48) -> Button:
@@ -53,6 +55,12 @@ func refresh() -> void:
 				button(row, "REMOVE", func(): session.send({"type": "kick", "id": id}), 36)
 		if session.self_id == session.host_id:
 			button(content, "UNLOCK ROOM" if session.locked else "LOCK ROOM", func(): session.send({"type": "lock", "locked": not session.locked}))
+		if session.self_id == session.host_id:
+			button(content, "GUESTS CAN PLAY MY GAMES: ON" if session.remote.share else "GUESTS CAN PLAY MY GAMES: OFF", func(): session.remote.share = not session.remote.share; refresh())
+			if not session.remote.streams.is_empty():
+				text(content, "%d guest(s) playing your games right now. Their game runs on your headset; they only get the picture." % session.remote.streams.size())
+		elif not session.remote.library.is_empty():
+			text(content, "The host shares %d game(s). Walk to the JW EDS machine: their games are listed there, marked @. You only play them while you are in this room." % session.remote.library.size())
 		button(content, "VOICE: ON  (TAP TO MUTE)" if session.voice.enabled else "VOICE: OFF  (TAP TO TALK)", func(): session.voice.enabled = not session.voice.enabled; refresh())
 		button(content, "LEAVE ROOM", session.leave)
 		text(content, "Point at a free machine or stool to claim it.\nVoice: you hear people from where they stand. Your microphone is only used while you are in a room.")

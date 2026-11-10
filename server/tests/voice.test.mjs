@@ -14,9 +14,9 @@ test('voice pieces reach everyone else in the room with the sender id, and nobod
   c.ws.send(JSON.stringify({type:'create',protocol:1,name:'C'}));await until(()=>c.text.find(m=>m.type==='welcome'));
   assert.ok(wa.vid>=1&&wb.vid>=1&&wa.vid!==wb.vid);
   const roster=await until(()=>b.text.filter(m=>m.type==='room').pop());assert.ok(roster.members.every(m=>Number.isInteger(m.vid)));
-  const piece=Buffer.from(new Array(640).fill(0x7f));a.ws.send(piece,{binary:true});
+  const piece=Buffer.from(new Array(640).fill(0x7f));a.ws.send(Buffer.concat([Buffer.from([1]),piece]),{binary:true});
   const got=await until(()=>b.bin[0]);assert.equal(got[0],wa.vid);assert.equal(got.length,641);
   await new Promise(r=>setTimeout(r,150));assert.equal(a.bin.length,0,'sender does not hear itself');assert.equal(c.bin.length,0,'another room hears nothing');
-  a.ws.send(Buffer.alloc(5000),{binary:true});await new Promise(r=>setTimeout(r,150));assert.equal(b.bin.length,1,'oversized piece is dropped');
+  a.ws.send(Buffer.concat([Buffer.from([1]),Buffer.alloc(5000)]),{binary:true});await new Promise(r=>setTimeout(r,150));assert.equal(b.bin.length,1,'oversized piece is dropped');
  }finally{for(const x of all)x.ws.terminate();await server.close();}
 });

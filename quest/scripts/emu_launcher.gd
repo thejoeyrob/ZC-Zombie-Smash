@@ -12,7 +12,7 @@ signal opened(path: String, system: String)
 const SYSTEMS := {
 	"md": "MEGA DRIVE", "gen": "MEGA DRIVE", "smd": "MEGA DRIVE", "bin": "MEGA DRIVE",
 	"nes": "NES", "sfc": "SUPER NES", "smc": "SUPER NES", "gb": "GAME BOY", "gbc": "GAME BOY COLOR", "gba": "GAME BOY ADVANCE",
-	"sms": "MASTER SYSTEM", "gg": "GAME GEAR", "pce": "PC ENGINE", "a26": "ATARI 2600", "zip": "ARCHIVE",
+	"sms": "MASTER SYSTEM", "gg": "GAME GEAR", "pce": "PC ENGINE", "sgx": "PC ENGINE", "a26": "ATARI 2600", "a78": "ATARI 7800", "lnx": "ATARI LYNX", "zip": "ARCHIVE",
 }
 ## Set to false for a store build: the machine then shows a plain notice and never looks at any files.
 const ENABLED := true
@@ -33,7 +33,11 @@ var index := 0
 var top := 0
 var status := ""
 var hold := false              # true while nobody is at the machine: the game is paused
-var session: EmuSession
+var session: EmuSession                ## the game being played right now: the local one, or a game streamed from the host of the room
+var local_session: EmuSession
+var remote: RemotePlay                 ## set when the app is in a room (guests see the host's games in the list)
+var _audio_host: Node3D
+var _wait_t := 0.0
 var server: RomServer
 var _label: RichTextLabel
 var _shade: ColorRect
@@ -87,6 +91,7 @@ func build(host: Node) -> void:
 	viewport.add_child(_label)
 	session = EmuSession.new()
 	host.add_child(session)
+	local_session = session
 	server = RomServer.new()
 	host.add_child(server)
 	server.uploaded.connect(func(n):
@@ -101,7 +106,17 @@ func screen_texture() -> Texture2D:
 
 
 func set_audio_position(host: Node3D) -> void:
-	session.attach_audio(host)
+	_audio_host = host
+	local_session.attach_audio(host)
+
+
+## The room's remote play: its game list shows up in this menu for guests, and the game picked from it is played here, running on the host.
+func set_remote(r: RemotePlay) -> void:
+	remote = r
+	r.library_changed.connect(func(): rescan())
+	r.guest_ended.connect(_remote_ended)
+	if _audio_host != null:
+		r.guest_session.attach_audio(_audio_host)
 
 
 func rescan() -> void:
@@ -128,6 +143,11 @@ func rescan() -> void:
 					sys = _zip_system(path)
 				files.append({"name": f.get_basename().to_upper(), "file": f, "path": path, "system": sys, "size": size})
 	files.sort_custom(func(a, b): return str(a.name) < str(b.name))
+	# in somebody else's room, the host's games are listed too (marked with @): they run on the host's headset, nothing is copied here
+	if remote != null and remote.is_guest():
+		for i in range(remote.library.size()):
+			var g: Dictionary = remote.library[i]
+			files.append({"name": "@" + str(g.n).to_upper(), "file": str(g.n), "path": "", "system": str(g.s), "size": 0, "remote": true, "game": i})
 	index = clampi(index, 0, maxi(files.size() - 1, 0))
 	_redraw()
 
@@ -223,6 +243,10 @@ func set_input(stick: Vector2, buttons: Dictionary) -> void:
 
 func _launch(f: Dictionary) -> void:
 	_info = f
+	if f.get("remote", false):
+		_launch_remote(f)
+		return
+	session = local_session
 	opened.emit(str(f.path), str(f.system))
 	var err := session.start(str(f.path), str(f.system))
 	if err == "":
@@ -235,6 +259,41 @@ func _launch(f: Dictionary) -> void:
 		_info = f.duplicate()
 		_info["error"] = err
 		_view = "info"
+
+
+func _launch_remote(f: Dictionary) -> void:
+	if remote == null:
+		return
+	var rs: RemoteGuestSession = remote.guest_session
+	rs.volume = local_session.volume
+	if rs.audio_player == null and _audio_host != null:
+		rs.attach_audio(_audio_host)
+	var err := rs.start_remote(int(f.game), str(f.system))
+	if err != "":
+		_info = f.duplicate()
+		_info["error"] = err
+		_view = "info"
+		return
+	session = rs
+	_view = "remote_wait"
+	_wait_t = 0.0
+	status = ""
+	_redraw()
+
+
+func _remote_ended(message: String) -> void:
+	if remote == null or session != remote.guest_session:
+		return
+	_back_to_list(message)
+
+
+func _back_to_list(message: String) -> void:
+	session = local_session
+	_picture.visible = false
+	_label.visible = true
+	_view = "list"
+	status = message
+	rescan()
 
 
 func _fit_picture() -> void:
@@ -274,6 +333,7 @@ func _pause_choice(i: int) -> void:
 
 func _end_game() -> void:
 	session.stop()
+	session = local_session
 	_picture.visible = false
 	_label.visible = true
 	_view = "list"
@@ -290,8 +350,31 @@ func tick(delta: float) -> void:
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	elif viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS:
 		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	if _view == "remote_wait":
+		_wait_t += delta
+		var rs := session as RemoteGuestSession
+		if rs != null and rs.running:
+			_view = "play"
+			_picture.visible = true
+			_picture.texture = session.texture
+			_label.visible = false
+			_fit_picture()
+		elif rs == null or (not rs.waiting and not rs.running) or _wait_t > 10.0:
+			var why := rs.ended_message if (rs != null and rs.ended_message != "") else "THE HOST DID NOT ANSWER"
+			if rs != null:
+				rs.stop()
+			_back_to_list(why)
+		elif int(_t * 2.0) != int((_t - delta) * 2.0):
+			_redraw()
+			viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		return
+	if (_view == "play" or _view == "pause") and session is RemoteGuestSession and not session.running:
+		_back_to_list((session as RemoteGuestSession).ended_message)
+		return
 	if (_view == "play" or _view == "pause") and session.running:
-		if _view == "play" and not hold:
+		if session is RemoteGuestSession:
+			session.tick(delta, 0 if (hold or _view == "pause") else _pad)
+		elif _view == "play" and not hold:
 			session.tick(delta, _pad)
 		_shade.visible = _view == "pause"
 		_label.visible = _view == "pause"
@@ -334,6 +417,10 @@ func _redraw() -> void:
 		return
 	t += "[color=#ffffff]JW EDS ARCADE OS  Version 1.1[/color]\n"
 	t += "[color=#9aa]Copyright (c) JW EDS. All rights reserved.[/color]\n\n"
+	if _view == "remote_wait":
+		t += "[color=#ffffff]CONNECTING TO THE HOST'S MACHINE[/color]\n\n%s\n\nASKING THE HOST TO START THE GAME%s\n" % [str(_info.get("name", "")), ".".repeat(1 + int(_t * 2.0) % 3)]
+		_label.text = t
+		return
 	if _view == "wifi":
 		var addr := server.address()
 		t += "[color=#ffffff]WI-FI GAME TRANSFER[/color]\n\n"
@@ -366,13 +453,13 @@ func _redraw() -> void:
 	elif files.is_empty():
 		t += "[color=#ffbf33]FILE NOT FOUND[/color]\n\n"
 		t += "ADD YOUR OWN GAME FILES:\n[color=#ffffff]PRESS C  (OVER WI-FI)[/color]\nOR COPY THEM BY CABLE TO\n[color=#ffffff]Android/data/%s/\nfiles/roms[/color]\n\n" % PACKAGE
-		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC SMS GG A26 (AND ZIP)\n"
+		t += "SUPPORTED: NES SFC SMC MD GEN SMD\nGB GBC GBA SMS GG PCE A26 A78 LNX\n(AND ZIP)\n"
 	else:
 		t += "[color=#9aa]%s  %s[/color]\n" % [_pad_s("NAME", 22), "SYSTEM"]
 		var last: int = mini(files.size(), top + ROWS)
 		for i in range(top, last):
 			var f2: Dictionary = files[i]
-			var mark := "" if EmuSession.has_core(str(f2.system)) else "*"
+			var mark := "" if (f2.get("remote", false) or EmuSession.has_core(str(f2.system))) else "*"
 			var line := "%s  %s%s" % [_pad_s(str(f2.name), 22), str(f2.system), mark]
 			if i == index:
 				t += "[bgcolor=#40ff60][color=#001a00]%s[/color][/bgcolor]\n" % _pad_s(line, COLS)

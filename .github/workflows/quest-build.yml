@@ -133,35 +133,7 @@ jobs:
           printf '%s' "${GODOT_VERSION}.stable" > android/.build_version
           touch android/build/.gdignore
 
-      - name: Export the APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd quest
-          mkdir -p build
-          # every build gets its own number, so a new install is never mistaken for an old one
-          sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"0.${GITHUB_RUN_NUMBER}.0\"/" export_presets.cfg
-          echo "{\"build\": ${GITHUB_RUN_NUMBER}}" > build.json
-          # the main APK is the store-safe one: no game-file menu, no emulator (the sideload version with the emulator is built next)
-          sed -i 's/^const ENABLED := true/const ENABLED := false/' scripts/emu_launcher.gd
-          godot --headless --import || true
-          if [ -n "${RELEASE_KEYSTORE_B64:-}" ]; then
-            # the real store key: builds signed like this can go to the Meta store
-            echo "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
-            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
-            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="fattysgameshack"
-            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
-            godot --headless --verbose --export-release "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
-          else
-            godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
-          fi
-          cp build/zombie-smash-vr.apk "build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk"
-          ls -la build
-        env:
-          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-
-      # ---- the sideload version: the same app plus the emulator plug-in and the open-source cores (pinned commits, see quest/native) ----
+      # ---- the emulator: a plug-in and the open-source cores (pinned commits, see quest/native), built first so the main app can carry them ----
       - name: Build the emulator plug-in and cores
         id: native
         continue-on-error: true
@@ -177,24 +149,58 @@ jobs:
           ./build-cores.sh android
           ./make-gdextension.sh
 
-      - name: Export the emulator APK (sideload version)
-        if: steps.native.outcome == 'success'
+      - name: Export the APK (with the emulators when they built)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd quest
+          mkdir -p build
+          # every build gets its own number, so a new install is never mistaken for an old one
+          sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"0.${GITHUB_RUN_NUMBER}.0\"/" export_presets.cfg
+          echo "{\"build\": ${GITHUB_RUN_NUMBER}}" > build.json
+          if [ "${{ steps.native.outcome }}" = "success" ]; then
+            echo "main app: with the emulator plug-in and cores"
+          else
+            echo "main app: the emulator did not build, so this one has the emulator menu switched off (see the build log)"
+            sed -i 's/^const ENABLED := true/const ENABLED := false/' scripts/emu_launcher.gd
+          fi
+          godot --headless --import || true
+          if [ -n "${RELEASE_KEYSTORE_B64:-}" ]; then
+            # the real store key: builds signed like this can go to the Meta store
+            echo "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="fattysgameshack"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
+            godot --headless --verbose --export-release "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
+          else
+            godot --headless --verbose --export-debug "Meta Quest" build/zombie-smash-vr.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -80
+          fi
+          cp build/zombie-smash-vr.apk "build/ZombieSmashVR-build${GITHUB_RUN_NUMBER}.apk"
+          unzip -l build/zombie-smash-vr.apk | grep -E "libretro" || echo "(no emulator libraries in the main app)"
+          ls -la build
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+
+      # a second copy with no emulator at all, kept ready in case a store review ever objects to the emulators
+      - name: Export the no-emulator APK (fallback)
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           cd quest
-          git checkout -- scripts/emu_launcher.gd          # the emulator menu back on
+          rm -rf bin
+          sed -i 's/^const ENABLED := true/const ENABLED := false/' scripts/emu_launcher.gd
           godot --headless --import || true
           if [ -n "${RELEASE_KEYSTORE_B64:-}" ]; then
             export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
             export GODOT_ANDROID_KEYSTORE_RELEASE_USER="fattysgameshack"
             export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
-            godot --headless --verbose --export-release "Meta Quest" build/emulator.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -40
+            godot --headless --verbose --export-release "Meta Quest" build/no-emulator.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -40
           else
-            godot --headless --verbose --export-debug "Meta Quest" build/emulator.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -40
+            godot --headless --verbose --export-debug "Meta Quest" build/no-emulator.apk 2>&1 | grep -viE "^\s*(first_scan|_update_scan|loading_editor)" | tail -40
           fi
-          unzip -l build/emulator.apk | grep -E "libretro" || echo "NO EMULATOR LIBRARIES IN THE APK"
+          unzip -l build/no-emulator.apk | grep -E "libretro" && echo "UNEXPECTED: emulator libraries in the fallback" || echo "fallback has no emulator libraries"
           ls -la build
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
@@ -229,12 +235,12 @@ jobs:
           NOTES="Build ${GITHUB_RUN_NUMBER} (commit ${GITHUB_SHA::7}) of the Fatty's Game Shack Quest VR test build. Download FattysGameShack-Quest.apk and install it on a Quest in developer mode."
           gh release view quest-latest >/dev/null 2>&1 || gh release create quest-latest --prerelease --target "$GITHUB_SHA" --title "Fatty's Game Shack - Quest test build" --notes "$NOTES"
           gh release upload quest-latest FattysGameShack-Quest.apk --clobber
-          if [ -f quest/build/emulator.apk ]; then
-            cp quest/build/emulator.apk FattysGameShack-Quest-Emulator.apk
-            gh release upload quest-latest FattysGameShack-Quest-Emulator.apk --clobber
-            NOTES="$NOTES Also FattysGameShack-Quest-Emulator.apk: the same app with the game-file menu and emulators (sideload only; not for the Meta store)."
+          gh release delete-asset quest-latest FattysGameShack-Quest-Emulator.apk -y 2>/dev/null || true
+          if [ -f quest/build/no-emulator.apk ]; then
+            cp quest/build/no-emulator.apk FattysGameShack-Quest-NoEmulator.apk
+            gh release upload quest-latest FattysGameShack-Quest-NoEmulator.apk --clobber
+            NOTES="$NOTES FattysGameShack-Quest.apk has the emulators (NES, SNES, Mega Drive, Master System, Game Gear, Game Boy, Game Boy Color, Game Boy Advance, PC Engine, Atari 2600, 7800, Lynx) built in; FattysGameShack-Quest-NoEmulator.apk is the same game with none, kept in case a store review objects."
           else
-            gh release delete-asset quest-latest FattysGameShack-Quest-Emulator.apk -y 2>/dev/null || true
-            NOTES="$NOTES (The emulator version did not build this time; see the build log.)"
+            gh release delete-asset quest-latest FattysGameShack-Quest-NoEmulator.apk -y 2>/dev/null || true
           fi
           gh release edit quest-latest --notes "$NOTES"

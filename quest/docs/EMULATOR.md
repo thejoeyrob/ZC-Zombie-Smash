@@ -14,11 +14,23 @@
 | Super NES | snes9x2010 | Snes9x licence (non-commercial) |
 | Mega Drive / Master System / Game Gear | Genesis Plus GX | Non-commercial licence |
 | Game Boy / Game Boy Color | gambatte | GPL v2 |
+| Game Boy Advance | gpSP | GPL v2 |
+| PC Engine / TurboGrafx-16 | Beetle PCE Fast | GPL v2 |
 | Atari 2600 | stella2014 | GPL v2 |
+| Atari 7800 | ProSystem | GPL v2 |
+| Atari Lynx | Handy | zlib-style licence |
 
-## Two versions of the app
-- `FattysGameShack-Quest.apk`: the **store-safe** build. The game-file menu is switched off (`ENABLED := false` in `emu_launcher.gd`) and no cores are included. Use this for Meta uploads.
-- `FattysGameShack-Quest-Emulator.apk`: the **sideload** build with the plug-in and cores. Do not upload it to the store: the cores' licences (GPL, non-commercial) and Meta's content rules for apps that load game files make it unsuitable for a commercial store release.
+## One app, emulators inside
+The owner decided (November 2026) to put the emulators in the same app that goes to the Meta store and deal with it if a review flags them.
+- `FattysGameShack-Quest.apk` (what the Upload to Meta workflow sends): the game with the emulator plug-in and every core that built. If the emulator step fails in CI the app is still built, with the game-file menu switched off.
+- `FattysGameShack-Quest-NoEmulator.apk`: the same game with no emulator at all (`ENABLED := false`, no plug-in, no cores). It is built every time and kept ready: if a store review objects to the emulators, upload this one instead. **The cores' licences (GPL, non-commercial) and Meta's content rules for apps that load game files are the risk to know about.**
+
+## Playing the host's games in a room (remote play)
+Players put their own game files on their own headset. In a room the **host** can let guests play the host's collection, like "remote play together":
+- The host's headset runs the game. The picture (JPEG, about 30 a second) and the sound (22 kHz, one byte a sample) are streamed to that one guest through the room server; the guest sends back only their buttons.
+- **Game files never leave the host's headset.** Guests receive a picture and sound, keep nothing, and can only play while they are in the host's room. The server relays the host's game list (names only).
+- The host's list is published when the host has a room; the host can turn it off (FRIENDS page: GUESTS CAN PLAY MY GAMES). At most two guest games run at once.
+- A guest sees the host's games in the JW EDS machine's menu, marked with an @, and opens them like their own (`scripts/social/remote_play.gd`, `remote_guest_session.gd`; server side in `server/server.mjs`; tests `tests/upgrade/remote_play_test.gd` and `server/tests/remote_play.test.mjs`).
 
 ## Not included, on purpose
 No game files, BIOS files or console firmware are in the app. Only play files you have the right to use (your own dumps, homebrew, public-domain games).

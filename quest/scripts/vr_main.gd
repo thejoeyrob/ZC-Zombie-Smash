@@ -224,6 +224,8 @@ func _ready() -> void:
 	social = ShackSession.new()
 	add_child(social)
 	social.setup(self)
+	social.remote.launcher = emu                      # the host's games are offered to the room; guests see them in the same menu
+	emu.set_remote(social.remote)
 	var lobby_panel := LobbyPanel.new()
 	menu._pages.friends.add_child(lobby_panel)
 	lobby_panel.setup(social)
