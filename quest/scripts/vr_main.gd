@@ -264,7 +264,7 @@ func _setup_desktop_camera() -> void:
 func _build_screen() -> void:
 	viewport = SubViewport.new()
 	viewport.size = Vector2i(1029, int(ZSScreen.FULL_H * 3.0))         # the whole 343 x 522 phone screen, drawn three times sharper than on the phone
-	viewport.msaa_2d = Viewport.MSAA_DISABLED       # already drawn three times sharper than it is shown, so edge smoothing here is wasted work
+	viewport.msaa_2d = Viewport.MSAA_2X       # as in build 124: the game screen is smoothed at the source
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	viewport.transparent_bg = false
 	add_child(viewport)
@@ -480,13 +480,7 @@ func _perf_tick(delta: float) -> void:
 	_perf_sum += delta
 	_perf_n += 1
 	_perf_t += delta
-	if _perf_age > 2.0 and not _rate_set and xr_on:
-		_rate_set = true
-		var iface := XRServer.find_interface("OpenXR")
-		if iface != null and iface.has_method("get_available_display_refresh_rates"):
-			var rates = iface.get_available_display_refresh_rates()
-			if rates is Array and rates.has(72.0):
-				iface.display_refresh_rate = 72.0        # a steady 72 beats an unsteady 90 or 120
+	# (no refresh-rate request: the headset keeps whatever rate it chose in build 124)
 	if _perf_t < 1.0:
 		return
 	var avg := _perf_sum / float(_perf_n)
