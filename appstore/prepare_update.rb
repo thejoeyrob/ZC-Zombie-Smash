@@ -29,10 +29,17 @@ version.get_app_store_version_localizations.each do |loc|
   puts "Set What's New for #{loc.locale}"
 end
 
-builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, processing_states: 'VALID', sort: '-uploadedDate').reject(&:expired)
-abort('No processed build yet. Wait a few minutes and run again.') if builds.empty?
-build = builds.first
-puts "Newest processed build: #{build.version} (version #{build.app_version rescue '?'})"
+# Only builds above 200 come from the new pipeline (the released app is build 144). Wait up to 12 minutes for processing.
+build = nil
+24.times do |i|
+  builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, sort: '-uploadedDate').reject(&:expired).select { |b| b.version.to_i > 200 }
+  build = builds.find { |b| b.processing_state == 'VALID' }
+  break if build
+  puts "Build #{builds.first&.version || 'none yet'} state #{builds.first&.processing_state || '-'}; waiting (#{i + 1}/24)"
+  sleep 30
+end
+abort('Build above 200 is not processed yet. Run again in a few minutes.') unless build
+puts "Using build #{build.version}"
 version.select_build(build_id: build.id)
 puts "Attached build #{build.version} to #{version.version_string}"
 detail = (version.fetch_app_store_review_detail rescue nil)
