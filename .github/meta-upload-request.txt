@@ -1,2 +1,2 @@
 ALPHA
-Build 136: picture quality restored (no automatic softening), game screens at normal brightness with a brightness slider, emulator status shown on the JW EDS menu
+Build 140: relief walls and floor, stronger surface response, game-only avatars, shorter menu, Quest-controller emulator mapping, pinball and own music
