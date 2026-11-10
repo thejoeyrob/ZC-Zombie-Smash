@@ -205,6 +205,7 @@ func _ready() -> void:
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	audio.play_music("ambient", 0.01)
 	room.jukebox.command.connect(_on_jukebox)
+	audio.track_changed.connect(room.jukebox.show_track)
 	screen.best = best
 	if not xr_on:
 		_setup_desktop_camera()
@@ -632,7 +633,8 @@ func _close_menu() -> void:
 	if _reach_dirty and locked:
 		_reach_dirty = false
 		_place_player(cab.stand_world(), cab.look_world(), true)
-	if menu_resume_state == "play" and state == "paused":
+	# closing the options (RESUME, or any way out) carries on a game that was paused, as long as you are at its machine
+	if (menu_resume_state == "play" or game != null) and state == "paused" and locked:
 		state = "play"
 		screen.mode = "play"
 	audio.ui("back")
@@ -1652,6 +1654,10 @@ func _buttons(hs: Array) -> void:
 		elif state == "over" and clock - over_at > 1.5:
 			audio.ui("chime")
 			start_game()
+		elif state == "paused" and game != null and not menu.open:
+			audio.ui("chime")                          # FIRE carries on a paused game
+			state = "play"
+			screen.mode = "play"
 	# the four weapon buttons: each puts that stored weapon in your hand (what is loaded shows in the screen's bottom bar)
 	for wk in WEAPON_BUTTONS:
 		var wd: bool = down.get(wk, false)

@@ -6,6 +6,7 @@ extends Node3D
 signal command(name: String)
 
 const TRACKS := [
+	["lostinside", "LOST INSIDE THE GAME"], ["everything", "EVERYTHING I USED TO BE"],
 	["arcade", "AIR GUITAR HERO"], ["home", "HOLD THE LINE"], ["wave1", "SUNNY HORDE"], ["wave2", "NIGHT SHIFT"], ["wave3", "LAST STAND"],
 	["disco", "DISCO MAN"], ["boss", "BOSS RUSH"], ["finale", "MANTIS LAB"], ["story", "THE OPENING"],
 ]
@@ -112,6 +113,16 @@ func build(font: Font) -> void:
 
 func current_id() -> String:
 	return TRACKS[index][0]
+
+
+## The music moved on by itself (one track ended and the next began): show it.
+func show_track(id: String) -> void:
+	for i in range(TRACKS.size()):
+		if TRACKS[i][0] == id:
+			index = i
+			playing = true
+			_refresh()
+			return
 
 
 func _refresh() -> void:

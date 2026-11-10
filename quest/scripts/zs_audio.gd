@@ -5,6 +5,10 @@ extends Node
 
 const SFX_PATH := "res://assets/audio/snd-%s.wav"
 const MUS_PATH := "res://assets/audio/mus-%s.wav"
+const MUS_PATH_MP3 := "res://assets/audio/mus-%s.mp3"
+## The owner's own productions, played one after the other in the arcade (Lost Inside the Game first), then round again.
+const OWN_TRACKS := ["lostinside", "everything"]
+signal track_changed(id: String)
 const SFX_NAMES := ["click", "chime", "back", "toggle", "key", "error", "page", "pistol", "smg", "shotgun", "dmr", "burst", "hose", "rainbow",
 	"bass", "beans", "laser", "remover", "purge", "hit", "kill", "ricochet", "bosshit", "throw", "explosion", "hurt", "breach", "pickup", "heart",
 	"goldheart", "boost1", "boost2", "boost3", "power", "switch", "target", "clear", "alarm", "warn", "doom", "mutation"]
@@ -23,7 +27,7 @@ var music_volume := 0.55
 var effects_volume := 0.8
 var wave := 1
 var boss_track := "boss"
-var ambient_track := "arcade"      # what the arcade plays when nobody is in a game (the jukebox changes it)
+var ambient_track := "lostinside"      # what the arcade plays when nobody is in a game (the jukebox changes it)
 var want := ""
 var current := ""
 var holding_until := 0.0
@@ -59,6 +63,7 @@ func setup(speaker: Node3D) -> void:
 		var d := AudioStreamPlayer.new()
 		d.volume_db = -80.0
 		add_child(d)
+		d.finished.connect(_deck_finished.bind(d))
 		_decks.append(d)
 	_sting_player = AudioStreamPlayer.new()
 	add_child(_sting_player)
@@ -85,8 +90,16 @@ func _db(linear: float) -> float:
 	return linear_to_db(maxf(0.0001, linear))
 
 
-func music_stream(track: String) -> AudioStreamWAV:
+func music_stream(track: String) -> AudioStream:
 	if not _music.has(track):
+		if OWN_TRACKS.has(track):                   # an mp3: it plays through once, then the next one starts (see _deck_finished)
+			var m = load(MUS_PATH_MP3 % track)
+			if m == null:
+				return null
+			if m is AudioStreamMP3:
+				m.loop = false
+			_music[track] = m
+			return m
 		var s = load(MUS_PATH % track)
 		if s == null:
 			return null
@@ -140,6 +153,18 @@ func play_music(id: String, fade := 0.9) -> void:
 	_fade(old, -1.0, 0.0, fade, true)
 
 
+## One of the owner's tracks reached its end: the next one follows (and the jukebox display follows along).
+func _deck_finished(deck: AudioStreamPlayer) -> void:
+	if deck != _decks[_deck] or not OWN_TRACKS.has(current) or want != "ambient":
+		return
+	var next: String = OWN_TRACKS[(OWN_TRACKS.find(current) + 1) % OWN_TRACKS.size()]
+	_resume.erase(next)
+	ambient_track = next
+	current = ""
+	play_music("ambient", 0.6)
+	track_changed.emit(next)
+
+
 func _remember() -> void:
 	if current == "":
 		return
@@ -177,7 +202,7 @@ func stop_music(fade := 0.5) -> void:
 
 ## A fanfare that owns the music until it is over (victory, defeat, high score).
 func stinger(name: String) -> void:
-	var s: AudioStreamWAV = music_stream(name)
+	var s: AudioStream = music_stream(name)
 	if s == null:
 		return
 	_remember()
@@ -192,7 +217,7 @@ func stinger(name: String) -> void:
 
 ## A short flourish over the music (new wave).
 func sting(name: String) -> void:
-	var s: AudioStreamWAV = music_stream(name)
+	var s: AudioStream = music_stream(name)
 	if s == null or holding_until > 0.0:
 		return
 	_sting_player.stream = s

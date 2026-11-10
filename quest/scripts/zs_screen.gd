@@ -238,7 +238,8 @@ func _draw() -> void:
 	if mode == "paused":
 		draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.62))
 		text("PAUSED", W / 2.0, H / 2.0 - 6.0, 30, hc("#f5da98"))
-		text("PRESS MENU TO RESUME", W / 2.0, H / 2.0 + 18.0, 12, Color.WHITE)
+		text("PRESS FIRE TO CARRY ON", W / 2.0, H / 2.0 + 18.0, 12, Color.WHITE)
+		text("MENU BUTTON  =  OPTIONS", W / 2.0, H / 2.0 + 36.0, 9, hc("#cfe7c8"))
 	if mode == "over":
 		draw_over()
 	draw_hud()                                  # the bars go on last, so nothing from the field spills over them
