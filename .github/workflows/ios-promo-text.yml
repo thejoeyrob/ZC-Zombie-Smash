@@ -1,0 +1,25 @@
+# Sets the promotional text on the live App Store version (no build, no review). Runs when this file or the text changes on this branch, or by hand.
+name: iOS promotional text
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/zombie-smash-deployment-stores-mk88wq]
+    paths: [.github/workflows/ios-promo-text.yml, appstore/set_promo_text.rb, appstore/metadata/en-GB/promotional_text.txt]
+concurrency:
+  group: ios-promo-text
+  cancel-in-progress: false
+jobs:
+  promo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash2' }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3' }
+      - run: gem install fastlane --no-document
+      - run: ruby appstore/set_promo_text.rb
