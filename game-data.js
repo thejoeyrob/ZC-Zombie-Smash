@@ -145,6 +145,9 @@ window.ZSData = {
     },
   ],
   SKINS: [
+    { id: 'retro-handheld', name: 'Retro Handheld', file: 'console-retro-handheld.webp',
+      win: [72, 98, 828, 1165], accent: '#c7d99a', bleed: '#282d2b',
+      fire: '#d92b29', grenade: '#1269dc', stick: '#edb91b' },
     {
       id: 'toxic',
       win: [63, 98, 836, 1165],
@@ -281,34 +284,150 @@ window.ZSData = {
       secret: true,
     },
   ],
+  // Seven arenas, two waves each; after Dr Mantis the endless waves stay in the Harvest Chamber.
+  mapIndex: (wave) => Math.min(6, Math.max(0, Math.floor((wave - 1) / 2))),
   MAPS: [
-    {
-      name: 'THE GROUND',
-      file: 'map-concrete.jpg',
-    },
-    {
-      name: 'DESERT DUST',
-      file: 'map-desert.jpg',
-    },
-    {
-      name: 'NORTH ASSAULT',
-      file: 'map-north.jpg',
-    },
-    {
-      name: 'THE HANGAR',
-      file: 'map-hangar.jpg',
-    },
-    {
-      name: 'LAST DANCE',
-      file: 'map-north.jpg',
-    },
-    {
-      name: 'WASTELAND',
-      file: 'map-wasteland.jpg',
-    },
-    {
-      name: 'MANTIS LAB',
-      file: 'map-hangar.jpg',
-    },
-  ],
+  {
+    "name": "FIREHOUSE SQUARE",
+    "file": "arena-jordan.webp",
+    "accent": "#ffac47",
+    "reward": "COOLANT PULSE",
+    "entries": [[112,77],[231,77]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "PRISM REACTOR",
+    "file": "arena-glowinghumanity.webp",
+    "accent": "#4ef4c5",
+    "reward": "REACTOR DISCHARGE",
+    "entries": [[97,94],[246,94]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "CHAIN YARD",
+    "file": "arena-debo.webp",
+    "accent": "#ffd361",
+    "reward": "CHAIN SHOCK",
+    "entries": [[112,76],[231,76]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "ESPRESSO EXPRESS",
+    "file": "arena-caffeinatedsloth.webp",
+    "accent": "#eeb273",
+    "reward": "COFFEE RUSH",
+    "entries": [[114,82],[229,82]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "NEON PALACE",
+    "file": "arena-discoman.webp",
+    "accent": "#eb7bff",
+    "reward": "DISCO SHIELD",
+    "entryStyle": "tile",
+    "tileGrid": {"cols": 5, "rows": 8, "pts": [[35.6,34.3],[93.2,34.3],[144.7,34.3],[197.5,34.3],[248.8,34.3],[306.4,34.3],[32.9,70.6],[91.7,70.6],[144.2,70.6],[198.0,70.6],[250.4,70.6],[309.0,70.6],[29.9,112.2],[90.0,112.2],[143.6,112.2],[198.6,112.2],[252.1,112.2],[312.1,112.2],[26.9,153.4],[88.3,153.4],[143.1,153.4],[199.2,153.4],[253.9,153.4],[315.1,153.4],[23.7,198.0],[86.5,198.0],[142.5,198.0],[199.9,198.0],[255.8,198.0],[318.4,198.0],[20.3,244.9],[84.5,244.9],[141.8,244.9],[200.6,244.9],[257.8,244.9],[321.8,244.9],[16.7,295.3],[82.4,295.3],[141.2,295.3],[201.3,295.3],[259.9,295.3],[325.5,295.3],[13.1,344.9],[80.4,344.9],[140.5,344.9],[202.0,344.9],[262.0,344.9],[329.1,344.9],[10.4,381.5],[78.9,381.5],[140.0,381.5],[202.6,381.5],[263.5,381.5],[331.8,381.5]]},
+    "entries": [[63.4,40.4],[118.4,40.4],[171.1,40.4],[223.7,40.4],[278.6,40.4],[61.1,79.4],[117.4,79.4],[171.1,79.4],[224.8,79.4],[280.9,79.4],[58.8,120.8],[116.2,120.8],[171.1,120.8],[226.0,120.8],[283.3,120.8]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "ROSE BARRACKS",
+    "file": "arena-fatamy.webp",
+    "accent": "#ff86b5",
+    "reward": "SUPPLY SHIELD",
+    "entries": [[110,80],[233,80]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  },
+  {
+    "name": "HARVEST CHAMBER",
+    "file": "arena-drmantis.webp",
+    "entryStyle": "edge",
+    "accent": "#b6f36a",
+    "reward": "PURGE ARC",
+    "entries": [[91,-24],[266,-24],[-16,143],[-16,232],[359,131],[359,178],[359,232]],
+    "corridor": [
+      64,
+      279
+    ],
+    "fanY": 155
+  }
+],
 };
+
+// ZOMBIE SMASH LAUNCH ART v1
+(() => {
+  const extra = [
+  {
+    "id": "toxic-pop",
+    "name": "Toxic Pop",
+    "accent": "#aaff2a",
+    "bleed": "#15121d",
+    "fire": "#ff5463",
+    "grenade": "#37bdf5",
+    "stick": "#c9ff68",
+    "file": "console-toxic-pop.webp",
+    "win": [
+      72,
+      98,
+      828,
+      1165
+    ]
+  },
+  {
+    "id": "disco-fever",
+    "name": "Disco Fever",
+    "accent": "#ff9af4",
+    "bleed": "#160d26",
+    "fire": "#ff4fa2",
+    "grenade": "#20d5f7",
+    "stick": "#d2b2ff",
+    "file": "console-disco-fever.webp",
+    "win": [
+      72,
+      98,
+      828,
+      1165
+    ]
+  },
+  {
+    "id": "pocket-arcade",
+    "name": "Pocket Arcade",
+    "accent": "#76dacc",
+    "bleed": "#203b3d",
+    "fire": "#ed6453",
+    "grenade": "#2197a8",
+    "stick": "#eac389",
+    "file": "console-pocket-arcade.webp",
+    "win": [
+      72,
+      98,
+      828,
+      1165
+    ]
+  }
+];
+  for (const skin of extra) if (!window.ZSData.SKINS.some(s => s.id === skin.id)) window.ZSData.SKINS.push(skin);
+})();

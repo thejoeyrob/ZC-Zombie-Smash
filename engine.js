@@ -42,6 +42,17 @@
     chainExtend: 0.22,
   });
   const GLOW = ['green', 'pink', 'blue', 'orange', 'yellow', 'violet'];
+  // The reward for lighting all three floor targets: a temporary special weapon themed on the arena's boss.
+  // `sound` is the existing gun sound it borrows; `hit` effects are applied in specialHit().
+  const SPECIALS = [
+    { id: 'hose', name: 'WATER PULSE', color: '#6fd0ff', sound: 'smg', time: 10, delay: 0.075, damage: 0.95, speed: 540, pierce: 3, life: 0.6, knock: 7, size: 6 },
+    { id: 'rainbow', name: 'RAINBOW SPRAY', color: '#ff6ad5', sound: 'burst', time: 10, delay: 0.12, damage: 0.8, speed: 560, pierce: 1, life: 0.9, fan: [-0.26, -0.13, 0, 0.13, 0.26], size: 5 },
+    { id: 'bass', name: 'BASS CANNON', color: '#ffb23d', sound: 'shotgun', time: 10, delay: 0.5, damage: 2.4, speed: 430, pierce: 1, life: 1.4, blast: 52, size: 9 },
+    { id: 'beans', name: 'ESPRESSO BLASTER', color: '#c98a4b', sound: 'smg', time: 10, delay: 0.04, damage: 0.55, speed: 740, pierce: 1, life: 0.9, jitter: 0.09, size: 3 },
+    { id: 'laser', name: 'LASER PULSE', color: '#ff2fd2', sound: 'dmr', time: 10, delay: 0.17, damage: 1.7, hitscan: true, width: 13 },
+    { id: 'remover', name: 'MAKEUP REMOVER', color: '#ff9fcb', sound: 'smg', time: 10, delay: 0.13, damage: 1.0, speed: 500, pierce: 2, life: 0.8, slow: true, strip: true, size: 6 },
+    { id: 'purge', name: 'PURGE ARC', color: '#9dff4a', sound: 'burst', time: 10, delay: 0.24, damage: 1.5, speed: 600, pierce: 1, life: 0.9, chain: 3, size: 5 },
+  ];
   const GUNS = {
     pistol: {
       name: 'PISTOL',
@@ -198,15 +209,21 @@
         target: 10,
         spawnIn: 0.6,
         enemies: [],
+        openings: [],
+        tileBag: [],
+        tileBagMap: -1,
         bullets: [],
         shots: [],
         pickups: [],
         grenades: [],
         barrels: [],
         effects: [],
+        beams: [],
+        arcs: [],
         pops: [],
         boss: null,
         scene: null,
+        arena: null,
         nextIn: 0,
         active: false,
         over: false,
@@ -252,6 +269,7 @@
       this.input = { axis: 0, fire: false };
     }
     prepareWave(n) {
+      if (ZSData.mapIndex(this.wave) !== ZSData.mapIndex(n)) { this.arena = null; this.openings = []; this.tileBag = []; this.tileBagMap = -1; }
       this.wave = n;
       this.target = Math.min(34, 8 + n * 2);
       this.spawned = 0;
@@ -312,9 +330,9 @@
     // The introductory round remains readable; pressure builds after it and continues in survival.
     enemyPace() {
       return (
-        (1 + Math.min(0.78, (this.wave - 1) * 0.045)) *
+        (1 + Math.min(1.1, (this.wave - 1) * 0.06)) *
         Math.min(1, 0.9 + (this.wave - 1) * 0.04) *
-        (1 + Math.min(0.5, Math.max(0, this.wave - 14) * 0.018))
+        (1 + Math.min(0.6, Math.max(0, this.wave - 12) * 0.025))
       );
     }
     spawnInterval() {
@@ -373,10 +391,53 @@
           charge: 0,
           baseX: 0,
         };
+      const spawnMap = ZSData.MAPS[ZSData.mapIndex(this.wave)];
+      if (!minion && y < 0 && spawnMap.entryStyle === 'edge') {
+        // The Harvest Chamber has no hatches: the horde walks in from the edges of the map.
+        const entry = spawnMap.entries[this.spawned % spawnMap.entries.length],
+          lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
+        z.x = entry[0];
+        z.y = entry[1];
+        z.entryStyle = 'edge';
+        z.route = {
+          edge: true,
+          fromX: z.x,
+          fromY: z.y,
+          toX: spawnMap.corridor[0] + lane * (spawnMap.corridor[1] - spawnMap.corridor[0]),
+          toY: Math.max(z.y, spawnMap.fanY - 20) + this.rand() * 22,
+        };
+      } else if (!minion && y < 0) {
+        const map = spawnMap;
+        let entry;
+        if (map.entryStyle === 'tile') {
+          const mapId = ZSData.mapIndex(this.wave);
+          if (this.tileBagMap !== mapId || !this.tileBag?.length) {
+            this.tileBagMap = mapId;
+            this.tileBag = map.entries.map((_, i) => i).filter(i => map.entries[i][0] >= map.corridor[0] && map.entries[i][0] <= map.corridor[1]);
+            for (let i = this.tileBag.length - 1; i > 0; i--) {
+              const j = Math.floor(this.rand() * (i + 1));
+              [this.tileBag[i], this.tileBag[j]] = [this.tileBag[j], this.tileBag[i]];
+            }
+            // A shuffled bag gives variety without repeated use of one square.
+            if (this.tileBag.length > 1 && this.tileBag.at(-1) === this.lastTileEntry)
+              [this.tileBag[0], this.tileBag[this.tileBag.length - 1]] = [this.tileBag.at(-1), this.tileBag[0]];
+          }
+          this.lastTileEntry = this.tileBag.pop();
+          entry = map.entries[this.lastTileEntry];
+        } else entry = map.entries[this.spawned % map.entries.length];
+        (this.openings ||= []).push({ x: entry[0], y: entry[1], age: 0 });
+        const lane = (this.spawned * 0.61803398875 + this.rand() * 0.16) % 1;
+        z.x = entry[0] + (map.entryStyle === 'tile' ? 0 : (this.rand() - 0.5) * 8);
+        z.entryStyle = map.entryStyle || 'grate';
+        z.y = entry[1];
+        z.route = { fromX: z.x, fromY: z.y, toX: map.corridor[0] + lane * (map.corridor[1] - map.corridor[0]), toY: map.fanY + this.rand() * 22 };
+        z.emerge = 0.45;
+      }
       z.baseX = z.x;
       z.speed *= this.enemyPace();
+      if(z.route) { z.paceFactor=(H-52-z.route.fromY)/(H-52+28); z.speed*=z.paceFactor; }
       z.hp = z.maxHp = spec.hp * this.enemyHealth(type);
-      if (!minion) {
+      if (!minion && !z.route?.edge) {
         const m = Math.ceil(z.height * 0.41) + 2;
         z.x = clamp(z.x, m, W - m);
         z.baseX = z.x;
@@ -386,12 +447,15 @@
       return z;
     }
     step(dt) {
+      if (this.openings?.length) this.openings = this.openings.filter((o) => (o.age += dt) < 2);
       if (!this.active || this.over) return;
       dt = Math.min(dt, 0.05);
       this.t += dt;
       this.shake = Math.max(0, this.shake - dt * 16);
       this.bannerLeft = Math.max(0, this.bannerLeft - dt);
       this.effects = this.effects.filter((f) => (f.life -= dt) > 0);
+      this.beams = (this.beams || []).filter((b) => (b.life -= dt) > 0);
+      this.arcs = (this.arcs || []).filter((a) => (a.life -= dt) > 0);
       this.pops = this.pops.filter((p) => (p.life -= dt) > 0);
       for (const f of this.effects) {
         f.x += (f.vx || 0) * dt;
@@ -399,11 +463,17 @@
       }
       if (this.scene) {
         this.scene.time += dt;
-        if (this.scene.time >= this.scene.duration) this.advanceScene();
+        if (!this.scene.mediaControlled && this.scene.time >= this.scene.duration) this.advanceScene();
         return;
+      }
+      if (this.player.special && (this.player.special.left -= dt) <= 0) {
+        this.player.special = null;
+        this.banner = 'WEAPON SPENT';
+        this.bannerLeft = 1;
       }
       const p = this.player;
       p.inv = Math.max(0, p.inv - dt);
+      p.hit = Math.max(0, (p.hit || 0) - dt);
       p.cool = Math.max(0, p.cool - dt);
       p.shield = Math.max(0, p.shield - dt);
       p.rapid = Math.max(0, p.rapid - dt);
@@ -434,7 +504,7 @@
         this.spawnIn -= dt;
         if (this.spawnIn <= 0 && this.enemies.length < 13) {
           const z = this.spawn();
-          if (this.spawned % 5 === 0) {
+          if (this.spawned % 5 === 0 && !z.route) {
             z.x = clamp(p.x, z.r + 6, W - z.r - 6);
             z.baseX = z.x;
           }
@@ -468,18 +538,44 @@
             z.charge = 2;
           } else z.charge = 0;
         }
-        if (z.type === 'berserker') z.x = clamp(z.baseX + Math.sin(z.age * 2.7) * 28, 20, W - 20);
-        if (['brute', 'titan', 'armored'].includes(z.type))
-          z.x += clamp(p.x - z.x, -1, 1) * 11 * dt;
-        z.y += speed * dt;
-        if (z.vx) {
-          z.x += z.vx * dt;
-          z.vx *= Math.max(0, 1 - dt * 0.7);
-          if (Math.abs(z.vx) < 2) z.vx = 0;
+        const map = ZSData.MAPS[ZSData.mapIndex(this.wave)];
+        speed *= this.arena?.slow > 0 ? 0.55 : 1;
+        z.emerge = Math.max(0, (z.emerge || 0) - dt);
+        if (z.emerge > 0 && (z.entryStyle === 'tile' || z.entryStyle === 'portal')) continue;
+        if (z.slowT > 0) {
+          z.slowT -= dt;
+          speed *= 0.5;
         }
-        if (!z.minion) {
+        if (z.route?.edge) {
+          const dx = z.route.toX - z.x,
+            dy = z.route.toY - z.y,
+            d = Math.hypot(dx, dy),
+            stride = speed * dt;
+          if (d <= stride + 0.5) {
+            z.x = z.route.toX;
+            z.y = z.route.toY;
+            z.baseX = z.x;
+            z.route = null;
+          } else {
+            z.x += (dx / d) * stride;
+            z.y += (dy / d) * stride;
+          }
+        } else if (z.route) {
+          z.y += speed * dt;
+          const t = clamp((z.y - z.route.fromY) / (z.route.toY - z.route.fromY), 0, 1);
+          // Smooth diagonal fan-out: deterministic per run, never a column of enemies.
+          const ease = t * t * (3 - 2 * t);
+          z.x = z.route.fromX + (z.route.toX - z.route.fromX) * ease;
+          if (t >= 1) { z.baseX = z.x; z.route = null; }
+        } else {
+          if (z.type === 'berserker') z.x = z.baseX + Math.sin(z.age * 2.7) * 28;
+          if (['brute', 'titan', 'armored'].includes(z.type)) z.x += clamp(p.x - z.x, -1, 1) * 11 * dt;
+          z.y += speed * dt;
+          if (z.vx) { z.x += z.vx * dt; z.vx *= Math.max(0, 1 - dt * 0.7); if (Math.abs(z.vx) < 2) z.vx = 0; }
+        }
+        if (!z.minion && !z.route?.edge) {
           const m = Math.ceil(z.height * 0.41) + 2;
-          z.x = clamp(z.x, m, W - m);
+          z.x = clamp(z.x, Math.max(m, map.corridor[0] + Math.max(0,m-27)), Math.min(W - m, map.corridor[1] - Math.max(0,m-27)));
         }
         if (z.type === 'toxic' && z.attack <= 0 && z.y > 25 && z.y < p.y - 70) {
           this.aimedShot(z.x, z.y, 'venom', 108 + Math.min(24, this.wave * 1.5), 8);
@@ -516,6 +612,7 @@
           br.rot += dt * 5;
           if (br.age >= br.T) this.explodeBarrel(br);
         }
+      this.updateArena(dt);
       this.updateBullets(dt);
       this.updateShots(dt);
       this.updatePickups(dt);
@@ -543,6 +640,7 @@
     fire() {
       const p = this.player;
       if (!this.active || this.over || this.scene || p.cool > 0 || this.nextIn > 0) return false;
+      if (p.special) return this.fireSpecial();
       if (p.ammo <= 0 && !this.infiniteAmmo) this.equip('pistol');
       const gun = GUNS[p.gun],
         angles =
@@ -572,6 +670,105 @@
       this.emit('shot', { gun: p.gun });
       return true;
     }
+    updateArena(dt) {
+      const index = ZSData.mapIndex(this.wave);
+      if (!this.arena || this.arena.index !== index) this.arena = { index, cool: 0, slow: 0, pulse: 0, targets: [{x:82,y:190,lit:false},{x:W/2,y:230,lit:false},{x:W-82,y:190,lit:false}] };
+      const a = this.arena, cooling = a.cool > 0;
+      a.cool = Math.max(0,a.cool-dt); a.slow = Math.max(0,a.slow-dt); a.pulse = Math.max(0,a.pulse-dt);
+      if (cooling && !a.cool) a.targets.forEach(t => t.lit=false);
+    }
+    hitArenaTarget(target) {
+      const a = this.arena;
+      if (!a || a.cool || target.lit || this.scene || this.over) return;
+      target.lit = true; this.emit('target', { n: a.targets.filter((t) => t.lit).length });
+      if (!a.targets.every(t => t.lit)) return;
+      a.cool=12; a.pulse=1.2;
+      this.grantSpecial(a.index);
+    }
+    // All three targets lit: the arena hands Joey a temporary special weapon.
+    grantSpecial(index) {
+      const sp = SPECIALS[index] || SPECIALS[0];
+      this.player.special = { id: sp.id, left: sp.time };
+      this.player.cool = 0;
+      this.banner = sp.name + '!';
+      this.bannerLeft = 2.2;
+      this.shake = 2;
+      this.effects.push({ kind: 'ring', x: this.player.x, y: this.player.y - 20, r: 120, life: 0.6, total: 0.6, color: sp.color });
+      this.burst(this.player.x, this.player.y - 20, sp.color, 26, 190);
+      this.emit('boost');
+      this.emit('special', { id: sp.id });
+    }
+    // One shot (or one sweep) of the special weapon.
+    fireSpecial() {
+      const p = this.player,
+        sp = SPECIALS.find((s) => s.id === p.special.id);
+      if (!sp) {
+        p.special = null;
+        return false;
+      }
+      p.cool = sp.delay * (p.rapid > 0 ? 0.65 : 1);
+      p.fireFx = 0.065;
+      if (sp.hitscan) {
+        // A strobing laser column: everything in front of Joey takes the hit, shields included.
+        const reach = sp.width / 2;
+        for (const z of [...this.enemies, ...(this.boss ? [this.boss] : [])])
+          if (!z.dead && z.y < p.y - 14 && Math.abs(z.x - p.x) < reach + (z.r || 14) * 0.8) this.damage(z, sp.damage, 'dmr');
+        for (const target of this.arena?.targets || []) if (Math.abs(target.x - p.x) < reach + 12) this.hitArenaTarget(target);
+        for (const item of this.pickups) if (item.life > 0 && Math.abs(item.x - p.x) < reach + 14) this.collect(item);
+        for (const barrel of this.barrels) if (!barrel.dead && Math.abs(barrel.x - p.x) < reach + 12) { barrel.hp -= sp.damage; if (barrel.hp <= 0) this.explodeBarrel(barrel); }
+        this.beams.push({ x: p.x, y: p.y - 30, life: 0.11, total: 0.11, width: sp.width, color: sp.color });
+      } else {
+        for (const a of sp.fan || [0]) {
+          const j = a + (sp.jitter ? (this.rand() - 0.5) * 2 * sp.jitter : 0);
+          this.bullets.push({
+            id: this.nextId++,
+            x: p.x,
+            y: p.y - 27,
+            prevX: p.x,
+            prevY: p.y - 27,
+            vx: Math.sin(j) * sp.speed,
+            vy: -Math.cos(j) * sp.speed,
+            damage: sp.damage,
+            gun: 'special',
+            sp: sp.id,
+            pierce: sp.pierce,
+            hit: [],
+            life: sp.life,
+          });
+        }
+      }
+      this.emit('shot', { gun: sp.sound, id: sp.id });
+      return true;
+    }
+    // What a special bullet does to what it hits, besides damage.
+    specialHit(b, z) {
+      const sp = SPECIALS.find((s) => s.id === b.sp);
+      if (!sp) return;
+      if (sp.knock && !z.boss) z.y = Math.max(-10, z.y - sp.knock);
+      if (sp.slow && !z.boss) z.slowT = 2.2;
+      if (sp.blast) this.explode(b.x, b.y, sp.blast, sp.damage * 0.7, false);
+      if (sp.chain) {
+        let from = z;
+        const used = new Set([z.id]);
+        for (let hop = 0; hop < sp.chain; hop++) {
+          let best = null,
+            bd = 95;
+          for (const o of this.enemies)
+            if (!o.dead && !used.has(o.id)) {
+              const d = Math.hypot(o.x - from.x, o.y - from.y);
+              if (d < bd) {
+                bd = d;
+                best = o;
+              }
+            }
+          if (!best) break;
+          used.add(best.id);
+          this.arcs.push({ x1: from.x, y1: from.y - 10, x2: best.x, y2: best.y - 10, life: 0.16, total: 0.16 });
+          this.damage(best, sp.damage * 0.7, 'chain');
+          from = best;
+        }
+      }
+    }
     updateBullets(dt) {
       for (const b of this.bullets) {
         b.prevX = b.x;
@@ -582,6 +779,8 @@
         const dx = b.x - b.prevX,
           dy = b.y - b.prevY,
           length = dx * dx + dy * dy || 1;
+        for (const target of this.arena?.targets || [])
+          if (segmentDistance(target.x,target.y,b.prevX,b.prevY,b.x,b.y)<16) this.hitArenaTarget(target);
         const hits = [...this.enemies, ...(this.boss ? [this.boss] : []), ...this.barrels]
           .filter(
             (z) =>
@@ -598,7 +797,10 @@
           if (b.pierce <= 0 || z.dead || this.scene) break;
           b.hit.push(z.id);
           b.pierce--;
-          if (z.r !== undefined) this.damage(z, b.damage, b.gun);
+          if (z.r !== undefined) {
+            this.damage(z, b.damage, b.sp === 'remover' ? 'dmr' : b.gun);
+            if (b.sp) this.specialHit(b, z);
+          }
           else {
             z.hp -= b.damage;
             if (z.hp <= 0) this.explodeBarrel(z);
@@ -693,6 +895,7 @@
       if (this.over || this.scene || p.inv > 0 || p.shield > 0 || this.invincible) return;
       p.lives--;
       p.inv = 1.25;
+      p.hit = 1.25; // the hit flash is separate from spawn/boss protection, which must not flash Joey
       this.shake = 2;
       this.resetCombo();
       this.emit('hurt');
@@ -720,6 +923,7 @@
       const ammo = p.inventory[gun];
       if (p.gun !== 'pistol' && p.ammo > 0) p.inventory[p.gun] = p.ammo;
       p.inventory[gun] = 0;
+      p.special = null; // choosing a stored gun hands back the normal weapon
       this.equip(gun, ammo);
       this.emit('weaponUse', { gun });
       return true;
@@ -1198,7 +1402,9 @@
       if (b.attack > 0) return;
       b.cycle++;
       b.attack = 3;
-      const V = 1.1 + (b.stage - 1) * 0.045,
+      // Disco Man's and Fat Amy's throws were too slow: their projectiles fly faster (nothing else changes).
+      const FAST = b.bossId === 'discoman' || b.bossId === 'fatamy' ? 1.4 : 1,
+        V = (1.1 + (b.stage - 1) * 0.045) * FAST,
         fan = (kind, n, gap, speed, r) => {
           for (let i = 0; i < n; i++)
             this.aimedShot(b.x, b.y, kind, speed * V, r, (i - (n - 1) / 2) * gap);
@@ -1285,8 +1491,9 @@
           }
           break;
         case 'discoman':
-          if (b.stage === 1) fan('disco', 2, 0.4, 110, 12);
-          else fan('tea', 3, 0.34, 115, 11);
+          b.recordVolley = !b.recordVolley;
+          if (b.stage === 1) fan(b.recordVolley ? 'record' : 'disco', 2, 0.4, 110, 12);
+          else fan(b.recordVolley ? 'record' : 'disco', 3, 0.34, 115, 11);
           b.attack = 2.9;
           break;
         case 'caffeinatedsloth':
@@ -1310,8 +1517,8 @@
               this.shots.push({
                 x: b.x,
                 y: b.y,
-                vx: side * 98,
-                vy: 92,
+                vx: side * 98 * FAST,
+                vy: 92 * FAST,
                 kind: 'donut',
                 r: 11,
                 life: 7,
@@ -1442,9 +1649,28 @@
       return copy;
     }
     restore(saved) {
-      if (!saved || typeof saved.t !== 'number' || !saved.player) return false;
+      // Reject incomplete saves before touching the running game. Old saves may omit newer fields.
+      if (!saved || !Number.isFinite(saved.t) || saved.t < 0 ||
+          !Number.isInteger(saved.wave) || saved.wave < 1 ||
+          !Number.isFinite(saved.score) || saved.score < 0 ||
+          !saved.active || saved.over || !saved.player ||
+          !Object.hasOwn(GUNS, saved.player.gun) ||
+          !Number.isFinite(saved.player.x) || !Number.isFinite(saved.player.lives) ||
+          !['enemies', 'bullets', 'shots', 'pickups', 'grenades', 'effects', 'pops', 'bossesDown']
+            .every(key => Array.isArray(saved[key]) && saved[key].every(item => item != null)) ||
+          saved.enemies.some(z => !Object.hasOwn(ENEMIES, z.type)) ||
+          (saved.boss && !BOSSES.some(b => b.id === saved.boss.bossId)) ||
+          (saved.scene && (!['arrival', 'mutation', 'down', 'loss'].includes(saved.scene.kind) ||
+            (saved.scene.bossId && !BOSSES.some(b => b.id === saved.scene.bossId))))) return false;
+      let copy;
+      try { copy = JSON.parse(JSON.stringify(saved)); } catch { return false; }
       const fn = this.onEvent;
-      Object.assign(this, saved);
+      this.reset();
+      // Only restore state fields, never instance methods or the event callback.
+      for (const key of Object.keys(this)) {
+        if (key !== 'onEvent' && Object.hasOwn(copy, key)) this[key] = copy[key];
+      }
+      if (this.scene) { this.scene.mediaControlled = false; this.scene.time = 0; }
       this.onEvent = fn;
       this.player.ammo = this.player.ammo ?? GUNS[this.player.gun].ammo;
       this.player.inventory = {
@@ -1461,15 +1687,15 @@
         const hpRatio = clamp(z.hp / (z.maxHp || spec.hp), 0, 1);
         z.height = spec.height;
         z.r = spec.r;
-        z.speed = spec.speed * this.enemyPace();
+        z.speed = spec.speed * this.enemyPace() * (z.paceFactor || 1);
         z.maxHp = spec.hp * this.enemyHealth(z.type);
         z.hp = z.maxHp * hpRatio;
       }
       if (!Array.isArray(saved.barrels)) this.spawnBarrels();
-      else this.barrels = saved.barrels;
+      else this.barrels = copy.barrels;
       this.resetInput();
       return true;
     }
   }
-  window.ZSEngine = { Game, ENEMIES, GUNS, BARREL, segmentDistance, clamp };
+  window.ZSEngine = { Game, ENEMIES, GUNS, SPECIALS, BARREL, segmentDistance, clamp };
 })();

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // Finds finished scene clips and extra console skins in the project folder and wires them into the game.
 //   - scene-<boss>-<scene>.mp4   -> scene-clips.json   (scene = intro, form2, form3, bossdown, joeydown)
 //   - console-<id>.webp          -> skins-extra.json   (settings come from art-pipeline/CONSOLE-DESIGN-MANIFEST.json)
@@ -6,7 +7,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const files = new Set(readdirSync(root));
 const BOSSES = [
   'jordan',
@@ -44,6 +45,7 @@ if (existsSync(manifestPath)) {
       fire: s.fire,
       grenade: s.grenade,
       stick: s.stick,
+      deck3d: true,
     });
   }
 }
@@ -53,7 +55,9 @@ writeFileSync(join(root, 'skins-extra.json'), JSON.stringify({ skins }, null, 2)
 const swPath = join(root, 'sw.js');
 let sw = readFileSync(swPath, 'utf8');
 const wanted = [
+  ...[...files].filter(f => /^arena-.+\.webp$/.test(f)).map(f => './'+f),
   './scene-clips.json',
+  './scene-beats.json',
   './skins-extra.json',
   ...Object.values(clips).map((f) => './' + f),
   ...skins.map((s) => './' + s.file),
@@ -62,8 +66,8 @@ const lines = sw.split('\n').filter((l) => {
   const m = /^\s*'\.\/([^']+)',\s*$/.exec(l);
   return !(
     m &&
-    (/^scene-.+\.mp4$/.test(m[1]) ||
-      /^(scene-clips|skins-extra)\.json$/.test(m[1]) ||
+    (m[1].startsWith('scene-layers/') || m[1].startsWith('opening-layers/') || /^scene-.+\.mp4$/.test(m[1]) || /^(comic-|arena-).+\.webp$/.test(m[1]) || /^icon-opt-/.test(m[1]) ||
+      /^(scene-clips|scene-beats|skins-extra)\.json$/.test(m[1]) ||
       skins.some((s) => s.file === m[1]))
   );
 });
