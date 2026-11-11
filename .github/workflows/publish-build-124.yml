@@ -1,0 +1,23 @@
+name: Publish build 124 APK
+on:
+  push:
+    branches: [publish-build-124]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the stored build 124 artifact and publish the APK as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir dl && cd dl
+          gh run download 42515995320 --repo "$GITHUB_REPOSITORY" -n zombie-smash-vr-apk
+          ls -la
+          APK=$(ls *.apk | head -1)
+          cp "$APK" FattysGameShack-Quest-build124.apk
+          gh release view build-124 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create build-124 --repo "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" --title "Build 124 (rollback copy)" --notes "Build 124 (commit 6d27e99): the store build before the pinball rebuild. Kept as a rollback copy."
+          gh release upload build-124 FattysGameShack-Quest-build124.apk --repo "$GITHUB_REPOSITORY" --clobber
