@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -403,6 +403,8 @@ func _on_setting(key: String, value) -> void:
 			_apply_tier()
 		"screenlight":
 			_apply_screen_level()
+		"foveation":
+			_apply_tier()
 		"fps":
 			_show_fps(str(value) == "on")
 	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
@@ -457,6 +459,11 @@ func _apply_tier() -> void:
 	var iface := XRServer.find_interface("OpenXR")
 	if iface != null:
 		iface.render_target_size_multiplier = _tier_sharp()
+		# foveation draws the edges of your view at lower detail; the Display page can turn it down or off to see if it is what looks soft
+		var fov := str(settings.get("foveation", "app"))
+		if fov != "app" and "foveation_level" in iface:
+			iface.foveation_level = {"off": 0, "low": 1, "high": 3}.get(fov, 1)
+			iface.foveation_dynamic = false
 	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
 	var msaa := int(t.msaa) if str(settings.smooth) == "on" else 4
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
@@ -468,6 +475,14 @@ func _apply_screen_level() -> void:
 	for m in machines:
 		if m.screen_mat != null:
 			m.screen_mat.albedo_color = Color(v, v, v)
+
+
+func _eye_size() -> String:
+	var iface := XRServer.find_interface("OpenXR")
+	if iface == null:
+		return "-"
+	var sz: Vector2 = iface.get_render_target_size()
+	return "%dx%d" % [int(sz.x), int(sz.y)]
 
 
 func _show_fps(on: bool) -> void:
@@ -491,7 +506,7 @@ func _perf_tick(delta: float) -> void:
 	_perf_n = 0
 	_perf_t = 0.0
 	if fps_label != null and fps_label.visible:
-		fps_label.text = "%d fps  q%d  x%.2f" % [int(round(fps_now)), q_tier, _tier_sharp()]
+		fps_label.text = "%d fps  x%.2f  %s  fov %s" % [int(round(fps_now)), _tier_sharp(), _eye_size(), str(settings.get("foveation", "app"))]
 	if not xr_on or str(settings.smooth) != "on" or _perf_age < 8.0:
 		return
 	if avg > 0.0158 and q_tier < TIERS.size() - 1:       # slower than about 63 frames a second

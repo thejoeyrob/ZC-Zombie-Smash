@@ -343,6 +343,7 @@ func _build_ui() -> void:
 	_slider(dp, "sharp", "Image sharpness", 1.0, 1.6, 0.1)
 	_slider(dp, "screenlight", "Arcade screens", 0.5, 1.15, 0.05)
 	_stepper(dp, "glow", "Neon bloom", ["on", "off"], "")
+	_stepper(dp, "foveation", "Edge detail (foveation)", ["app", "off", "low", "high"], "")
 	_stepper(dp, "fps", "Show FPS", ["off", "on"], "")
 	_heading(dp, "SOUND")
 	_slider(dp, "music", "Music", 0.0, 1.0, 0.05)
