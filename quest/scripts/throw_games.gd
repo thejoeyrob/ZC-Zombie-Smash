@@ -58,7 +58,7 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 		g.tick(delta)
 	for i in range(2):
 		var h: Dictionary = hs[i]
-		var here: bool = bool(h.active) and can_play
+		var here: bool = bool(h.active) and can_play and h.has("palm")       # (the flat desktop view has no hand points)
 		if here:
 			tracks[i].push(_clock, h.palm, (h.vis_xf as Transform3D).basis)
 		else:
