@@ -5,8 +5,8 @@ extends Control
 
 signal exited
 
-const IDS := ["serpent", "paddle", "brick", "rocks", "aliens"]
-const NAMES := {"serpent": "SERPENT", "paddle": "PADDLE BALL", "brick": "BRICK BREAK", "rocks": "ROCK BLASTER", "aliens": "ALIEN WAVE"}
+const IDS := ["serpent", "paddle", "brick", "rocks", "aliens", "maze", "brawl"]
+const NAMES := {"serpent": "SERPENT", "paddle": "PADDLE BALL", "brick": "BRICK BREAK", "rocks": "ROCK BLASTER", "aliens": "ALIEN WAVE", "maze": "MAZE MUNCH", "brawl": "STREET BRAWL"}
 const SAVE_PATH := "user://mini_scores.json"
 
 var game: MiniGame
@@ -30,6 +30,8 @@ static func make(id: String) -> MiniGame:
 		"brick": return MGBrick.new()
 		"rocks": return MGRocks.new()
 		"aliens": return MGAliens.new()
+		"maze": return MGMaze.new()
+		"brawl": return MGBrawl.new()
 	return null
 
 

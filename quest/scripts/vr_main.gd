@@ -1942,37 +1942,38 @@ func _run_tour() -> void:
 	demo = true
 	# [camera position, look-at point, seconds to get there, seconds to hold]
 	var st := cab.stand_world()
+	var m1: Cabinet = machines[1]
+	var m2: Cabinet = machines[2]
+	var jw: Cabinet = _jw_machine()
 	var stops := [
 		[st + Vector3(0, 1.68, 0), cab.look_world() - Vector3(0, 0.1, 0), 0.1, 4.0],
 		[st + Vector3(0.05, 1.55, 0.0), cab.panel.global_position + Vector3(0, 0.1, 0), 2.0, 3.0],
-		[cab.to_global(Vector3(0.9, 1.5, 1.7)), cab.to_global(Vector3(0, 1.05, -0.3)), 2.5, 2.5],
-		[cab.to_global(Vector3(1.3, 1.2, -0.3)), cab.to_global(Vector3(0, 1.0, -0.3)), 3.0, 2.5],
-		[cab.to_global(Vector3(0.7, 1.3, -1.8)), cab.to_global(Vector3(0, 1.0, -0.4)), 3.0, 2.5],
-		[cab.to_global(Vector3(-1.3, 1.2, -0.3)), cab.to_global(Vector3(0, 1.0, -0.3)), 3.0, 2.5],
-		[cab.to_global(Vector3(0.0, 1.5, 1.7)), cab.to_global(Vector3(0, 1.1, -0.3)), 3.0, 2.0],
-		[Vector3(0, 1.75, 0.3), Vector3(0, 1.3, 5.5), 3.5, 3.0],
-		[Vector3(-0.8, 1.7, 0.2), Vector3(-3.1, 1.2, 4.2), 3.5, 3.0, "m1"],
-		[Vector3(0.8, 1.7, 0.2), Vector3(3.1, 1.2, 4.2), 5.0, 3.0, "m3"],
-		[Vector3(0, 1.7, 3.0), Vector3(0, 1.9, -0.55), 4.0, 3.0],
+		[Vector3(0, 1.7, 0.3), Vector3(0, 1.4, 6.0), 3.0, 3.5],                                  # the whole arcade from the door
+		[Vector3(-0.4, 1.7, 0.6), Vector3(-3.0, 1.3, 2.4), 3.0, 3.0],
+		[Vector3(0.4, 1.7, 0.6), Vector3(3.0, 1.3, 2.4), 3.5, 3.0],
+		[m1.to_global(Vector3(0.0, 1.55, 1.6)), m1.to_global(Vector3(0, 1.1, -0.3)), 3.0, 3.0],      # road rush
+		[m2.to_global(Vector3(0.0, 1.55, 1.6)), m2.to_global(Vector3(0, 1.1, -0.3)), 3.0, 3.0],      # big rig
+		[jw.to_global(Vector3(-1.1, 1.2, 1.2)), jw.to_global(Vector3(0, 1.0, -0.3)), 3.0, 3.0],
+		[jw.to_global(Vector3(0.0, 1.55, 0.9)), jw.to_global(Vector3(0, 0.95, 0.1)), 2.5, 3.5],
+		[Vector3(0, 1.7, 3.6), Vector3(0, 1.5, 7.3), 3.5, 3.0],                                      # towards the opening
+		[Vector3(0, 1.7, 5.4), Vector3(0, 1.6, 12.0), 3.0, 3.5],                                     # through it into the hall
+		[Vector3(0, 1.7, 8.6), Vector3(0, 1.4, 17.0), 3.5, 3.5],
+		[Vector3(-0.4, 1.7, 9.0), Vector3(-3.9, 1.6, 10.6), 3.5, 3.5],                               # darts
+		[Vector3(-1.6, 1.6, 10.6), Vector3(-3.9, 1.7, 10.6), 3.0, 3.5],
+		[Vector3(1.2, 1.6, 9.2), Vector3(2.1, 0.5, 19.9), 3.5, 3.0],                                 # lanes
+		[Vector3(2.1, 1.5, 11.5), Vector3(2.1, 0.3, 20.0), 3.5, 3.5],
+		[Vector3(-1.8, 1.7, 17.6), Vector3(-1.8, 1.5, 21.2), 3.5, 3.5],                              # axes
+		[Vector3(-1.8, 2.4, 14.0), Vector3(-0.5, 1.2, 20.5), 3.5, 3.0],
+		[Vector3(-0.5, 1.7, 8.2), Vector3(-3.9, 1.7, 6.2), 3.5, 2.5],                                # back through to the Hall of Fame bay
+		[Vector3(-2.0, 1.65, 5.2), Vector3(-3.95, 1.72, 5.95), 3.0, 3.5],
 		[Vector3(3.0, 1.6, 5.1), room.jukebox.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
 		[Vector3(1.3, 1.6, 1.6), room.vending.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
+		[Vector3(-1.2, 1.7, 1.0), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.6, 0), 3.5, 2.5, "sit0"],
+		[ArcadeRoom.ARC_CENTRE + Vector3(0, 1.38, -0.62), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.95, 0.05), 3.0, 14.0, "dice"],
+		[Vector3(1.7, 1.1, 3.9), ArcadeRoom.ARC_CENTRE + Vector3(0, 1.0, 0), 3.0, 3.0],
+		[room.pinball.stand_world() + Vector3(0, 1.65, 0), room.pinball.look_world(), 3.0, 3.5],
 		[Vector3(0.9, 1.5, 1.4), Vector3(0, 1.0, ArcadeRoom.FRONT_Z), 3.0, 2.5],
 		[Vector3(0, 1.7, 0.9), Vector3(0, 1.3, -5.0), 3.0, 3.0],
-		[Vector3(-2.4, 1.5, 3.7), Vector3(-3.1, 1.1, 3.15), 3.5, 2.5],
-		[Vector3(2.4, 1.5, 3.7), Vector3(3.1, 1.1, 3.15), 3.0, 2.5],
-		[_jw_machine().to_global(Vector3(-1.1, 1.1, -0.3)), _jw_machine().to_global(Vector3(0, 1.0, -0.3)), 3.0, 2.5],
-		[Vector3(-1.2, 1.7, 1.0), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.6, 0), 3.5, 2.5, "sit0"],
-		[ArcadeRoom.ARC_CENTRE + Vector3(0, 1.38, -0.62), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.95, 0.05), 3.0, 18.0, "dice"],
-		[Vector3(1.7, 1.1, 3.9), ArcadeRoom.ARC_CENTRE + Vector3(0, 1.0, 0), 3.0, 3.0],
-		[Vector3(0, 1.7, 3.6), Vector3(0, 1.5, 7.3), 3.5, 3.5],
-		[room.pinball.stand_world() + Vector3(0, 1.65, 0), room.pinball.look_world(), 3.0, 3.5],
-		[room.pinball2.stand_world() + Vector3(0, 1.65, 0), room.pinball2.look_world(), 3.5, 3.5],
-		[Vector3(0, 1.7, 5.2), Vector3(0, 1.75, 7.3), 3.0, 4.0],
-		[Vector3(-1.3, 1.7, 5.4), Vector3(-3.25, 1.85, ArcadeRoom.BACK_Z), 3.0, 4.0],
-		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 3.5, 2.2, "skins", "next"],
-		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 0.1, 2.2, "skins", "next"],
-		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 0.1, 2.2, "skins", "next"],
-		[Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.3, -0.1), 0.1, 2.2, "skins", "select"],
 	]
 	if args.has("tourpart"):                         # render only some of the stops, e.g. --tourpart=5-8 (long renders are made in pieces)
 		var ab: PackedStringArray = str(args.tourpart).split("-")
