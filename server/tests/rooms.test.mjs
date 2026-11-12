@@ -55,3 +55,12 @@ test('pinball relay accepts the lease owner only, preserving ramp and lights',as
  a.send({type:'claim',station:'pinball'});await a.next('granted');a.send({type:'pin',station:'pinball',state:pin});const got=await b.next('pin');assert.deepEqual(got.state,pin);
  }finally{a.ws.terminate();b.ws.terminate();await server.close();}
 });
+test('friends room: first person creates it, others join by the same code, it survives the first person leaving, wrong code is refused',async()=>{
+ const server=startServer({port:0});await once(server.app,'listening');const url=`ws://127.0.0.1:${server.app.address().port}/shack`;const clients=[];
+ try{
+ const a=await client(url);clients.push(a);a.send({type:'join',protocol:1,friends:true,code:'73920184',name:'ONE'});await a.next('welcome');const r1=await a.next('room');assert.equal(r1.code,'73920184');
+ const b=await client(url);clients.push(b);b.send({type:'join',protocol:1,friends:true,code:'73920184',name:'TWO'});await b.next('welcome');const r2=await b.next('room',x=>x.members.length===2);assert.equal(r2.members.length,2);
+ a.ws.close();const r3=await b.next('room',x=>x.members.length===1);assert.equal(r3.members.length,1);assert.equal(r3.host,r3.members[0].id);
+ const bad=await client(url);clients.push(bad);bad.send({type:'join',protocol:1,friends:true,code:'11111111',name:'X'});const e=await bad.next('error');assert.match(e.message,/not found/);
+ }finally{for(const c of clients)c.ws.close();server.close?.();}
+});

@@ -65,6 +65,11 @@ func refresh() -> void:
 		button(content, "LEAVE ROOM", session.leave)
 		text(content, "Point at a free machine or stool to claim it.\nVoice: you hear people from where they stand. Your microphone is only used while you are in a room.")
 		return
+	if session.friends_code != "":
+		var fb := button(content, "JOIN THE FRIENDS ROOM", func(): session.connect_friends(name_value), 78)
+		fb.disabled = session.connecting
+		fb.add_theme_font_size_override("font_size", 32)
+		text(content, "One tap: you land in the same room as everyone else who tapped it. No code to type.")
 	button(content, "NAME: " + name_value + ("  ✓ DONE" if editing_name else "  EDIT"), func(): editing_name = not editing_name; refresh())
 	if editing_name:
 		var keys := GridContainer.new()

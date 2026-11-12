@@ -45,8 +45,17 @@ func setup(owner_node: Node3D) -> void:
 		var config = JSON.parse_string(FileAccess.get_file_as_string(config_path))
 		if config is Dictionary:
 			endpoint = str(config.get("endpoint", ""))
+			friends_code = str(config.get("friends_code", ""))
 
-func connect_room(room_code: String, player_name: String) -> void:
+var friends_code := ""             # the standing room for the owner's friends (from config/shack.json); empty = no such button
+
+
+## One button for the owner's friends: join the standing room (it is made when the first person arrives, and stays while anyone is in it).
+func connect_friends(player_name: String) -> void:
+	connect_room(friends_code, player_name, true)
+
+
+func connect_room(room_code: String, player_name: String, friends := false) -> void:
 	if online or connecting:
 		return
 	if not endpoint.begins_with("wss://") and not (OS.is_debug_build() and endpoint.begins_with("ws://127.0.0.1:")):
@@ -55,6 +64,8 @@ func connect_room(room_code: String, player_name: String) -> void:
 		return
 	request_data = {"type": "create" if room_code.is_empty() else "join", "protocol": 1,
 		"name": player_name.left(20), "skin": main.avatar.skin_id, "code": room_code}
+	if friends:
+		request_data["friends"] = true
 	socket = WebSocketPeer.new()
 	socket.inbound_buffer_size = 65536
 	socket.outbound_buffer_size = 65536
