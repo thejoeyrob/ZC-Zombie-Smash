@@ -73,7 +73,7 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 			tracks[i].clear()
 		var grip: bool = bool(h.gripping) or bool(h.trigger)
 		if grip and not grip_prev[i] and held[i] == null:
-			_try_grab(i, h.palm)
+			_try_grab(i, h)
 		if held[i] != null:
 			if grip:
 				var t: Throwable = held[i]
@@ -85,13 +85,26 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 		grip_prev[i] = grip
 
 
-func _try_grab(i: int, palm: Vector3) -> void:
+## Picks up the nearest thing within reach of the hand. The hand has several points (the palm, the fingertip, the spot the stick ball is held, the controller
+## itself); the nearest of them counts, and the reach is never less than 20 cm, so a dart on its rack or a ball in its return is easy to take.
+func _try_grab(i: int, h: Dictionary) -> void:
+	var points: Array = [h.palm]
+	for k in ["tip", "grip"]:
+		if h.has(k) and (h[k] as Vector3).length() < 90.0:
+			points.append(h[k])
+	if h.has("vis_xf"):
+		points.append((h.vis_xf as Transform3D).origin)
 	var best: Throwable = null
 	var best_d := 1.0e9
 	for g in games:
 		for t in (g as SportGame).things():
-			var d := palm.distance_to((t as Throwable).world_pos())
-			if t.can_grab() and d < (t as Throwable).radius and d < best_d:
+			if not t.can_grab():
+				continue
+			var reach: float = maxf((t as Throwable).radius, 0.2)
+			var d := 1.0e9
+			for p in points:
+				d = minf(d, (p as Vector3).distance_to((t as Throwable).world_pos()))
+			if d < reach and d < best_d:
 				best = t
 				best_d = d
 	if best != null:

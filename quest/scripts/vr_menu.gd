@@ -452,6 +452,7 @@ This replaces the selected lane's scores.")
 	var dp: VBoxContainer = _pages.display
 	_heading(dp, "PICTURE")
 	_slider(dp, "sharp", "Image sharpness", 1.0, 1.6, 0.1)
+	_stepper(dp, "refresh", "Refresh rate (Hz)", ["72", "90", "120", "auto"], "")
 	_slider(dp, "screenlight", "Arcade screens", 0.5, 1.15, 0.05)
 	_stepper(dp, "glow", "Neon bloom", ["on", "off"], "")
 	_stepper(dp, "foveation", "Edge detail", ["app", "off", "low", "high"], "")

@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.3, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -380,6 +380,13 @@ func _load_settings() -> void:
 			settings.handtilt = int(settings.handtilt)
 	# Preserve headset clarity: a previously saved adaptive quality value must not silently downgrade the image.
 	settings.smooth = "off"
+	# Settings saved by older builds: the old default of 130% picture size is more than the headset can draw in the bigger room (it made the picture soft and
+	# the movement judder), so those start again at 100% and a steady 72 Hz. Anything the player sets from now on is kept.
+	if int(settings.get("ver", 0)) < 2:
+		settings.sharp = 1.0
+		settings.refresh = "72"
+		settings.ver = 2
+		_save_settings()
 
 
 func _save_settings() -> void:
@@ -416,6 +423,9 @@ func _on_setting(key: String, value) -> void:
 			_apply_screen_level()
 		"foveation":
 			_apply_tier()
+		"refresh":
+			_rate_set = false
+			_apply_refresh()
 		"fps":
 			_show_fps(str(value) == "on")
 	if key != "music" and key != "effects" and key != "lift" and key != "reach" and key != "haptics":
@@ -479,6 +489,23 @@ func _eye_multiplier(iface) -> float:
 	return minf(want, EYE_CAP_W / _eye_base_w)
 
 
+## Asks the headset for a refresh rate the game can hold. The default the headset picks (90 or 120 Hz) is more than the room can draw, so frames arrive
+## unevenly and movement judders; 72 Hz leaves room to spare. "auto" leaves the headset's own choice alone.
+func _apply_refresh() -> void:
+	_rate_set = true
+	var want := str(settings.get("refresh", "72"))
+	if want == "auto":
+		return
+	var iface := XRServer.find_interface("OpenXR")
+	if iface == null or not ("display_refresh_rate" in iface):
+		return
+	var rates: Array = iface.get_available_display_refresh_rates() if iface.has_method("get_available_display_refresh_rates") else []
+	var hz := float(want)
+	if rates.is_empty() or rates.has(hz):
+		iface.display_refresh_rate = hz
+		print("Refresh rate set to ", hz, " (available: ", rates, ")")
+
+
 func _tier_sharp() -> float:
 	var want := clampf(float(settings.sharp), 0.7, 1.6)
 	if str(settings.smooth) != "on":
@@ -530,7 +557,8 @@ func _perf_tick(delta: float) -> void:
 	_perf_sum += delta
 	_perf_n += 1
 	_perf_t += delta
-	# (no refresh-rate request: the headset keeps whatever rate it chose in build 124)
+	if xr_on and not _rate_set and _perf_age > 2.0:
+		_apply_refresh()
 	if _perf_t < 1.0:
 		return
 	var avg := _perf_sum / float(_perf_n)
@@ -1334,8 +1362,14 @@ func _locomotion(hs: Array, delta: float) -> void:
 		ph = 1 - ph
 	if locked:
 		selector.aim(Vector3.ZERO, Vector3.UP)
+		# walking into the sports hall always frees you: there is nothing to play at the machine from there
+		if room.sports.active:
+			audio.ui("toggle")
+			_set_locked(false)
+			return
 		var emu_busy: bool = cab.emu and emu.in_game()          # the thumbsticks and triggers are the game's controls: no leaving by them mid-game
-		if (xr_on or demo) and not emu_busy:
+		var cart_busy: bool = cab.cart != null and (cab.cart as TTCartridge).view != null and (cab.cart as TTCartridge).view.state == "play"      # the trigger is the horn: it must not also be "hold to leave"
+		if (xr_on or demo) and not emu_busy and not cart_busy:
 			_leave_gesture(hs, ph, delta)
 		# walking away is the quick way out: push the left stick for a moment and you are free again
 		var mvl: Vector2 = hs[0].stick

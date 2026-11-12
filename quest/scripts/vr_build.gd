@@ -183,34 +183,46 @@ static func side_panel(parent: Node, profile: PackedVector2Array, x: float, thic
 
 ## Bakes a node's plain mesh children into as few meshes as possible (one per distinct look), which keeps the draw-call count low
 ## on the headset. Children that must stay separate (moving parts, live screens) are marked with set_meta("dynamic", true).
-static func merge_static(parent: Node) -> void:
+## `deep` also looks through plain holder nodes (only for scenery that has no moving parts inside its holders: the room and the hall).
+static func merge_static(parent: Node, deep := false) -> void:
 	var groups := {}
 	var doomed: Array = []
-	for c in parent.get_children():
-		if not (c is MeshInstance3D):
-			continue
-		var mi := c as MeshInstance3D
-		if mi.mesh == null or mi.has_meta("dynamic") or mi.name == "ScreenQuad" or mi.mesh.get_surface_count() != 1:
-			continue
+	var found: Array = []
+	_collect_static(parent, Transform3D.IDENTITY, found, deep)
+	for f in found:
+		var mi: MeshInstance3D = f[0]
+		var xf: Transform3D = f[1]
 		var m := mi.material_override as StandardMaterial3D
-		if m == null:
-			continue
 		var sig := str([m.albedo_color, m.albedo_texture.get_instance_id() if m.albedo_texture != null else 0, m.roughness, m.metallic, m.emission_enabled, m.emission, m.emission_energy_multiplier,
-			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat])
+			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat, mi.cast_shadow, mi.layers])
 		if not groups.has(sig):
 			var st := SurfaceTool.new()
 			st.begin(Mesh.PRIMITIVE_TRIANGLES)
 			groups[sig] = {"mat": m, "st": st}
-		(groups[sig].st as SurfaceTool).append_from(mi.mesh, 0, mi.transform)
+		(groups[sig].st as SurfaceTool).append_from(mi.mesh, 0, xf)
 		doomed.append(mi)
 	for d in doomed:
-		parent.remove_child(d)
+		d.get_parent().remove_child(d)
 		d.queue_free()
 	for sig in groups:
 		var merged := MeshInstance3D.new()
 		merged.mesh = (groups[sig].st as SurfaceTool).commit()
 		merged.material_override = groups[sig].mat
 		parent.add_child(merged)
+
+
+## Every plain mesh under `node` (looking through plain, unscripted holder nodes too) with its transform relative to the merge root.
+static func _collect_static(node: Node, xf: Transform3D, out: Array, deep: bool) -> void:
+	for c in node.get_children():
+		if c is MeshInstance3D:
+			var mi := c as MeshInstance3D
+			if mi.mesh == null or mi.has_meta("dynamic") or mi.name == "ScreenQuad" or mi.mesh.get_surface_count() != 1 or not mi.visible or mi.get_child_count() > 0:
+				continue
+			if mi.material_override as StandardMaterial3D == null:
+				continue
+			out.append([mi, xf * mi.transform])
+		elif deep and c is Node3D and c.get_script() == null and c.get_class() == "Node3D" and not c.has_meta("dynamic") and (c as Node3D).visible:
+			_collect_static(c, xf * (c as Node3D).transform, out, deep)
 
 
 ## A flat shape (points as (z, y) in metres) turned into a slab, picture-mapped on its outer face. `uvs` are the picture coordinates of each point.

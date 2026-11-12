@@ -87,7 +87,7 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	_back_wall(root, font)
 	_decor(root, font)
 	_spots()
-	VRBuild.merge_static(root)
+	VRBuild.merge_static(root, true)
 	sports = ThrowGames.new()                          # the hall behind the back wall (darts, axes, bowling); it merges its own scenery
 	sports.build(root, font)
 

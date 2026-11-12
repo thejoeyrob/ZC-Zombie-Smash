@@ -46,7 +46,7 @@ func build(parent: Node3D, f: Font) -> void:
 	_axe_scenery()
 	_bowling_scenery()
 	_lobby_signs()
-	VRBuild.merge_static(node)
+	VRBuild.merge_static(node, true)
 
 
 func set_active(on: bool) -> void:
