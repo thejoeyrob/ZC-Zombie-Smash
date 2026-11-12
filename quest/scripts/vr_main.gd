@@ -122,7 +122,7 @@ func _ready() -> void:
 			m.set_live(null)
 	for m in machines:
 		if m.cart_mode != "":
-			var rc := RoadCartridge.new(m.cart_mode)
+			var rc := TTCartridge.new()
 			rc.build(self)
 			rc.sound.connect(func(n, _d): audio.sfx(n, 0.7, 0.02, m.global_position + Vector3(0, 1.2, 0.3)))
 			rc.haptic.connect(func(a, d): _haptic(-1, a, d))
@@ -849,7 +849,7 @@ func _process(delta: float) -> void:
 	emu.tick(delta)
 	for m in machines:
 		if m.cart != null:
-			(m.cart as RoadCartridge).set_active(m == cab and locked and not menu.open)
+			(m.cart as TTCartridge).set_active((m == cab and locked and not menu.open) or m == tour_cab)
 			m.cart.tick(delta)
 	if cab.emu or cab.cart != null:
 		pass
@@ -1923,6 +1923,9 @@ func _select_machine(i: int) -> void:
 
 
 # ---- a camera tour of the room, for a video ----------------------------------------------------------------
+var tour_cab: Cabinet = null       # during the video tour, this machine plays itself
+
+
 func _jw_machine() -> Cabinet:
 	for m in machines:
 		if m.emu:
@@ -1943,7 +1946,9 @@ func _run_tour() -> void:
 	# [camera position, look-at point, seconds to get there, seconds to hold]
 	var st := cab.stand_world()
 	var m1: Cabinet = machines[1]
-	var m2: Cabinet = machines[2]
+	tour_cab = m1
+	(m1.cart as TTCartridge).view.auto = true
+	(m1.cart as TTCartridge).view.start_game()
 	var jw: Cabinet = _jw_machine()
 	var stops := [
 		[st + Vector3(0, 1.68, 0), cab.look_world() - Vector3(0, 0.1, 0), 0.1, 4.0],
@@ -1951,8 +1956,8 @@ func _run_tour() -> void:
 		[Vector3(0, 1.7, 0.3), Vector3(0, 1.4, 6.0), 3.0, 3.5],                                  # the whole arcade from the door
 		[Vector3(-0.4, 1.7, 0.6), Vector3(-3.0, 1.3, 2.4), 3.0, 3.0],
 		[Vector3(0.4, 1.7, 0.6), Vector3(3.0, 1.3, 2.4), 3.5, 3.0],
-		[m1.to_global(Vector3(0.0, 1.55, 1.6)), m1.to_global(Vector3(0, 1.1, -0.3)), 3.0, 3.0],      # road rush
-		[m2.to_global(Vector3(0.0, 1.55, 1.6)), m2.to_global(Vector3(0, 1.1, -0.3)), 3.0, 3.0],      # big rig
+		[m1.to_global(Vector3(0.0, 1.55, 1.6)), m1.to_global(Vector3(0, 1.1, -0.3)), 3.0, 3.0],      # the lorry game
+		[m1.to_global(Vector3(1.2, 1.3, 0.9)), m1.to_global(Vector3(0, 1.0, -0.2)), 3.0, 3.0],
 		[jw.to_global(Vector3(-1.1, 1.2, 1.2)), jw.to_global(Vector3(0, 1.0, -0.3)), 3.0, 3.0],
 		[jw.to_global(Vector3(0.0, 1.55, 0.9)), jw.to_global(Vector3(0, 0.95, 0.1)), 2.5, 3.5],
 		[Vector3(0, 1.7, 3.6), Vector3(0, 1.5, 7.3), 3.5, 3.0],                                      # towards the opening
