@@ -13,7 +13,7 @@ func _initialize() -> void:
 		[Vector3(gx, 0, 6.5), Vector3(gx, 0, 6.5), "open floor inside the arcade"],
 		[Vector3(gx, 0, ArcadeRoom.BACK_Z), Vector3(gx, 0, ArcadeRoom.BACK_Z), "standing in the gateway"],
 		[Vector3(gx, 0, 9.0), Vector3(gx, 0, 9.0), "inside the hall"],
-		[Vector3(0.0, 0, ArcadeRoom.BACK_Z - 0.2), Vector3(0.0, 0, ArcadeRoom.BACK_Z - 0.4), "pushed back off the wall away from the gate"],
+		[Vector3(-3.4, 0, ArcadeRoom.BACK_Z - 0.2), Vector3(-3.4, 0, ArcadeRoom.BACK_Z - 0.4), "pushed back off the wall away from the gate"],
 		[Vector3(gx + 1.2, 0, ArcadeRoom.BACK_Z + 0.1), Vector3(gx + 1.2, 0, ArcadeRoom.BACK_Z + 0.35), "the hall side of the wall beside the gate"],
 	]
 	for c in cases:

@@ -5,9 +5,12 @@ var cam: Camera3D
 var room := ArcadeRoom.new()
 var prefix := "/tmp/claude-0/shots/gate"
 var views := [
-	[Vector3(-2.0, 1.6, 3.6), Vector3(-3.2, 1.3, 7.3), 75.0],      # in the arcade, looking at the gate
-	[Vector3(-3.2, 1.6, 8.9), Vector3(-3.2, 1.5, 7.3), 75.0],      # in the hall, looking back at the gate
-	[Vector3(-3.2, 1.6, 8.3), Vector3(-0.5, 1.5, 13.0), 75.0],     # in the hall just inside, looking along it
+	[Vector3(0, 1.7, 0.9), Vector3(0, 1.4, 6.0), 75.0],          # from the door, looking down the arcade to the opening
+	[Vector3(-0.3, 1.7, 3.0), Vector3(-3.0, 1.2, 2.0), 75.0],    # across to the left-hand machines
+	[Vector3(0.3, 1.7, 3.0), Vector3(3.0, 1.2, 2.0), 75.0],      # across to the right-hand machines
+	[Vector3(0, 1.65, 6.2), Vector3(0, 1.3, 14.0), 78.0],        # through the opening into the hall
+	[Vector3(0, 1.65, 9.0), Vector3(0, 1.4, 4.0), 80.0],         # in the hall, looking back into the arcade
+	[Vector3(-2.2, 1.7, 5.0), Vector3(-4.0, 1.6, 5.95), 70.0],   # the Hall of Fame in the old bay
 ]
 
 func _initialize() -> void:

@@ -1923,6 +1923,13 @@ func _select_machine(i: int) -> void:
 
 
 # ---- a camera tour of the room, for a video ----------------------------------------------------------------
+func _jw_machine() -> Cabinet:
+	for m in machines:
+		if m.emu:
+			return m
+	return machines[0]
+
+
 func _run_tour() -> void:
 	room.board_game.auto_human = true
 	room.board_game.take_seat(0, "local")
@@ -1953,7 +1960,7 @@ func _run_tour() -> void:
 		[Vector3(0, 1.7, 0.9), Vector3(0, 1.3, -5.0), 3.0, 3.0],
 		[Vector3(-2.4, 1.5, 3.7), Vector3(-3.1, 1.1, 3.15), 3.5, 2.5],
 		[Vector3(2.4, 1.5, 3.7), Vector3(3.1, 1.1, 3.15), 3.0, 2.5],
-		[machines[4].to_global(Vector3(-1.1, 1.1, -0.3)), machines[4].to_global(Vector3(0, 1.0, -0.3)), 3.0, 2.5],
+		[_jw_machine().to_global(Vector3(-1.1, 1.1, -0.3)), _jw_machine().to_global(Vector3(0, 1.0, -0.3)), 3.0, 2.5],
 		[Vector3(-1.2, 1.7, 1.0), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.6, 0), 3.5, 2.5, "sit0"],
 		[ArcadeRoom.ARC_CENTRE + Vector3(0, 1.38, -0.62), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.95, 0.05), 3.0, 18.0, "dice"],
 		[Vector3(1.7, 1.1, 3.9), ArcadeRoom.ARC_CENTRE + Vector3(0, 1.0, 0), 3.0, 3.0],
@@ -2014,8 +2021,8 @@ func _run_shots() -> void:
 		"backleft": [Vector3(0.6, 1.7, 4.6), Vector3(-2.4, 1.1, 7.2)],
 		"promo": [Vector3(0.2, 1.7, 4.9), Vector3(1.2, 1.35, 7.2)],
 		"backwall": [Vector3(0, 1.7, 3.4), Vector3(0, 1.5, 7.3)],
-		"jw_threeq": [machines[4].to_global(Vector3(-1.3, 1.7, 1.5)), machines[4].to_global(Vector3(0, 1.1, -0.2))],
-		"jw_deck": [machines[4].to_global(Vector3(0.0, 1.55, 0.9)), machines[4].to_global(Vector3(0, 0.95, 0.1))],
+		"jw_threeq": [_jw_machine().to_global(Vector3(-1.3, 1.7, 1.5)), _jw_machine().to_global(Vector3(0, 1.1, -0.2))],
+		"jw_deck": [_jw_machine().to_global(Vector3(0.0, 1.55, 0.9)), _jw_machine().to_global(Vector3(0, 0.95, 0.1))],
 		"zs_deck": [machines[0].to_global(Vector3(0.0, 1.55, 0.9)), machines[0].to_global(Vector3(0, 0.95, 0.1))],
 		"zs_threeq": [machines[0].to_global(Vector3(1.3, 1.7, 1.5)), machines[0].to_global(Vector3(0, 1.1, -0.2))],
 		"cab_sideL": [cab.to_global(Vector3(-1.25, 1.1, -0.3)), cab.to_global(Vector3(0, 1.0, -0.3))],

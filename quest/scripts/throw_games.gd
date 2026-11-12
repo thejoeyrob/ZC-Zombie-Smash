@@ -36,10 +36,10 @@ func build(parent: Node3D, font: Font) -> void:
 
 func set_active(on: bool) -> void:
 	active = on
-	annex.set_active(on)
+	annex.set_active(true)               # the hall is part of the same space now: it is always there to see (the camera only draws what it looks at)
 	for g in games:
 		g.active = on
-		g.visible = on
+		g.visible = true
 		g.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 	if not on:
 		for i in range(2):

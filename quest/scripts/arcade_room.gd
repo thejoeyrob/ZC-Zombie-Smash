@@ -12,7 +12,7 @@ const ARC_CENTRE := Vector3(0, 0, 2.9)
 const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 # [x, z, yaw in degrees, which boss]: four machines along each side wall, each turned a little toward the lounge so its painted side faces the door
-const SLOTS := [[-2.9, 1.35, 52.0, "zsa"], [-2.95, 3.15, 81.0, "roadrush"], [-2.9, 4.95, 114.0, "debo"],
+const SLOTS := [[-2.9, 1.35, 52.0, "zsa"], [-2.95, 3.15, 81.0, "roadrush"], [-2.9, 4.95, 114.0, ""],
 	[2.9, 1.35, -52.0, "bigrig"], [2.95, 3.15, -81.0, "jw"], [2.9, 4.95, -114.0, "fatamy"]]
 const PLAYER_SLOT := 0
 const DUAL_STICK := ["zsa", "debo"]      # these machines have two sticks: the right one pushed away fires, pulled toward you throws a grenade
@@ -48,26 +48,25 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	_font_ref = font
 	env = Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.02, 0.01, 0.05)
+	env.background_color = Color(0.03, 0.035, 0.045)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_energy = 0.53
-	env.ambient_light_color = Color(0.58, 0.61, 0.68)
+	env.ambient_light_energy = 0.72
+	env.ambient_light_color = Color(0.82, 0.84, 0.88)
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.08
-	# a softer, more natural picture: a gentle haze that grows with distance (it also hides shimmer far away), slightly relaxed colour and
-	# contrast, and a light bloom so the bright neon rolls off instead of ending in a hard digital edge
+	env.tonemap_exposure = 1.05
+	# a clean, neutral picture: no coloured haze, natural colour and contrast, and a very light bloom only where something really glows (screens, LEDs)
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.08, 0.10, 0.14)
-	env.fog_density = 0.003
+	env.fog_light_color = Color(0.45, 0.47, 0.5)
+	env.fog_density = 0.0012
 	env.fog_sky_affect = 1.0
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.04
-	env.adjustment_contrast = 1.055
+	env.adjustment_saturation = 1.0
+	env.adjustment_contrast = 1.03
 	env.glow_enabled = true
-	env.glow_intensity = 0.35
-	env.glow_strength = 0.68
+	env.glow_intensity = 0.22
+	env.glow_strength = 0.6
 	env.glow_bloom = 0.0
-	env.glow_hdr_threshold = 1.0
+	env.glow_hdr_threshold = 1.15
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	for lv in [0, 1, 3, 5, 6]:
 		env.set_glow_level(lv, 0.0)                  # only two soft, wide levels: cheap and gentle
@@ -76,9 +75,8 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)
-	# real dark brick walls with neon tubes, like a proper old arcade
-	# real dark brick: a photographed medieval brick set (colour, bumps and roughness), darkened for the late-night mood
-	var wood := VRBuild.pbr("brick-light", Color(0.74, 0.55, 0.48), Vector2.ONE, 3.0)
+	# a modern space: painted plaster walls, oak slat panelling on the back wall, polished concrete floor, a dark ceiling with LED light bars
+	var wood := VRBuild.pbr("plaster", Color(0.88, 0.87, 0.84), Vector2.ONE, 0.8)       # (the name is from the old brick: this is the plain wall material)
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -104,16 +102,15 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.pbr("tiles-bw", Color(0.86, 0.86, 0.9), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
-	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	VRSurfaceRelief.tile_floor(root, w, d, cz, carpet)
-	var ceiling := VRBuild.pbr("tiles", Color(0.22, 0.22, 0.3), Vector2(w / 2.4, d / 2.4), 0.8)      # dark ceiling tiles
+	var floor_m := VRBuild.pbr("concrete", Color(0.95, 0.95, 0.97), Vector2(w / 3.0, d / 3.0), 0.7)       # polished concrete with saw-cut joints
+	floor_m.metallic_specular = 0.7
+	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), floor_m, Vector3(-PI / 2, 0, 0))
+	var ceiling := VRBuild.mat(Color(0.07, 0.07, 0.08), 0.9)                                            # dark, matte
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
+	_ceiling_lights(root, 0.0, BACK_Z, [1.3, 3.1, 4.9])
 	# the back wall and the two side walls (the front wall, with the door, belongs to the door scene)
+	var oak := VRBuild.pbr("oakslat", Color(0.85, 0.8, 0.75), Vector2.ONE, 1.2)
 	var walls := [[Vector3(0, 0, BACK_Z), PI, w], [Vector3(-HALF_W, 0, cz), PI / 2, d], [Vector3(HALF_W, 0, cz), -PI / 2, d]]
-	var neon_a := VRBuild.mat(Color(1.0, 0.2, 0.7), 0.4, 0.0, 2.2)
-	var neon_b := VRBuild.mat(Color(0.1, 0.9, 1.0), 0.4, 0.0, 2.2)
-	var trim := VRBuild.mat(TRIM, 0.55)
 	var k := 0
 	for wall in walls:
 		var root_w := Node3D.new()
@@ -121,45 +118,57 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
 		if k == 0:
-			# the back wall has the gate to the sports hall cut into it: a narrow piece beside it, a lintel over it, and the long piece
+			# the back wall is oak slat panelling with the wide opening to the sports hall cut into it, between the two pinball machines
 			# (this wall is turned half way round, so its local x runs the opposite way to the world's)
 			var gl: float = ShackAnnex.GATE_X - ShackAnnex.GATE_W / 2.0
 			var gr: float = ShackAnnex.GATE_X + ShackAnnex.GATE_W / 2.0
-			_wall_piece(root_w, wood, -((-HALF_W + gl) / 2.0), gl + HALF_W, 0.0, HEIGHT)
-			_wall_piece(root_w, wood, -((gl + gr) / 2.0), gr - gl, ShackAnnex.GATE_H, HEIGHT - ShackAnnex.GATE_H)
-			_wall_piece(root_w, wood, -((gr + HALF_W) / 2.0), HALF_W - gr, 0.0, HEIGHT)
+			_wall_piece(root_w, oak, -((-HALF_W + gl) / 2.0), gl + HALF_W, 0.0, HEIGHT, true)
+			_wall_piece(root_w, oak, -((gl + gr) / 2.0), gr - gl, ShackAnnex.GATE_H, HEIGHT - ShackAnnex.GATE_H, true)
+			_wall_piece(root_w, oak, -((gr + HALF_W) / 2.0), HALF_W - gr, 0.0, HEIGHT, true)
 		else:
-			_wall_piece(root_w, wood, 0.0, float(wall[2]), 0.0, HEIGHT)
+			_wall_piece(root_w, wood, 0.0, float(wall[2]), 0.0, HEIGHT, false)
 		k += 1
-	# neon tubes across the ceiling instead of beams and panels
-	for z in [1.4, 3.4, 5.4]:
-		var tube_col := Color(1.0, 0.2, 0.7) if int(round(z)) % 2 == 0 else Color(0.1, 0.9, 1.0)
-		VRBuild.neon_tube(root, w, Vector3(0, HEIGHT - 0.05, z), tube_col, Vector3.ZERO, 0.02)
 
 
-## One piece of wall: the brick face, its raised bricks, a neon tube along the top and (for pieces that reach the floor) along the bottom, and the skirting.
-func _wall_piece(root_w: Node3D, wood: StandardMaterial3D, cx: float, width: float, y0: float, height: float) -> void:
+## Dark pendant light bars and a track with spot heads across the ceiling between z0 and z1: modern warm-white LED light (they are plain emissive meshes;
+## the real lights are the few omni lights below).
+func _ceiling_lights(root: Node3D, z0: float, z1: float, bars: Array) -> void:
+	var black := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.5, 0.6)
+	for z in bars:
+		VRBuild.led_bar(root, Vector3(3.6, 0.05, 0.1), Vector3(0, HEIGHT - 0.55, z), Color(1.0, 0.9, 0.76), 2.4)
+		VRBuild.box(root, Vector3(3.7, 0.025, 0.14), Vector3(0, HEIGHT - 0.51, z), black)
+		for sx in [-1.7, 1.7]:
+			VRBuild.box(root, Vector3(0.008, 0.5, 0.008), Vector3(sx, HEIGHT - 0.26, z), black)
+	# a track along each side with little spot heads aimed at the machines
+	for sx in [-2.9, 2.9]:
+		VRBuild.box(root, Vector3(0.05, 0.04, z1 - z0 - 1.0), Vector3(sx, HEIGHT - 0.03, (z0 + z1) / 2.0), black)
+		var zz := z0 + 0.8
+		while zz < z1 - 0.5:
+			VRBuild.cylinder(root, 0.04, 0.09, Vector3(sx, HEIGHT - 0.1, zz), black, 0.035, Vector3.ZERO, 10)
+			VRBuild.led_bar(root, Vector3(0.05, 0.006, 0.05), Vector3(sx, HEIGHT - 0.148, zz), Color(1.0, 0.92, 0.8), 3.0)
+			zz += 1.15
+
+
+## One piece of wall: the painted (or panelled) face, a slim shadow-gap skirting of dark metal, and a warm LED strip tucked in under the ceiling.
+func _wall_piece(root_w: Node3D, wall_mat: StandardMaterial3D, cx: float, width: float, y0: float, height: float, slat: bool) -> void:
 	var holder := Node3D.new()
 	holder.position = Vector3(cx, y0, 0)
 	root_w.add_child(holder)
-	var wm: StandardMaterial3D = wood.duplicate()      # the same chunky embossed brick on every wall (the old back-wall size), same size and colour
-	wm.uv1_scale = Vector3(width / 2.4, height / 2.4, 1)
+	var wm: StandardMaterial3D = wall_mat.duplicate()
+	wm.uv1_scale = Vector3(width / (1.2 if slat else 2.4), height / (1.2 if slat else 2.4), 1)
 	wm.texture_repeat = true
 	VRBuild.quad(holder, Vector2(width, height), Vector3(0, height / 2.0, 0), wm)
-	# True low-profile brick edges: static geometry instead of flat bump-map illusion.
-	VRSurfaceRelief.brick_wall(holder, width, height, wm)
-	VRBuild.neon_tube(holder, width, Vector3(0, height - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
+	if y0 + height > HEIGHT - 0.01:
+		VRBuild.led_bar(holder, Vector3(width, 0.03, 0.03), Vector3(0, height - 0.1, 0.03), Color(1.0, 0.86, 0.66), 1.6)
 	if y0 < 0.01:
-		VRBuild.neon_tube(holder, width, Vector3(0, 0.2, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(holder, Vector3(width, 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(width / 0.7, 0.34), 1.8))   # tall green washed wood skirting
-		VRBuild.box(holder, Vector3(width, 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(width / 0.7, 0.1), 1.8))   # its top moulding
+		VRBuild.box(holder, Vector3(width, 0.09, 0.025), Vector3(0, 0.045, 0.0125), VRBuild.mat(Color(0.03, 0.03, 0.035), 0.5, 0.5))
 
 
 func _lights(root: Node3D) -> void:
 	var specs := [
-		[Vector3(-2.6, 2.7, 1.8), Color(1.0, 0.3, 0.75), 1.3, 6.0],
-		[Vector3(2.6, 2.7, 1.8), Color(0.2, 0.85, 1.0), 1.3, 6.0],
-		[Vector3(0.0, 2.8, 5.8), Color(1.0, 0.75, 0.45), 1.0, 6.5],
+		[Vector3(-2.2, 2.7, 1.8), Color(1.0, 0.92, 0.82), 1.0, 6.5],
+		[Vector3(2.2, 2.7, 1.8), Color(1.0, 0.92, 0.82), 1.0, 6.5],
+		[Vector3(0.0, 2.8, 5.6), Color(1.0, 0.94, 0.86), 0.9, 7.0],
 	]
 	for s in specs:
 		var l := OmniLight3D.new()
@@ -185,6 +194,8 @@ func _machines(root: Node3D) -> void:
 	bosses["bigrig"] = {"name": "BIG RIG", "accent": "#ffbf40"}
 	for i in range(SLOTS.size()):
 		var id: String = SLOTS[i][3]
+		if id == "":
+			continue                                   # an empty bay: the Hall of Fame hangs there now
 		var key: String = art_key.get(id, id)
 		var pos := Vector3(float(SLOTS[i][0]), 0, float(SLOTS[i][1]))
 		var yaw := deg_to_rad(float(SLOTS[i][2]))
@@ -322,7 +333,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	prize_wall = PrizeWall.new()          # the prize shelves are gone: the object stays (empty) so the rest of the game can keep talking to it
 	# the Hall of Fame, big, in the middle of the back wall facing the door, in its original wooden frame
 	hall = HallBoard.new()
-	hall.build(root, font, progress, Vector3(0, 1.72, BACK_Z - 0.08), PI)
+	hall.build(root, font, progress, Vector3(-HALF_W + 0.08, 1.72, 5.95), PI / 2.0)       # on the left wall, in the bay where a machine used to stand
 	hall.scale = Vector3(0.9, 0.9, 1.0)
 	# a pinball machine on each side of it, well apart and each playing on its own
 	for k in range(2):
@@ -342,9 +353,11 @@ func _back_wall(root: Node3D, font: Font) -> void:
 			pinball = pb
 		else:
 			pinball2 = pb
-	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.92, BACK_Z - 0.04), PI, Vector2(2.1, 0.62))
+	# the wordmark over the opening: plain lit lettering
+	VRBuild.label(root, "SPORTS HALL", 0.2, Vector3(ShackAnnex.GATE_X, ShackAnnex.GATE_H + 0.35, BACK_Z - 0.04), Color(1.0, 0.94, 0.84), Vector3(0, PI, 0), 0, font, true)
+	VRBuild.label(root, "DARTS  •  AXES  •  BOWLING", 0.07, Vector3(ShackAnnex.GATE_X, ShackAnnex.GATE_H + 0.12, BACK_Z - 0.04), Color(0.85, 0.88, 0.95), Vector3(0, PI, 0), 0, font, true)
 	# the wedding poster, left of the left pinball machine on the back wall
-	_signboard(root, Vector3(-1.2, 1.85, BACK_Z + 0.02), 0.0, "panel-wedding.jpg", Vector2(1.2, 1.6), Color(1.0, 0.25, 0.65), false)       # (now on the hall side of the wall, since the gate is where it hung)
+	_signboard(root, Vector3(-3.25, 1.85, BACK_Z), PI, "panel-wedding.jpg", Vector2(1.2, 1.6), Color(1.0, 0.85, 0.7), false)
 	# the snack machine beside the door
 	vending = VendingMachine.new()
 	vending.position = Vector3(1.8, 0, 0.02)        # beside the door, inside on the right
@@ -423,7 +436,7 @@ func _signboard(root: Node3D, pos: Vector3, yaw: float, file: String, art_size: 
 	var off := 0.075                                   # how far the sign stands from the wall
 	# the glow on the brick behind the sign (additive, no hard edge)
 	var halo := _pool(glow)
-	halo.albedo_color = Color(glow.r, glow.g, glow.b, 0.65)
+	halo.albedo_color = Color(0.9, 0.85, 0.8, 0.22)
 	VRBuild.quad(holder, Vector2(w * 1.9, h * 2.3), Vector3(0, 0, 0.012), halo)
 	# four standoffs
 	for sx in [-1.0, 1.0]:
@@ -453,7 +466,7 @@ func _spots() -> void:
 		spots.append(["m%d" % i, "PLAY", m.stand_world(), m.look_world(), m.theme_color])
 	spots.append(["pinball", "PINBALL", pinball.stand_world(), pinball.look_world(), Color(1.0, 0.85, 0.2)])
 	spots.append(["pinball2", "PINBALL", pinball2.stand_world(), pinball2.look_world(), Color(1.0, 0.85, 0.2)])
-	spots.append(["hall", "HALL OF FAME", Vector3(0, 0, BACK_Z - 2.4), Vector3(0, 1.7, BACK_Z), Color(1.0, 0.82, 0.25)])
+	spots.append(["hall", "HALL OF FAME", Vector3(-2.2, 0, 5.95), Vector3(-HALF_W, 1.7, 5.95), Color(1.0, 0.82, 0.25)])
 	spots.append(["vending", "SNACKS", Vector3(1.8, 0, 1.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
 	spots.append(["jukebox", "JUKEBOX", Vector3(3.3, 0, BACK_Z - 1.5), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
 	spots.append(["skins", "AVATAR LOCKER", Vector3(-1.85, 0, 1.0), Vector3(-1.85, 1.3, -0.1), Color(0.3, 0.9, 1.0)])

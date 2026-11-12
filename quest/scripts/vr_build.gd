@@ -327,6 +327,19 @@ static func scanline_texture() -> ImageTexture:
 			img.set_pixel(x, y, Color(0, 0, 0, 0.0 if y % 2 == 0 else 0.08))
 	return ImageTexture.create_from_image(img)
 
+## A modern LED strip or light bar: one plain emissive box (cheap, and it merges with the room's other static meshes).
+static func led_bar(parent: Node, size: Vector3, pos: Vector3, color := Color(1.0, 0.88, 0.7), energy := 2.2, rot := Vector3.ZERO) -> MeshInstance3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.emission_enabled = true
+	m.emission = color
+	m.emission_energy_multiplier = energy
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var mi := box(parent, size, pos, m, rot)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
 ## A real neon tube: a round glass tube with a hot white core, a soft glow around it, and dark mounting clips along its length.
 ## It runs along local X from the given centre. Rotate the parent (or pass rot) to point it anywhere.
 static func neon_tube(parent: Node, length: float, pos: Vector3, color: Color, rot := Vector3.ZERO, standoff := 0.03) -> Node3D:
