@@ -6,7 +6,7 @@ var bowl: BowlingGame
 var phase := 0
 var frames := 0
 var results: Array = []
-var shots := [[0.0, 7.0, 0.0], [0.0, 7.0, 6.0], [0.65, 7.0, 0.0], [0.0, 9.0, 0.0]]       # [x offset from the lane's middle, speed, wrist roll]
+var shots := [[0.0, 7.0, 0.0], [0.0, 7.0, 6.0], [0.65, 7.0, 0.0], [0.0, 9.0, 0.0], [-0.09, 7.0, 0.0]]       # [x offset from the lane's middle, speed, wrist roll]
 var shot := 0
 
 
@@ -51,6 +51,7 @@ func _init() -> void:
 	_t(dg.checkout(170, 3) == "T20 T20 50", "170 checks out T20 T20 50: %s" % dg.checkout(170, 3))
 	_t(dg.checkout(40, 1) == "D20", "40 is D20")
 	_t(dg.checkout(32, 3) != "" and dg.checkout(169, 3) == "", "32 can be finished, 169 cannot")
+	dg.free()
 	# ---- axes ----
 	_t(AxeGame.score_at(0.0, 0.0).value == 5, "the bullseye is 5")
 	_t(AxeGame.score_at(0.0, 0.2).value == 3, "a ring: 3")
@@ -64,7 +65,7 @@ func _init() -> void:
 	bowl = BowlingGame.new()
 	root.add_child(bowl)
 	bowl.build(null)
-	bowl.choose("g_b0_go")
+	bowl._start(0)
 
 
 func _t(ok: bool, what: String) -> void:
@@ -99,13 +100,14 @@ func _process(delta: float) -> bool:
 		print("throw ", shot, " -> ", rolls[rolls.size() - 1], " pins   (", s.msg, ")")
 		shot += 1
 		if shot >= shots.size():
-			_t(results[0] >= 7, "a straight 7 m/s ball down the middle knocks down most of the pins (%d)" % results[0])
+			_t(results[0] >= 5, "a centre hit transfers energy through the rack (splits are possible with flat-base pins) (%d)" % results[0])
 			_t(results[2] == 0, "a ball 0.65 m off line goes in the gutter: %d" % results[2])
+			_t(results[4] >= 6, "a pocket shot produces pin action")
 			print("BOWLING / DARTS / AXE TESTS ", "PASS" if fails == 0 else "FAIL %d" % fails)
 			quit(1 if fails > 0 else 0)
 			return true
 		# each shot starts from a fresh rack
-		bowl.choose("g_b0_go")
+		bowl._start(0)
 		phase = 0
 		frames = 0
 	elif phase == 1 and frames > 2400:

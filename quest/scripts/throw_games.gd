@@ -43,12 +43,12 @@ func set_active(on: bool) -> void:
 		g.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 	if not on:
 		for i in range(2):
-			_drop(i)
+			_cancel(i)
 
 
 ## `hs` are the two hands as vr_main reads them; `at` is where the player is standing.
 func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
-	var want: bool = at.z > ShackAnnex.Z0 - 1.6 and absf(at.x - ShackAnnex.GATE_X) < 3.2 or at.z > ShackAnnex.Z0 + 0.2
+	var want: bool = (at.z > ShackAnnex.Z0 - 1.6 and absf(at.x - ShackAnnex.GATE_X) < 3.2) or at.z > ShackAnnex.Z0 + 0.2
 	if want != active:
 		set_active(want)
 	if not active:
@@ -63,7 +63,15 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 			tracks[i].push(_clock, h.palm, (h.vis_xf as Transform3D).basis)
 		else:
 			tracks[i].clear()
-		var grip: bool = here and (bool(h.gripping) or bool(h.trigger))
+		if not here:
+			_cancel(i)
+			grip_prev[i] = bool(h.gripping) or bool(h.trigger)
+			continue
+		# A restart may have returned an item to its rack while it was held.
+		if held[i] != null and (held[i].state != "held" or held[i].held_hand != i):
+			held[i] = null
+			tracks[i].clear()
+		var grip: bool = bool(h.gripping) or bool(h.trigger)
 		if grip and not grip_prev[i] and held[i] == null:
 			_try_grab(i, h.palm)
 		if held[i] != null:
@@ -83,12 +91,13 @@ func _try_grab(i: int, palm: Vector3) -> void:
 	for g in games:
 		for t in (g as SportGame).things():
 			var d := palm.distance_to((t as Throwable).world_pos())
-			if d < (t as Throwable).radius and d < best_d:
+			if t.can_grab() and d < (t as Throwable).radius and d < best_d:
 				best = t
 				best_d = d
 	if best != null:
 		held[i] = best
 		best.held_hand = i
+		tracks[i].clear()
 		(best.game as SportGame).on_grab(best, i)
 		buzz.emit(i, 0.25, 0.04)
 
@@ -104,14 +113,26 @@ func _release(i: int, h: Dictionary) -> void:
 	(t.game as SportGame).on_release(t, h.vis_xf, v, w, i)
 
 
-## Lets go of whatever the hand holds (the player left the hall or put the controller down).
-func _drop(i: int) -> void:
+## Cancelling tracking, opening menus or travelling never spends a throw.
+func _cancel(i: int) -> void:
 	var t = held[i]
+	held[i] = null
+	tracks[i].clear()
 	if t == null:
 		return
-	held[i] = null
+	if t.state == "held":
+		(t.game as SportGame).cancel_hold(t)
 	t.held_hand = -1
-	(t.game as SportGame).on_release(t, Transform3D(t.node.global_transform.basis, t.node.global_position), Vector3.ZERO, Vector3.ZERO, i)
+
+
+func cancel_holds() -> void:
+	for i in range(2):
+		_cancel(i)
+		grip_prev[i] = false
+
+
+func _drop(i: int) -> void:
+	_cancel(i)
 
 
 func selector_targets() -> Array:

@@ -644,12 +644,20 @@ func _on_jukebox(cmd: String) -> void:
 
 
 func _on_menu_action(name: String) -> void:
+	if name.begins_with("visit_") or name.begins_with("sport_"):
+		_menu_destination(name)
+		return
 	match name:
 		"resume":
 			_close_menu()
 		"recentre":
 			_close_menu()
-			recenter()
+			if locked:
+				recenter()
+			else:
+				avatar._inited = false
+				if xr_on and not seated:
+					_eye_stand = clampf(cam.position.y, 1.2, 2.1)
 		"quit":
 			get_tree().quit()
 		"story":
@@ -673,7 +681,53 @@ func _on_menu_action(name: String) -> void:
 				audio.play_music("ambient", 1.0)
 
 
+## Menu travel reuses the existing fade and releases the cabinet claim.
+func _menu_destination(id: String) -> void:
+	if tele_busy:
+		return
+	room.sports.cancel_holds()
+	var kind := id.trim_prefix("visit_").trim_prefix("sport_")
+	var start := id.begins_with("sport_")
+	var v: Dictionary = menu.values
+	var players := clampi(int(v.get("sports_players", 1)), 1, 4)
+	var pos := Vector3(0, 0, ShackAnnex.Z0 - 1.4)
+	var look := Vector3(0, 1.4, ShackAnnex.Z0 + 2.0)
+	if kind == "bowling":
+		var lane := clampi(int(v.get("bowling_lane", 1)) - 1, 0, 1)
+		pos = Vector3(ShackAnnex.LANE_X[lane], 0, ShackAnnex.FOUL_Z - 1.9)
+		look = Vector3(pos.x, 1.2, ShackAnnex.HEAD_PIN_Z)
+		if start:
+			room.sports.bowling.lanes[lane].players = players
+			room.sports.bowling._start(lane)
+	elif kind == "darts":
+		var lane := clampi(int(v.get("darts_lane", 1)) - 1, 0, 1)
+		pos = Vector3(ShackAnnex.OCHE_X + 0.6, 0, ShackAnnex.DART_Z[lane])
+		look = Vector3(ShackAnnex.DART_FACE_X, ShackAnnex.DART_Y, pos.z)
+		if start:
+			room.sports.darts.boards[lane].players = players
+			room.sports.darts.boards[lane].mode = maxi(0, DartsGame.MODES.find(str(v.get("darts_mode", "501"))))
+			room.sports.darts._start(lane)
+	elif kind == "axes":
+		var lane := clampi(int(v.get("axe_lane", 1)) - 1, 0, 2)
+		pos = Vector3(ShackAnnex.AXE_X[lane], 0, ShackAnnex.AXE_LINE_Z - 1.75)
+		look = Vector3(pos.x, ShackAnnex.AXE_Y, ShackAnnex.AXE_FACE_Z)
+		if start:
+			room.sports.axes.lanes[lane].players = players
+			room.sports.axes.lanes[lane].mode = maxi(0, AxeGame.MODES.find(str(v.get("axe_mode", "CLASSIC"))))
+			room.sports.axes._start(lane)
+	elif kind in ["pinball", "lounge"]:
+		for spot in room.spots:
+			if str(spot[0]) == kind:
+				pos = spot[2]
+				look = spot[3]
+	_set_locked(false)
+	_stand_up()
+	_close_menu()
+	teleport_to_spot([kind, kind, pos, look, Color.WHITE])
+
+
 func _open_menu() -> void:
+	room.sports.cancel_holds()
 	menu_resume_state = state
 	if state == "play":
 		state = "paused"
@@ -1246,6 +1300,10 @@ func _menu_input(hs: Array) -> void:
 			_open_menu()
 	menu_prev_btn = pressed
 	if menu.open:
+		var scroll_hand := 0 if settings.pointer == "left" else 1
+		var scroll_axis: float = hs[scroll_hand].stick.y
+		if absf(scroll_axis) > 0.25:
+			menu.scroll_page(-scroll_axis * 700.0 * get_process_delta_time())
 		var poked := false
 		var mn: Vector3 = menu.global_transform.basis.z.normalized()
 		for i in range(2):
@@ -1260,7 +1318,7 @@ func _menu_input(hs: Array) -> void:
 			if hs[ph].active:
 				menu.point(hs[ph].aim_origin, hs[ph].aim_dir, hs[ph].trigger)
 			else:
-				menu._release()
+				menu._cancel_pointer()
 				menu.beam.visible = false
 				menu.dot.visible = false
 

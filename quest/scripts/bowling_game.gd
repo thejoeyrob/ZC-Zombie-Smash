@@ -33,7 +33,7 @@ func build(f: Font) -> void:
 
 func _fresh(i: int) -> Dictionary:
 	return {"lane": i, "players": 1, "state": "idle", "phase": "idle", "cur": 0, "rolls": [], "pins": [], "ball": null, "t": 0.0, "still": 0.0, "msg": "",
-		"label": null, "board": null, "buttons": {}, "standing_before": 10, "thaw": [], "hook": 0.0, "fwd": Vector3(0, 0, 1)}
+		"label": null, "board": null, "buttons": {}, "standing_before": 10, "thaw": [], "hook": 0.0, "fwd": Vector3(0, 0, 1), "gutter": false}
 
 
 func lane_x(i: int) -> float:
@@ -60,8 +60,17 @@ func _build_world() -> void:
 	var z1 := ShackAnnex.Z1
 	var foul := ShackAnnex.FOUL_Z
 	var hw := ShackAnnex.HALF_W
-	# the floor: everywhere at floor level, except under the lanes
-	_box(Vector3(0, -0.5, (z0 + z1) / 2.0), Vector3(hw * 2.0, 1.0, z1 - z0))
+	# Cut out the complete lane / gutter / pit footprints. A full hall slab
+	# here used to cover every recessed gutter and the pin pit.
+	_box(Vector3(0, -0.5, (z0 + foul) / 2.0), Vector3(hw * 2.0, 1.0, foul - z0))
+	var left := -hw
+	for centre in ShackAnnex.LANE_X:
+		var edge_left: float = centre - ShackAnnex.LANE_W / 2.0 - ShackAnnex.GUTTER_W
+		if edge_left > left:
+			_box(Vector3((left + edge_left) / 2.0, -0.5, (foul + z1) / 2.0), Vector3(edge_left - left, 1.0, z1 - foul))
+		left = centre + ShackAnnex.LANE_W / 2.0 + ShackAnnex.GUTTER_W
+	if left < hw:
+		_box(Vector3((left + hw) / 2.0, -0.5, (foul + z1) / 2.0), Vector3(hw - left, 1.0, z1 - foul))
 	# the walls of the hall (so a ball cannot leave it)
 	_box(Vector3(-hw - 0.5, 1.5, (z0 + z1) / 2.0), Vector3(1.0, 3.0, z1 - z0))
 	_box(Vector3(hw + 0.5, 1.5, (z0 + z1) / 2.0), Vector3(1.0, 3.0, z1 - z0))
@@ -91,6 +100,8 @@ func _build_lane(i: int) -> void:
 	VRBuild.cylinder(self, 0.11, 0.05, Vector3(lx, 0.82, _ball_z()), VRBuild.mat(Color(0.3, 0.05, 0.1), 0.5), 0.09, Vector3.ZERO, 16)
 	# the ball
 	var b := RigidBody3D.new()
+	b.collision_layer = 1 << (i + 1)
+	b.collision_mask = 1 | b.collision_layer
 	b.mass = BALL_MASS
 	b.continuous_cd = true
 	b.can_sleep = true
@@ -160,20 +171,27 @@ func _ball_home(t: Throwable) -> void:
 
 func _make_pin(i: int, k: int) -> Dictionary:
 	var b := RigidBody3D.new()
+	b.collision_layer = 1 << (i + 1)
+	b.collision_mask = 1 | b.collision_layer
+	b.continuous_cd = true
 	b.mass = PIN_MASS
 	b.can_sleep = true
-	b.linear_damp = 0.12
-	b.angular_damp = 0.25
+	b.linear_damp = 0.08
+	b.angular_damp = 0.18
 	var pm := PhysicsMaterial.new()
 	pm.friction = 0.3
-	pm.bounce = 0.25
+	pm.bounce = 0.35
 	b.physics_material_override = pm
 	var cs := CollisionShape3D.new()
-	var cap := CapsuleShape3D.new()
-	cap.radius = 0.048
-	cap.height = PIN_H
-	cs.shape = cap
-	cs.position = Vector3(0, PIN_H / 2.0, 0)
+	# A real flat base and tapered body; capsules balance on a hemisphere.
+	var hull := ConvexPolygonShape3D.new()
+	var points := PackedVector3Array()
+	for level in [[0.030, 0.0], [0.0475, 0.08], [0.038, 0.17], [0.0255, 0.25], [0.041, 0.345], [0.02, 0.38]]:
+		for segment in range(12):
+			var angle := TAU * segment / 12.0
+			points.append(Vector3(sin(angle) * float(level[0]), level[1], cos(angle) * float(level[0])))
+	hull.points = points
+	cs.shape = hull
 	b.add_child(cs)
 	var mi := MeshInstance3D.new()
 	mi.mesh = _pin_mesh
@@ -214,7 +232,7 @@ func _pin_set(p: Dictionary, at: Vector3) -> void:
 	b.linear_velocity = Vector3.ZERO
 	b.angular_velocity = Vector3.ZERO
 	b.global_transform = Transform3D(Basis.IDENTITY, at)
-	p["thaw"] = 3
+	p["thaw"] = 0
 
 
 func _hide_pin(p: Dictionary) -> void:
@@ -273,7 +291,17 @@ func on_grab(t: Throwable, _hand: int) -> void:
 	sound.emit("pickup", t.world_pos(), 0.5)
 
 
+func cancel_hold(t: Throwable) -> void:
+	_ball_home(t)
+
+
 func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, angv: Vector3, hand: int) -> void:
+	if lanes[t.lane].state != "play" or lanes[t.lane].phase != "ready":
+		_ball_home(t)
+		return
+	for pin in lanes[t.lane].pins:
+		if pin.alive:
+			(pin.body as RigidBody3D).freeze = false
 	var b := t.node as RigidBody3D
 	var s: Dictionary = lanes[t.lane]
 	var v := vel
@@ -293,7 +321,8 @@ func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, angv: Vector3
 	s.phase = "rolling"
 	s.t = 0.0
 	s.still = 0.0
-	s.standing_before = _standing(s)
+	s.standing_before = int(BowlingScore.state(s.rolls[s.cur]).standing)
+	s.gutter = false
 	buzz.emit(hand, 0.4, 0.08)
 	sound.emit("throw", t.node.global_position, 0.7)
 
@@ -318,7 +347,7 @@ func choose(id: String) -> bool:
 	var s: Dictionary = lanes[i]
 	if what == "players" and s.state != "play":
 		s.players = s.players % 4 + 1
-	elif what == "go":
+	elif what == "go" and request_restart(s):
 		_start(i)
 	sound.emit("click", Vector3(lane_x(i), 1.1, ShackAnnex.FOUL_Z - 1.0), 0.5)
 	_refresh_buttons(i)
@@ -328,11 +357,12 @@ func choose(id: String) -> bool:
 func _refresh_buttons(i: int) -> void:
 	var s: Dictionary = lanes[i]
 	s.buttons.players.label.text = "PLAYERS\n%d" % s.players
-	s.buttons.go.label.text = "RESTART" if s.state == "play" else "NEW GAME"
+	s.buttons.go.label.text = "CONFIRM" if float(s.get("restart_left", 0.0)) > 0.0 else "RESTART" if s.state == "play" else "NEW GAME"
 
 
 func _start(i: int) -> void:
 	var s: Dictionary = lanes[i]
+	s["restart_left"] = 0.0
 	s.state = "play"
 	s.phase = "ready"
 	s.cur = 0
@@ -364,11 +394,8 @@ func _pin_up(p: Dictionary) -> bool:
 func tick(delta: float) -> void:
 	for i in range(lanes.size()):
 		var s: Dictionary = lanes[i]
-		for p in s.pins:
-			if int(p.get("thaw", 0)) > 0:
-				p["thaw"] = int(p.thaw) - 1
-				if int(p.thaw) == 0 and p.alive:
-					(p.body as RigidBody3D).freeze = false
+		if tick_restart(s, delta):
+			_refresh_buttons(i)
 		var t: Throwable = s.ball
 		if t.state == "held":
 			continue
@@ -382,10 +409,12 @@ func _follow(i: int, delta: float) -> void:
 	var b := s.ball.node as RigidBody3D
 	s.t += delta
 	var z := b.global_position.z
+	if z >= ShackAnnex.FOUL_Z and z < ShackAnnex.HEAD_PIN_Z - 0.2 and absf(b.global_position.x - lane_x(i)) > ShackAnnex.LANE_W / 2.0 + BALL_R * 0.35:
+		s.gutter = true
 	# the hook: the lane's friction pulls a spinning ball sideways, mostly in the last half of the lane
-	if s.phase == "rolling" and absf(s.hook) > 0.01 and z > ShackAnnex.FOUL_Z + 4.5 and z < ShackAnnex.HEAD_PIN_Z - 0.5 and b.global_position.y < 0.2:
+	if s.phase == "rolling" and not s.gutter and absf(s.hook) > 0.01 and z > ShackAnnex.FOUL_Z + 4.5 and z < ShackAnnex.HEAD_PIN_Z - 0.5 and b.global_position.y < 0.2:
 		var side := Vector3.UP.cross(s.fwd).normalized()
-		b.apply_central_force(side * clampf(s.hook, -HOOK_MAX, HOOK_MAX) * BALL_MASS)
+		b.apply_central_impulse(side * clampf(s.hook, -HOOK_MAX, HOOK_MAX) * BALL_MASS * delta)
 	if s.phase == "rolling":
 		var speed := b.linear_velocity.length()
 		var done: bool = z > ShackAnnex.HEAD_PIN_Z + 1.2 or b.global_position.y < -0.15 or float(s.t) > 9.0
@@ -417,11 +446,16 @@ func _finish_ball(i: int) -> void:
 	var s: Dictionary = lanes[i]
 	var after := _standing(s)
 	var before: int = s.standing_before
-	var knocked: int = before - after
+	var knocked: int = clampi(before - after, 0, before)
+	if s.gutter:
+		knocked = 0
+		_place_pins(i, false) # gutter rebounds cannot score or remove pins
 	# pins that are down leave the lane
 	for p in s.pins:
 		if p.alive and not _pin_up(p):
 			_hide_pin(p)
+		elif p.alive:
+			(p.body as RigidBody3D).freeze = true
 	(s.rolls[s.cur] as Array).append(knocked)
 	var msg := "%d PIN%s" % [knocked, "" if knocked == 1 else "S"]
 	if knocked == 10 and before == 10:
@@ -429,7 +463,7 @@ func _finish_ball(i: int) -> void:
 	elif before < 10 and knocked == before and knocked > 0:
 		msg = "SPARE!"
 	elif knocked == 0:
-		msg = "GUTTER BALL" if absf((s.ball.node as Node3D).global_position.x - lane_x(i)) > ShackAnnex.LANE_W / 2.0 else "MISSED"
+		msg = "GUTTER BALL" if s.gutter else "MISSED"
 	s.msg = "P%d: %s" % [s.cur + 1, msg]
 	sound.emit("clear" if knocked == 10 else "hit", Vector3(lane_x(i), 0.6, ShackAnnex.HEAD_PIN_Z), 0.9)
 	_next_ball(i)
@@ -455,7 +489,7 @@ func _next_ball(i: int) -> void:
 			for q in range(s.players):
 				if BowlingScore.total(s.rolls[q]) > BowlingScore.total(s.rolls[best]):
 					best = q
-			s.msg = ("PLAYER %d WINS  %d" % [best + 1, BowlingScore.total(s.rolls[best])]) if s.players > 1 else "FINAL SCORE  %d" % BowlingScore.total(s.rolls[0])
+			s.msg = result_text(s.rolls.map(func(rs): return BowlingScore.total(rs)))
 			sound.emit("chime", Vector3(lane_x(i), 2.0, ShackAnnex.FOUL_Z), 1.0)
 			_ball_home(s.ball)
 			_refresh_buttons(i)
@@ -484,6 +518,9 @@ func _text(i: int) -> void:
 				line += "%-3s " % f.text
 				cum += "%-3s " % (str(f.total) if int(f.total) >= 0 else ".")
 			txt += line + "\n" + "    " + cum + "\n"
+		if s.state == "play":
+			var st := BowlingScore.state(s.rolls[s.cur])
+			txt += "FRAME %d / 10  |  BALL %d\n" % [st.frame, st.ball]
 		txt += s.msg
 	(s.label as Label3D).text = txt
 	(s.board as Label3D).text = txt

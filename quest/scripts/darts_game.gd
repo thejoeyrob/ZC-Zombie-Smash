@@ -51,7 +51,7 @@ static func score_at(sx: float, sy: float) -> Dictionary:
 
 ## The fewest darts that finish `score` with a double on the last one (up to `darts_left` darts). "" when there is no way.
 func checkout(score: int, darts_left: int) -> String:
-	if score < 2 or score > 170:
+	if darts_left <= 0 or score < 2 or score > 170:
 		return ""
 	var key := "%d:%d" % [score, darts_left]
 	if _check_cache.has(key):
@@ -168,6 +168,9 @@ func _make_dart(b: int) -> Node3D:
 
 
 func _to_rack(t: Throwable) -> void:
+	t.data.clear()
+	t.vel = Vector3.ZERO
+	t.t = 0.0
 	t.state = "rest"
 	t.held_hand = -1
 	t.node.visible = true
@@ -177,7 +180,7 @@ func _to_rack(t: Throwable) -> void:
 func things() -> Array:
 	var out: Array = []
 	for t in darts:
-		if t.can_grab() and boards[t.lane].state == "play" and boards[t.lane].left > 0:
+		if t.can_grab() and boards[t.lane].state == "play" and boards[t.lane].left > 0 and not lane_busy(darts, t.lane):
 			out.append(t)
 	return out
 
@@ -191,7 +194,16 @@ func on_grab(t: Throwable, _hand: int) -> void:
 	sound.emit("pickup", t.world_pos(), 0.4)
 
 
-func on_release(t: Throwable, hand_xf: Transform3D, vel: Vector3, _angv: Vector3, hand: int) -> void:
+func cancel_hold(t: Throwable) -> void:
+	_to_rack(t)
+
+
+func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, _angv: Vector3, hand: int) -> void:
+	if boards[t.lane].state != "play" or boards[t.lane].left <= 0:
+		_to_rack(t)
+		return
+	t.data.clear()
+	t.data["hand"] = hand
 	t.pos = t.node.global_position
 	t.vel = vel * THROW_BOOST
 	if t.vel.length() > 14.0:
@@ -226,7 +238,7 @@ func choose(id: String) -> bool:
 		s.mode = (s.mode + 1) % MODES.size()
 	elif what == "players" and s.state != "play":
 		s.players = s.players % 4 + 1
-	elif what == "go":
+	elif what == "go" and request_restart(s):
 		_start(b)
 	sound.emit("click", Vector3(-ShackAnnex.HALF_W + 0.5, 2.0, _board_z(b)), 0.5)
 	_refresh_buttons(b)
@@ -237,11 +249,12 @@ func _refresh_buttons(b: int) -> void:
 	var s: Dictionary = boards[b]
 	s.buttons.mode.label.text = "MODE\n%s" % MODES[s.mode]
 	s.buttons.players.label.text = "PLAYERS\n%d" % s.players
-	s.buttons.go.label.text = "RESTART" if s.state == "play" else "START"
+	s.buttons.go.label.text = "CONFIRM" if float(s.get("restart_left", 0.0)) > 0.0 else "RESTART" if s.state == "play" else "START"
 
 
 func _start(b: int) -> void:
 	var s: Dictionary = boards[b]
+	s["restart_left"] = 0.0
 	var np: int = s.players
 	s.state = "play"
 	s.cur = 0
@@ -249,6 +262,7 @@ func _start(b: int) -> void:
 	s.winner = -1
 	s.hits = []
 	s.last = ""
+	s.turn_total = 0
 	s.timer = 0.0
 	s.scores = []
 	s.marks = []
@@ -282,6 +296,8 @@ func _record(b: int, hit: Dictionary) -> void:
 			s.scores[p] = s.turn_start               # bust: the turn's score is thrown away
 			s.msg = "BUST!  BACK TO %d" % s.turn_start
 			s.left = 0
+			s.turn_total = 0
+			s.last = s.msg
 			sound.emit("hurt", Vector3(-ShackAnnex.HALF_W + 0.5, 1.7, _board_z(b)), 0.6)
 		elif sc == 0:
 			s.scores[p] = 0
@@ -307,10 +323,13 @@ func _record(b: int, hit: Dictionary) -> void:
 			if _cricket_won(s, p):
 				s.winner = p
 				done = true
+	if s.mode < 2 and s.left > 0:
+		s.turn_total = s.turn_start - int(s.scores[p])
 	if done:
 		s.state = "over"
 		s.msg = "PLAYER %d WINS!" % (p + 1)
 		s.timer = 0.0
+		_refresh_buttons(b)
 		sound.emit("chime", Vector3(-ShackAnnex.HALF_W + 0.8, 1.8, _board_z(b)), 1.0)
 		for t in darts:
 			if t.lane == b and t.state == "rest":
@@ -334,6 +353,8 @@ func _next_turn(b: int) -> void:
 	s.cur = (s.cur + 1) % s.players
 	s.left = 3
 	s.hits = []
+	s.last = ""
+	s.turn_total = 0
 	if s.mode < 2:
 		s.turn_start = s.scores[s.cur]
 	s.msg = "PLAYER %d - THROW!" % (s.cur + 1)
@@ -345,6 +366,8 @@ func _next_turn(b: int) -> void:
 func tick(delta: float) -> void:
 	for b in range(boards.size()):
 		var s: Dictionary = boards[b]
+		if tick_restart(s, delta):
+			_refresh_buttons(b)
 		if s.state == "play" and s.left == 0 and s.timer > 0.0:
 			# wait for the last dart to land, then clear the board for the next player
 			var busy := false
@@ -394,6 +417,10 @@ func _fly(t: Throwable, delta: float) -> void:
 			t.pos = Vector3(clampf(t.pos.x, -ShackAnnex.HALF_W + 0.07, ShackAnnex.HALF_W - 0.12), minf(t.pos.y, ShackAnnex.HEIGHT - 0.06), clampf(t.pos.z, ShackAnnex.Z0 + 0.12, ShackAnnex.Z1 - 0.12))
 		if t.t > 4.0:
 			t.state = "down"
+			if not t.data.get("scored", false):
+				_record(t.lane, {"label": "MISS", "value": 0, "mult": 0, "number": 0})
+				t.data["scored"] = true
+			_settle(t)
 			return
 	_pose(t)
 
@@ -432,7 +459,7 @@ func _hit_board(t: Throwable, hit: Vector3) -> void:
 		t.data["scored"] = true
 		_record(b, sc)
 		sound.emit("target", hit, 0.9)
-		buzz.emit(0, 0.1, 0.02)
+		buzz.emit(int(t.data.get("hand", 0)), 0.1, 0.02)
 		return
 	# it bounces off (wire, surround, a flat landing or a weak throw) and falls
 	t.vel = Vector3(absf(t.vel.x) * 0.2 + 0.4, minf(t.vel.y, 0.0) * 0.3, t.vel.z * 0.3)
@@ -475,4 +502,7 @@ func _text(b: int) -> void:
 				line += "%s " % ["·", "/", "X", "◉"][mini(int(s.marks[i][k]), 3)]
 			t += line + ("  " if k % 2 == 0 else "\n")
 		t += s.msg
-	lbl.text = t
+	if s.state == "play":
+		t += "\n%d DART%s LEFT  |  %s" % [s.left, "" if s.left == 1 else "S", "  ".join(s.hits)]
+	if lbl.text != t:
+		lbl.text = t

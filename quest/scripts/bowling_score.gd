@@ -98,9 +98,10 @@ static func _text(f: int, balls: Array) -> String:
 	var s := ""
 	for k in range(balls.size()):
 		var b: int = balls[k]
-		if b == 10 and (f == 10 or k == 0):
+		var fresh_rack: bool = k == 0 or (f == 10 and ((k == 1 and balls[0] == 10) or (k == 2 and (balls[0] != 10 or balls[1] == 10))))
+		if b == 10 and fresh_rack:
 			s += "X"
-		elif k > 0 and balls[k - 1] != 10 and balls[k - 1] + b == 10 and not (f == 10 and k == 2 and balls[1] == 10):
+		elif k > 0 and not fresh_rack and balls[k - 1] + b == 10:
 			s += "/"
 		elif b == 0:
 			s += "-"

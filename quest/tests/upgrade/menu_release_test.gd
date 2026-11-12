@@ -11,6 +11,7 @@ func _run() -> void:
 	menu.build(scene, ThemeDB.fallback_font, defaults.settings)
 	defaults.free()
 	menu.set_open(true)
+	menu.point(Vector3(0, 0, 1), Vector3(0, 0, -1), false)
 	menu.point(Vector3(0, 0, 1), Vector3(0, 0, -1), true)
 	assert(menu._pressed)
 	menu.point(Vector3(0, 0, 1), Vector3.RIGHT, true)

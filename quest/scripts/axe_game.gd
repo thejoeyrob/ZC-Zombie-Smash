@@ -25,7 +25,7 @@ var axes: Array = []
 static func score_at(dx: float, dy: float) -> Dictionary:
 	for sgn in [-1.0, 1.0]:
 		var cx: float = float(sgn) * CLUTCH_X
-		if sqrt((dx - cx) * (dx - cx) + (dy - CLUTCH_Y) * (dy - CLUTCH_Y)) <= CLUTCH_R + 0.02:
+		if sqrt((dx - cx) * (dx - cx) + (dy - CLUTCH_Y) * (dy - CLUTCH_Y)) <= CLUTCH_R:
 			return {"value": 7, "label": "CLUTCH 7", "bull": true}
 	var r := sqrt(dx * dx + dy * dy)
 	for i in range(RINGS.size()):
@@ -109,6 +109,9 @@ func _rest_xf(t: Throwable) -> Transform3D:
 
 
 func _to_rack(t: Throwable) -> void:
+	t.data.clear()
+	t.vel = Vector3.ZERO
+	t.t = 0.0
 	t.state = "rest"
 	t.held_hand = -1
 	t.node.visible = true
@@ -118,7 +121,7 @@ func _to_rack(t: Throwable) -> void:
 func things() -> Array:
 	var out: Array = []
 	for t in axes:
-		if t.can_grab() and lanes[t.lane].state == "play" and lanes[t.lane].thrown < PER_TURN:
+		if t.can_grab() and lanes[t.lane].state == "play" and lanes[t.lane].thrown < PER_TURN and not lane_busy(axes, t.lane):
 			out.append(t)
 	return out
 
@@ -132,7 +135,16 @@ func on_grab(t: Throwable, _hand: int) -> void:
 	sound.emit("pickup", t.world_pos(), 0.5)
 
 
+func cancel_hold(t: Throwable) -> void:
+	_to_rack(t)
+
+
 func on_release(t: Throwable, hand_xf: Transform3D, vel: Vector3, angv: Vector3, hand: int) -> void:
+	if lanes[t.lane].state != "play" or lanes[t.lane].thrown >= PER_TURN:
+		_to_rack(t)
+		return
+	t.data.clear()
+	t.data["hand"] = hand
 	t.pos = t.node.global_position
 	t.basis = hand_xf.basis.orthonormalized()
 	t.vel = vel * 1.25
@@ -150,7 +162,7 @@ func on_release(t: Throwable, hand_xf: Transform3D, vel: Vector3, angv: Vector3,
 	var w := angv.dot(side)
 	if absf(w) < 3.0:
 		w = TAU * maxf(sp, 3.0) / 3.66
-	t.spin = clampf(w, 2.0, 26.0)
+	t.spin = clampf(w, -26.0, 26.0)
 	t.state = "flying"
 	t.t = 0.0
 	t.data["scored"] = false
@@ -181,7 +193,7 @@ func choose(id: String) -> bool:
 		s.mode = (s.mode + 1) % MODES.size()
 	elif what == "players" and s.state != "play":
 		s.players = s.players % 4 + 1
-	elif what == "go":
+	elif what == "go" and request_restart(s):
 		_start(i)
 	sound.emit("click", Vector3(_lane_x(i), 1.3, _rack_z()), 0.5)
 	_refresh_buttons(i)
@@ -192,11 +204,12 @@ func _refresh_buttons(i: int) -> void:
 	var s: Dictionary = lanes[i]
 	s.buttons.mode.label.text = "MODE\n%s" % ("CLASSIC" if s.mode == 0 else "BLITZ")
 	s.buttons.players.label.text = "PLAYERS\n%d" % s.players
-	s.buttons.go.label.text = "RESTART" if s.state == "play" else "START"
+	s.buttons.go.label.text = "CONFIRM" if float(s.get("restart_left", 0.0)) > 0.0 else "RESTART" if s.state == "play" else "START"
 
 
 func _start(i: int) -> void:
 	var s: Dictionary = lanes[i]
+	s["restart_left"] = 0.0
 	s.state = "play"
 	s.cur = 0
 	s.round = 0
@@ -216,6 +229,8 @@ func _start(i: int) -> void:
 
 func _score_throw(t: Throwable, hit: Dictionary) -> void:
 	var s: Dictionary = lanes[t.lane]
+	if s.state != "play":
+		return
 	var pts: int = hit.value
 	if s.mode == 1:
 		if hit.bull:
@@ -232,6 +247,8 @@ func _score_throw(t: Throwable, hit: Dictionary) -> void:
 func tick(delta: float) -> void:
 	for i in range(lanes.size()):
 		var s: Dictionary = lanes[i]
+		if tick_restart(s, delta):
+			_refresh_buttons(i)
 		if s.state == "play" and s.thrown >= PER_TURN:
 			var busy := false
 			for t in axes:
@@ -262,7 +279,7 @@ func _next_turn(i: int) -> void:
 		for p in range(s.players):
 			if s.scores[p] > s.scores[best]:
 				best = p
-		s.msg = "PLAYER %d WINS  %d" % [best + 1, s.scores[best]] if s.players > 1 else "FINAL SCORE  %d" % s.scores[0]
+		s.msg = result_text(s.scores)
 		sound.emit("chime", Vector3(_lane_x(i), 2.0, ShackAnnex.AXE_LINE_Z), 1.0)
 		_refresh_buttons(i)
 	else:
@@ -297,6 +314,7 @@ func _fly(t: Throwable, delta: float) -> void:
 			if not t.data.get("scored", false):
 				t.data["scored"] = true
 				lanes[t.lane].last = "NO STICK"
+				lanes[t.lane].combo = 0
 				sound.emit("hit", t.pos, 0.5)
 			return
 		if t.pos.x < -ShackAnnex.HALF_W + 0.1 or t.pos.x > ShackAnnex.HALF_W - 0.1 or t.pos.z < ShackAnnex.Z0 + 0.15 or t.pos.y > ShackAnnex.HEIGHT - 0.1:
@@ -306,6 +324,8 @@ func _fly(t: Throwable, delta: float) -> void:
 			t.pos.y = minf(t.pos.y, ShackAnnex.HEIGHT - 0.11)
 		if t.t > 5.0:
 			t.state = "down"
+			lanes[t.lane].last = "NO STICK"
+			lanes[t.lane].combo = 0
 			return
 	t.node.global_transform = Transform3D(t.basis, t.pos)
 
@@ -321,7 +341,7 @@ func _arrive(t: Throwable, prev_edge: Vector3, edge: Vector3, plane: float) -> v
 	for k in range(lanes.size()):
 		if absf(hit.x - _lane_x(k)) < 0.6 and absf(hit.y - ShackAnnex.AXE_Y) < 0.6:
 			lane = k
-	if lane >= 0 and can_stick(blade_dir, handle, t.vel.normalized(), speed):
+	if lane == t.lane and not t.data.get("scored", false) and can_stick(blade_dir, handle, t.vel.normalized(), speed):
 		var dx := -(hit.x - _lane_x(lane))          # the thrower faces +z: their right is -x
 		var dy := hit.y - (ShackAnnex.AXE_Y - CENTRE_DROP)
 		t.state = "stuck"
@@ -330,19 +350,17 @@ func _arrive(t: Throwable, prev_edge: Vector3, edge: Vector3, plane: float) -> v
 		t.node.global_transform = Transform3D(b, hit - b * BLADE_EDGE + Vector3(0, 0, 0.035))
 		t.data["scored"] = true
 		_score_throw(t, score_at(dx, dy))
-		buzz.emit(0, 0.7, 0.08)
-		buzz.emit(1, 0.7, 0.08)
+		buzz.emit(int(t.data.get("hand", 0)), 0.7, 0.08)
 		return
 	# it hits flat, handle first, or the wall beside the targets: it falls
 	t.vel = Vector3(t.vel.x * 0.2, t.vel.y * 0.2, -absf(t.vel.z) * 0.22)
 	t.spin = -t.spin * 0.4
 	t.data["scored"] = true
-	lanes[t.lane].last = "NO STICK"
+	lanes[t.lane].last = "WRONG LANE" if lane >= 0 and lane != t.lane else "NO STICK"
 	if lanes[t.lane].mode == 1:
 		lanes[t.lane].combo = 0
 	sound.emit("ricochet", hit, 0.7)
-	buzz.emit(0, 0.25, 0.04)
-	buzz.emit(1, 0.25, 0.04)
+	buzz.emit(int(t.data.get("hand", 0)), 0.25, 0.04)
 
 
 func _text(i: int) -> void:
@@ -359,4 +377,7 @@ func _text(i: int) -> void:
 	if s.mode == 1 and s.combo > 1 and s.state == "play":
 		t += "COMBO x%d\n" % s.combo
 	t += s.last if s.last != "" and s.state == "play" else s.msg
-	lbl.text = t
+	if s.state == "play":
+		t += "\n%d OF %d THROWN" % [s.thrown, PER_TURN]
+	if lbl.text != t:
+		lbl.text = t
