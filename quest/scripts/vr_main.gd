@@ -905,9 +905,11 @@ func _process(delta: float) -> void:
 	_update_peg_targets()
 	_calibrate(delta)
 	var hs := _read_hands(delta)
-	room.sports.update(hs, delta, _head_floor(), not menu.open and not locked)
 	_pose_hands(hs)
 	_update_avatar(hs, delta)
+	# (after the hands are posed: the sports code needs each hand's palm, tip and visible pose, which are only worked out there. Before this fix it ran first and
+	# found none of them, so nothing in the hall could ever be picked up.)
+	room.sports.update(hs, delta, _head_floor(), not menu.open and not locked)
 	_menu_input(hs)
 	_world_inputs(hs)
 	if social != null:
