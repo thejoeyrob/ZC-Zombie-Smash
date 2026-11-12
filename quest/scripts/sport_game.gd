@@ -1,0 +1,38 @@
+class_name SportGame
+extends Node3D
+## Base for the three sports. A game owns its things to throw, shows its own score display and answers the pointer buttons next to it.
+
+signal sound(name: String, at: Vector3, volume: float)
+signal buzz(hand: int, amp: float, dur: float)
+
+var font: Font
+var active := false              # only runs while somebody is in the hall
+
+
+func things() -> Array:
+	return []
+
+
+func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:
+	return hand_xf
+
+
+func on_grab(_t: Throwable, _hand: int) -> void:
+	pass
+
+
+func on_release(_t: Throwable, _hand_xf: Transform3D, _vel: Vector3, _angv: Vector3, _hand: int) -> void:
+	pass
+
+
+## Buttons you can point at: {id, label, xf, box, colour}.
+func selector_targets() -> Array:
+	return []
+
+
+func choose(_id: String) -> bool:
+	return false
+
+
+func tick(_delta: float) -> void:
+	pass

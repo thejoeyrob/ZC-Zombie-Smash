@@ -32,6 +32,7 @@ var progress: VRProgress
 var pinball: Pinball
 var pinball2: Pinball
 var board_game: BoardGame
+var sports: ThrowGames
 var vending: VendingMachine
 var jukebox: Jukebox
 var skins: SkinMachine            # the avatar locker, left of the door
@@ -89,6 +90,8 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	_decor(root, font)
 	_spots()
 	VRBuild.merge_static(root)
+	sports = ThrowGames.new()                          # the hall behind the back wall (darts, axes, bowling); it merges its own scenery
+	sports.build(root, font)
 
 
 func _art(file: String, fallback: Texture2D) -> Texture2D:
@@ -117,21 +120,39 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 		root_w.position = wall[0]
 		root_w.rotation.y = wall[1]
 		root.add_child(root_w)
-		var wm: StandardMaterial3D = wood.duplicate()      # the same chunky embossed brick on every wall (the old back-wall size), same size and colour
-		wm.uv1_scale = Vector3(wall[2] / 2.4, HEIGHT / 2.4, 1)
-		wm.texture_repeat = true
-		VRBuild.quad(root_w, Vector2(wall[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
-		# True low-profile brick edges: static geometry instead of flat bump-map illusion.
-		VRSurfaceRelief.brick_wall(root_w, float(wall[2]), HEIGHT, wm)
-		VRBuild.neon_tube(root_w, wall[2], Vector3(0, HEIGHT - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
-		VRBuild.neon_tube(root_w, wall[2], Vector3(0, 0.2, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(root_w, Vector3(wall[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(wall[2] / 0.7, 0.34), 1.8))   # tall green washed wood skirting
-		VRBuild.box(root_w, Vector3(wall[2], 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(wall[2] / 0.7, 0.1), 1.8))   # its top moulding
+		if k == 0:
+			# the back wall has the gate to the sports hall cut into it: a narrow piece beside it, a lintel over it, and the long piece
+			# (this wall is turned half way round, so its local x runs the opposite way to the world's)
+			var gl: float = ShackAnnex.GATE_X - ShackAnnex.GATE_W / 2.0
+			var gr: float = ShackAnnex.GATE_X + ShackAnnex.GATE_W / 2.0
+			_wall_piece(root_w, wood, -((-HALF_W + gl) / 2.0), gl + HALF_W, 0.0, HEIGHT)
+			_wall_piece(root_w, wood, -((gl + gr) / 2.0), gr - gl, ShackAnnex.GATE_H, HEIGHT - ShackAnnex.GATE_H)
+			_wall_piece(root_w, wood, -((gr + HALF_W) / 2.0), HALF_W - gr, 0.0, HEIGHT)
+		else:
+			_wall_piece(root_w, wood, 0.0, float(wall[2]), 0.0, HEIGHT)
 		k += 1
 	# neon tubes across the ceiling instead of beams and panels
 	for z in [1.4, 3.4, 5.4]:
 		var tube_col := Color(1.0, 0.2, 0.7) if int(round(z)) % 2 == 0 else Color(0.1, 0.9, 1.0)
 		VRBuild.neon_tube(root, w, Vector3(0, HEIGHT - 0.05, z), tube_col, Vector3.ZERO, 0.02)
+
+
+## One piece of wall: the brick face, its raised bricks, a neon tube along the top and (for pieces that reach the floor) along the bottom, and the skirting.
+func _wall_piece(root_w: Node3D, wood: StandardMaterial3D, cx: float, width: float, y0: float, height: float) -> void:
+	var holder := Node3D.new()
+	holder.position = Vector3(cx, y0, 0)
+	root_w.add_child(holder)
+	var wm: StandardMaterial3D = wood.duplicate()      # the same chunky embossed brick on every wall (the old back-wall size), same size and colour
+	wm.uv1_scale = Vector3(width / 2.4, height / 2.4, 1)
+	wm.texture_repeat = true
+	VRBuild.quad(holder, Vector2(width, height), Vector3(0, height / 2.0, 0), wm)
+	# True low-profile brick edges: static geometry instead of flat bump-map illusion.
+	VRSurfaceRelief.brick_wall(holder, width, height, wm)
+	VRBuild.neon_tube(holder, width, Vector3(0, height - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
+	if y0 < 0.01:
+		VRBuild.neon_tube(holder, width, Vector3(0, 0.2, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
+		VRBuild.box(holder, Vector3(width, 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(width / 0.7, 0.34), 1.8))   # tall green washed wood skirting
+		VRBuild.box(holder, Vector3(width, 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(width / 0.7, 0.1), 1.8))   # its top moulding
 
 
 func _lights(root: Node3D) -> void:
@@ -318,7 +339,7 @@ func _back_wall(root: Node3D, font: Font) -> void:
 			pinball2 = pb
 	_neon_sign(root, "neon-arcade.png", Vector3(0, 2.92, BACK_Z - 0.04), PI, Vector2(2.1, 0.62))
 	# the wedding poster, left of the left pinball machine on the back wall
-	_signboard(root, Vector3(-3.25, 1.85, BACK_Z), PI, "panel-wedding.jpg", Vector2(1.2, 1.6), Color(1.0, 0.25, 0.65), false)
+	_signboard(root, Vector3(-1.2, 1.85, BACK_Z + 0.02), 0.0, "panel-wedding.jpg", Vector2(1.2, 1.6), Color(1.0, 0.25, 0.65), false)       # (now on the hall side of the wall, since the gate is where it hung)
 	# the snack machine beside the door
 	vending = VendingMachine.new()
 	vending.position = Vector3(1.8, 0, 0.02)        # beside the door, inside on the right
@@ -437,7 +458,19 @@ func _spots() -> void:
 
 ## Keeps a walking player out of walls, machines and counters.
 func collide(p: Vector3) -> Vector3:
-	var out := Vector3(clampf(p.x, -HALF_W + 0.35, HALF_W - 0.35), 0.0, clampf(p.z, FRONT_Z + 0.5, BACK_Z - 0.4))
+	var gate_lo: float = ShackAnnex.GATE_X - ShackAnnex.GATE_W / 2.0 + 0.25
+	var gate_hi: float = ShackAnnex.GATE_X + ShackAnnex.GATE_W / 2.0 - 0.25
+	var out := Vector3(clampf(p.x, -HALF_W + 0.35, HALF_W - 0.35), 0.0, p.z)
+	# the arcade, the gate through its back wall (a wall's thickness of it), and the sports hall beyond
+	if p.z < BACK_Z - 0.4:
+		out.z = maxf(p.z, FRONT_Z + 0.5)
+	elif p.z < BACK_Z + 0.35:
+		if p.x > gate_lo - 0.15 and p.x < gate_hi + 0.15:
+			out.x = clampf(p.x, gate_lo, gate_hi)                                  # in the gateway: the way through
+		else:
+			out.z = BACK_Z - 0.4 if p.z < BACK_Z - 0.025 else BACK_Z + 0.35       # against the wall, on whichever side you are
+	else:
+		out.z = minf(p.z, ShackAnnex.Z1 - 0.4)
 	for b in blockers:
 		var d := Vector2(out.x - b[0], out.z - b[1])
 		var r: float = float(b[2]) + (float(b[3]) if b.size() > 3 else 0.2)

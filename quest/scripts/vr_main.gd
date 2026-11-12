@@ -132,6 +132,8 @@ func _ready() -> void:
 		var m := {"roll": "throw", "hop": "click", "enter": "pickup", "capture": "hurt", "finish": "clear", "win": "chime"}
 		if m.has(n):
 			audio.sfx(m[n], 0.6, 0.02, room.board_game.global_position + Vector3(0, 0.3, 0)))
+	room.sports.sound.connect(func(n, at, v): audio.sfx(n, v, 0.03, at))
+	room.sports.buzz.connect(func(h, a, d): _haptic(h, a, d))
 	room.pinball2.table.best = progress.pinball_best
 	room.pinball2.table.bonus_balls = progress.codes.has("pinball")
 	room.pinball2.sound.connect(_on_pinball_sound)
@@ -812,6 +814,7 @@ func _process(delta: float) -> void:
 	_update_peg_targets()
 	_calibrate(delta)
 	var hs := _read_hands(delta)
+	room.sports.update(hs, delta, _head_floor(), not menu.open and not locked)
 	_pose_hands(hs)
 	_update_avatar(hs, delta)
 	_menu_input(hs)
@@ -1416,6 +1419,9 @@ func _choose(id: String) -> void:
 		audio.ui("switch")
 		_open_menu()
 		return
+	if id.begins_with("g_"):
+		room.sports.choose(id)
+		return
 	if id == "dice":
 		if social != null and social.online:
 			social.send({"type": "roll"})
@@ -1455,6 +1461,8 @@ func _update_peg_targets() -> void:
 
 func _within_reach(id: String) -> bool:
 	var hp := _head_floor()
+	if id.begins_with("g_"):
+		return room.sports.active
 	if id.begins_with("m") and id.substr(1).is_valid_int():
 		return hp.distance_to((machines[int(id.substr(1))] as Cabinet).stand_world()) < 1.5
 	if id == "pinball":
@@ -1484,6 +1492,7 @@ func _selector_targets() -> Array:
 		out.append({"id": "peg%d" % k, "label": "MOVE", "xf": Transform3D.IDENTITY, "box": AABB(Vector3(0, -100, 0), Vector3.ZERO), "colour": Color(1.0, 0.95, 0.4), "always": false})
 	out.append({"id": "pinball2", "label": "PLAY", "xf": room.pinball2.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
+	out.append_array(room.sports.selector_targets())
 	for sd in room.seats:
 		out.append({"id": sd[0], "label": "SIT", "xf": Transform3D(Basis.IDENTITY, sd[1]), "box": AABB(Vector3(-0.25, 0.0, -0.25), Vector3(0.5, 0.85, 0.5)), "colour": Color(1.0, 0.45, 0.85), "always": true})
 	out.append({"id": "skins", "label": "AVATARS", "xf": room.skins.global_transform, "box": AABB(Vector3(-0.42, 0.0, -0.3), Vector3(0.84, 2.0, 1.3)), "colour": Color(0.3, 0.9, 1.0), "always": true})
