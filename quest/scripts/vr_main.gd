@@ -120,6 +120,15 @@ func _ready() -> void:
 			emu.set_audio_position(m)               # the game's sound comes out of the JW EDS machine
 			m.attract_tex = emu.screen_texture()
 			m.set_live(null)
+	for m in machines:
+		if m.cart_mode != "":
+			var rc := RoadCartridge.new(m.cart_mode)
+			rc.build(self)
+			rc.sound.connect(func(n, _d): audio.sfx(n, 0.7, 0.02, m.global_position + Vector3(0, 1.2, 0.3)))
+			rc.haptic.connect(func(a, d): _haptic(-1, a, d))
+			m.cart = rc
+			m.attract_tex = rc.screen_texture()
+			m.set_live(null)
 	cab = machines[room.player_index]
 	cab.set_live(cartridge.screen_texture())
 	room.set_active(room.player_index)
@@ -614,7 +623,7 @@ func _capture_attract() -> void:
 		return
 	var tex := ImageTexture.create_from_image(img)
 	for m in machines:
-		if m.emu:
+		if m.emu or m.cart != null:
 			continue
 		m.attract_tex = tex
 		if m != cab:
@@ -838,7 +847,11 @@ func _process(delta: float) -> void:
 	emu.hold = not (cab.emu and locked and not menu.open)       # the game only runs while somebody is playing at its machine
 	emu.session.set_volume(0.0 if emu.hold else float(settings.effects))
 	emu.tick(delta)
-	if cab.emu:
+	for m in machines:
+		if m.cart != null:
+			(m.cart as RoadCartridge).set_active(m == cab and locked and not menu.open)
+			m.cart.tick(delta)
+	if cab.emu or cab.cart != null:
 		pass
 	elif state == "play" and game != null:
 		acc += minf(delta, 0.1)
@@ -1607,6 +1620,9 @@ func _released(h: Dictionary, dist: float) -> bool:
 
 
 func _stick(hs: Array, delta: float) -> void:
+	if cab.wheel:
+		_wheel(hs, delta)
+		return
 	var ball := cab.ball_world_position()
 	if grab_hand == -1:
 		for i in range(2):
@@ -1646,6 +1662,51 @@ func _stick(hs: Array, delta: float) -> void:
 	if absf(axis) > 0.55 and absf(prev) <= 0.55 and grab_hand >= 0:
 		audio.sfx("switch", 0.5)
 		_haptic(grab_hand, 0.35, 0.03)
+
+
+## The steering wheel of a driving machine: close a hand (grip) on the rim and turn it; the wheel follows the hand's angle round the hub and
+## springs back to straight when you let go. The thumbsticks steer too.
+var wheel_off := 0.0
+var _wheel_prev := 0.0
+
+
+func _wheel(hs: Array, delta: float) -> void:
+	if grab_hand == -1:
+		for i in range(2):
+			var h: Dictionary = hs[i]
+			if h.gripping and h.active:
+				var pol := cab.wheel_polar(h.grip)
+				if pol.y > 0.05 and pol.y < Cabinet.WHEEL_R + 0.08 and pol.z < 0.09:
+					grab_hand = i
+					wheel_off = pol.x - cab.wheel_angle
+					_wheel_prev = pol.x
+					_haptic(i, 0.5, 0.06)
+					audio.sfx("switch", 0.6)
+					break
+	if grab_hand >= 0:
+		var h: Dictionary = hs[grab_hand]
+		var pol := cab.wheel_polar(h.grip)
+		if _released(h, maxf(pol.y - Cabinet.WHEEL_R, 0.0) + pol.z):
+			grab_hand = -1
+			audio.sfx("toggle", 0.5)
+		elif pol.y > 0.03:
+			var a := pol.x
+			var d := wrapf(a - _wheel_prev, -PI, PI)               # follow the hand round without jumping when it passes the bottom
+			_wheel_prev = a
+			wheel_off = wrapf(wheel_off, -PI, PI)
+			cab.wheel_angle = clampf(cab.wheel_angle + d, -1.7, 1.7)
+	if grab_hand == -1:
+		cab.wheel_angle *= exp(-delta * 5.0)
+	roll = clampf(cab.wheel_angle / 1.5 * Cabinet.MAX_TILT, -Cabinet.MAX_TILT, Cabinet.MAX_TILT)
+	pitch = 0.0
+	cab.set_stick(roll, pitch)
+	var raw := roll / Cabinet.MAX_TILT
+	var m := 0.0 if absf(raw) < 0.04 else raw
+	for h in hs:
+		var sx: float = h.get("stick", Vector2.ZERO).x
+		if locked and grab_hand == -1 and absf(sx) > 0.2:
+			m = sx
+	axis = clampf(m * 1.1, -1.0, 1.0)
 
 
 ## The right-hand stick of a two-stick machine: pushed away from you it fires, pulled toward you it throws a grenade.
@@ -1749,6 +1810,13 @@ func _buttons(hs: Array) -> void:
 		controller_stick = Vector2.ZERO
 	for k in down:
 		cab.button_pressed_visual(k, down[k])
+	if cab.cart != null:
+		if locked and not menu.open:
+			var gas: bool = down.fire or (not hs[1].bare and hs[1].trigger)
+			var brake: bool = down.grenade or (not hs[0].bare and hs[0].trigger)
+			cab.cart.set_input({"axis": axis, "fire": gas, "alt": brake, "stick": Vector2.ZERO})
+		fire_now = false
+		return
 	if cab.emu:
 		var st := Vector2(axis, pitch / (Cabinet.MAX_TILT * 0.7))
 		if controller_stick.length() > 0.3:
@@ -1847,7 +1915,7 @@ func _select_machine(i: int) -> void:
 	for k in cab.caps:
 		cab.button_pressed_visual(k, false)
 	cab = m
-	cab.set_live(emu.screen_texture() if cab.emu else cartridge.screen_texture())
+	cab.set_live(emu.screen_texture() if cab.emu else (cab.cart.screen_texture() if cab.cart != null else cartridge.screen_texture()))
 	cab.screen_mat.albedo_color = Color(float(settings.screenlight), float(settings.screenlight), float(settings.screenlight))
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)

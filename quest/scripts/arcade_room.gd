@@ -12,8 +12,8 @@ const ARC_CENTRE := Vector3(0, 0, 2.9)
 const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 # [x, z, yaw in degrees, which boss]: four machines along each side wall, each turned a little toward the lounge so its painted side faces the door
-const SLOTS := [[-2.9, 1.35, 52.0, "zsa"], [-2.95, 3.15, 81.0, "drmantis"], [-2.9, 4.95, 114.0, "debo"],
-	[2.9, 1.35, -52.0, "discoman"], [2.95, 3.15, -81.0, "jw"], [2.9, 4.95, -114.0, "fatamy"]]
+const SLOTS := [[-2.9, 1.35, 52.0, "zsa"], [-2.95, 3.15, 81.0, "roadrush"], [-2.9, 4.95, 114.0, "debo"],
+	[2.9, 1.35, -52.0, "bigrig"], [2.95, 3.15, -81.0, "jw"], [2.9, 4.95, -114.0, "fatamy"]]
 const PLAYER_SLOT := 0
 const DUAL_STICK := ["zsa", "debo"]      # these machines have two sticks: the right one pushed away fires, pulled toward you throws a grenade
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
@@ -178,9 +178,11 @@ func _machines(root: Node3D) -> void:
 	var bosses := {}
 	for b in ZSEngine.BOSSES:
 		bosses[b.id] = b
-	var art_key := {"discoman": "disco", "drmantis": "mantis", "zsa": "zs", "jw": "jw"}
+	var art_key := {"discoman": "disco", "drmantis": "mantis", "zsa": "zs", "jw": "jw", "roadrush": "roadrush", "bigrig": "bigrig"}
 	bosses["zsa"] = {"name": "ZOMBIE SMASH", "accent": "#7fd64a"}
 	bosses["jw"] = {"name": "JW EDS", "accent": "#19c3e6"}
+	bosses["roadrush"] = {"name": "ROAD RUSH", "accent": "#ff5f99"}       # the two driving machines: their own games, a steering wheel instead of a stick
+	bosses["bigrig"] = {"name": "BIG RIG", "accent": "#ffbf40"}
 	for i in range(SLOTS.size()):
 		var id: String = SLOTS[i][3]
 		var key: String = art_key.get(id, id)
@@ -195,6 +197,9 @@ func _machines(root: Node3D) -> void:
 		c.profile = CabProfile.get_profile("standard")
 		c.dual = id in DUAL_STICK
 		c.emu = id == "jw"
+		c.wheel = id in ["roadrush", "bigrig"]
+		c.cart_mode = "racer" if id == "roadrush" else ("trucker" if id == "bigrig" else "")
+		c.side_text = c.wheel                                   # the driving machines' side pictures have lettering: keep it readable on both sides
 		c.side_art = _art("side-%s-flat.png" % key, _art("side-%s.png" % key, null))
 		c.jw_logo = _art("jw-logo.png", null) if c.emu else null
 		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id in ["zsa", "jw"] else id), null)

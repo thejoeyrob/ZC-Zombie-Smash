@@ -34,6 +34,12 @@ var neon: Array = []
 var theme_color := Color(0.1, 0.85, 0.35)
 var side_art: Texture2D        # picture for the outside of both sides
 var dual := false              # two sticks: the left one moves, the right one pushed away fires and pulled toward you throws a grenade
+var wheel := false              # a driving machine: a steering wheel instead of the stick, with gas and brake buttons
+var wheel_spin: Node3D
+var wheel_angle := 0.0
+var wheel_hub := Vector3.ZERO     # the hub of the wheel in panel space
+var cart: Cartridge              # the machine's own game (driving machines), when it is not Zombie Smash
+var cart_mode := ""
 var emu := false               # the JW EDS machine: four action buttons, a start button, a multidirectional stick and a 4:3 screen
 var button_defs := {}          # the buttons this machine has: name -> {pos, radius, col, front?}
 var stick2_pivot: Node3D
@@ -348,6 +354,11 @@ func _build_sides(poly: Array, body: Material) -> void:
 
 func _make_button_defs() -> Dictionary:
 	var menu: Dictionary = BUTTONS["menu"]
+	if wheel:
+		return {
+			"fire": {"pos": Vector3(0.21, 0.0, 0.06), "radius": 0.05},
+			"grenade": {"pos": Vector3(-0.21, 0.0, 0.06), "radius": 0.04},
+			"menu": menu}
 	if emu:
 		return {
 			"a": {"pos": Vector3(-0.02, 0.0, 0.075), "radius": 0.027, "col": Color("#e3262a")},
@@ -442,11 +453,13 @@ func _build_controls() -> void:
 	var rubber := VRBuild.mat(Color(0.02, 0.02, 0.025), 0.9)
 	var steel := VRBuild.mat(Color(0.88, 0.89, 0.94), 0.15, 0.9)
 	var mset := {"steel": steel, "chrome": chrome, "brass": brass, "black": black, "rubber": rubber}
-	var first := _build_stick(STICK_LOCAL, mset)
+	var first := _build_stick(STICK_LOCAL if not wheel else Vector3(0.0, 0.0, 0.07), mset)
 	stick_pivot = first[0]
 	ball = first[1]
 	ball_mat = first[2]
 	ball_mat.albedo_color = Color("#f5b800") if not emu else Color("#19c3e6")
+	if wheel:
+		_build_wheel(mset)
 	if dual:
 		var second := _build_stick(STICK2_LOCAL, mset)
 		stick2_pivot = second[0]
@@ -582,6 +595,10 @@ func to_panel(world: Vector3) -> Vector3:
 
 ## Leans the stick. roll > 0 leans right (+x), pitch > 0 leans toward the player (+z).
 func set_stick(roll: float, pitch: float) -> void:
+	if wheel:
+		if wheel_spin != null:
+			wheel_spin.rotation.y = -wheel_angle           # turning right is clockwise as the driver sees it
+		return
 	stick_pivot.rotation = Vector3(pitch, 0.0, -roll)
 
 
@@ -618,3 +635,46 @@ func button_at(local: Vector3, reach_above := 0.05) -> String:
 		if d <= maxf(float(b.radius), 0.04) + 0.015 and q.y > -0.03 and q.y < reach:
 			return k
 	return ""
+
+
+# ---- the steering wheel of a driving machine -----------------------------------------------------------------
+const WHEEL_R := 0.15
+const WHEEL_TILT := 0.93                # the wheel's face leans toward the driver (radians from lying flat)
+
+
+func _build_wheel(m: Dictionary) -> void:
+	ball.visible = false
+	var hub := Node3D.new()
+	hub.position = Vector3(0, STICK_LENGTH + 0.035, 0)
+	hub.rotation = Vector3(WHEEL_TILT, 0, 0)
+	stick_pivot.add_child(hub)
+	wheel_spin = Node3D.new()
+	hub.add_child(wheel_spin)
+	var rubber := VRBuild.mat(Color(0.03, 0.03, 0.035), 0.55)
+	var rim := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = WHEEL_R - 0.016
+	tm.outer_radius = WHEEL_R + 0.016
+	tm.rings = 36
+	tm.ring_segments = 12
+	rim.mesh = tm
+	rim.material_override = rubber
+	wheel_spin.add_child(rim)
+	var chrome: Material = m.chrome
+	for k in range(3):
+		var a := PI * 0.5 + TAU * float(k) / 3.0
+		var spoke := VRBuild.box(wheel_spin, Vector3(WHEEL_R - 0.02, 0.012, 0.022), Vector3(cos(a), 0.0, sin(a)) * (WHEEL_R * 0.5), chrome, Vector3(0, -a, 0))
+	VRBuild.cylinder(wheel_spin, 0.034, 0.03, Vector3.ZERO, VRBuild.mat(Color(0.8, 0.1, 0.12), 0.35), 0.03, Vector3.ZERO, 20)
+	VRBuild.box(wheel_spin, Vector3(0.012, 0.012, 0.04), Vector3(0, 0.0, -(WHEEL_R)), VRBuild.mat(Color(1.0, 0.9, 0.2), 0.4, 0.0, 1.0))     # a bright stripe at the top so the turn shows
+	wheel_hub = stick_pivot.position + Vector3(0, STICK_LENGTH + 0.035, 0)
+
+
+## Where a hand is on the wheel: [angle in radians (0 = top, positive = to the driver's right), distance from the hub, distance from the wheel's face].
+func wheel_polar(world: Vector3) -> Vector3:
+	var local := to_panel(world) - wheel_hub
+	var n := Vector3(0.0, cos(WHEEL_TILT), sin(WHEEL_TILT))        # the wheel's axis, pointing at the driver
+	var up_in_plane := Vector3(0.0, sin(WHEEL_TILT), -cos(WHEEL_TILT))
+	var px := local.x
+	var py := local.dot(up_in_plane)
+	var off := local.dot(n)
+	return Vector3(atan2(px, py), sqrt(px * px + py * py), absf(off))

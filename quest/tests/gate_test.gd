@@ -1,6 +1,7 @@
 extends SceneTree
 ## You can walk from the arcade through the gate into the sports hall, but not through the rest of the back wall.
 func _initialize() -> void:
+	ZSEngine.setup()
 	var world := Node3D.new()
 	root.add_child(world)
 	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)

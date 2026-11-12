@@ -15,6 +15,7 @@ func _initialize() -> void:
 	if args.size() > 0:
 		prefix = args[0]
 	root.size = Vector2i(1280, 720)
+	ZSEngine.setup()
 	var world := Node3D.new()
 	root.add_child(world)
 	var img := Image.create(8, 8, false, Image.FORMAT_RGBA8)

@@ -17,3 +17,9 @@ Not done yet: scores and throws are not shared with other players in a room (the
 
 ## Frustration / Trouble
 The lounge board game. Four pegs each, roll a 6 to bring a peg out (and roll again), landing on another player's peg sends it home, you cannot land on your own peg, exact roll to finish in your home lane. The server (`server/board.mjs`) runs the game in a room and `quest/scripts/board_game.gd` runs it on your own; the rules are the same in both. **The room server must be redeployed for rooms to use the new rules.**
+
+## Arcade machines and the JW EDS games
+* The arcade now has six machines: Zombie Smash, Debo, Fat Amy's Revenge, the JW EDS, and two driving machines. Dr Mantis and Disco Fever made way for them (the art is still in the project).
+* **ROAD RUSH** (race the clock through checkpoints, overtaking traffic) and **BIG RIG** (a heavy truck delivers cargo to three cities against the clock, with fuel cans to collect and cargo damage). Both have a steering wheel (grip the rim and turn it; the thumbsticks steer too), a red gas button (or right trigger) and a blue brake button (or left trigger). Files: `road_view.gd` (road, traffic, rules, drawing), `road_cartridge.gd`, art from `tools/make_road_art.py`, test `tests/road_test.gd`.
+* **JW EDS built-in games** (they need no emulator and no game files): Serpent, Paddle Ball, Brick Break, Rock Blaster, Alien Wave. They are our own code and drawings (`mini_game.gd`, `mg_*.gd`, `mini_arcade.gd`). Test `tests/mini_games_test.gd`.
+* **Emulator check**: on the JW EDS menu press Y: it lists the plug-in status, each core's result and the log lines about the plug-in.

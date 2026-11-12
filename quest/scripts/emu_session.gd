@@ -72,6 +72,53 @@ static func supported() -> bool:
 	return ClassDB.class_exists("RetroCore")
 
 
+static var _core_report := {}
+
+
+## Opens every core once (and closes it again) and reports which ones work and why the others do not. This is how the JW EDS menu can say what is wrong
+## on the headset itself: {ok, total, lines: ["NES: cannot load ...: dlopen failed ..."]}.
+static func core_report(force := false) -> Dictionary:
+	if not force and not _core_report.is_empty():
+		return _core_report
+	var r := {"ok": 0, "total": 0, "lines": []}
+	if supported():
+		var seen := {}
+		for sys in CORES:
+			var cname: String = CORES[sys]
+			if seen.has(cname):
+				continue
+			seen[cname] = true
+			r.total += 1
+			var c = ClassDB.instantiate("RetroCore")
+			if c != null and c.load_core(lib_path(cname)):
+				r.ok += 1
+				c.unload()
+			else:
+				r.lines.append("%s: %s" % [cname.to_upper(), str(c.get_last_error() if c != null else "no core object").to_upper()])
+	_core_report = r
+	return r
+
+
+## The last lines of the app's own log that mention the plug-in or a library that would not load (the log is switched on in project.godot).
+static func log_hint(max_lines := 5) -> Array:
+	var out: Array = []
+	var f := FileAccess.open("user://logs/godot.log", FileAccess.READ)
+	if f == null:
+		return ["(NO LOG FILE)"]
+	var keys := ["gdextension", "dynamic library", "retro", "libretro", "dlopen", "cannot open", "can't open", "unable to load"]
+	for line in f.get_as_text().split("\n"):
+		var low := line.to_lower()
+		for k in keys:
+			if low.contains(k):
+				out.append(line.strip_edges().to_upper().left(120))
+				break
+	if out.size() > max_lines:
+		out = out.slice(out.size() - max_lines)
+	if out.is_empty():
+		out.append("(NOTHING ABOUT THE PLUG-IN IN THE LOG)")
+	return out
+
+
 static func plugin_status() -> String:
 	if supported():
 		return "READY"

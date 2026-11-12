@@ -45,7 +45,8 @@ var _picture: TextureRect
 var _t := 0.0
 var _stick_prev := Vector2.ZERO
 var _btn_prev := {}
-var _view := "list"            # list | info | wifi | play | pause
+var _view := "list"            # list | info | wifi | play | pause | diag | mini
+var _mini: MiniArcade
 var _info := {}
 var _pause_index := 0
 var _select_t := 0.0
@@ -162,6 +163,11 @@ func rescan() -> void:
 					sys = _zip_system(path)
 				files.append({"name": f.get_basename().to_upper(), "file": f, "path": path, "system": sys, "size": size})
 	files.sort_custom(func(a, b): return str(a.name) < str(b.name))
+	# our own games come first: they need no emulator and no game files
+	var own: Array = []
+	for id in MiniArcade.IDS:
+		own.append({"name": str(MiniArcade.NAMES[id]), "file": "", "path": "", "system": "BUILT-IN", "size": 0, "mini": id})
+	files = own + files
 	# in somebody else's room, the host's games are listed too (marked with @): they run on the host's headset, nothing is copied here
 	if remote != null and remote.is_guest():
 		for i in range(remote.library.size()):
@@ -194,7 +200,7 @@ func rom_folder_hint() -> String:
 
 ## Whether a game is on screen (or about to be): the VR controllers' sticks, triggers and menu button then belong to the game.
 func in_game() -> bool:
-	return _view == "play" or _view == "pause" or _view == "remote_wait"
+	return _view == "play" or _view == "pause" or _view == "remote_wait" or _view == "mini"
 
 
 const LEGEND := "[color=#ffffff]CLASSIC CONTROLS[/color]\nLEFT STICK   MOVE / D-PAD\nA  B  X  Y   GAME BUTTONS\nGRIPS  L / R\nLEFT STICK CLICK  SELECT\nRIGHT STICK CLICK  START\n[color=#ffbf33]LEFT MENU  PAUSE / EXIT[/color]"
@@ -218,6 +224,15 @@ func set_input(stick: Vector2, buttons: Dictionary) -> void:
 	var c: bool = press.call("c")
 	var start: bool = press.call("start")
 	var menu: bool = press.call("menu")
+	var dbtn: bool = press.call("d")
+	if _view == "diag":
+		if a or b or c or dbtn or start or menu:
+			_view = "list"
+			_redraw()
+		return
+	if _view == "mini":
+		_mini.set_input(stick, buttons)
+		return
 	if _view == "play":
 		_pad = EmuSession.pad_from(stick, buttons, _select_t > 0.0, session.system)
 		if menu:
@@ -262,17 +277,22 @@ func set_input(stick: Vector2, buttons: Dictionary) -> void:
 	elif b or menu:
 		rescan()
 		status = "DISK RESCANNED"
+	elif dbtn:
+		_view = "diag"
 	elif c and ENABLED:
 		if server.start():
 			_view = "wifi"
 		else:
 			status = "WI-FI TRANSFER NOT AVAILABLE"
-	if up or down or a or b or c or start or menu:
+	if up or down or a or b or c or dbtn or start or menu:
 		_redraw()
 
 
 func _launch(f: Dictionary) -> void:
 	_info = f
+	if f.has("mini"):
+		_start_mini(str(f.mini))
+		return
 	if f.get("remote", false):
 		_launch_remote(f)
 		return
@@ -290,6 +310,27 @@ func _launch(f: Dictionary) -> void:
 		_info = f.duplicate()
 		_info["error"] = err
 		_view = "info"
+
+
+func _start_mini(id: String) -> void:
+	if _mini == null:
+		_mini = MiniArcade.new()
+		_mini.exited.connect(_end_mini)
+		viewport.add_child(_mini)
+	_mini.visible = true
+	_mini.start(id, _font)
+	_label.visible = false
+	_view = "mini"
+	_legend_t = 0.0
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+
+
+func _end_mini() -> void:
+	if _mini != null:
+		_mini.visible = false
+	_label.visible = true
+	_view = "list"
+	rescan()
 
 
 func _launch_remote(f: Dictionary) -> void:
@@ -378,6 +419,10 @@ func tick(delta: float) -> void:
 	if _legend != null and (_legend.visible != show_legend):
 		_legend.visible = show_legend
 		_legend_bg.visible = show_legend
+	if _view == "mini":
+		if not hold:
+			_mini.tick(delta)
+		return
 	# the screen only redraws every frame while a game is running at the machine; the menu just redraws when it changes (twice a second)
 	var live := (_view == "play" and session.running and not hold) or (_view == "pause" and session.running)
 	if live:
@@ -461,6 +506,19 @@ func _redraw() -> void:
 		t += "\nRECEIVED: %d\n\n[color=#b4dac5]A / B / X TO FINISH[/color]" % server.received
 		_label.text = t
 		return
+	if _view == "diag":
+		t += "[color=#ffffff]EMULATOR CHECK[/color]\n"
+		t += "PLUG-IN: %s\n" % EmuSession.plugin_status()
+		var rep := EmuSession.core_report(true)
+		t += "CORES WORKING: %d OF %d\n" % [rep.ok, rep.total]
+		for l in rep.lines:
+			t += "[color=#ffcf77]%s[/color]\n" % str(l).left(110)
+		t += "\n[color=#b4dac5]LOG:[/color]\n"
+		for l in EmuSession.log_hint(5):
+			t += "[color=#9aa]%s[/color]\n" % l
+		t += "\n[color=#b4dac5]ANY BUTTON = BACK[/color]"
+		_label.text = t
+		return
 	if _view == "info":
 		t += "[color=#ffffff]%s[/color]\n%s\n\n" % [str(_info.get("name", "GAME")).substr(0, 26), str(_info.get("system", ""))]
 		t += "[color=#ffcf77]%s[/color]\n\n" % str(_info.get("error", EmuSession.plugin_status()))
@@ -481,15 +539,17 @@ func _redraw() -> void:
 		for i in range(top, last):
 			var f: Dictionary = files[i]
 			var title := str(f.name).substr(0, 25)
-			var available := bool(f.get("remote", false)) or EmuSession.has_core(str(f.system))
+			var available := bool(f.get("remote", false)) or f.has("mini") or EmuSession.has_core(str(f.system))
 			var line := "%s%s" % [title, "" if available else "  [NO CORE]"]
 			if i == index:
 				t += "[bgcolor=#33d884][color=#04190e]> %s[/color][/bgcolor]\n" % line
 			else:
 				t += "  %s\n" % line
 		t += "\n[color=#b4dac5]%d GAMES FOUND[/color]\n" % files.size()
-	t += "\n[color=#b4dac5]X = ADD GAMES   B = REFRESH[/color]\n"
-	t += "[color=#b4dac5]EMULATOR: %s[/color]" % EmuSession.plugin_status()
+	t += "\n[color=#b4dac5]X = ADD GAMES   B = REFRESH   Y = CHECK[/color]\n"
+	var cr := EmuSession.core_report()
+	var ok_all: bool = EmuSession.plugin_status() == "READY" and int(cr.ok) == int(cr.total) and int(cr.total) > 0
+	t += "[color=#b4dac5]EMULATOR: %s[/color]" % (("READY  CORES %d/%d" % [cr.ok, cr.total]) if ok_all else ("PROBLEM - PRESS Y  (%s)" % EmuSession.plugin_status()))
 	if status != "":
 		t += "\n[color=#ffcf77]%s[/color]" % status
 	_label.text = t
