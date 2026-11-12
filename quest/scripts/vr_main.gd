@@ -245,7 +245,7 @@ func _setup_xr() -> void:
 		get_viewport().use_xr = true
 		get_viewport().msaa_3d = Viewport.MSAA_4X
 		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
-		iface.render_target_size_multiplier = _tier_sharp()          # draw each eye sharper than the headset's default, so far-away detail stays clean
+		iface.render_target_size_multiplier = _eye_multiplier(iface)          # draw each eye sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
 		cam = XRCamera3D.new()
 		origin.add_child(cam)
@@ -446,6 +446,28 @@ var _rate_set := false
 var fps_label: Label3D
 
 
+## How much bigger than the headset's own picture size to draw each eye. The headset (or a tool such as Quest Games Optimiser) may already have
+## raised its resolution; stacking the game's own boost on top of that asks for far more pixels than the GPU can draw and the whole picture goes soft.
+## So: when the headset is already above its default size the game adds nothing, and the total is capped either way.
+const EYE_DEFAULT_MAX_W := 2200.0     # per-eye width at or below this means the headset is at its normal setting
+const EYE_CAP_W := 3000.0
+var _eye_base_w := 0.0
+
+
+func _eye_multiplier(iface) -> float:
+	var want := _tier_sharp()
+	if _eye_base_w <= 0.0:
+		var prev: float = iface.render_target_size_multiplier
+		iface.render_target_size_multiplier = 1.0
+		_eye_base_w = float(iface.get_render_target_size().x)
+		iface.render_target_size_multiplier = prev
+	if _eye_base_w <= 0.0:
+		return want
+	if _eye_base_w > EYE_DEFAULT_MAX_W:
+		want = 1.0
+	return minf(want, EYE_CAP_W / _eye_base_w)
+
+
 func _tier_sharp() -> float:
 	var want := clampf(float(settings.sharp), 0.7, 1.6)
 	if str(settings.smooth) != "on":
@@ -458,7 +480,7 @@ func _apply_tier() -> void:
 		return
 	var iface := XRServer.find_interface("OpenXR")
 	if iface != null:
-		iface.render_target_size_multiplier = _tier_sharp()
+		iface.render_target_size_multiplier = _eye_multiplier(iface)
 		# foveation draws the edges of your view at lower detail; the Display page can turn it down or off to see if it is what looks soft
 		var fov := str(settings.get("foveation", "app"))
 		if fov != "app" and "foveation_level" in iface:
@@ -506,7 +528,7 @@ func _perf_tick(delta: float) -> void:
 	_perf_n = 0
 	_perf_t = 0.0
 	if fps_label != null and fps_label.visible:
-		fps_label.text = "%d fps  x%.2f  %s  fov %s" % [int(round(fps_now)), _tier_sharp(), _eye_size(), str(settings.get("foveation", "app"))]
+		fps_label.text = "%d fps  base %d  %s  fov %s" % [int(round(fps_now)), int(_eye_base_w), _eye_size(), str(settings.get("foveation", "app"))]
 	if not xr_on or str(settings.smooth) != "on" or _perf_age < 8.0:
 		return
 	if avg > 0.0158 and q_tier < TIERS.size() - 1:       # slower than about 63 frames a second
