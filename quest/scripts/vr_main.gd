@@ -129,7 +129,7 @@ func _ready() -> void:
 	room.pinball.table.bonus_balls = progress.codes.has("pinball")
 	room.pinball2.set_enabled(true)
 	room.board_game.event.connect(func(n):
-		var m := {"roll": "throw", "hop": "click", "grenade": "clear", "zombie": "hurt", "heart": "pickup", "boss": "doom", "win": "chime"}
+		var m := {"roll": "throw", "hop": "click", "enter": "pickup", "capture": "hurt", "finish": "clear", "win": "chime"}
 		if m.has(n):
 			audio.sfx(m[n], 0.6, 0.02, room.board_game.global_position + Vector3(0, 0.3, 0)))
 	room.pinball2.table.best = progress.pinball_best
@@ -808,8 +808,8 @@ func _process(delta: float) -> void:
 		_fix_poses()
 	room.animate(clock)
 	room.prize_wall.animate(delta)
-	selector.relabel("dice", "STEADY" if room.board_game.hint() != "" else "")
-	selector.relabel("dash", "DASH +2" if room.board_game.hint() != "" else "")
+	selector.relabel("dice", "ROLL" if room.board_game.hint() == "ROLL" else "")
+	_update_peg_targets()
 	_calibrate(delta)
 	var hs := _read_hands(delta)
 	_pose_hands(hs)
@@ -1416,11 +1416,17 @@ func _choose(id: String) -> void:
 		audio.ui("switch")
 		_open_menu()
 		return
-	if id in ["dice", "dash"]:
+	if id == "dice":
 		if social != null and social.online:
-			social.send({"type": "roll", "dash": id == "dash"})
+			social.send({"type": "roll"})
 		else:
-			room.board_game.roll_human(id == "dash")
+			room.board_game.roll_human()
+		return
+	if id.begins_with("peg") and id.substr(3).is_valid_int():
+		if social != null and social.online:
+			social.send({"type": "move", "peg": int(id.substr(3))})
+		else:
+			room.board_game.move_human(int(id.substr(3)))
 		return
 	if id.begins_with("sit"):
 		for sd in room.seats:
@@ -1432,6 +1438,21 @@ func _choose(id: String) -> void:
 
 
 ## You can only start something by pointing at it when you have walked up to it yourself.
+func _update_peg_targets() -> void:
+	var bg: BoardGame = room.board_game
+	var seat := bg.seat_of(bg.local_id)
+	var pick := seat >= 0 and bg.choosing()
+	for t in selector.targets:
+		var id := str(t.id)
+		if id.begins_with("peg") and id.substr(3).is_valid_int():
+			var k := int(id.substr(3))
+			if pick and bg.legal.has(k):
+				t.xf = Transform3D(Basis.IDENTITY, bg.peg_world(seat, k))
+				t.box = AABB(Vector3(-0.04, -0.01, -0.04), Vector3(0.08, 0.1, 0.08))
+			else:
+				t.box = AABB(Vector3(0, -100, 0), Vector3.ZERO)
+
+
 func _within_reach(id: String) -> bool:
 	var hp := _head_floor()
 	if id.begins_with("m") and id.substr(1).is_valid_int():
@@ -1458,8 +1479,9 @@ func _selector_targets() -> Array:
 		var zf := maxf(m.front_z, m.deck_front_z) + 0.1
 		var box := AABB(Vector3(-0.35, 0.0, m.back_z), Vector3(0.7, 2.05, zf - m.back_z))
 		out.append({"id": "m%d" % i, "label": "PLAY", "xf": m.global_transform, "box": box, "colour": m.theme_color, "always": true})
-	out.append({"id": "dice", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-0.42, 1.03, -0.42), Vector3(0.42, 0.1, 0.84)), "colour": Color(0.4, 1.0, 0.3), "always": true})
-	out.append({"id": "dash", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(0, 1.03, -0.42), Vector3(0.42, 0.1, 0.84)), "colour": Color(1, 0.65, 0.2), "always": true})
+	out.append({"id": "dice", "label": "", "xf": Transform3D(Basis.IDENTITY, ArcadeRoom.ARC_CENTRE), "box": AABB(Vector3(-0.12, 1.03, -0.12), Vector3(0.24, 0.12, 0.24)), "colour": Color(0.4, 1.0, 0.3), "always": true})
+	for k in range(4):         # the pegs of your seat, pointed at when there is a choice of which to move (see _update_peg_targets)
+		out.append({"id": "peg%d" % k, "label": "MOVE", "xf": Transform3D.IDENTITY, "box": AABB(Vector3(0, -100, 0), Vector3.ZERO), "colour": Color(1.0, 0.95, 0.4), "always": false})
 	out.append({"id": "pinball2", "label": "PLAY", "xf": room.pinball2.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	out.append({"id": "pinball", "label": "PLAY", "xf": room.pinball.global_transform, "box": AABB(Vector3(-0.38, 0.0, -0.8), Vector3(0.76, 2.0, 1.75)), "colour": Color(1.0, 0.85, 0.2), "always": true})
 	for sd in room.seats:

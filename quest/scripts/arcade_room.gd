@@ -229,7 +229,7 @@ func set_active(i: int) -> void:
 			machines[k].set_live(null)
 
 
-# ---- the social corner: a tall table with an old Chutes & Ladders board, and six leather-topped bar stools -------------------
+# ---- the social corner: a tall table with a Frustration / Trouble board, and six leather-topped bar stools -------------------
 func _lounge(root: Node3D, font_ref: Font = null) -> void:
 	var c := ARC_CENTRE
 	var brushed := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 3), 0.9)                       # brushed steel poles
@@ -277,7 +277,7 @@ func _lounge(root: Node3D, font_ref: Font = null) -> void:
 	var wood_edge := VRBuild.pbr("wood-navy", Color(0.75, 0.7, 0.65), Vector2(1.2, 0.2), 1.2)                    # old worn painted wood
 	VRBuild.box(table, Vector3(0.84, 0.05, 0.84), Vector3(0, 1.0, 0), wood_edge)                                  # the board's wooden frame and body
 	VRBuild.box(table, Vector3(0.86, 0.012, 0.86), Vector3(0, 0.972, 0), black_metal)
-	var game := VRBuild.tex_mat(_art("boardgame-zs.jpg", null), 0.0, 0.7)
+	var game := VRBuild.tex_mat(_art("boardgame-trouble.jpg", null), 0.0, 0.7)
 	game.normal_enabled = true
 	game.normal_texture = _art("pbr-wood-navy-n.png", null)
 	game.normal_scale = 0.3
@@ -462,20 +462,8 @@ func animate(t: float) -> void:
 		l.modulate.a = on
 
 
-func _rules_card(root: Node3D, centre: Vector3, font: Font) -> void:
-	var card := Node3D.new()
-	root.add_child(card)
-	card.position = centre + Vector3(0, 1.034, 0)
-	VRBuild.box(card, Vector3(0.42, 0.004, 0.21), Vector3.ZERO, VRBuild.mat(Color(0.035, 0.055, 0.07), 0.65))
-	VRBuild.label(card, "RACE TO THE LAB", 0.03, Vector3(0, 0.005, 0.06), Color(0.9, 0.75, 0.4), Vector3(-PI / 2, PI, 0), 2, font)
-	VRBuild.label(card, "STEADY: roll 1–6   •   DASH: +2", 0.018, Vector3(0, 0.006, 0.02), Color.WHITE, Vector3(-PI / 2, PI, 0), 0, font)
-	VRBuild.label(card, "Dash a 1: lose shield or go back 2", 0.016, Vector3(0, 0.006, -0.01), Color(0.8, 0.9, 0.95), Vector3(-PI / 2, PI, 0), 0, font)
-	VRBuild.label(card, "Hearts: shield + extra roll  •  ? = event", 0.016, Vector3(0, 0.006, -0.045), Color(0.8, 0.9, 0.95), Vector3(-PI / 2, PI, 0), 0, font)
-	for i in [2, 10, 16, 23]:
-		var mark := board_game.square_pos(i) + Vector3(0, 0.002, 0)
-		VRBuild.label(board_game, "?", 0.028, mark, Color(1, 0.85, 0.4), Vector3(-PI / 2, 0, 0), 3, font)
-	for side in [-1, 1]:
-		VRBuild.label(root, "STEADY" if side < 0 else "DASH +2", 0.022, centre + Vector3(side * 0.23, 1.043, -0.39), Color(0.6, 0.95, 0.85), Vector3(-PI / 2, PI, 0), 1, font)
+func _rules_card(root: Node3D, centre: Vector3, _font: Font) -> void:
+	# (the rules are printed on the board's edge: roll a 6 to start, 6 rolls again, land on a peg to send it home, exact roll to finish)
 	# One local key light supplies readable faces/table pieces; no six-player per-avatar lights.
 	var key := SpotLight3D.new()
 	root.add_child(key)

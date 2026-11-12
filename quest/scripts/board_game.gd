@@ -1,29 +1,29 @@
 class_name BoardGame
 extends Node3D
-## The lounge board game, "Zombie Smash: Race to the Lab". A loop of 28 squares round the table. Everyone races once round:
-##   GRENADE jump forward 3   ZOMBIE run back 2   HEART roll again   BOSS miss your next turn
-## Four seats, one per stool, each with its own piece. A seat nobody sits on is played by the computer, so the game always runs.
-## Sit on a stool and you take over that seat's piece where it stands, mid-game; stand up and the computer carries on for you.
-## Each seat remembers who last sat there, so someone who comes back gets the same piece if the seat is still free.
-## Occupants are named by an id ("local" for this headset), ready for players joining over the network later.
-## Square positions match the picture drawn by tools/make_zs_board.py.
+## The lounge board game: Frustration (UK) / Trouble (US). Four players, four pegs each, a loop of 28 spaces round the board and a four-space
+## home lane for each player. Roll a 6 to bring a peg out onto your start space (and roll again); land on another player's peg and it goes back
+## home; you cannot land on your own peg; you need the exact number to finish. First to fill all four holes of their lane wins.
+## Four seats, one per stool. A seat nobody sits on is played by the computer, so the game always runs. In a room the server runs the game
+## (server/board.mjs, the same rules); on your own this script does. A peg's place: -1 home, 0..27 on the loop from its start, 28..31 in its lane.
 
 signal event(name: String)
 
-const SQUARES := 28
+const LOOP := 28
+const LANE_END := 31
 const MARGIN := 72.0
 const CELL := 110.0
 const PIC := 1024.0
 const BOARD_M := 0.76             # the picture is this many metres across on the table
-const KIND := {4: "grenade", 13: "grenade", 22: "grenade", 6: "zombie", 11: "zombie", 17: "zombie", 24: "zombie", 3: "heart", 9: "heart", 15: "heart", 20: "heart", 26: "heart",
-	8: "boss", 14: "boss", 19: "boss", 25: "boss"}
-const BOSS_NAME := {8: "JORDAN", 14: "DEBO", 19: "DR MANTIS", 25: "DISCO MAN"}
+const START := [24, 3, 10, 17]    # the loop space each seat's pegs start on
+const LANES := [[[5, 6], [5, 5], [5, 4], [5, 3]], [[1, 5], [2, 5], [3, 5], [4, 5]], [[2, 1], [2, 2], [2, 3], [2, 4]], [[6, 2], [5, 2], [4, 2], [3, 2]]]
+const HOMES := [[[1, 6], [2, 6], [3, 6], [4, 6]], [[1, 1], [1, 2], [1, 3], [1, 4]], [[3, 1], [4, 1], [5, 1], [6, 1]], [[6, 3], [6, 4], [6, 5], [6, 6]]]
 const NAMES := ["DEBO", "DR MANTIS", "DISCO MAN", "FAT AMY"]          # the computer player in each seat
-const COLOURS := [Color(0.5, 0.95, 0.3), Color(1.0, 0.18, 0.18), Color(1.0, 0.62, 0.12), Color(0.7, 0.45, 1.0)]   # match the stools: green, red, amber, purple
-const PIECES := ["GREEN HAND", "RED GRENADE", "AMBER BRAIN", "PURPLE SKULL"]
-const TOP_Y := 0.0               # tokens stand on the board surface (this node sits on it)
+const COLOURS := [Color(0.34, 0.85, 0.27), Color(0.95, 0.2, 0.2), Color(1.0, 0.63, 0.14), Color(0.68, 0.45, 0.98)]   # match the stools: green, red, amber, purple
+const PIECES := ["GREEN PEGS", "RED PEGS", "AMBER PEGS", "PURPLE PEGS"]
+const TOP_Y := 0.0               # pegs stand on the board surface (this node sits on it)
 
-var players: Array = []          # {name, pos, skip, token: Node3D, human, occupant}
+var players: Array = []          # {name, pegs: [4], occupant, wins, human}
+var peg_nodes: Array = []        # [seat][peg] -> Node3D
 var last_occupant: Array = ["", "", "", ""]   # who sat in each seat most recently
 var current := 0
 var waiting_for_roll := false
@@ -31,31 +31,40 @@ var busy := false
 var message := ""
 var winner := -1
 var rng := RandomNumberGenerator.new()
-var _die: Node3D
-var _label: Label3D
-var _font: Font
-var _roll_now := false
 var authority := true
 var local_id := "local"
-var phase := "wait"
+var phase := "wait"              # wait (roll the die), move (pick a peg), pass (nothing can move), after (a move just made), win
 var remaining := 1.6
 var again := false
 var round_number := 1
 var die_value := 1
-var deck: Array = []
+var tries := 3
+var legal: Array = []
 var auto_human := false           # the tour video plays the human seat by itself
+var _die: Node3D
+var _dome: MeshInstance3D
+var _label: Label3D
+var _font: Font
+var _roll_t := 9.0
+var _seen_die_key := ""
+var _t := 0.0
 
 
 func build(font: Font) -> void:
 	_font = font
 	rng.randomize()
 	for i in range(NAMES.size()):
-		var tok := _make_token(i)
-		add_child(tok)
-		players.append({"name": NAMES[i], "pos": 0, "skip": false, "token": tok, "human": false, "occupant": "", "shield": 1, "wins": 0})
+		players.append({"name": NAMES[i], "pegs": [-1, -1, -1, -1], "occupant": "", "wins": 0, "human": false})
+		var row: Array = []
+		for k in range(4):
+			var peg := _make_peg(i)
+			add_child(peg)
+			row.append(peg)
+		peg_nodes.append(row)
 	_die = _make_die()
 	_die.visible = false
 	add_child(_die)
+	_make_dome()
 	_label = VRBuild.label(self, "", 0.045, Vector3(0, 0.34, 0), Color(1, 1, 1), Vector3.ZERO, 8, font)
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.no_depth_test = true
@@ -63,10 +72,9 @@ func build(font: Font) -> void:
 	_reset_game()
 
 
-
-# ---- squares ----------------------------------------------------------------------------------------
-static func _cell_of(i: int) -> Vector2i:
-	var n := i % SQUARES
+# ---- where things are ---------------------------------------------------------------------------------
+static func _cell_of(n: int) -> Vector2i:
+	n = n % LOOP
 	if n < 8:
 		return Vector2i(0, 7 - n)                 # up the left edge: (column, row)
 	if n < 15:
@@ -76,22 +84,30 @@ static func _cell_of(i: int) -> Vector2i:
 	return Vector2i(7 - (n - 21), 7)              # back along the bottom
 
 
-## Local position (on the board surface) of a square, with a small spread so tokens sharing a square do not overlap.
-func square_pos(i: int, slot := 0) -> Vector3:
-	var c := _cell_of(mini(i, SQUARES))
-	var px := MARGIN + (float(c.x) + 0.5) * CELL
-	var pz := MARGIN + (float(c.y) + 0.5) * CELL
+func cell_pos(c: int, r: int) -> Vector3:
 	var k := BOARD_M / PIC
-	var off := Vector2(float(slot % 3) - 1.0, float(slot / 3) - 0.5) * 0.018
-	if i >= SQUARES:
-		c = _cell_of(0)
-		px = MARGIN + 0.5 * CELL
-		pz = MARGIN + 7.5 * CELL
-	return Vector3((px - PIC / 2.0) * k + off.x, TOP_Y, (pz - PIC / 2.0) * k + off.y)
+	return Vector3((MARGIN + (float(c) + 0.5) * CELL - PIC / 2.0) * k, TOP_Y, (MARGIN + (float(r) + 0.5) * CELL - PIC / 2.0) * k)
+
+
+## Local position (on the board surface) of a peg: in its home area, on the loop, or in its lane.
+func peg_pos(seat: int, peg: int, place: int) -> Vector3:
+	if place < 0:
+		var h: Array = HOMES[seat][peg]
+		return cell_pos(h[0], h[1])
+	if place >= LOOP:
+		var l: Array = LANES[seat][place - LOOP]
+		return cell_pos(l[0], l[1])
+	var c := _cell_of(int(START[seat]) + place)
+	return cell_pos(c.x, c.y)
+
+
+func square_pos(i: int, _slot := 0) -> Vector3:
+	var c := _cell_of(i)
+	return cell_pos(c.x, c.y)
 
 
 # ---- seats ------------------------------------------------------------------------------------------
-## Someone sits in a seat: they play that piece from wherever it is now. Returns false if someone else is already there.
+## Someone sits in a seat: they play those pegs from wherever they are now. Returns false if someone else is already there.
 func take_seat(seat: int, occupant: String, display_name := "YOU") -> bool:
 	if seat < 0 or seat >= players.size():
 		return false
@@ -109,7 +125,7 @@ func take_seat(seat: int, occupant: String, display_name := "YOU") -> bool:
 	return true
 
 
-## Someone stands up: the computer player takes the piece back and carries on. A roll they were waiting on is made for them.
+## Someone stands up: the computer takes the pegs back and carries on.
 func leave_seat(occupant: String) -> void:
 	for i in range(players.size()):
 		var p: Dictionary = players[i]
@@ -117,7 +133,7 @@ func leave_seat(occupant: String) -> void:
 			p.occupant = ""
 			p.human = false
 			p.name = NAMES[i]
-			if waiting_for_roll and current == i:
+			if current == i and phase in ["wait", "move"]:
 				remaining = minf(remaining, 1.6)
 
 
@@ -136,32 +152,86 @@ func seat_of(occupant: String) -> int:
 	return -1
 
 
-# ---- the game ---------------------------------------------------------------------------------------
+# ---- what the player can do ---------------------------------------------------------------------------
+func my_turn() -> bool:
+	return current == seat_of(local_id)
+
+
 func hint() -> String:
-	return "STEADY / DASH" if waiting_for_roll and current == seat_of(local_id) else ""
+	if not my_turn():
+		return ""
+	if phase == "wait":
+		return "ROLL"
+	if phase == "move" and legal.size() > 1:
+		return "PICK A PEG"
+	return ""
 
 
-func roll_human(dash := false) -> void:
+## The pegs you may pick right now (when there is a choice).
+func choosing() -> bool:
+	return phase == "move" and my_turn() and legal.size() > 1
+
+
+func roll_human(_dash := false) -> void:
 	if authority and phase == "wait" and players[current].occupant == local_id:
-		_resolve(dash)
+		_do_roll()
 
 
+func move_human(peg: int) -> void:
+	if authority and phase == "move" and players[current].occupant == local_id and legal.has(peg):
+		_do_move(peg)
+
+
+func peg_world(seat: int, peg: int) -> Vector3:
+	return global_transform * peg_nodes[seat][peg].position
+
+
+# ---- the rules (the same as server/board.mjs) -----------------------------------------------------------
 func _reset_game() -> void:
 	winner = -1
 	current = 0
+	again = false
+	tries = 3
+	legal = []
 	for i in range(players.size()):
-		players[i].pos = 0
-		players[i].skip = false
-		players[i].shield = 1
-		players[i].token.position = square_pos(0, i)
-	_say("RACE TO THE LAB!  SIT ON A STOOL TO PLAY")
-	_place_all()
+		players[i].pegs = [-1, -1, -1, -1]
+	phase = "wait"
+	remaining = 1.6
+	_say("FRUSTRATION!  SIT ON A STOOL TO PLAY")
+	_place_all(true)
 
 
-func _place_all() -> void:
-	for i in range(players.size()):
-		var tok: Node3D = players[i].token
-		tok.position = square_pos(int(players[i].pos), i)
+func _on_board(p: Dictionary) -> bool:
+	for r in p.pegs:
+		if int(r) >= 0:
+			return true
+	return false
+
+
+static func abs_space(seat: int, rel: int) -> int:
+	return (int(START[seat]) + rel) % LOOP
+
+
+func legal_moves() -> Array:
+	var out: Array = []
+	var p: Dictionary = players[current]
+	for k in range(4):
+		var r: int = p.pegs[k]
+		var t := 0
+		if r < 0:
+			if die_value != 6:
+				continue
+		else:
+			t = r + die_value
+			if t > LANE_END:
+				continue
+		var blocked := false
+		for j in range(4):
+			if j != k and int(p.pegs[j]) == t:
+				blocked = true
+		if not blocked:
+			out.append(k)
+	return out
 
 
 func _say(t: String) -> void:
@@ -170,154 +240,232 @@ func _say(t: String) -> void:
 		_label.text = t
 
 
-func _process(delta: float) -> void:
-	for i in range(players.size()):
-		var token: Node3D = players[i].token
-		token.position = token.position.lerp(square_pos(players[i].pos, i), 1.0 - exp(-delta * 8.0))
-	waiting_for_roll = phase == "wait"
-	busy = phase != "wait"
-	_die.visible = phase == "result"
-	if _die.visible:
-		_die.position = Vector3(0, 0.04, 0)
-		if remaining > 1.4:
-			_die.rotation = Vector3(2.2 - remaining, 2.2 - remaining, 2.2 - remaining) * 12.0
-			_die.position.y = 0.04 + absf(sin((2.2 - remaining) * 10.0)) * 0.05
-		else:
-			_die.basis = _face_up(die_value)
-	if _label != null and phase == "wait":
-		_label.text = "%s  •  %ds\nSHIELDS %d  •  WINS %d" % [message, ceili(remaining), players[current].shield, players[current].wins]
-	if not authority:
-		return
-	remaining -= delta
-	if remaining > 0.0:
-		return
-	if phase == "win":
-		round_number += 1
-		_reset_game()
-		current = (round_number - 1) % players.size()
-		_begin_turn()
-	elif phase == "result":
-		if not again:
-			current = (current + 1) % players.size()
-		_begin_turn()
-	else:
-		_resolve(false)
-
-
-func _begin_turn() -> void:
-	phase = "wait"
-	remaining = 25.0 if players[current].human and not auto_human else 1.6
-	_say("%s — STEADY or DASH" % players[current].name)
-
-
-func _resolve(dash: bool) -> void:
+func _do_roll() -> void:
 	var p: Dictionary = players[current]
-	phase = "result"
-	remaining = 2.2
-	again = false
-	if p.skip:
-		p.skip = false
-		_say("%s MISSES A TURN" % p.name)
-		return
 	die_value = rng.randi_range(1, 6)
-	var steps := die_value + (2 if dash else 0)
-	var detail := ""
-	if dash and die_value == 1:
-		if p.shield > 0:
-			p.shield -= 1
-			detail = "SHIELD SAVED DASH"
-		else:
-			steps = -2
-			detail = "DASH FAILED — BACK 2"
-	p.pos = clampi(p.pos + steps, 0, 28)
-	if p.pos < 28 and steps > 0:
-		match KIND.get(p.pos, ""):
-			"grenade":
-				p.pos = mini(28, p.pos + 3)
-				detail = "GRENADE +3"
-			"heart":
-				p.shield = mini(2, p.shield + 1)
-				again = true
-				detail = "HEART: SHIELD + ROLL AGAIN"
-			"boss", "zombie":
-				if p.shield > 0:
-					p.shield -= 1
-					detail = "SHIELD BLOCKED ATTACK"
-				elif KIND.get(p.pos) == "boss":
-					p.skip = true
-					detail = "BOSS: MISS NEXT TURN"
-				else:
-					p.pos = maxi(0, p.pos - 2)
-					detail = "ZOMBIE: BACK 2"
-			_:
-				if p.pos in [2, 10, 16, 23]:
-					if deck.is_empty():
-						deck = [0, 1, 2, 3, 4, 5]
-						for i in range(5, 0, -1):
-							var j := rng.randi_range(0, i)
-							var saved: int = deck[i]
-							deck[i] = deck[j]
-							deck[j] = saved
-					var card: int = deck.pop_back()
-					if card in [0, 3]:
-						p.shield = mini(2, p.shield + 1)
-					else:
-						p.pos = clampi(p.pos + [0, 2, -1, 0, 1, 3][card], 0, 28)
-					detail = ["SUPPLY: SHIELD", "SHORTCUT +2", "AMBUSH -1", "MEDKIT: SHIELD", "RESCUE +1", "POWER SURGE +3"][card]
-	_say("%s: %s %d  %s" % [p.name, "DASH" if dash else "STEADY", die_value, detail])
+	legal = legal_moves()
 	event.emit("roll")
-	if p.pos >= 28:
+	if legal.is_empty():
+		phase = "pass"
+		remaining = 1.4
+		_say("%s ROLLS %d — NO MOVE" % [p.name, die_value])
+		return
+	phase = "move"
+	remaining = 25.0 if (p.human and legal.size() > 1 and not auto_human) else 1.0
+	_say("%s ROLLS %d%s" % [p.name, die_value, " — CHOOSE A PEG" if legal.size() > 1 else ""])
+
+
+func ai_pick() -> int:
+	var p: Dictionary = players[current]
+	var best: int = legal[0]
+	var best_score := -1
+	for k in legal:
+		var r: int = p.pegs[k]
+		var t := 0 if r < 0 else r + die_value
+		var s := t
+		if r < 0:
+			s += 40
+		if t >= LOOP:
+			s += 35
+		if t <= 27:
+			var a := abs_space(current, t)
+			for i in range(players.size()):
+				if i != current:
+					for q in players[i].pegs:
+						if int(q) >= 0 and int(q) <= 27 and abs_space(i, int(q)) == a:
+							s += 60
+		if r >= 0 and r < LOOP and t >= LOOP:
+			s += 10
+		if s > best_score:
+			best_score = s
+			best = k
+	return best
+
+
+func _do_move(k: int) -> void:
+	var p: Dictionary = players[current]
+	var r: int = p.pegs[k]
+	var t := 0 if r < 0 else r + die_value
+	p.pegs[k] = t
+	var detail := "PEG OUT" if r < 0 else ""
+	event.emit("enter" if r < 0 else "hop")
+	if t <= 27:
+		var a := abs_space(current, t)
+		for i in range(players.size()):
+			if i == current:
+				continue
+			for j in range(4):
+				var q: int = players[i].pegs[j]
+				if q >= 0 and q <= 27 and abs_space(i, q) == a:
+					players[i].pegs[j] = -1
+					detail = "SENDS %s HOME" % players[i].name
+					event.emit("capture")
+	elif detail == "":
+		detail = "IN THE HOME LANE"
+		event.emit("finish")
+	_say(("%s: %d  %s" % [p.name, die_value, detail]).strip_edges())
+	var all_home := true
+	for q in p.pegs:
+		if int(q) < LOOP:
+			all_home = false
+	if all_home:
 		winner = current
 		p.wins += 1
 		phase = "win"
-		remaining = 7.0
+		remaining = 8.0
 		_say("%s WINS!" % p.name)
 		event.emit("win")
+		return
+	again = die_value == 6
+	phase = "after"
+	remaining = 0.9
+
+
+func _next_turn() -> void:
+	var was_again := again
+	tries = 3
+	if not was_again:
+		current = (current + 1) % players.size()
+	again = false
+	legal = []
+	phase = "wait"
+	remaining = 25.0 if (players[current].human and not auto_human) else 1.4
+	_say("%s%s" % [players[current].name, " — SIX! ROLL AGAIN" if was_again else " — ROLL THE DIE"])
+
+
+func _tick_rules(delta: float) -> void:
+	remaining -= delta
+	if remaining > 0.0:
+		return
+	match phase:
+		"win":
+			round_number += 1
+			for q in players:
+				q.pegs = [-1, -1, -1, -1]
+			winner = -1
+			current = (round_number - 1) % players.size()
+			again = false
+			legal = []
+			phase = "wait"
+			tries = 3
+			remaining = 25.0 if (players[current].human and not auto_human) else 1.4
+			_say("NEW GAME — %s ROLLS" % players[current].name)
+		"after":
+			_next_turn()
+		"pass":
+			var p: Dictionary = players[current]
+			if not _on_board(p) and tries > 1:
+				tries -= 1
+				legal = []
+				phase = "wait"
+				remaining = 25.0 if (p.human and not auto_human) else 1.0
+				_say("%s — TRY AGAIN (%d LEFT)" % [p.name, tries])
+			else:
+				_next_turn()
+		"move":
+			_do_move(ai_pick() if not legal.is_empty() else 0)
+		_:
+			_do_roll()
+
+
+# ---- showing it ---------------------------------------------------------------------------------------
+func _place_all(snap := false) -> void:
+	for i in range(players.size()):
+		for k in range(4):
+			var n: Node3D = peg_nodes[i][k]
+			var want := peg_pos(i, k, int(players[i].pegs[k]))
+			n.position = want if snap else n.position.lerp(want, 0.2)
+
+
+func _process(delta: float) -> void:
+	_t += delta
+	waiting_for_roll = phase == "wait"
+	busy = phase != "wait"
+	var pick := choosing()
+	for i in range(players.size()):
+		for k in range(4):
+			var n: Node3D = peg_nodes[i][k]
+			var want := peg_pos(i, k, int(players[i].pegs[k]))
+			var d := Vector3(want.x - n.position.x, 0.0, want.z - n.position.z)      # sideways distance still to go (a peg hops while it travels)
+			n.position = n.position.lerp(want, 1.0 - exp(-delta * 9.0))
+			var hop := clampf(d.length() * 4.0, 0.0, 0.05)
+			var bounce := 0.0
+			if pick and i == current and legal.has(k):
+				bounce = (0.5 + 0.5 * sin(_t * 8.0 + float(k))) * 0.016
+			elif i == current and phase == "move" and legal.has(k):
+				bounce = 0.006
+			n.position.y = TOP_Y + hop + bounce
+			n.scale = Vector3.ONE * (1.25 if (pick and i == current and legal.has(k)) else 1.0)
+	# the die in the dome: a tumble when a new number is rolled, then it rests showing the number
+	var key := "%d:%d:%d:%s" % [round_number, current, die_value, phase]
+	if phase in ["move", "pass"] and key != _seen_die_key:
+		_seen_die_key = key
+		_roll_t = 0.0
+	if phase in ["wait", "win"]:
+		_seen_die_key = ""
+	_roll_t += delta
+	var show_die := phase in ["move", "pass", "after"]
+	_die.visible = show_die
+	if show_die:
+		if _roll_t < 0.8:
+			var u := _roll_t / 0.8
+			_die.rotation = Vector3(11.0, 8.0, 6.0) * u * (1.0 - u * 0.2) + Vector3(0.6, 0.2, 0.9)
+			_die.position = Vector3(0.0, 0.045 + absf(sin(u * PI * 3.0)) * 0.05 * (1.0 - u), 0.0)
+		else:
+			_die.basis = _face_up(die_value)
+			_die.position = Vector3(0.0, 0.03, 0.0)
+	_dome.scale = Vector3(1.0, 0.55 - (0.12 if (phase == "move" and _roll_t < 0.15) else 0.0), 1.0)
+	if _label != null:
+		if phase == "wait":
+			_label.text = "%s  •  %ds\nWINS %d" % [message, ceili(maxf(remaining, 0.0)), players[current].wins]
+		elif phase == "move" and choosing():
+			_label.text = "%s  •  %ds" % [message, ceili(maxf(remaining, 0.0))]
+	if not authority:
+		return
+	_tick_rules(delta)
 
 
 func apply_snapshot(data: Dictionary) -> void:
 	var ps: Array = data.get("players", [])
-	if ps.size() != players.size() or not data.get("phase", "") in ["wait", "result", "win"]:
+	if ps.size() != players.size() or not str(data.get("phase", "")) in ["wait", "move", "pass", "after", "win"]:
 		return
 	for q in ps:
-		if not q is Dictionary or not q.get("pos", -1) is float and not q.get("pos", -1) is int:
+		if not q is Dictionary or not q.get("pegs", null) is Array or q.pegs.size() != 4:
 			return
-		if q.pos < 0 or q.pos > 28:
-			return
+		for r in q.pegs:
+			if not (r is float or r is int) or r < -1 or r > LANE_END:
+				return
 	authority = false
 	current = clampi(int(data.get("current", 0)), 0, players.size() - 1)
 	winner = clampi(int(data.get("winner", -1)), -1, players.size() - 1)
-	phase = data.phase
+	phase = str(data.phase)
 	remaining = clampf(float(data.get("remaining", 0)), 0, 25)
 	die_value = clampi(int(data.get("die", 1)), 1, 6)
+	round_number = int(data.get("round", round_number))
+	legal = []
+	for k in data.get("legal", []):
+		if k is float or k is int:
+			legal.append(clampi(int(k), 0, 3))
 	for i in range(players.size()):
-		for key in ["name", "occupant", "pos", "skip", "shield", "wins"]:
-			players[i][key] = ps[i].get(key, players[i][key])
+		players[i].name = str(ps[i].get("name", players[i].name)).left(20)
+		players[i].occupant = str(ps[i].get("occupant", ""))
+		players[i].wins = int(ps[i].get("wins", 0))
+		for k in range(4):
+			players[i].pegs[k] = int(ps[i].pegs[k])
 		players[i].human = players[i].occupant != ""
 	_say(str(data.get("message", "")).left(120))
 
 
-# ---- the die ----------------------------------------------------------------------------------------
-func _roll_die(n: int) -> void:
-	_die.visible = true
-	var start := Vector3(0.0, 0.5, 0.0)
-	_die.position = start
-	event.emit("roll")
-	var spin := Vector3(rng.randf_range(4.0, 9.0), rng.randf_range(3.0, 8.0), rng.randf_range(3.0, 8.0))
-	var final := _face_up(n)
-	var tw := create_tween()
-	tw.tween_method(func(t: float):
-		var arc := sin(t * PI) * 0.16
-		_die.position = Vector3(0.0, 0.07 + 0.43 * (1.0 - ease(t, 0.35)) + arc * 0.2, 0.0)
-		if t < 0.82:
-			_die.rotation = spin * t
-		else:
-			_die.basis = Basis.from_euler(spin * 0.82).slerp(final, (t - 0.82) / 0.18), 0.0, 1.0, 1.1)
-	await tw.finished
-	_die.position = Vector3(0.0, 0.03, 0.0)
-	_die.basis = final
-	await get_tree().create_timer(0.5).timeout
-	_die.visible = false
+# ---- the Pop-O-Matic dome and the die ----------------------------------------------------------------
+func _make_dome() -> void:
+	var ring := VRBuild.cylinder(self, 0.085, 0.012, Vector3(0, 0.006, 0), VRBuild.mat(Color(0.1, 0.08, 0.07), 0.3, 0.7), 0.09, Vector3.ZERO, 40)
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.8, 0.92, 1.0, 0.16)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.roughness = 0.05
+	glass.metallic = 0.1
+	_dome = VRBuild.sphere(self, 0.08, Vector3(0, 0.012, 0), glass, 24)
+	_dome.scale = Vector3(1.0, 0.55, 1.0)
 
 
 ## The orientation that shows value n on top. Opposite faces add to 7: +y 1, -y 6, +z 2, -z 5, +x 3, -x 4.
@@ -352,48 +500,12 @@ func _make_die() -> Node3D:
 	return die
 
 
-# ---- the pieces: little collector's tokens, each in a player colour ----------------------------------
-func _make_token(i: int) -> Node3D:
+# ---- the pegs: a round foot, a stem and a rounded head, in the seat's colour ------------------------
+func _make_peg(i: int) -> Node3D:
 	var t := Node3D.new()
 	var col: Color = COLOURS[i]
-	var base := VRBuild.mat(col.darkened(0.55), 0.25, 0.6)
-	var glossy := VRBuild.mat(col, 0.18, 0.15, 0.25, col)
-	VRBuild.cylinder(t, 0.022, 0.006, Vector3(0, 0.003, 0), base, 0.024, Vector3.ZERO, 24)          # a round base, like a board game piece
-	match i:
-		0:    # the zombie hand: palm, four fingers and a thumb reaching up
-			var palm := VRBuild.sphere(t, 0.015, Vector3(0, 0.02, 0), glossy, 16)
-			palm.scale = Vector3(1.0, 0.8, 0.75)
-			for f in range(4):
-				var fx := (float(f) - 1.5) * 0.0105
-				VRBuild.cylinder(t, 0.0042, 0.026, Vector3(fx, 0.043, 0), glossy, 0.0035, Vector3(0, 0, (float(f) - 1.5) * -0.12), 10)
-				VRBuild.sphere(t, 0.0042, Vector3(fx + (float(f) - 1.5) * -0.0031, 0.057, 0), glossy, 8)
-			VRBuild.cylinder(t, 0.0045, 0.02, Vector3(0.019, 0.03, 0), glossy, 0.0038, Vector3(0, 0, -0.9), 10)
-		1:    # a grenade
-			var body := VRBuild.sphere(t, 0.017, Vector3(0, 0.026, 0), glossy, 16)
-			body.scale = Vector3(1.0, 1.1, 1.0)
-			VRBuild.cylinder(t, 0.007, 0.01, Vector3(0, 0.048, 0), base, -1.0, Vector3.ZERO, 12)
-			var ring := MeshInstance3D.new()
-			var tm := TorusMesh.new()
-			tm.inner_radius = 0.0045
-			tm.outer_radius = 0.0075
-			ring.mesh = tm
-			ring.material_override = VRBuild.mat(Color(0.85, 0.85, 0.9), 0.2, 0.9)
-			ring.position = Vector3(0.008, 0.058, 0)
-			ring.rotation = Vector3(PI / 2, 0, 0)
-			t.add_child(ring)
-		2:    # a brain: two lumpy halves
-			for sx in [-1.0, 1.0]:
-				var half := VRBuild.sphere(t, 0.0135, Vector3(sx * 0.0085, 0.028, 0), glossy, 14)
-				half.scale = Vector3(0.95, 0.9, 1.15)
-			VRBuild.sphere(t, 0.008, Vector3(0, 0.017, 0.006), glossy, 10)
-		3:    # a skull
-			var skull := VRBuild.sphere(t, 0.0165, Vector3(0, 0.036, 0), glossy, 16)
-			skull.scale = Vector3(1.0, 1.05, 1.0)
-			var jaw := VRBuild.cylinder(t, 0.0105, 0.012, Vector3(0, 0.017, 0.003), glossy, 0.0085, Vector3.ZERO, 12)
-			var dark := VRBuild.mat(Color(0.02, 0.02, 0.03), 0.4)
-			for sx in [-1.0, 1.0]:
-				VRBuild.sphere(t, 0.0045, Vector3(sx * 0.0068, 0.038, 0.0135), dark, 8)
-		4, 5:
-			VRBuild.cylinder(t, 0.012, 0.05, Vector3(0, 0.034, 0), glossy, 0.009, Vector3.ZERO, 16)
-			VRBuild.sphere(t, 0.015, Vector3(0, 0.063, 0), glossy, 14)
+	var glossy := VRBuild.mat(col, 0.16, 0.12, 0.3, col.darkened(0.55))
+	VRBuild.cylinder(t, 0.017, 0.007, Vector3(0, 0.0035, 0), glossy, 0.019, Vector3.ZERO, 20)
+	VRBuild.cylinder(t, 0.008, 0.026, Vector3(0, 0.02, 0), glossy, 0.01, Vector3.ZERO, 14)
+	VRBuild.sphere(t, 0.0125, Vector3(0, 0.04, 0), glossy, 14)
 	return t

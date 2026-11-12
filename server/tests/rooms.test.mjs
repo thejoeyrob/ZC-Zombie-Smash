@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {WebSocket} from '../vendor/ws/wrapper.mjs';
 import {startServer,validPose,validPin} from '../server.mjs';
-import {newBoard,sit,roll,tickBoard} from '../board.mjs';
+import {newBoard,sit,roll,move,tickBoard,legalMoves,START} from '../board.mjs';
 async function client(url){const ws=new WebSocket(url);const queue=[];const wait=[];ws.on('message',raw=>{const p=JSON.parse(raw);queue.push(p);for(const f of [...wait])f();});await once(ws,'open');return {ws,send:p=>ws.send(JSON.stringify(p)),next:(type,condition=()=>true)=>new Promise((resolve,reject)=>{let timer;const poll=()=>{const i=queue.findIndex(p=>p.type===type&&condition(p));if(i>=0){clearTimeout(timer);const wi=wait.indexOf(poll);if(wi>=0)wait.splice(wi,1);resolve(queue.splice(i,1)[0]);}};timer=setTimeout(()=>{wait.splice(wait.indexOf(poll),1);reject(Error('Timeout: '+type));},3000);wait.push(poll);poll();})};}
 test('six users, full room, host controls, leases, seats, disconnect',async()=>{
  const server=startServer({port:0});await once(server.app,'listening');const url=`ws://127.0.0.1:${server.app.address().port}/shack`;const clients=[];
@@ -16,16 +16,33 @@ test('six users, full room, host controls, leases, seats, disconnect',async()=>{
  host.send({type:'claim',station:'pinball'});await host.next('granted');guest.send({type:'claim',station:'pinball'});assert.match((await guest.next('error')).message,/in use/);
  host.send({type:'sit',seat:0});await host.next('seated');guest.send({type:'sit',seat:0});assert.match((await guest.next('error')).message,/occupied/);
  guest.send({type:'roll',dash:true});assert.match((await guest.next('error')).message,/turn/);
- host.send({type:'roll',dash:true});const board=await host.next('board',p=>p.state.phase==='result');assert.equal(board.state.players[0].occupant,h.id);
+ host.send({type:'roll',dash:true});const board=await host.next('board',p=>['move','pass'].includes(p.state.phase));assert.equal(board.state.players[0].occupant,h.id);
  guest.send({type:'claim',station:'pinball'});await guest.next('granted');guest.send({type:'leave'});await guest.next('ended');await host.next('room',p=>!p.owners.pinball&&p.members.length===5);
  host.send({type:'lock',locked:true});await host.next('room',p=>p.locked);extra.send({type:'join',protocol:1,code:room.code});assert.match((await extra.next('error')).message,/locked/);
  host.ws.close();await clients[2].next('ended');assert.equal(server.rooms.size,0);
  }finally{for(const c of clients)c.ws.terminate();await server.close();}
 });
-test('board turn, shields, risk, win, round timeout',()=>{
- const b=newBoard();assert.equal(b.players.length,4);sit(b,'a','Alice',0);assert.equal(roll(b,'b'),false);b.players[0].shield=0;roll(b,'a',true,()=>0);assert.equal(b.players[0].pos,0);tickBoard(b,3);assert.equal(b.current,1);
- b.current=0;b.phase='wait';b.players[0].pos=25;roll(b,'a',false,()=>.99);assert.equal(b.winner,0);assert.equal(b.players[0].wins,1);tickBoard(b,8);assert.equal(b.players[0].pos,0);assert.equal(b.players[0].wins,1);
- b.current=0;b.phase='wait';b.players[0].pos=0;roll(b,'a',false,()=>.34);assert.equal(b.players[0].pos,3);assert.equal(b.again,true);assert.equal(b.players[0].shield,2);
+test('Frustration: a 6 brings a peg out, captures send pegs home, own pegs block, exact finish, win',()=>{
+ const b=newBoard();assert.equal(b.players.length,4);sit(b,'a','Alice',0);assert.equal(roll(b,'b'),false);
+ // no 6: nothing can move, and with no peg out there are three tries before the turn passes
+ assert.equal(roll(b,'a',false,()=>0),true);assert.equal(b.die,1);assert.equal(b.phase,'pass');tickBoard(b,1.5);assert.equal(b.current,0);assert.equal(b.tries,2);assert.equal(b.phase,'wait');
+ roll(b,'a',false,()=>0);tickBoard(b,1.5);roll(b,'a',false,()=>0);tickBoard(b,1.5);assert.equal(b.current,1);
+ // a 6 brings a peg onto the start space and rolls again
+ b.current=0;b.phase='wait';assert.equal(roll(b,'a',false,()=>.99),true);assert.equal(b.die,6);assert.deepEqual(b.legal,[0,1,2,3]);assert.equal(move(b,'a',2),true);assert.equal(b.players[0].pegs[2],0);tickBoard(b,1);assert.equal(b.current,0);assert.equal(b.phase,'wait');
+ // landing on another player's peg sends it home (seat 1's start is space 3; seat 0 peg at rel 7 is space 31%28=3)
+ b.players[1].pegs[0]=0;b.players[0].pegs=[-1,-1,7-4,-1];b.die=4;b.phase='move';b.legal=legalMoves(b);assert.deepEqual(b.legal,[2]);move(b,'a',2);assert.equal(b.players[0].pegs[2],7);assert.equal(b.players[1].pegs[0],-1);
+ // your own pegs block you, and a 6 cannot bring a peg out onto your own peg
+ b.current=0;b.phase='wait';b.again=false;b.players[0].pegs=[5,8,-1,-1];b.die=3;assert.deepEqual(legalMoves(b),[1]);   // 5+3 = 8 is blocked
+ b.players[0].pegs=[0,-1,-1,-1];b.die=6;assert.deepEqual(legalMoves(b),[0]);      // the start space is taken by your own peg
+ // exact finish: nothing goes past the last hole of the lane
+ b.players[0].pegs=[30,-1,-1,-1];b.die=2;assert.deepEqual(legalMoves(b),[]);b.die=1;assert.deepEqual(legalMoves(b),[0]);
+ // all four in the lane wins
+ b.current=0;b.phase='move';b.again=false;
+ b.players[0].pegs=[31,30,29,27];b.die=1;b.legal=legalMoves(b);assert.deepEqual(b.legal,[3]);move(b,'a',3);assert.equal(b.winner,0);assert.equal(b.players[0].wins,1);
+ tickBoard(b,9);assert.deepEqual(b.players[0].pegs,[-1,-1,-1,-1]);assert.equal(b.players[0].wins,1);
+ // the computer plays for an empty seat and a timed-out human
+ const c=newBoard();for(let i=0;i<400;i++)tickBoard(c,1.5,Math.random);assert.ok(c.round>=1);
+ assert.deepEqual(START,[24,3,10,17]);
 });
 test('reject malformed pose and pin state',()=>{
  const xf=[0,1.6,0,0,0,0,1];const p={head:xf,left:xf,right:xf,curls:[0,0,0,0,0,0],active:[true,true],scale:1,seated:false};assert.ok(validPose(p));assert.ok(validPose({...p,wrists:[[0,1,0],[1,1,0]]}));assert.ok(!validPose({...p,wrists:[[0,1,0],[1,NaN,0]]}));assert.ok(!validPose({...p,wrists:[[0,1,0]]}));assert.ok(!validPose({...p,head:[NaN,1,1,1,1,1,1]}));assert.ok(!validPose({...p,head:[0,0,0,0,0,0,0]}));assert.ok(!validPin({ball:[0,1],angles:[0,0],score:-1,balls:3,play:true,over:false}));

@@ -1,7 +1,7 @@
 import http from 'node:http';
 import {randomInt,randomUUID} from 'node:crypto';
 import {WebSocketServer,WebSocket} from './vendor/ws/wrapper.mjs';
-import {newBoard,sit,stand,roll,tickBoard} from './board.mjs';
+import {newBoard,sit,stand,roll,move,tickBoard} from './board.mjs';
 import {pathToFileURL} from 'node:url';
 const stations=new Set(['m0','m1','m2','m3','m4','m5','pinball','pinball2']);
 const send=(ws,p)=>{if(ws.readyState===WebSocket.OPEN&&ws.bufferedAmount<65536)ws.send(JSON.stringify(p));};
@@ -65,7 +65,8 @@ if(now-c.window>=1000){c.window=now;c.count=0;}if(++c.count>30)return c.close(10
  case 'emu_play':{if(c.id===r.host)break;const h=r.members.get(r.host);if(h)send(h,{type:'emu_play',from:c.vid,game:Number.isInteger(p.game)?p.game:-1});break;}
  case 'emu_stop':{if(c.id===r.host)break;const h=r.members.get(r.host);if(h)send(h,{type:'emu_stop',from:c.vid});break;}
  case 'emu_ok':case 'emu_no':case 'emu_end':{if(c.id!==r.host)break;for(const m of r.members.values())if(m.vid===p.to)send(m,{type:p.type,message:String(p.message||'').slice(0,60),rate:Number.isFinite(p.rate)?p.rate:0,aspect:Number.isFinite(p.aspect)?p.aspect:0});break;}
- case 'roll':if(!roll(r.board,c.id,p.dash===true,random))return error('Wait for your turn.');break;
+ case 'roll':if(!roll(r.board,c.id,false,random))return error('Wait for your turn.');break;
+ case 'move':if(!move(r.board,c.id,Number.isInteger(p.peg)?p.peg:-1))return error('Not a legal move.');break;
  case 'pose':if(validPose(p.pose))broadcast(r,{type:'pose',id:c.id,pose:p.pose},c);break;
  case 'pin':if(['pinball','pinball2'].includes(p.station)&&r.owners[p.station]===c.id&&validPin(p.state))broadcast(r,{type:'pin',station:p.station,state:p.state},c);break;
  case 'appearance':if(['human_m01','human_f02','human_joeyrob','human_discoman','human_fatamy','human_drmantis','human_debo','human_glowing','human_jordan','human_riley','human_caffeinatedsloth'].includes(p.skin)){c.skin=p.skin;roster(r);}break;
