@@ -42,21 +42,21 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 		# the same low green skirting as the other three walls, stopping at the door frame
 		var sk_w: float = wall_w - 0.1
 		var sk_x: float = side * (door_w / 2.0 + 0.1 + sk_w / 2.0)
-		VRBuild.box(self, Vector3(sk_w, 0.13, 0.05), Vector3(sk_x, 0.065, 0.085), VRBuild.mat(Color(0.07, 0.07, 0.08), 0.45, 0.6))
-		VRBuild.box(self, Vector3(sk_w, 0.025, 0.065), Vector3(sk_x, 0.1425, 0.0925), VRBuild.mat(Color(0.07, 0.07, 0.08), 0.45, 0.6))
+		VRBuild.box(self, Vector3(sk_w, 0.13, 0.05), Vector3(sk_x, 0.065, 0.085), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(sk_w / 0.7, 0.34), 1.8))
+		VRBuild.box(self, Vector3(sk_w, 0.025, 0.065), Vector3(sk_x, 0.1425, 0.0925), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(sk_w / 0.7, 0.1), 1.8))
 	var tmat: StandardMaterial3D = wood.duplicate()
 	tmat.uv1_scale = Vector3(3.0 * door_w / 2.4, 2.0 * (height - door_h) / 2.4, 1)
 	tmat.texture_repeat = true
 	VRBuild.box(self, Vector3(door_w, height - door_h, 0.12), Vector3(0, door_h + (height - door_h) / 2.0, 0), tmat)
 	# frame
-	var frame := VRBuild.mat(Color(0.07, 0.07, 0.085), 0.4, 0.7)
+	var frame := VRBuild.pbr("wood-navy", Color(0.45, 0.47, 0.55), Vector2(1.0, 2.0), 1.2)
 	for sx in [-1, 1]:
 		VRBuild.box(self, Vector3(0.12, door_h, 0.2), Vector3(sx * (door_w / 2.0 + 0.04), door_h / 2.0, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.24, 0.12, 0.2), Vector3(0, door_h + 0.04, 0), frame)
 	VRBuild.box(self, Vector3(door_w + 0.2, 0.04, 0.4), Vector3(0, 0.01, 0.05), VRBuild.mat(Color(0.5, 0.45, 0.35), 0.4, 0.5, 0.2, Color(0.5, 0.45, 0.35)))   # brass threshold
 	# two leaves, each with a glass window
-	var leaf := VRBuild.mat(Color(0.1, 0.105, 0.115), 0.4, 0.6)       # green washed wood door leaves
-	var inset := VRBuild.mat(Color(0.075, 0.08, 0.09), 0.4, 0.6)       # the recessed panels are a shade darker
+	var leaf := VRBuild.pbr("wood-green", Color(0.72, 0.8, 0.72), Vector2(1.0, 1.4), 2.2)       # green washed wood door leaves
+	var inset := VRBuild.pbr("wood-green", Color(0.5, 0.56, 0.5), Vector2(1.0, 1.0), 2.6)       # the recessed panels are a shade darker
 	var brass := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 2), 0.9)                     # brushed metal push bars and handles
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.5, 0.65, 0.9, 0.07)

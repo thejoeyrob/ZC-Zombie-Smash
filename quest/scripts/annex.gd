@@ -9,7 +9,7 @@ const DEPTH := 14.0
 const Z1 := Z0 + DEPTH             # the far wall
 const HALF_W := 4.0
 const HEIGHT := 3.4
-const GATE_X := 0.0                # the opening in the arcade's back wall, between the two pinball machines (world x of its middle)
+const GATE_X := 0.0                # the wide opening in the arcade's back wall, between the two pinball machines (world x of its middle)
 const GATE_W := 2.4
 const GATE_H := 2.6
 
@@ -56,40 +56,35 @@ func set_active(on: bool) -> void:
 # ---- the hall -----------------------------------------------------------------------------------------
 func _shell() -> void:
 	var cz := (Z0 + Z1) / 2.0
-	var floor_m := VRBuild.pbr("concrete", Color(0.8, 0.8, 0.84), Vector2(HALF_W * 2.0 / 3.0, DEPTH / 3.0), 0.7)
+	var floor_m := VRBuild.pbr("tiles-bw", Color(0.62, 0.62, 0.68), Vector2(HALF_W * 2.0 / 1.6, DEPTH / 1.6), 0.9)
 	VRBuild.quad(node, Vector2(HALF_W * 2.0, DEPTH), Vector3(0, 0, cz), floor_m, Vector3(-PI / 2, 0, 0))
-	VRBuild.quad(node, Vector2(HALF_W * 2.0, DEPTH), Vector3(0, HEIGHT, cz), VRBuild.mat(Color(0.07, 0.07, 0.08), 0.9), Vector3(PI / 2, 0, 0))
-	var plaster := VRBuild.pbr("plaster", Color(0.8, 0.8, 0.8), Vector2(1, 1), 0.8)
-	var oak := VRBuild.pbr("oakslat", Color(0.85, 0.8, 0.75), Vector2(1, 1), 1.2)
-	var black := VRBuild.mat(Color(0.03, 0.03, 0.035), 0.5, 0.5)
-	var walls := [[Vector3(0, 0, Z1), PI, HALF_W * 2.0, true], [Vector3(-HALF_W, 0, cz), PI / 2, DEPTH, false], [Vector3(HALF_W, 0, cz), -PI / 2, DEPTH, false]]
+	var ceil_m := VRBuild.pbr("tiles", Color(0.2, 0.2, 0.28), Vector2(HALF_W * 2.0 / 2.4, DEPTH / 2.4), 0.8)
+	VRBuild.quad(node, Vector2(HALF_W * 2.0, DEPTH), Vector3(0, HEIGHT, cz), ceil_m, Vector3(PI / 2, 0, 0))
+	var brick := VRBuild.pbr("brick-light", Color(0.55, 0.42, 0.4), Vector2(1, 1), 1.2)
+	var walls := [[Vector3(0, 0, Z1), PI, HALF_W * 2.0], [Vector3(-HALF_W, 0, cz), PI / 2, DEPTH], [Vector3(HALF_W, 0, cz), -PI / 2, DEPTH]]
 	for w in walls:
 		var holder := Node3D.new()
 		holder.position = w[0]
 		holder.rotation.y = w[1]
 		node.add_child(holder)
-		var wm: StandardMaterial3D = (oak if w[3] else plaster).duplicate()
-		var tile := 1.2 if w[3] else 2.4
-		wm.uv1_scale = Vector3(float(w[2]) / tile, HEIGHT / tile, 1)
+		var wm: StandardMaterial3D = brick.duplicate()
+		wm.uv1_scale = Vector3(float(w[2]) / 2.4, HEIGHT / 2.4, 1)
 		VRBuild.quad(holder, Vector2(w[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
-		VRBuild.led_bar(holder, Vector3(w[2], 0.03, 0.03), Vector3(0, HEIGHT - 0.1, 0.03), Color(1.0, 0.86, 0.66), 1.6)
-		VRBuild.box(holder, Vector3(w[2], 0.09, 0.025), Vector3(0, 0.045, 0.0125), black)
-	# the hall's side of the arcade's back wall: oak slats facing into the hall, with the opening cut out of it
+		VRBuild.neon_tube(holder, w[2], Vector3(0, HEIGHT - 0.1, 0.04), Color(0.1, 0.9, 1.0) if int(w[1] * 10) % 2 == 0 else Color(1.0, 0.2, 0.7))
+		VRBuild.box(holder, Vector3(w[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.9, 0.95, 0.9), Vector2(float(w[2]) / 0.7, 0.34), 1.6))
+	# the hall's side of the arcade's back wall: plain brick facing into the hall, with the gate cut out of it
 	var gl := GATE_X - GATE_W / 2.0
 	var gr := GATE_X + GATE_W / 2.0
 	for piece in [[-HALF_W, gl, 0.0, HEIGHT], [gl, gr, GATE_H, HEIGHT], [gr, HALF_W, 0.0, HEIGHT]]:
 		var w: float = float(piece[1]) - float(piece[0])
 		var h: float = float(piece[3]) - float(piece[2])
-		var fm: StandardMaterial3D = oak.duplicate()
-		fm.uv1_scale = Vector3(w / 1.2, h / 1.2, 1)
+		var fm: StandardMaterial3D = brick.duplicate()
+		fm.uv1_scale = Vector3(w / 2.4, h / 2.4, 1)
 		VRBuild.quad(node, Vector2(w, h), Vector3((float(piece[0]) + float(piece[1])) / 2.0, float(piece[2]) + h / 2.0, Z0 + 0.012), fm)
-	# the ceiling: pendant light bars over each zone, and spot tracks
-	for z in [9.2, 12.4, 15.6, 18.8]:
-		VRBuild.led_bar(node, Vector3(3.6, 0.05, 0.1), Vector3(0, HEIGHT - 0.55, z), Color(1.0, 0.9, 0.76), 2.4)
-		VRBuild.box(node, Vector3(3.7, 0.025, 0.14), Vector3(0, HEIGHT - 0.51, z), black)
-		for sx in [-1.7, 1.7]:
-			VRBuild.box(node, Vector3(0.008, 0.5, 0.008), Vector3(sx, HEIGHT - 0.26, z), black)
-	for p in [[Vector3(-1.6, 3.0, 9.8), Color(1.0, 0.93, 0.84), 1.0], [Vector3(2.2, 3.0, 12.0), Color(1.0, 0.93, 0.84), 0.9], [Vector3(-1.6, 3.0, 15.8), Color(1.0, 0.95, 0.88), 1.0], [Vector3(2.2, 3.0, 18.5), Color(1.0, 0.95, 0.88), 0.9]]:
+	VRBuild.neon_tube(node, HALF_W * 2.0 - GATE_W, Vector3((gr + HALF_W) / 2.0 - HALF_W * 0.0 - (HALF_W - gr) / 2.0 + (HALF_W - gr) / 2.0, HEIGHT - 0.1, Z0 + 0.04), Color(1.0, 0.2, 0.7))
+	for z in [9.4, 13.0, 16.6, 19.6]:
+		VRBuild.neon_tube(node, HALF_W * 2.0, Vector3(0, HEIGHT - 0.05, z), Color(0.15, 0.4, 1.0), Vector3.ZERO, 0.02)      # blue neon across the ceiling
+	for p in [[Vector3(-2.2, 3.0, 9.0), Color(1.0, 0.3, 0.75), 1.1], [Vector3(2.2, 3.0, 12.0), Color(0.3, 0.85, 1.0), 1.1], [Vector3(-1.6, 3.0, 16.0), Color(1.0, 0.8, 0.5), 1.1], [Vector3(2.2, 3.0, 18.5), Color(1.0, 0.85, 0.6), 1.0]]:
 		var l := OmniLight3D.new()
 		l.position = p[0]
 		l.light_color = p[1]
@@ -100,17 +95,21 @@ func _shell() -> void:
 
 
 func _gate_trim() -> void:
-	# the opening: a slim black steel frame with a warm LED reveal
-	var black := VRBuild.mat(Color(0.03, 0.03, 0.035), 0.45, 0.7)
+	var trim := VRBuild.mat(Color(0.25, 0.17, 0.32), 0.55)
+	var glow := VRBuild.mat(Color(0.1, 0.9, 1.0), 0.4, 0.0, 2.2)
 	for sx in [-1.0, 1.0]:
-		VRBuild.box(node, Vector3(0.07, GATE_H, 0.3), Vector3(GATE_X + sx * (GATE_W / 2.0 + 0.035), GATE_H / 2.0, Z0), black)
-		VRBuild.led_bar(node, Vector3(0.015, GATE_H - 0.1, 0.012), Vector3(GATE_X + sx * (GATE_W / 2.0 - 0.01), GATE_H / 2.0, Z0 - 0.15), Color(1.0, 0.88, 0.7), 1.8)
-	VRBuild.box(node, Vector3(GATE_W + 0.14, 0.07, 0.3), Vector3(GATE_X, GATE_H + 0.035, Z0), black)
-	VRBuild.led_bar(node, Vector3(GATE_W - 0.04, 0.015, 0.012), Vector3(GATE_X, GATE_H - 0.02, Z0 - 0.15), Color(1.0, 0.88, 0.7), 1.8)
+		VRBuild.box(node, Vector3(0.1, GATE_H, 0.34), Vector3(GATE_X + sx * (GATE_W / 2.0 + 0.05), GATE_H / 2.0, Z0), trim)
+		VRBuild.box(node, Vector3(0.025, GATE_H, 0.02), Vector3(GATE_X + sx * (GATE_W / 2.0), GATE_H / 2.0, Z0 - 0.17), glow)
+	VRBuild.box(node, Vector3(GATE_W + 0.3, 0.1, 0.34), Vector3(GATE_X, GATE_H + 0.05, Z0), trim)
+	VRBuild.box(node, Vector3(GATE_W, 0.025, 0.02), Vector3(GATE_X, GATE_H - 0.01, Z0 - 0.17), glow)
 
 
 func _lobby_signs() -> void:
-	VRBuild.label(node, "PICK UP: GRIP OR TRIGGER NEAR IT   •   THROW: LET GO", 0.06, Vector3(2.7, 1.7, Z0 + 0.04), Color(0.9, 0.9, 0.88), Vector3.ZERO, 0, font, true)
+	VRBuild.label(node, "THE SHACK EXTRA", 0.3, Vector3(GATE_X, 3.02, Z0 + 0.06), Color(1.0, 0.85, 0.3), Vector3.ZERO, 6, font, true)
+	VRBuild.label(node, "DARTS    AXES    BOWLING", 0.14, Vector3(GATE_X, 2.8, Z0 + 0.06), Color(0.5, 0.95, 1.0), Vector3.ZERO, 4, font, true)
+	VRBuild.label(node, "THE SHACK EXTRA", 0.3, Vector3(GATE_X, 3.02, Z0 - 0.19), Color(1.0, 0.85, 0.3), Vector3(0, PI, 0), 6, font, true)
+	VRBuild.label(node, "DARTS • AXES • BOWLING", 0.14, Vector3(GATE_X, 2.8, Z0 - 0.19), Color(0.5, 0.95, 1.0), Vector3(0, PI, 0), 4, font, true)
+	VRBuild.label(node, "PICK UP: GRIP OR TRIGGER NEAR IT   •   THROW: LET GO", 0.06, Vector3(2.7, 1.7, Z0 + 0.04), Color(0.9, 0.9, 0.8), Vector3.ZERO, 3, font, true)
 
 
 # ---- darts ---------------------------------------------------------------------------------------------
@@ -159,7 +158,7 @@ func _axe_scenery() -> void:
 		VRBuild.box(node, Vector3(0.04, 2.3, 0.04), Vector3(x, 1.15, AXE_LINE_Z + 0.2), post)
 		VRBuild.box(node, Vector3(0.04, 2.3, 0.04), Vector3(x, 1.15, AXE_FACE_Z - 0.1), post)
 		VRBuild.box(node, Vector3(0.012, 1.6, AXE_FACE_Z - AXE_LINE_Z - 0.3), Vector3(x, 1.5, (AXE_FACE_Z + AXE_LINE_Z) / 2.0 + 0.05), cage)
-	VRBuild.label(node, "AXE THROWING", 0.22, Vector3(-1.75, 3.0, Z1 - 0.06), Color(1.0, 0.94, 0.84), Vector3(0, PI, 0), 0, font, true)
+	VRBuild.label(node, "AXE THROWING", 0.26, Vector3(-1.75, 3.0, Z1 - 0.06), Color(1.0, 0.45, 0.2), Vector3(0, PI, 0), 6, font, true)
 
 
 # ---- bowling -----------------------------------------------------------------------------------------------
@@ -185,8 +184,8 @@ func _bowling_scenery() -> void:
 	# the pin deck's back: a dark pit, and the masking unit above it with the big score screens
 	VRBuild.box(node, Vector3(HALF_W - 0.45, 0.5, 1.0), Vector3(2.15, 0.0, HEAD_PIN_Z + 1.1), VRBuild.mat(Color(0.03, 0.03, 0.04), 0.7))
 	VRBuild.box(node, Vector3(HALF_W - 0.45, 1.5, 0.12), Vector3(2.15, 2.5, Z1 - 0.45), VRBuild.mat(Color(0.08, 0.06, 0.12), 0.45, 0.4))
-	VRBuild.label(node, "BOWLING", 0.22, Vector3(2.15, 3.0, Z1 - 0.52), Color(1.0, 0.94, 0.84), Vector3(0, PI, 0), 0, font, true)
+	VRBuild.label(node, "BOWLING", 0.3, Vector3(2.15, 3.0, Z1 - 0.52), Color(1.0, 0.8, 0.3), Vector3(0, PI, 0), 6, font, true)
 	# the ball return between the two lanes: a low hooded box
 	var mid_x: float = (LANE_X[0] + LANE_X[1]) / 2.0
 	VRBuild.box(node, Vector3(0.28, 0.5, 0.7), Vector3(mid_x, 0.25, FOUL_Z - 0.55), VRBuild.mat(Color(0.12, 0.1, 0.16), 0.4, 0.5))
-	VRBuild.box(node, Vector3(0.3, 0.02, 0.72), Vector3(mid_x, 0.51, FOUL_Z - 0.55), VRBuild.mat(Color(0.12, 0.1, 0.12), 0.3, 0.6))
+	VRBuild.box(node, Vector3(0.3, 0.02, 0.72), Vector3(mid_x, 0.51, FOUL_Z - 0.55), VRBuild.mat(Color(1.0, 0.3, 0.7), 0.3, 0.0, 1.6))
