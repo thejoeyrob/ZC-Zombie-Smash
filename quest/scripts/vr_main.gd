@@ -2067,6 +2067,10 @@ func _run_shots() -> void:
 	var vd: Vector3 = room.vending.global_position
 	var tc: Vector3 = ArcadeRoom.ARC_CENTRE
 	views["locker"] = [Vector3(-1.85, 1.6, 1.5), Vector3(-1.85, 1.2, -0.1)]
+	views["hall_darts"] = [Vector3(-0.2, 1.7, 8.5), Vector3(-3.9, 2.4, 10.6)]
+	views["hall_lanes"] = [Vector3(-1.0, 1.9, 11.0), Vector3(3.9, 2.2, 15.0)]
+	views["hall_axes"] = [Vector3(0.5, 1.8, 15.0), Vector3(-1.8, 2.4, 21.2)]
+	views["hall_pins"] = [Vector3(0.5, 1.7, 12.0), Vector3(2.5, 2.6, 21.0)]
 	views["locker_wide"] = [Vector3(1.2, 1.7, 4.4), Vector3(3.3, 1.0, 7.0)]
 	views["body_down"] = [Vector3(0.3, 1.65, 1.2), Vector3(0.3, 0.0, 1.45)]
 	views["body_fwd"] = [Vector3(0.3, 1.65, 1.2), Vector3(0.3, 1.2, 0.0)]

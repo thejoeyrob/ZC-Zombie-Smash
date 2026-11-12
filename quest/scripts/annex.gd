@@ -94,6 +94,21 @@ func _shell() -> void:
 		lights.append(l)
 
 
+## A neon tube sign (picture made by tools/make_sports_neon.py), lit and see-through round the tubes; `height` is its height in metres, the width follows the picture.
+func _neon(file: String, pos: Vector3, yaw: float, height: float) -> void:
+	var t = load("res://assets/art/" + file)
+	if t == null:
+		return
+	var m := VRBuild.tex_mat(t, 0.0, 0.5, true)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var holder := Node3D.new()
+	holder.position = pos
+	holder.rotation.y = yaw
+	node.add_child(holder)
+	var aspect: float = float(t.get_width()) / float(t.get_height())
+	VRBuild.quad(holder, Vector2(height * aspect, height), Vector3(0, 0, 0.02), m)
+
+
 func _gate_trim() -> void:
 	var trim := VRBuild.mat(Color(0.25, 0.17, 0.32), 0.55)
 	var glow := VRBuild.mat(Color(0.1, 0.9, 1.0), 0.4, 0.0, 2.2)
@@ -106,14 +121,15 @@ func _gate_trim() -> void:
 
 func _lobby_signs() -> void:
 	VRBuild.label(node, "THE SHACK EXTRA", 0.3, Vector3(GATE_X, 3.02, Z0 + 0.06), Color(1.0, 0.85, 0.3), Vector3.ZERO, 6, font, true)
-	VRBuild.label(node, "DARTS    AXES    BOWLING", 0.14, Vector3(GATE_X, 2.8, Z0 + 0.06), Color(0.5, 0.95, 1.0), Vector3.ZERO, 4, font, true)
+	VRBuild.label(node, "DARTS   ODIN'S AXE TOSS   STRIKERS", 0.14, Vector3(GATE_X, 2.8, Z0 + 0.06), Color(0.5, 0.95, 1.0), Vector3.ZERO, 4, font, true)
 	VRBuild.label(node, "THE SHACK EXTRA", 0.3, Vector3(GATE_X, 3.02, Z0 - 0.19), Color(1.0, 0.85, 0.3), Vector3(0, PI, 0), 6, font, true)
-	VRBuild.label(node, "DARTS • AXES • BOWLING", 0.14, Vector3(GATE_X, 2.8, Z0 - 0.19), Color(0.5, 0.95, 1.0), Vector3(0, PI, 0), 4, font, true)
+	VRBuild.label(node, "DARTS • ODIN'S AXE TOSS • STRIKERS", 0.14, Vector3(GATE_X, 2.8, Z0 - 0.19), Color(0.5, 0.95, 1.0), Vector3(0, PI, 0), 4, font, true)
 	VRBuild.label(node, "PICK UP: GRIP OR TRIGGER NEAR IT   •   THROW: LET GO", 0.06, Vector3(2.7, 1.7, Z0 + 0.04), Color(0.9, 0.9, 0.8), Vector3.ZERO, 3, font, true)
 
 
 # ---- darts ---------------------------------------------------------------------------------------------
 func _darts_scenery() -> void:
+	_neon("neon-darts.png", Vector3(-HALF_W + 0.04, 2.95, (DART_Z[0] + DART_Z[1]) / 2.0), PI / 2.0, 0.72)       # DARTS in red tube with a dartboard and dart
 	var wood := VRBuild.mat(Color(0.12, 0.07, 0.05), 0.5)
 	var rubber := VRBuild.mat(Color(0.05, 0.05, 0.06), 0.8)
 	for bz in DART_Z:
@@ -158,7 +174,7 @@ func _axe_scenery() -> void:
 		VRBuild.box(node, Vector3(0.04, 2.3, 0.04), Vector3(x, 1.15, AXE_LINE_Z + 0.2), post)
 		VRBuild.box(node, Vector3(0.04, 2.3, 0.04), Vector3(x, 1.15, AXE_FACE_Z - 0.1), post)
 		VRBuild.box(node, Vector3(0.012, 1.6, AXE_FACE_Z - AXE_LINE_Z - 0.3), Vector3(x, 1.5, (AXE_FACE_Z + AXE_LINE_Z) / 2.0 + 0.05), cage)
-	VRBuild.label(node, "AXE THROWING", 0.26, Vector3(-1.75, 3.0, Z1 - 0.06), Color(1.0, 0.45, 0.2), Vector3(0, PI, 0), 6, font, true)
+	_neon("neon-odin.png", Vector3(-1.75, 2.95, Z1 - 0.06), PI, 0.72)       # ODIN'S AXE TOSS, in amber tube with the Norse knot
 
 
 # ---- bowling -----------------------------------------------------------------------------------------------
@@ -184,7 +200,8 @@ func _bowling_scenery() -> void:
 	# the pin deck's back: a dark pit, and the masking unit above it with the big score screens
 	VRBuild.box(node, Vector3(HALF_W - 0.45, 0.5, 1.0), Vector3(2.15, 0.0, HEAD_PIN_Z + 1.1), VRBuild.mat(Color(0.03, 0.03, 0.04), 0.7))
 	VRBuild.box(node, Vector3(HALF_W - 0.45, 1.5, 0.12), Vector3(2.15, 2.5, Z1 - 0.45), VRBuild.mat(Color(0.08, 0.06, 0.12), 0.45, 0.4))
-	VRBuild.label(node, "BOWLING", 0.3, Vector3(2.15, 3.0, Z1 - 0.52), Color(1.0, 0.8, 0.3), Vector3(0, PI, 0), 6, font, true)
+	_neon("neon-strikers.png", Vector3(2.15, 3.0, Z1 - 0.52), PI, 0.62)       # STRIKERS over the pin deck
+	_neon("neon-strikers.png", Vector3(HALF_W - 0.04, 2.35, (FOUL_Z + HEAD_PIN_Z) / 2.0), -PI / 2.0, 0.95)       # and along the wall beside the lanes
 	# the ball return between the two lanes: a low hooded box
 	var mid_x: float = (LANE_X[0] + LANE_X[1]) / 2.0
 	VRBuild.box(node, Vector3(0.28, 0.5, 0.7), Vector3(mid_x, 0.25, FOUL_Z - 0.55), VRBuild.mat(Color(0.12, 0.1, 0.16), 0.4, 0.5))
