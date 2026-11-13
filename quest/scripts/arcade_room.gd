@@ -106,8 +106,9 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.pbr("carpet", Color(0.33, 0.42, 0.48), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
+	var carpet := VRBuild.pbr("tiles-bw", Color(0.86, 0.86, 0.9), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
+	VRSurfaceRelief.tile_floor(root, w, d, cz, carpet)
 
 	var ceiling := VRBuild.pbr("tiles", Color(0.22, 0.22, 0.3), Vector2(w / 2.4, d / 2.4), 0.8)      # dark ceiling tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
@@ -147,10 +148,8 @@ func _wall_piece(root_w: Node3D, wood: StandardMaterial3D, cx: float, width: flo
 	VRSurfaceRelief.brick_wall(holder, width, height, wm)
 	VRBuild.neon_tube(holder, width, Vector3(0, height - 0.12, 0.04), Color(1.0, 0.65, 0.25))      # neon tube along the top of the wall
 	if y0 < 0.01:
-		VRBuild.box(holder, Vector3(width, 0.94, 0.045), Vector3(0,0.47,0.032), VRBuild.pbr("oakslat",Color(0.64,0.49,0.34),Vector2(width/1.5,1),0.4))
+		ShackRenovation.wainscot(holder, width, 0.0)
 		VRBuild.neon_tube(holder, width, Vector3(0, 1.02, 0.065), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(holder, Vector3(width, 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-navy", Color(0.95, 1.0, 0.95), Vector2(width / 0.7, 0.34), 1.8))   # tall green washed wood skirting
-		VRBuild.box(holder, Vector3(width, 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-navy", Color(0.8, 0.9, 0.8), Vector2(width / 0.7, 0.1), 1.8))   # its top moulding
 
 
 func _lights(root: Node3D) -> void:

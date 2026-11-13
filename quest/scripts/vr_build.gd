@@ -202,7 +202,7 @@ static func merge_static(parent: Node, deep := false) -> void:
 		var xf: Transform3D = f[1]
 		var m := mi.material_override as StandardMaterial3D
 		var sig := str([m.albedo_color, m.albedo_texture.get_instance_id() if m.albedo_texture != null else 0, m.roughness, m.metallic, m.emission_enabled, m.emission, m.emission_energy_multiplier,
-			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat, m.texture_filter, m.vertex_color_use_as_albedo,
+			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat, m.uv1_triplanar, m.texture_filter, m.vertex_color_use_as_albedo,
 			m.normal_enabled, m.normal_texture, m.normal_scale, m.roughness_texture, m.roughness_texture_channel,
 			m.metallic_texture, m.ao_enabled, m.ao_texture, m.ao_light_affect,
 			m.clearcoat_enabled, m.clearcoat, m.clearcoat_roughness, mi.cast_shadow, mi.layers])
