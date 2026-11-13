@@ -2217,6 +2217,25 @@ func _run_shots() -> void:
 	views["floor_graze"] = [Vector3(0, 1.2, 0.4), Vector3(0, 0.0, 3.0)]
 	views["seated"] = [tc + Vector3(0, 1.38, -0.62), tc + Vector3(0, 0.95, 0.05)]
 	views["skirt_door"] = [Vector3(-2.6, 0.7, 1.0), Vector3(-2.6, 0.1, ArcadeRoom.FRONT_Z)]
+	# 360 degree preview for the store: six 90 degree faces from one spot (--cube=x,y,z --fov=90, square window)
+	if args.has("fov"):
+		cam.fov = float(args.fov)
+	if args.has("cube"):
+		var cp := Vector3(0, 1.6, 3.6)
+		var cparts := String(args.cube).split(",")
+		if cparts.size() == 3:
+			cp = Vector3(float(cparts[0]), float(cparts[1]), float(cparts[2]))
+		if avatar != null:
+			avatar.visible = false
+		for hh in hands:
+			if hh.has("mesh") and hh.mesh != null:
+				hh.mesh.visible = false
+		views["cube_front"] = [cp, cp + Vector3(0, 0, 1), Vector3.UP]
+		views["cube_back"] = [cp, cp + Vector3(0, 0, -1), Vector3.UP]
+		views["cube_right"] = [cp, cp + Vector3(-1, 0, 0), Vector3.UP]
+		views["cube_left"] = [cp, cp + Vector3(1, 0, 0), Vector3.UP]
+		views["cube_up"] = [cp, cp + Vector3(0, 1, 0), Vector3(0, 0, -1)]
+		views["cube_down"] = [cp, cp + Vector3(0, -1, 0), Vector3(0, 0, 1)]
 	var plan: Array = String(args.get("views", "head,panel,overview,door,pinball")).split(",")
 	if args.has("intro"):
 		_begin_intro()
@@ -2229,7 +2248,7 @@ func _run_shots() -> void:
 	if args.has("pinplay"):
 		room.pinball.viewport.get_texture().get_image().save_png("%s/pin_viewport.png" % shot_dir)
 	for v in plan:
-		cam.look_at_from_position(views[v][0], views[v][1], Vector3.UP)
+		cam.look_at_from_position(views[v][0], views[v][1], views[v][2] if views[v].size() > 2 else Vector3.UP)
 		await get_tree().process_frame
 		await get_tree().process_frame
 		await get_tree().create_timer(0.3).timeout
