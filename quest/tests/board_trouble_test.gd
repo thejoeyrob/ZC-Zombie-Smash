@@ -1,5 +1,5 @@
 extends SceneTree
-## Frustration / Trouble rules in the game (the same as server/board.mjs): a 6 brings a peg out, captures, blocking, exact finish, win, and a full computer game.
+## Frustration / Trouble rules in the game (the same as server/board.mjs): a 6 brings a peg out, captures, blocking, exact finish, win.
 
 func _init() -> void:
 	var b := BoardGame.new()
@@ -59,25 +59,7 @@ func _init() -> void:
 	b.current = 3
 	b.apply_snapshot(snap)
 	fails += _expect(b.current == 3, "a bad snapshot is ignored")
-	# a whole game played by the computer on its own always ends with pegs in distinct places and eventually a winner
-	var g := BoardGame.new()
-	root.add_child(g)
-	g.build(null)
-	g.rng.seed = 5
-	var won := false
-	for i in range(60000):
-		g._tick_rules(0.1)
-		for s in range(4):
-			var seen := {}
-			for r in g.players[s].pegs:
-				var rr: int = r
-				if rr >= 0 and seen.has(rr):
-					fails += _expect(false, "two pegs of one player on the same place")
-				seen[rr] = true
-		if g.phase == "win":
-			won = true
-			break
-	fails += _expect(won, "the computer players finish a game")
+	# (the computer no longer plays: only people move the pegs; see tests/upgrade/board_human_only.gd)
 	print("BOARD TROUBLE PASS" if fails == 0 else "BOARD TROUBLE FAIL %d" % fails)
 	quit(1 if fails > 0 else 0)
 

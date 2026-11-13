@@ -1182,6 +1182,14 @@ var _jb_last := ["", ""]
 
 ## Hands pressing the snack machine's keypad, and working the pinball machine's buttons and plunger.
 func _world_inputs(hs: Array) -> void:
+	var bg := room.board_game
+	if seated and not menu.open:
+		for i in range(hs.size()):
+			if hs[i].active and bg.press_hand(hs[i].palm,i):
+				_choose("dice")
+				_haptic(i,0.5,0.07)
+	else:
+		bg.clear_contacts()
 	var tips: Array = []
 	var palms: Array = []
 	for i in range(hs.size()):
@@ -1500,7 +1508,7 @@ func _sit(sd_in: Array) -> void:
 		if social == null or not social.online:
 			bg.take_seat(seat, "local")
 		seated = true
-		origin.position.y = float(settings.lift) - float(sd[3]) if sd.size() > 3 else float(settings.lift) - 0.55)
+		origin.position.y = float(settings.lift) - float(sd[3]) + 0.20 if sd.size() > 3 else float(settings.lift) - 0.35)
 	tw.tween_method(func(v: float): m.albedo_color.a = v, 1.0, 0.0, 0.2)
 	tw.tween_callback(func():
 		fade_quad.visible = false
@@ -2043,7 +2051,7 @@ func _jw_machine() -> Cabinet:
 
 
 func _run_tour() -> void:
-	room.board_game.auto_human = true
+	room.board_game.auto_human = false
 	room.board_game.take_seat(0, "local")
 	progress.last = {"score": 48210, "wave": 7, "kills": 212, "bosses": 3, "seconds": 400}
 	progress.best = 61500

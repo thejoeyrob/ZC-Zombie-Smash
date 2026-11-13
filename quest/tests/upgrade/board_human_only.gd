@@ -1,0 +1,27 @@
+extends SceneTree
+var errors:=0
+func check(ok: bool,label: String) -> void:
+	if not ok: errors+=1;push_error(label)
+func _initialize() -> void: run.call_deferred()
+func run() -> void:
+	var b:=BoardGame.new();root.add_child(b);b.build(null)
+	for i in range(100): b._tick_rules(10)
+	check(b.phase=="wait" and b.die_value==1,"Empty board must not play itself")
+	check(b.take_seat(2,"local"),"Human can join")
+	check(b.current==2,"First seated human gets turn")
+	for i in range(100): b._tick_rules(10)
+	check(b.phase=="wait","Human turn never times out")
+	b.die_value=6;b.phase="move";b.legal=b.legal_moves()
+	for i in range(100): b._tick_rules(10)
+	check(b.players[2].pegs[0]==-1,"No auto piece selection")
+	b.move_human(0);b._tick_rules(2)
+	check(b.current==2 and b.phase=="wait","Six grants another roll")
+	check(not b.press_hand(Vector3(0,0.12,0),0),"Dome needs downward crossing")
+	check(b.press_hand(Vector3(0,0.07,0),0),"Physical dome press")
+	check(not b.press_hand(Vector3(0,0.07,0),0),"Holding cannot repeat")
+	b.take_seat(0,"friend");b.again=false;b._next_turn()
+	check(b.current==0,"Skip both empty seats")
+	b.leave_seat("friend");check(b.current==2,"Leaving advances to human")
+	b.leave_seat("local");check(b.players[2].pegs[0]==-1,"Vacant pegs clear board")
+	print("BOARD HUMAN ONLY: ",errors," failures")
+	b.queue_free();quit(errors)

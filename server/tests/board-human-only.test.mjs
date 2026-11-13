@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {newBoard,sit,stand,roll,move,tickBoard} from '../board.mjs';
+const b=newBoard();const snapshot=JSON.stringify(b.players);
+for(let i=0;i<100;i++)tickBoard(b,10,()=>.99);
+assert.equal(JSON.stringify(b.players),snapshot);assert.equal(b.phase,'wait');
+assert.equal(roll(b,''),false);assert.equal(sit(b,'','Nobody',0),false);
+assert.ok(sit(b,'joe','Joe',2));assert.equal(b.current,2);
+for(let i=0;i<100;i++)tickBoard(b,10);assert.equal(b.phase,'wait');
+assert.equal(roll(b,'wrong',false,()=>.99),false);
+assert.ok(roll(b,'joe',false,()=>.99));assert.equal(b.die,6);assert.equal(b.phase,'move');
+for(let i=0;i<100;i++)tickBoard(b,10);assert.deepEqual(b.players[2].pegs,[-1,-1,-1,-1]);
+assert.ok(move(b,'joe',0));tickBoard(b,1);assert.equal(b.current,2);
+sit(b,'bella','Bella',0);roll(b,'joe',false,()=>0);move(b,'joe',0);tickBoard(b,1);assert.equal(b.current,0);
+stand(b,'bella');assert.equal(b.current,2);assert.deepEqual(b.players[0].pegs,[-1,-1,-1,-1]);
+stand(b,'joe');for(let i=0;i<100;i++)tickBoard(b,1);assert.equal(b.phase,'wait');assert.ok(b.players.every(p=>!p.occupant));
+console.log('PASS: human-only turns, no timeout actions, correct six, skip empty seats, disconnect, ownership');

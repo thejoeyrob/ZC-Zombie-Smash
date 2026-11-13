@@ -3,7 +3,7 @@ extends Node3D
 ## The lounge board game: Frustration (UK) / Trouble (US). Four players, four pegs each, a loop of 28 spaces round the board and a four-space
 ## home lane for each player. Roll a 6 to bring a peg out onto your start space (and roll again); land on another player's peg and it goes back
 ## home; you cannot land on your own peg; you need the exact number to finish. First to fill all four holes of their lane wins.
-## Four seats, one per stool. A seat nobody sits on is played by the computer, so the game always runs. In a room the server runs the game
+## Four seats, one per stool. Empty seats are skipped; only humans roll and choose pieces. In a room the server runs the game
 ## (server/board.mjs, the same rules); on your own this script does. A peg's place: -1 home, 0..27 on the loop from its start, 28..31 in its lane.
 
 signal event(name: String)
@@ -17,7 +17,7 @@ const BOARD_M := 0.76             # the picture is this many metres across on th
 const START := [24, 3, 10, 17]    # the loop space each seat's pegs start on
 const LANES := [[[5, 6], [5, 5], [5, 4], [5, 3]], [[1, 5], [2, 5], [3, 5], [4, 5]], [[2, 1], [2, 2], [2, 3], [2, 4]], [[6, 2], [5, 2], [4, 2], [3, 2]]]
 const HOMES := [[[1, 6], [2, 6], [3, 6], [4, 6]], [[1, 1], [1, 2], [1, 3], [1, 4]], [[3, 1], [4, 1], [5, 1], [6, 1]], [[6, 3], [6, 4], [6, 5], [6, 6]]]
-const NAMES := ["DEBO", "DR MANTIS", "DISCO MAN", "FAT AMY"]          # the computer player in each seat
+const NAMES := ["OPEN SEAT", "OPEN SEAT", "OPEN SEAT", "OPEN SEAT"]          # the computer player in each seat
 const COLOURS := [Color(0.34, 0.85, 0.27), Color(0.95, 0.2, 0.2), Color(1.0, 0.63, 0.14), Color(0.68, 0.45, 0.98)]   # match the stools: green, red, amber, purple
 const PIECES := ["GREEN PEGS", "RED PEGS", "AMBER PEGS", "PURPLE PEGS"]
 const TOP_Y := 0.0               # pegs stand on the board surface (this node sits on it)
@@ -62,12 +62,12 @@ func build(font: Font) -> void:
 			row.append(peg)
 		peg_nodes.append(row)
 	_die = _make_die()
-	_die.visible = false
+	_die.visible = true
 	add_child(_die)
 	_make_dome()
-	_label = VRBuild.label(self, "", 0.045, Vector3(0, 0.34, 0), Color(1, 1, 1), Vector3.ZERO, 8, font)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	_label = VRBuild.label(self, "", 0.022, Vector3(0, 0.018, 0.19), Color(0.95, 0.87, 0.65), Vector3(-PI/2,0,0), 0, font)
+	_label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	_label.no_depth_test = false
 	_label.render_priority = 6
 	_reset_game()
 
@@ -109,32 +109,37 @@ func square_pos(i: int, _slot := 0) -> Vector3:
 # ---- seats ------------------------------------------------------------------------------------------
 ## Someone sits in a seat: they play those pegs from wherever they are now. Returns false if someone else is already there.
 func take_seat(seat: int, occupant: String, display_name := "YOU") -> bool:
-	if seat < 0 or seat >= players.size():
+	if occupant.is_empty() or seat < 0 or seat >= players.size():
 		return false
 	var p: Dictionary = players[seat]
 	if p.occupant != "" and p.occupant != occupant:
 		return false
+	if p.occupant == occupant:
+		return true
 	leave_seat(occupant)                     # one seat per person
 	p.occupant = occupant
 	p.human = true
-	if current == seat and phase == "wait":
-		remaining = 25.0
+	if players[current].occupant == "":
+		current=seat;phase="wait";legal=[];again=false;tries=3
 	p.name = display_name
 	last_occupant[seat] = occupant
 	_say("%s TAKES THE %s" % [display_name, PIECES[seat]])
 	return true
 
 
-## Someone stands up: the computer takes the pegs back and carries on.
+## Vacate the seat, return its pegs home, and advance to the next human.
 func leave_seat(occupant: String) -> void:
+	if occupant.is_empty(): return
 	for i in range(players.size()):
 		var p: Dictionary = players[i]
 		if p.occupant == occupant:
 			p.occupant = ""
 			p.human = false
 			p.name = NAMES[i]
-			if current == i and phase in ["wait", "move"]:
-				remaining = minf(remaining, 1.6)
+			p.pegs = [-1,-1,-1,-1]
+			if current == i:
+				again=false
+				_next_turn()
 
 
 ## The seat this person should get: the one they had before if it is free, otherwise the given one.
@@ -162,14 +167,14 @@ func hint() -> String:
 		return ""
 	if phase == "wait":
 		return "ROLL"
-	if phase == "move" and legal.size() > 1:
+	if phase == "move" and legal.size() > 0:
 		return "PICK A PEG"
 	return ""
 
 
 ## The pegs you may pick right now (when there is a choice).
 func choosing() -> bool:
-	return phase == "move" and my_turn() and legal.size() > 1
+	return phase == "move" and my_turn() and legal.size() > 0
 
 
 func roll_human(_dash := false) -> void:
@@ -251,8 +256,8 @@ func _do_roll() -> void:
 		_say("%s ROLLS %d — NO MOVE" % [p.name, die_value])
 		return
 	phase = "move"
-	remaining = 25.0 if (p.human and legal.size() > 1 and not auto_human) else 1.0
-	_say("%s ROLLS %d%s" % [p.name, die_value, " — CHOOSE A PEG" if legal.size() > 1 else ""])
+	remaining = 25.0 if (p.human and legal.size() > 0 and not auto_human) else 1.0
+	_say("%s ROLLS %d%s" % [p.name, die_value, " — CHOOSE A PEG" if legal.size() > 0 else ""])
 
 
 func ai_pick() -> int:
@@ -322,50 +327,51 @@ func _do_move(k: int) -> void:
 
 
 func _next_turn() -> void:
-	var was_again := again
-	tries = 3
-	if not was_again:
-		current = (current + 1) % players.size()
-	again = false
-	legal = []
-	phase = "wait"
-	remaining = 25.0 if (players[current].human and not auto_human) else 1.4
-	_say("%s%s" % [players[current].name, " — SIX! ROLL AGAIN" if was_again else " — ROLL THE DIE"])
-
+	var repeat_turn: bool = again and players[current].occupant != ""
+	if not repeat_turn:
+		for offset in range(1,players.size()+1):
+			var candidate := (current+offset)%players.size()
+			if players[candidate].occupant != "":
+				current=candidate
+				break
+	again=false;tries=3;legal=[];phase="wait";remaining=0
+	_say("%s — PRESS DOME" % players[current].name if players[current].occupant != "" else "TAKE A SEAT TO PLAY")
 
 func _tick_rules(delta: float) -> void:
-	remaining -= delta
-	if remaining > 0.0:
+	if players[current].occupant == "":
+		_next_turn()
 		return
+	if phase in ["wait","move"]: return
+	remaining -= delta
+	if remaining > 0: return
 	match phase:
 		"win":
-			round_number += 1
-			for q in players:
-				q.pegs = [-1, -1, -1, -1]
-			winner = -1
-			current = (round_number - 1) % players.size()
-			again = false
-			legal = []
-			phase = "wait"
-			tries = 3
-			remaining = 25.0 if (players[current].human and not auto_human) else 1.4
-			_say("NEW GAME — %s ROLLS" % players[current].name)
-		"after":
+			round_number+=1
+			for q in players: q.pegs=[-1,-1,-1,-1]
+			winner=-1;again=false
 			_next_turn()
+		"after": _next_turn()
 		"pass":
-			var p: Dictionary = players[current]
-			if not _on_board(p) and tries > 1:
-				tries -= 1
-				legal = []
-				phase = "wait"
-				remaining = 25.0 if (p.human and not auto_human) else 1.0
-				_say("%s — TRY AGAIN (%d LEFT)" % [p.name, tries])
-			else:
-				_next_turn()
-		"move":
-			_do_move(ai_pick() if not legal.is_empty() else 0)
-		_:
-			_do_roll()
+			if not _on_board(players[current]) and tries>1:
+				tries-=1;legal=[];phase="wait";remaining=0
+				_say("PRESS DOME / %d TRIES LEFT"%tries)
+			else: _next_turn()
+
+# Edge-triggered dome press. The caller sends the roll to the authoritative server.
+var _press_previous := {}
+var _press_cooldown := 0.0
+func press_hand(world_point: Vector3, hand: int) -> bool:
+	var p := to_local(world_point)
+	var prev: Vector3 = _press_previous.get(hand,p)
+	_press_previous[hand]=p
+	if not my_turn() or phase!="wait" or _press_cooldown>0: return false
+	if Vector2(p.x,p.z).length()>0.075: return false
+	if prev.y>0.083 and p.y<=0.083 and p.y>=0.035 and prev.y>p.y:
+		_press_cooldown=0.6
+		return true
+	return false
+func clear_contacts() -> void:
+	_press_previous.clear()
 
 
 # ---- showing it ---------------------------------------------------------------------------------------
@@ -379,6 +385,7 @@ func _place_all(snap := false) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	_press_cooldown=maxf(0,_press_cooldown-delta)
 	waiting_for_roll = phase == "wait"
 	busy = phase != "wait"
 	var pick := choosing()
@@ -404,22 +411,19 @@ func _process(delta: float) -> void:
 	if phase in ["wait", "win"]:
 		_seen_die_key = ""
 	_roll_t += delta
-	var show_die := phase in ["move", "pass", "after"]
+	var show_die := true
 	_die.visible = show_die
 	if show_die:
 		if _roll_t < 0.8:
 			var u := _roll_t / 0.8
 			_die.rotation = Vector3(11.0, 8.0, 6.0) * u * (1.0 - u * 0.2) + Vector3(0.6, 0.2, 0.9)
-			_die.position = Vector3(0.0, 0.045 + absf(sin(u * PI * 3.0)) * 0.05 * (1.0 - u), 0.0)
+			_die.position = Vector3(sin(u*19)*0.016*(1-u), 0.032 + absf(sin(u*PI*4))*0.015*(1-u), cos(u*17)*0.016*(1-u))
 		else:
 			_die.basis = _face_up(die_value)
 			_die.position = Vector3(0.0, 0.03, 0.0)
-	_dome.scale = Vector3(1.0, 0.55 - (0.12 if (phase == "move" and _roll_t < 0.15) else 0.0), 1.0)
+	_dome.scale = Vector3(1.0, 0.95 - (0.18 if (_press_cooldown > 0.45) else 0.0), 1.0)
 	if _label != null:
-		if phase == "wait":
-			_label.text = "%s  •  %ds\nWINS %d" % [message, ceili(maxf(remaining, 0.0)), players[current].wins]
-		elif phase == "move" and choosing():
-			_label.text = "%s  •  %ds" % [message, ceili(maxf(remaining, 0.0))]
+		_label.text = message
 	if not authority:
 		return
 	_tick_rules(delta)
@@ -465,7 +469,7 @@ func _make_dome() -> void:
 	glass.roughness = 0.05
 	glass.metallic = 0.1
 	_dome = VRBuild.sphere(self, 0.08, Vector3(0, 0.012, 0), glass, 24)
-	_dome.scale = Vector3(1.0, 0.55, 1.0)
+	_dome.scale = Vector3(1.0, 0.95, 1.0)
 
 
 ## The orientation that shows value n on top. Opposite faces add to 7: +y 1, -y 6, +z 2, -z 5, +x 3, -x 4.
@@ -483,7 +487,7 @@ func _make_die() -> Node3D:
 	var die := Node3D.new()
 	var body := VRBuild.mat(Color(0.96, 0.95, 0.9), 0.25, 0.0)
 	var pip := VRBuild.mat(Color(0.05, 0.05, 0.06), 0.3, 0.0)
-	var h := 0.026
+	var h := 0.018
 	VRBuild.box(die, Vector3(h * 2.0, h * 2.0, h * 2.0), Vector3.ZERO, body)
 	var layouts := {1: [Vector2(0, 0)], 2: [Vector2(-1, -1), Vector2(1, 1)], 3: [Vector2(-1, -1), Vector2(0, 0), Vector2(1, 1)],
 		4: [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)], 5: [Vector2(-1, -1), Vector2(1, -1), Vector2(0, 0), Vector2(-1, 1), Vector2(1, 1)],
@@ -495,7 +499,7 @@ func _make_die() -> Node3D:
 		var rt := nrm.cross(up).normalized()
 		var upv := rt.cross(nrm).normalized()
 		for q in layouts[v]:
-			var sph := VRBuild.sphere(die, 0.0048, nrm * (h + 0.0005) + rt * q.x * 0.014 + upv * q.y * 0.014, pip, 10)
+			var sph := VRBuild.sphere(die, 0.0035, nrm * (h + 0.0005) + rt * q.x * 0.009 + upv * q.y * 0.009, pip, 10)
 			sph.scale = Vector3(1, 1, 0.5) if false else Vector3.ONE
 	return die
 

@@ -3,13 +3,25 @@
 // Roll a 6 to bring a peg out onto your start space (and roll again). Land on another player's peg and it goes back home.
 // You cannot land on your own peg, and you need the exact number to go past the end of your lane. First to fill all four holes wins.
 // The same rules are in quest/scripts/board_game.gd (used when playing without a room); keep the two in step.
-export const names=['DEBO','DR MANTIS','DISCO MAN','FAT AMY'];
+export const names=['OPEN SEAT','OPEN SEAT','OPEN SEAT','OPEN SEAT'];
 export const SEATS=names.length;
 export const LOOP=28, LANE_END=31;
 export const START=[24,3,10,17];
 export function newBoard(){return {players:names.map(name=>({name,occupant:'',pegs:[-1,-1,-1,-1],wins:0})),current:0,winner:-1,phase:'wait',remaining:1.6,die:1,tries:3,again:false,legal:[],last:'',message:'FRUSTRATION — FOUR SEATS',round:1,deck:[]};}
-export function sit(b,id,name,seat){if(!Number.isInteger(seat)||seat<0||seat>=SEATS||(b.players[seat].occupant&&b.players[seat].occupant!==id))return false;stand(b,id);Object.assign(b.players[seat],{occupant:id,name});if(seat===b.current&&b.phase==='wait')b.remaining=25;return true;}
-export function stand(b,id){for(let i=0;i<SEATS;i++)if(b.players[i].occupant===id){Object.assign(b.players[i],{occupant:'',name:names[i]});if(i===b.current)b.remaining=Math.min(b.remaining,1.6);}}
+export function sit(b,id,name,seat){
+ if(!id||!Number.isInteger(seat)||seat<0||seat>=SEATS||(b.players[seat].occupant&&b.players[seat].occupant!==id))return false;
+ if(b.players[seat].occupant===id)return true;
+ stand(b,id);Object.assign(b.players[seat],{occupant:id,name});
+ if(!b.players[b.current].occupant){b.current=seat;b.phase='wait';b.legal=[];b.again=false;b.tries=3;}
+ b.message='PRESS DOME TO ROLL';return true;
+}
+export function stand(b,id){
+ if(!id)return;
+ for(let i=0;i<SEATS;i++)if(b.players[i].occupant===id){
+  Object.assign(b.players[i],{occupant:'',name:names[i],pegs:[-1,-1,-1,-1]});
+  if(i===b.current){b.again=false;nextTurn(b);}
+ }
+}
 const onBoard=p=>p.pegs.some(r=>r>=0);
 export function absSpace(seat,rel){return (START[seat]+rel)%LOOP;}
 export function legalMoves(b){const p=b.players[b.current],d=b.die,out=[];
@@ -18,7 +30,7 @@ export function legalMoves(b){const p=b.players[b.current],d=b.die,out=[];
   if(p.pegs.some((q,j)=>j!==k&&q===t))continue;
   out.push(k);}
  return out;}
-export function roll(b,id,_dash,random=Math.random){if(b.phase!=='wait'||b.players[b.current].occupant!==id)return false;return doRoll(b,random);}
+export function roll(b,id,_dash,random=Math.random){if(!id||b.phase!=='wait'||b.players[b.current].occupant!==id)return false;return doRoll(b,random);}
 function doRoll(b,random){const p=b.players[b.current];
  b.die=1+Math.floor(random()*6);b.legal=legalMoves(b);
  if(b.legal.length===0){b.phase='pass';b.remaining=1.4;
@@ -35,7 +47,7 @@ export function aiPick(b){const p=b.players[b.current],d=b.die;let best=b.legal[
   if(r>=0&&r<28&&t>=28)s+=10;
   if(s>bs){bs=s;best=k;}}
  return best;}
-export function move(b,id,k){if(b.phase!=='move'||b.players[b.current].occupant!==id)return false;if(!b.legal.includes(k))return false;return doMove(b,k);}
+export function move(b,id,k){if(!id||b.phase!=='move'||b.players[b.current].occupant!==id)return false;if(!b.legal.includes(k))return false;return doMove(b,k);}
 function doMove(b,k){const p=b.players[b.current],d=b.die,r=p.pegs[k];const t=r<0?0:r+d;p.pegs[k]=t;
  let detail=r<0?'PEG OUT':'';b.last=`${b.current}:${k}`;
  if(t<=27){const a=absSpace(b.current,t);
@@ -46,13 +58,19 @@ function doMove(b,k){const p=b.players[b.current],d=b.die,r=p.pegs[k];const t=r<
  if(p.pegs.every(q=>q>=28)){b.winner=b.current;p.wins++;b.phase='win';b.remaining=8;b.message=p.name+' WINS!';return true;}
  b.again=d===6;
  b.phase='after';b.remaining=0.9;return true;}
-function nextTurn(b){const again=b.again;b.tries=3;if(!again)b.current=(b.current+1)%SEATS;b.again=false;b.legal=[];b.phase='wait';
- b.remaining=b.players[b.current].occupant?25:1.4;b.message=b.players[b.current].name+(again?' — SIX! ROLL AGAIN':' — ROLL THE DIE');}
-export function tickBoard(b,dt,random=Math.random){b.remaining-=dt;if(b.remaining>0)return;
+function nextTurn(b){
+ const repeat=b.again&&!!b.players[b.current].occupant;
+ if(!repeat)for(let n=1;n<=SEATS;n++){const candidate=(b.current+n)%SEATS;if(b.players[candidate].occupant){b.current=candidate;break;}}
+ b.again=false;b.tries=3;b.legal=[];b.phase='wait';b.remaining=0;
+ b.message=b.players[b.current].occupant?b.players[b.current].name+' — PRESS DOME':'TAKE A SEAT TO PLAY';
+}
+export function tickBoard(b,dt,random=Math.random){
+ if(!b.players[b.current].occupant){nextTurn(b);return;}
+ if(b.phase==='wait'||b.phase==='move')return;
+ b.remaining-=dt;if(b.remaining>0)return;
  switch(b.phase){
- case 'win':b.round++;for(const p of b.players)p.pegs=[-1,-1,-1,-1];b.winner=-1;b.current=(b.round-1)%SEATS;b.again=false;b.legal=[];b.phase='wait';b.tries=3;b.remaining=b.players[b.current].occupant?25:1.4;b.message='NEW GAME — '+b.players[b.current].name+' ROLLS';break;
+ case 'win':b.round++;for(const p of b.players)p.pegs=[-1,-1,-1,-1];b.winner=-1;b.again=false;nextTurn(b);break;
  case 'after':nextTurn(b);break;
- case 'pass':{const p=b.players[b.current];if(!onBoard(p)&&b.tries>1){b.tries--;b.legal=[];b.phase='wait';b.remaining=p.occupant?25:1.0;b.message=p.name+' — TRY AGAIN ('+b.tries+' LEFT)';}else nextTurn(b);break;}
- case 'move':doMove(b,b.legal.includes(aiPick(b))?aiPick(b):b.legal[0]);break;
- default:doRoll(b,random);}
+ case 'pass':{const p=b.players[b.current];if(!onBoard(p)&&b.tries>1){b.tries--;b.legal=[];b.phase='wait';b.remaining=0;b.message='PRESS DOME / '+b.tries+' TRIES LEFT';}else nextTurn(b);break;}
+ }
 }

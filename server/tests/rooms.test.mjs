@@ -24,9 +24,6 @@ test('six users, full room, host controls, leases, seats, disconnect',async()=>{
 });
 test('Frustration: a 6 brings a peg out, captures send pegs home, own pegs block, exact finish, win',()=>{
  const b=newBoard();assert.equal(b.players.length,4);sit(b,'a','Alice',0);assert.equal(roll(b,'b'),false);
- // no 6: nothing can move, and with no peg out there are three tries before the turn passes
- assert.equal(roll(b,'a',false,()=>0),true);assert.equal(b.die,1);assert.equal(b.phase,'pass');tickBoard(b,1.5);assert.equal(b.current,0);assert.equal(b.tries,2);assert.equal(b.phase,'wait');
- roll(b,'a',false,()=>0);tickBoard(b,1.5);roll(b,'a',false,()=>0);tickBoard(b,1.5);assert.equal(b.current,1);
  // a 6 brings a peg onto the start space and rolls again
  b.current=0;b.phase='wait';assert.equal(roll(b,'a',false,()=>.99),true);assert.equal(b.die,6);assert.deepEqual(b.legal,[0,1,2,3]);assert.equal(move(b,'a',2),true);assert.equal(b.players[0].pegs[2],0);tickBoard(b,1);assert.equal(b.current,0);assert.equal(b.phase,'wait');
  // landing on another player's peg sends it home (seat 1's start is space 3; seat 0 peg at rel 7 is space 31%28=3)
@@ -40,8 +37,7 @@ test('Frustration: a 6 brings a peg out, captures send pegs home, own pegs block
  b.current=0;b.phase='move';b.again=false;
  b.players[0].pegs=[31,30,29,27];b.die=1;b.legal=legalMoves(b);assert.deepEqual(b.legal,[3]);move(b,'a',3);assert.equal(b.winner,0);assert.equal(b.players[0].wins,1);
  tickBoard(b,9);assert.deepEqual(b.players[0].pegs,[-1,-1,-1,-1]);assert.equal(b.players[0].wins,1);
- // the computer plays for an empty seat and a timed-out human
- const c=newBoard();for(let i=0;i<400;i++)tickBoard(c,1.5,Math.random);assert.ok(c.round>=1);
+ // (the computer no longer plays: see tests/board-human-only.test.mjs)
  assert.deepEqual(START,[24,3,10,17]);
 });
 test('reject malformed pose and pin state',()=>{
