@@ -13,7 +13,7 @@ const ARC_RADIUS := 2.7
 # angle round the curve (negative = the right-hand side as you come in), and which boss's machine it is
 # [x, z, yaw in degrees, which boss]: four machines along each side wall, each turned a little toward the lounge so its painted side faces the door
 const SLOTS := [[-2.9, 1.35, 52.0, "zsa"], [-2.95, 3.15, 81.0, "truckin"], [-2.9, 4.95, 114.0, ""],
-	[2.9, 1.35, -52.0, ""], [2.95, 3.15, -81.0, "jw"], [2.9, 4.95, -114.0, "fatamy"]]
+	[2.9, 1.35, -52.0, ""], [2.95, 3.15, -81.0, "jw"], [2.9, 4.95, -114.0, "fatamy"], [-2.9,4.95,114.0,"fkbc"]]
 const PLAYER_SLOT := 0
 const DUAL_STICK := ["zsa", "debo"]      # these machines have two sticks: the right one pushed away fires, pulled toward you throws a grenade
 const PURPLE := Color(0.19, 0.07, 0.29)    # the counters and shelves
@@ -177,6 +177,7 @@ func _machines(root: Node3D) -> void:
 		bosses[b.id] = b
 	var art_key := {"discoman": "disco", "drmantis": "mantis", "zsa": "zs", "jw": "jw", "truckin": "truckin"}
 	bosses["zsa"] = {"name": "ZOMBIE SMASH", "accent": "#7fd64a"}
+	bosses["fkbc"] = {"name":"FKBC", "accent":"#cc1722"}
 	bosses["jw"] = {"name": "JW EDS", "accent": "#19c3e6"}
 	bosses["truckin"] = {"name": "TRUCKIN' & DRIVIN'", "accent": "#45e0c8"}       # the owner's lorry game: a steering wheel instead of a stick
 	for i in range(SLOTS.size()):
@@ -192,16 +193,21 @@ func _machines(root: Node3D) -> void:
 		root.add_child(c)
 		var accent := Color.html(str(bosses[id].accent))
 		c.bezel_id = id
-		c.profile = CabProfile.get_profile("standard")
+		c.profile = FKBCMachine.cabinet_profile() if id=="fkbc" else CabProfile.get_profile("standard")
 		c.dual = id in DUAL_STICK
-		c.emu = id == "jw"
+		c.emu = id in ["jw","fkbc"]
 		c.wheel = id == "truckin"
 		c.cart_mode = "truckin" if id == "truckin" else ""
 		c.side_text = c.wheel                                   # the lorry machine's side picture has lettering: keep it readable on both sides
 		c.side_art = _art("side-%s-flat.png" % key, _art("side-%s.png" % key, null))
-		c.jw_logo = _art("jw-logo.png", null) if c.emu else null
+		c.jw_logo = _art("jw-logo.png", null) if id=="jw" else null
 		var arena: Texture2D = _art("arena-%s.webp" % ("jordan" if id in ["zsa", "jw"] else id), null)
 		c.build(arena, _art("marquee-%s.jpg" % key, null), accent.darkened(0.8), accent, true, str(bosses[id].name))
+		if id=="fkbc":
+			c.fkbc_session=FKBCMachine.new()
+			c.fkbc_session.build(c,_font_ref)
+			c.attract_tex=c.fkbc_session.texture()
+			c.set_live(null)
 		c.set_lock_light(i == player_index)      # red = somebody is playing here, green = free
 		c.set_lit(i == player_index)
 		machines.append(c)

@@ -40,6 +40,7 @@ var wheel_angle := 0.0
 var wheel_hub := Vector3.ZERO     # the hub of the wheel in panel space
 var cart: Cartridge              # the machine's own game (driving machines), when it is not Zombie Smash
 var cart_mode := ""
+var fkbc_session: FKBCMachine
 var emu := false               # the JW EDS machine: four action buttons, a start button, a multidirectional stick and a 4:3 screen
 var button_defs := {}          # the buttons this machine has: name -> {pos, radius, col, front?}
 var stick2_pivot: Node3D
@@ -74,9 +75,13 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	theme_color = trim_color
 	attract_tex = screen_tex
 	var body := VRBuild.pbr("plate", body_color.lightened(0.10), Vector2(1.4,1.4),0.25,0.15)
+	if bezel_id=="fkbc":
+		body=StandardMaterial3D.new();body.albedo_color=Color("#cc1722");body.roughness=0.45;body.cull_mode=BaseMaterial3D.CULL_DISABLED
 	var dark := VRBuild.mat(Color(0.015, 0.015, 0.02), 0.6)
 	dark.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var trim := VRBuild.mat(trim_color, 0.3, 0.0, 2.0)
+	if bezel_id=="fkbc":
+		trim.emission_enabled=false;trim.albedo_color=Color(0.025,0.025,0.03)
 	neon.append(trim)
 	var poly: Array = profile.get("poly", [])
 	var spire_z := -0.62
@@ -117,7 +122,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var chrome := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 1), 0.8)    # brushed steel
 	var black_tex := VRBuild.pbr("plate-blue", Color(0.34, 0.34, 0.42), Vector2(1.0, 1.4), 0.9)    # worn, dark blue steel plate
 	var leather := VRBuild.pbr("leather-jet", Color(1.5, 1.5, 1.55), Vector2(1.6, 2.4), 1.2)     # the same black leather as the control deck, down the whole front
-	var front_paint := leather
+	var front_paint := body if bezel_id=="fkbc" else leather
 	var body_h := deck_front_y - 0.05          # the lower body stops just under the control deck's front lip
 	VRBuild.box(self, Vector3(0.67, body_h, 0.03), Vector3(0, body_h / 2.0, front_z - 0.012), front_paint)
 	VRBuild.box(self, Vector3(0.65, 0.12, 0.036), Vector3(0, 0.07, front_z - 0.004), leather)               # kick plate
@@ -200,8 +205,9 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	var hx := screen_size.x / 2.0
 	for off in [Vector3(0, hy + 0.05, 0.1), Vector3(0, -hy - 0.05, 0.1)]:
 		VRBuild.box(mon, Vector3(0.66, 0.1, 0.012), off, black)
-	for off in [Vector3(-hx - 0.07, 0, 0.1), Vector3(hx + 0.07, 0, 0.1)]:
-		VRBuild.box(mon, Vector3(0.14, 0.8, 0.012), off, black)
+	var border_width := maxf(0.01,(0.66-screen_size.x)/2.0)
+	for off in [Vector3(-hx-border_width/2,0,0.1),Vector3(hx+border_width/2,0,0.1)]:
+		VRBuild.box(mon,Vector3(border_width,0.8,0.012),off,black)
 	VRBuild.box(mon, Vector3(screen_size.x + 0.05, 0.012, 0.02), Vector3(0, hy + 0.002, 0.098), black, Vector3(0.5, 0, 0))
 	VRBuild.box(mon, Vector3(screen_size.x + 0.05, 0.012, 0.02), Vector3(0, -hy - 0.002, 0.098), black, Vector3(-0.5, 0, 0))
 	VRBuild.box(mon, Vector3(0.012, screen_size.y, 0.02), Vector3(-hx - 0.003, 0, 0.098), black, Vector3(0, 0.5, 0))
@@ -249,6 +255,11 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 		var top_m := VRBuild.tex_mat(jw_logo, 0.9, 0.4, true)
 		top_m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		VRBuild.quad(marq, Vector2(0.56, 0.236), Vector3(0, 0.1008, 0), top_m, Vector3(-PI / 2, 0, 0))      # the logo on the top
+	if bezel_id=="fkbc":
+		for side in [-1,1]:
+			VRBuild.label(self,"FKBC",0.16,Vector3(side*0.378,1.38,(front_z+back_z)*0.5),Color.BLACK,Vector3(0,side*PI/2,0),0,load("res://assets/fonts/font-barlow-condensed-900.woff2"))
+		VRBuild.quad(marq,Vector2(0.64,0.2),Vector3(0,0,0.063),VRBuild.unshaded(Color("#cc1722")))
+		VRBuild.label(marq,"FKBC",0.14,Vector3(0,0,0.065),Color.BLACK,Vector3.ZERO,0,load("res://assets/fonts/font-barlow-condensed-900.woff2"))
 	if interactive:
 		front_panel = Node3D.new()
 		front_panel.position = Vector3(0, 0, front_z + 0.004)
@@ -323,6 +334,10 @@ func _build_sides(poly: Array, body: Material) -> void:
 	for p in poly:
 		pts.append(Vector2(CabProfile.z_of(float(p[0])), CabProfile.y_of(float(p[1]))))
 		uvs.append(Vector2(float(p[0]), float(p[1])))
+	if bezel_id=="fkbc":
+		VRBuild.side_panel(self,pts,-0.335,0.04,body).set_meta("dynamic",true)
+		VRBuild.side_panel(self,pts,0.335,0.04,body).set_meta("dynamic",true)
+		return
 	var picture: Material
 	if side_art != null:
 		var pm := VRBuild.tex_mat(side_art, 0.18, 0.55)
@@ -331,11 +346,11 @@ func _build_sides(poly: Array, body: Material) -> void:
 	else:
 		picture = body
 	var dark := VRBuild.mat(Color(0.03, 0.03, 0.05), 0.7)
-	if emu:
+	if emu and bezel_id!="fkbc":
 		dark = VRBuild.mat(Color(0.96, 0.96, 0.97), 0.35)       # the white edge of the side panels
 	dark.cull_mode = BaseMaterial3D.CULL_DISABLED
 	# the picture reads the right way round from outside on the left side; it is mirrored on the right
-	if emu:
+	if emu and bezel_id!="fkbc":
 		# a thin white edge all round each side panel: a slightly bigger white slab sits just behind the picture
 		var white := VRBuild.mat(Color(0.96, 0.96, 0.97), 0.35)
 		white.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -367,12 +382,9 @@ func _make_button_defs() -> Dictionary:
 			"d": {"pos": Vector3(0.25, 0.0, 0.075), "radius": 0.027, "col": Color("#25b34a")},
 			"start": {"pos": Vector3(0.1, 0.0, -0.1), "radius": 0.017, "col": Color("#f4f4f4")},
 			"menu": menu}
-	if dual:
-		var d := {"menu": menu}
-		for k in ["w_smg", "w_shotgun", "w_dmr", "w_burst"]:
-			d[k] = BUTTONS[k]
-		return d
-	return BUTTONS.duplicate(true)
+	var weapon := {"pos": Vector3(0.0,0.0,-0.09),"radius":0.025,"col":Color(0.8,0.65,0.3)}
+	if dual: return {"menu":menu,"weapon_cycle":weapon}
+	return {"fire":BUTTONS.fire,"grenade":BUTTONS.grenade,"weapon_cycle":weapon,"menu":menu}
 
 
 func _sheen() -> GradientTexture2D:

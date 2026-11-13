@@ -5,8 +5,8 @@ extends Control
 
 signal exited
 
-const IDS := ["serpent", "paddle", "brick", "rocks", "aliens", "maze", "brawl"]
-const NAMES := {"serpent": "SERPENT", "paddle": "PADDLE BALL", "brick": "BRICK BREAK", "rocks": "ROCK BLASTER", "aliens": "ALIEN WAVE", "maze": "MAZE MUNCH", "brawl": "STREET BRAWL"}
+const IDS := ["serpent", "paddle", "brick", "rocks", "aliens", "maze", "fkbc"]
+const NAMES := {"serpent": "SERPENT", "paddle": "PADDLE BALL", "brick": "BRICK BREAK", "rocks": "ROCK BLASTER", "aliens": "ALIEN WAVE", "maze": "MAZE MUNCH", "fkbc": "FKBC FIGHT NIGHT", "brawl": "FKBC FIGHT NIGHT"}
 const SAVE_PATH := "user://mini_scores.json"
 
 var game: MiniGame
@@ -31,7 +31,7 @@ static func make(id: String) -> MiniGame:
 		"rocks": return MGRocks.new()
 		"aliens": return MGAliens.new()
 		"maze": return MGMaze.new()
-		"brawl": return MGBrawl.new()
+		"fkbc", "brawl": return MGFKBC.new()
 	return null
 
 
@@ -72,8 +72,12 @@ func set_input(stick: Vector2, buttons: Dictionary) -> void:
 		_prev[k] = d
 	_st = stick
 	_btn = buttons
-	if state == "title" and (_edge.a or _edge.start):
+	if state == "title" and _edge.menu:
+		exited.emit()
+	elif state == "title" and (_edge.a or _edge.start):
 		state = "play"
+	elif state == "over" and _edge.menu:
+		exited.emit()
 	elif state == "over" and (_edge.a or _edge.start):
 		game = make(game_id)
 		state = "play"
@@ -90,6 +94,7 @@ func tick(delta: float) -> void:
 	_t += delta
 	if state == "play" and game != null:
 		game.update(minf(delta, 0.05), _st, _btn, _edge)
+		_edge.clear()
 		if game.over:
 			state = "over"
 			if game.score > int(best.get(game_id, 0)):

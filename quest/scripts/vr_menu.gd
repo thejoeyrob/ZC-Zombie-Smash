@@ -78,6 +78,8 @@ func set_open(on: bool) -> void:
 	_armed = false
 	if _confirm_layer != null:
 		_confirm_layer.visible = false
+	_accept_ready=false
+	_nav_ready=true
 	open = on
 	visible = on
 	beam.visible = false
@@ -627,3 +629,30 @@ func _value_text(key: String, value: float) -> String:
 	if key == "walk":
 		return "%.1f m/s" % value
 	return "%.1fx" % value
+
+# Controller navigation after selecting a physical sports screen.
+# Left stick selects, A activates, right stick continues to scroll.
+var _nav_ready := true
+var _accept_ready := false
+func controller(stick: Vector2, accept: bool) -> void:
+	if not open: return
+	if not accept: _accept_ready=true
+	var options: Array[Button]=[]
+	var scope: Node = _confirm_layer if _confirm_layer!=null and _confirm_layer.visible else _pages[_page_name]
+	for node in scope.find_children("*","Button",true,false):
+		var button:=node as Button
+		if button.is_visible_in_tree() and not button.disabled: options.append(button)
+	if options.is_empty(): return
+	var focused:=viewport.gui_get_focus_owner()
+	var index:=options.find(focused)
+	if absf(stick.y)<0.3: _nav_ready=true
+	if absf(stick.y)>0.65 and _nav_ready:
+		_nav_ready=false
+		index=0 if index<0 else posmod(index+(1 if stick.y>0 else -1),options.size())
+		options[index].focus_mode=Control.FOCUS_ALL
+		options[index].grab_focus()
+		for scroll in _scrolls.values():
+			if scroll is ScrollContainer and scroll.is_ancestor_of(options[index]): scroll.ensure_control_visible(options[index])
+	if accept and _accept_ready:
+		_accept_ready=false
+		if index>=0: options[index].pressed.emit()

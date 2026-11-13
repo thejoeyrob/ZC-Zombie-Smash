@@ -116,7 +116,9 @@ func _ready() -> void:
 	add_child(emu)
 	emu.build(self)
 	for m in machines:
-		if m.emu:
+		if m.fkbc_session!=null:
+			m.fkbc_session.leave.connect(func(): _set_locked(false))
+		if m.emu and m.fkbc_session==null:
 			emu.set_audio_position(m)               # the game's sound comes out of the JW EDS machine
 			m.attract_tex = emu.screen_texture()
 			m.set_live(null)
@@ -943,9 +945,12 @@ func _process(delta: float) -> void:
 		fire_now = false
 		grab_hand = -1
 		grab_hand2 = -1
-	emu.hold = not (cab.emu and locked and not menu.open)       # the game only runs while somebody is playing at its machine
+	emu.hold = not (cab.emu and cab.fkbc_session==null and locked and not menu.open)       # the game only runs while somebody is playing at its machine
 	emu.session.set_volume(0.0 if emu.hold else float(settings.effects))
 	emu.tick(delta)
+	for machine in machines:
+		if machine.fkbc_session!=null:
+			machine.fkbc_session.tick(delta,machine==cab and locked and not menu.open,float(settings.effects))
 	for m in machines:
 		if m.cart != null:
 			(m.cart as TTCartridge).set_active((m == cab and locked and not menu.open) or m == tour_cab)
@@ -1296,7 +1301,7 @@ func _set_locked(on: bool) -> void:
 	selector.set_shown(not on)
 	leave_t = 0.0
 	leave_prompt.visible = false
-	if on and state == "title" and not progress.codes.has("story_seen"):
+	if on and not cab.emu and cab.cart==null and state == "title" and not progress.codes.has("story_seen"):
 		_begin_intro()
 	if not on and state == "intro":
 		screen.video.stop()
@@ -1335,7 +1340,7 @@ func _head_floor() -> Vector3:
 
 func _menu_input(hs: Array) -> void:
 	var pressed: bool = hs[0].menu or hs[1].menu
-	if cab.emu and locked and emu.in_game():
+	if cab.emu and locked and (cab.fkbc_session!=null or emu.in_game()):
 		pressed = false                           # in a game on the emulator machine this button is its pause menu (see _emu_controller)
 	if pressed and not menu_prev_btn:
 		if menu.open:
@@ -1344,6 +1349,7 @@ func _menu_input(hs: Array) -> void:
 			_open_menu()
 	menu_prev_btn = pressed
 	if menu.open:
+		menu.controller(Vector2(hs[0].stick.x,-hs[0].stick.y),hs[1].a)
 		var scroll_hand := 0 if settings.pointer == "left" else 1
 		var scroll_axis: float = hs[scroll_hand].stick.y
 		if absf(scroll_axis) > 0.25:
@@ -1383,7 +1389,7 @@ func _locomotion(hs: Array, delta: float) -> void:
 			audio.ui("toggle")
 			_set_locked(false)
 			return
-		var emu_busy: bool = cab.emu and emu.in_game()          # the thumbsticks and triggers are the game's controls: no leaving by them mid-game
+		var emu_busy: bool = cab.emu and (cab.fkbc_session!=null or emu.in_game())          # the thumbsticks and triggers are the game's controls: no leaving by them mid-game
 		var cart_busy: bool = cab.cart != null and (cab.cart as TTCartridge).view != null and (cab.cart as TTCartridge).view.state == "play"      # the trigger is the horn: it must not also be "hold to leave"
 		if (xr_on or demo) and not emu_busy and not cart_busy:
 			_leave_gesture(hs, ph, delta)
@@ -1904,7 +1910,7 @@ func _buttons(hs: Array) -> void:
 			down["fire"] = true       # assist: any trigger fires (the score is marked with an asterisk)
 			if state == "play":
 				run_assisted = true
-		if h.get("a", false) and str(settings.assist) == "on":
+		if i==1 and h.get("a", false) and str(settings.assist) == "on":
 			down["grenade"] = true
 			if state == "play":
 				run_assisted = true
@@ -1939,7 +1945,10 @@ func _buttons(hs: Array) -> void:
 		if controller_stick.length() > 0.3:
 			st = controller_stick
 		if locked:
-			emu.set_input(st, down)
+			if cab.fkbc_session!=null:
+				cab.fkbc_session.set_input(st,down)
+			else:
+				emu.set_input(st, down)
 		fire_now = false
 		return
 	var fire_edge: bool = down.fire and not fire_now
@@ -1958,6 +1967,17 @@ func _buttons(hs: Array) -> void:
 			audio.ui("chime")                          # FIRE carries on a paused game
 			state = "play"
 			screen.mode = "play"
+	var cycle: bool=bool(down.get("weapon_cycle",false)) or (not hs[0].bare and hs[0].a)
+	if cycle and not weapon_prev.get("cycle",false) and state=="play" and game!=null:
+		var guns := ["smg","shotgun","dmr","burst"]
+		var start := guns.find(str(game.player.gun))
+		for offset in range(1,5):
+			if game.use_stored(guns[(start+offset)%4]):
+				_haptic(-1,0.35,0.06)
+				audio.ui("toggle")
+				break
+	weapon_prev["cycle"]=cycle
+	# Legacy direct weapon controls remain compatible with existing input sources.
 	# the four weapon buttons: each puts that stored weapon in your hand (what is loaded shows in the screen's bottom bar)
 	for wk in WEAPON_BUTTONS:
 		var wd: bool = down.get(wk, false)
@@ -2032,7 +2052,7 @@ func _select_machine(i: int) -> void:
 	for k in cab.caps:
 		cab.button_pressed_visual(k, false)
 	cab = m
-	cab.set_live(emu.screen_texture() if cab.emu else (cab.cart.screen_texture() if cab.cart != null else cartridge.screen_texture()))
+	cab.set_live(cab.fkbc_session.texture() if cab.fkbc_session!=null else emu.screen_texture() if cab.emu else (cab.cart.screen_texture() if cab.cart != null else cartridge.screen_texture()))
 	cab.screen_mat.albedo_color = Color(float(settings.screenlight), float(settings.screenlight), float(settings.screenlight))
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	room.set_active(i)
