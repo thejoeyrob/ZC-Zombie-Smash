@@ -8,6 +8,14 @@ static func mat(color: Color, rough := 0.7, metal := 0.0, emit := 0.0, emit_colo
 	m.albedo_color = color
 	m.roughness = rough
 	m.metallic = metal
+	# Physical paint, rubber and metal keep fine surface detail, even on small props.
+	if emit == 0.0:
+		var finish := "metal" if metal > 0.4 else "leather-neutral"
+		m.albedo_texture = load("res://assets/art/pbr-%s-c.jpg" % finish)
+		m.normal_enabled = true
+		m.normal_texture = load("res://assets/art/pbr-%s-n.png" % finish)
+		m.normal_scale = 0.12 if metal > 0.4 else 0.20
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	if emit > 0.0:
 		m.emission_enabled = true
 		m.emission = emit_color if emit_color.a > 0.0 else color

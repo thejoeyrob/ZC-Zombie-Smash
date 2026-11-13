@@ -56,7 +56,7 @@ func set_active(on: bool) -> void:
 # ---- the hall -----------------------------------------------------------------------------------------
 func _shell() -> void:
 	var cz := (Z0 + Z1) / 2.0
-	var floor_m := VRBuild.pbr("tiles-bw", Color(0.62, 0.62, 0.68), Vector2(HALF_W * 2.0 / 1.6, DEPTH / 1.6), 0.9)
+	var floor_m := VRBuild.pbr("carpet", Color(0.34, 0.4, 0.45), Vector2(HALF_W * 2.0 / 1.6, DEPTH / 1.6), 0.9)
 	SportsFinish.floor_piece(node, -HALF_W, HALF_W, Z0, FOUL_Z, floor_m)
 	var left := -HALF_W
 	for centre in LANE_X:
@@ -66,7 +66,7 @@ func _shell() -> void:
 	SportsFinish.floor_piece(node, left, HALF_W, FOUL_Z, Z1, floor_m)
 	var ceil_m := VRBuild.pbr("tiles", Color(0.2, 0.2, 0.28), Vector2(HALF_W * 2.0 / 2.4, DEPTH / 2.4), 0.8)
 	VRBuild.quad(node, Vector2(HALF_W * 2.0, DEPTH), Vector3(0, HEIGHT, cz), ceil_m, Vector3(PI / 2, 0, 0))
-	var brick := VRBuild.pbr("brick-light", Color(0.55, 0.42, 0.4), Vector2(1, 1), 1.2)
+	var brick := VRBuild.pbr("brick-light", Color(0.65, 0.61, 0.55), Vector2(1, 1), 1.2)
 	var walls := [[Vector3(0, 0, Z1), PI, HALF_W * 2.0], [Vector3(-HALF_W, 0, cz), PI / 2, DEPTH], [Vector3(HALF_W, 0, cz), -PI / 2, DEPTH]]
 	for w in walls:
 		var holder := Node3D.new()
@@ -76,8 +76,8 @@ func _shell() -> void:
 		var wm: StandardMaterial3D = brick.duplicate()
 		wm.uv1_scale = Vector3(float(w[2]) / 2.4, HEIGHT / 2.4, 1)
 		VRBuild.quad(holder, Vector2(w[2], HEIGHT), Vector3(0, HEIGHT / 2.0, 0), wm)
-		VRBuild.neon_tube(holder, w[2], Vector3(0, HEIGHT - 0.1, 0.04), Color(0.1, 0.9, 1.0) if int(w[1] * 10) % 2 == 0 else Color(1.0, 0.2, 0.7))
-		VRBuild.box(holder, Vector3(w[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.9, 0.95, 0.9), Vector2(float(w[2]) / 0.7, 0.34), 1.6))
+		VRBuild.neon_tube(holder, w[2], Vector3(0, HEIGHT - 0.1, 0.04), Color(0.1, 0.9, 1.0) if int(w[1] * 10) % 2 == 0 else Color(1.0, 0.65, 0.25))
+		VRBuild.box(holder, Vector3(w[2], 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-navy", Color(0.9, 0.95, 0.9), Vector2(float(w[2]) / 0.7, 0.34), 1.6))
 	# the hall's side of the arcade's back wall: plain brick facing into the hall, with the gate cut out of it
 	var gl := GATE_X - GATE_W / 2.0
 	var gr := GATE_X + GATE_W / 2.0
@@ -87,7 +87,7 @@ func _shell() -> void:
 		var fm: StandardMaterial3D = brick.duplicate()
 		fm.uv1_scale = Vector3(w / 2.4, h / 2.4, 1)
 		VRBuild.quad(node, Vector2(w, h), Vector3((float(piece[0]) + float(piece[1])) / 2.0, float(piece[2]) + h / 2.0, Z0 + 0.012), fm)
-	VRBuild.neon_tube(node, HALF_W * 2.0 - GATE_W, Vector3((gr + HALF_W) / 2.0 - HALF_W * 0.0 - (HALF_W - gr) / 2.0 + (HALF_W - gr) / 2.0, HEIGHT - 0.1, Z0 + 0.04), Color(1.0, 0.2, 0.7))
+	VRBuild.neon_tube(node, HALF_W * 2.0 - GATE_W, Vector3((gr + HALF_W) / 2.0 - HALF_W * 0.0 - (HALF_W - gr) / 2.0 + (HALF_W - gr) / 2.0, HEIGHT - 0.1, Z0 + 0.04), Color(1.0, 0.65, 0.25))
 	for z in [9.4, 13.0, 16.6, 19.6]:
 		VRBuild.neon_tube(node, HALF_W * 2.0, Vector3(0, HEIGHT - 0.05, z), Color(0.15, 0.4, 1.0), Vector3.ZERO, 0.02)      # blue neon across the ceiling
 	for p in [[Vector3(-2.2, 3.0, 9.0), Color(1.0, 0.3, 0.75), 1.1], [Vector3(2.2, 3.0, 12.0), Color(0.3, 0.85, 1.0), 1.1], [Vector3(-1.6, 3.0, 16.0), Color(1.0, 0.8, 0.5), 1.1], [Vector3(2.2, 3.0, 18.5), Color(1.0, 0.85, 0.6), 1.0]]:

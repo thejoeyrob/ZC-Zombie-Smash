@@ -10,7 +10,7 @@ const PIN_H := 0.38
 const PIN_MASS := 1.5
 const PIN_SPACING := 0.305
 const ROW_SPACING := 0.264
-const LANE_END := ShackAnnex.HEAD_PIN_Z + 0.75
+const LANE_END := ShackAnnex.HEAD_PIN_Z + 0.95
 const PIT_FLOOR := -0.45
 const HOOK_GAIN := 0.06
 const HOOK_MAX := 0.9
@@ -116,12 +116,20 @@ func _build_lane(i: int) -> void:
 	sh.radius = BALL_R
 	cs.shape = sh
 	b.add_child(cs)
-	var gloss := VRBuild.mat(BALL_COLOURS[i % 2], 0.12, 0.35, 0.1, BALL_COLOURS[i % 2].darkened(0.6))
-	VRBuild.sphere(b, BALL_R, Vector3.ZERO, gloss, 24)
-	var hole := VRBuild.mat(Color(0.02, 0.02, 0.03), 0.5)
-	for h in [Vector3(-0.025, 0.09, 0.03), Vector3(0.025, 0.09, 0.03), Vector3(0.0, 0.085, -0.03)]:
-		var hn: Vector3 = (h as Vector3).normalized()
-		VRBuild.sphere(b, 0.011, hn * BALL_R * 0.99, hole, 8)
+	var gloss := StandardMaterial3D.new()
+	gloss.roughness=0.2;gloss.metallic=0.12
+	gloss.clearcoat_enabled=true;gloss.clearcoat=0.7;gloss.clearcoat_roughness=0.12
+	var noise:=FastNoiseLite.new();noise.seed=53+i*19;noise.frequency=0.018
+	noise.fractal_octaves=3
+	var resin:=NoiseTexture2D.new();resin.width=256;resin.height=256;resin.seamless=true;resin.noise=noise
+	var ramp:=Gradient.new();ramp.colors=PackedColorArray([BALL_COLOURS[i%2].darkened(0.72),BALL_COLOURS[i%2].lightened(0.3)])
+	resin.color_ramp=ramp;gloss.albedo_texture=resin
+	gloss.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	var shape:=MeshInstance3D.new();shape.mesh=load("res://assets/renovation/bowling_ball.res")
+	for surface in range(shape.mesh.get_surface_count()):
+		if shape.mesh.surface_get_material(surface).resource_name=="shell":
+			shape.set_surface_override_material(surface,gloss)
+	b.add_child(shape)
 	add_child(b)
 	var t := Throwable.new()
 	t.kind = "ball"
@@ -141,17 +149,21 @@ func _build_lane(i: int) -> void:
 	var mon := VRBuild.label(self, "", 0.085, Vector3(lx, 2.55, ShackAnnex.HEAD_PIN_Z + 0.83), Color(0.7, 1.0, 0.8), Vector3(0, PI, 0), 3, font, true)
 	mon.line_spacing = -6.0
 	s.board = mon
+	mon.visible = false
+	var reaction := BowlingReaction.new()
+	reaction.build(self, Vector3(lx,2.50,ShackAnnex.HEAD_PIN_Z+0.80), font, i)
+	s["reaction"] = reaction
 	var near := VRBuild.label(self, "", 0.08, Vector3(lx, 2.55, ShackAnnex.FOUL_Z - 0.12), Color(0.7, 1.0, 0.8), Vector3(0, PI, 0), 3, font, true)
 	near.line_spacing = -6.0
 	s.label = near
 	SportsFinish.panel(self, mon.position, PI, Vector2(1.45, 0.68))
 	SportsFinish.panel(self, near.position, PI, Vector2(1.45, 0.68))
 	var px := lx - 0.78
-	VRBuild.box(self, Vector3(0.04, 0.22, 0.5), Vector3(px, 1.15, ShackAnnex.FOUL_Z - 1.0), VRBuild.mat(Color(0.1, 0.08, 0.1), 0.5))
 	var names := ["players", "go"]
 	for k in range(2):
 		var zz := ShackAnnex.FOUL_Z - 1.0 + (0.12 if k == 0 else -0.12)
 		var bl := VRBuild.label(self, "", 0.04, Vector3(px + 0.025, 1.15, zz), Color(1.0, 0.85, 0.4), Vector3(0, PI / 2, 0), 2, font, true)
+		bl.visible = false
 		s.buttons[names[k]] = {"label": bl, "z": zz, "x": px}
 	_refresh_buttons(i)
 
@@ -235,6 +247,7 @@ func _pin_set(p: Dictionary, at: Vector3) -> void:
 	b.angular_velocity = Vector3.ZERO
 	b.global_transform = Transform3D(Basis.IDENTITY, at)
 	p["thaw"] = 0
+	p["tipped"] = false
 
 
 func _hide_pin(p: Dictionary) -> void:
@@ -298,7 +311,7 @@ func wake(t: Throwable) -> void:
 
 
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:
-	return hand_xf * Transform3D(Basis.IDENTITY, Vector3(0, -0.02, -0.07))
+	return hand_xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.065, -0.12))
 
 
 func on_grab(t: Throwable, _hand: int) -> void:
@@ -322,7 +335,7 @@ func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, angv: Vector3
 			(pin.body as RigidBody3D).freeze = false
 	var b := t.node as RigidBody3D
 	var s: Dictionary = lanes[t.lane]
-	var v := vel
+	var v := SportAssist.bowling(vel, b.global_position, lane_x(t.lane), ShackAnnex.HEAD_PIN_Z) if social_handling else vel
 	if v.length() > 11.0:
 		v = v.normalized() * 11.0
 	b.freeze = false
@@ -341,6 +354,7 @@ func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, angv: Vector3
 	s.still = 0.0
 	s.standing_before = int(BowlingScore.state(s.rolls[s.cur]).standing)
 	s.gutter = false
+	s["carry_used"] = false
 	buzz.emit(hand, 0.4, 0.08)
 	sound.emit("throw", t.node.global_position, 0.7)
 
@@ -349,9 +363,8 @@ func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, angv: Vector3
 func selector_targets() -> Array:
 	var out: Array = []
 	for i in range(lanes.size()):
-		for nm in lanes[i].buttons:
-			var bd: Dictionary = lanes[i].buttons[nm]
-			out.append({"id": "g_b%d_%s" % [i, nm], "label": "", "xf": Transform3D.IDENTITY, "box": AABB(Vector3(float(bd.x) - 0.05, 1.04, float(bd.z) - 0.11), Vector3(0.12, 0.22, 0.22)), "colour": Color(1.0, 0.85, 0.3), "always": false})
+		var panel := lanes[i].label as Label3D
+		out.append({"id": "setup_b%d" % i, "label": "", "xf": panel.global_transform, "box": AABB(Vector3(-0.72,-0.34,-0.05),Vector3(1.44,0.68,0.1)), "colour": Color(0.85,0.67,0.36), "always": false})
 	return out
 
 
@@ -403,6 +416,8 @@ func _standing(s: Dictionary) -> int:
 
 
 func _pin_up(p: Dictionary) -> bool:
+	if p.get("tipped", false):
+		return false
 	var b := p.body as RigidBody3D
 	var up := b.global_transform.basis.y.y
 	var d := Vector2(b.global_position.x - p.home.x, b.global_position.z - p.home.z).length()
@@ -426,9 +441,23 @@ func _follow(i: int, delta: float) -> void:
 	var s: Dictionary = lanes[i]
 	var b := s.ball.node as RigidBody3D
 	s.t += delta
+	for pin in s.pins:
+		if pin.alive and (pin.body as RigidBody3D).global_transform.basis.y.y < 0.70:
+			pin["tipped"] = true
 	var z := b.global_position.z
 	if z >= ShackAnnex.FOUL_Z and z < ShackAnnex.HEAD_PIN_Z - 0.2 and absf(b.global_position.x - lane_x(i)) > ShackAnnex.LANE_W / 2.0 + BALL_R * 0.35:
 		s.gutter = true
+	# Social pin-carry assistance is gated by a genuine low pocket entry.
+	# It adds contact energy; the normal physics/scoring still decide pinfall.
+	if social_handling and not s.gutter and not s.get("carry_used", false) and z > ShackAnnex.HEAD_PIN_Z - 0.13 and z < ShackAnnex.HEAD_PIN_Z + 0.15:
+		var offset := absf(b.global_position.x - lane_x(i))
+		if offset > 0.025 and offset < 0.14 and b.global_position.y < 0.24 and b.linear_velocity.z > 3.0:
+			s.carry_used = true
+			for pin in s.pins:
+				if pin.alive:
+					var body: RigidBody3D = pin.body
+					var side: float = signf(body.global_position.x - b.global_position.x)
+					body.apply_impulse(Vector3(side * 0.22, 0, 1.3) * PIN_MASS, Vector3(0, 0.15, 0))
 	# the hook: the lane's friction pulls a spinning ball sideways, mostly in the last half of the lane
 	if s.phase == "rolling" and not s.gutter and absf(s.hook) > 0.01 and z > ShackAnnex.FOUL_Z + 4.5 and z < ShackAnnex.HEAD_PIN_Z - 0.5 and b.global_position.y < 0.2:
 		var side := Vector3.UP.cross(s.fwd).normalized()
@@ -483,6 +512,8 @@ func _finish_ball(i: int) -> void:
 	elif knocked == 0:
 		msg = "GUTTER BALL" if s.gutter else "MISSED"
 	s.msg = "P%d: %s" % [s.cur + 1, msg]
+	if s.has("reaction"):
+		(s.reaction as BowlingReaction).react(msg, knocked, s.cur)
 	sound.emit("clear" if knocked == 10 else "hit", Vector3(lane_x(i), 0.6, ShackAnnex.HEAD_PIN_Z), 0.9)
 	_next_ball(i)
 
@@ -526,7 +557,7 @@ func _text(i: int) -> void:
 	var s: Dictionary = lanes[i]
 	var txt := ""
 	if s.state == "idle":
-		txt = "LANE %d\nPOINT AT NEW GAME" % (i + 1)
+		txt = "LANE %d\nPICK UP A BALL\nSELECT SCREEN FOR SETUP" % (i + 1)
 	else:
 		for p in range(s.players):
 			var fr := BowlingScore.frames(s.rolls[p])

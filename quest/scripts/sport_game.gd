@@ -5,6 +5,7 @@ extends Node3D
 signal sound(name: String, at: Vector3, volume: float)
 signal buzz(hand: int, amp: float, dur: float)
 
+var social_handling := true
 var font: Font
 var active := false              # only runs while somebody is in the hall
 

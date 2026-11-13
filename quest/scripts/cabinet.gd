@@ -73,7 +73,7 @@ func build(screen_tex: Texture2D, marquee_tex: Texture2D, body_color: Color, tri
 	button_defs = _make_button_defs()
 	theme_color = trim_color
 	attract_tex = screen_tex
-	var body := VRBuild.mat(body_color, 0.55, 0.1)
+	var body := VRBuild.pbr("plate", body_color.lightened(0.10), Vector2(1.4,1.4),0.25,0.15)
 	var dark := VRBuild.mat(Color(0.015, 0.015, 0.02), 0.6)
 	dark.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var trim := VRBuild.mat(trim_color, 0.3, 0.0, 2.0)

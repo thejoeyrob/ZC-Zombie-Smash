@@ -14,6 +14,7 @@ var games: Array = []
 var tracks: Array = [HandTrack.new(), HandTrack.new()]
 var held: Array = [null, null]
 var grip_prev: Array = [false, false]
+var primary := ["gripping", "gripping"]
 var active := false
 var _clock := 0.0
 
@@ -60,7 +61,8 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 		var h: Dictionary = hs[i]
 		var here: bool = bool(h.active) and can_play and h.has("palm")       # (the flat desktop view has no hand points)
 		if here:
-			tracks[i].push(_clock, h.palm, (h.vis_xf as Transform3D).basis)
+			var raw: Transform3D = h.get("xf", h.vis_xf)
+			tracks[i].push(_clock, raw.origin, raw.basis)
 		else:
 			tracks[i].clear()
 		if not here:
@@ -75,9 +77,14 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 		if grip and held[i] == null:
 			_try_grab(i, h)
 		if held[i] != null:
-			if grip:
+			if bool(h.get(primary[i], false)):
 				var t: Throwable = held[i]
-				var xf: Transform3D = (t.game as SportGame).hold_xf(t, h.vis_xf)
+				var grip_pose: Transform3D = h.vis_xf
+				if t.kind == "dart" and h.has("aim_dir") and not bool(h.get("bare", false)):
+					var aim: Vector3 = h.aim_dir
+					if aim.is_finite() and aim.length_squared() > 0.5 and absf(aim.normalized().dot(Vector3.UP)) < 0.98:
+						grip_pose.basis = Basis.looking_at(aim, Vector3.UP)
+				var xf: Transform3D = (t.game as SportGame).hold_xf(t, grip_pose)
 				t.node.global_transform = xf
 				t.pos = xf.origin
 			else:
@@ -116,6 +123,7 @@ func _try_grab(i: int, h: Dictionary) -> void:
 		if not (best.game as SportGame).things().has(best):
 			return
 	if best != null:
+		primary[i] = "gripping" if bool(h.gripping) else "trigger"
 		held[i] = best
 		best.held_hand = i
 		tracks[i].clear()

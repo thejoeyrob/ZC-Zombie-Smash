@@ -170,7 +170,7 @@ func _show_target(t: Dictionary) -> void:
 		return
 	_word.text = str(t.label)
 	_word.global_position = _word_pos(t)
-	_word.visible = true
+	_word.visible = false
 
 
 func _process(delta: float) -> void:
@@ -180,7 +180,7 @@ func _process(delta: float) -> void:
 	_word.scale = Vector3.ONE * (1.0 + 0.06 * sin(_t * 4.0))
 	for i in _hints:
 		var h: Label3D = _hints[i]
-		h.visible = shown and h.text != ""
+		h.visible = false
 		var on: bool = (i == hover)
 		h.modulate = Color(1, 1, 1, 1.0) if on else Color(1, 1, 1, 0.35 + 0.4 * pulse)
 		h.scale = Vector3.ONE * (1.35 if on else 1.0 + 0.05 * pulse)

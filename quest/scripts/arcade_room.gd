@@ -76,7 +76,7 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	we.environment = env
 	root.add_child(we)
 	# real dark brick walls with neon tubes, like a proper old arcade; blue neon across the ceiling
-	var wood := VRBuild.pbr("brick-light", Color(0.74, 0.55, 0.48), Vector2.ONE, 3.0)
+	var wood := VRBuild.pbr("brick-light", Color(0.65, 0.63, 0.58), Vector2.ONE, 3.0)
 	var paper := wood
 	wood.texture_repeat = true
 	_shell(root, wood, paper, font)
@@ -86,6 +86,7 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	_machines(root)
 	_back_wall(root, font)
 	_decor(root, font)
+	ShackRenovation.build(root, font)
 	_spots()
 	VRBuild.merge_static(root, true)
 	sports = ThrowGames.new()                          # the hall behind the back wall (darts, axes, bowling); it merges its own scenery
@@ -105,9 +106,9 @@ func _shell(root: Node3D, wood: StandardMaterial3D, paper: StandardMaterial3D, f
 	var w := HALF_W * 2.0
 	var d := BACK_Z - FRONT_Z
 	var cz := (BACK_Z + FRONT_Z) / 2.0
-	var carpet := VRBuild.pbr("tiles-bw", Color(0.86, 0.86, 0.9), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
+	var carpet := VRBuild.pbr("carpet", Color(0.33, 0.42, 0.48), Vector2(w / 1.6, d / 1.6), 0.9)       # black and white worn floor tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, 0, cz), carpet, Vector3(-PI / 2, 0, 0))
-	VRSurfaceRelief.tile_floor(root, w, d, cz, carpet)
+
 	var ceiling := VRBuild.pbr("tiles", Color(0.22, 0.22, 0.3), Vector2(w / 2.4, d / 2.4), 0.8)      # dark ceiling tiles
 	VRBuild.quad(root, Vector2(w, d), Vector3(0, HEIGHT, cz), ceiling, Vector3(PI / 2, 0, 0))
 	for z in [1.4, 3.4, 5.4]:                                                                         # blue neon tubes across the ceiling
@@ -144,17 +145,18 @@ func _wall_piece(root_w: Node3D, wood: StandardMaterial3D, cx: float, width: flo
 	VRBuild.quad(holder, Vector2(width, height), Vector3(0, height / 2.0, 0), wm)
 	# True low-profile brick edges: static geometry instead of flat bump-map illusion.
 	VRSurfaceRelief.brick_wall(holder, width, height, wm)
-	VRBuild.neon_tube(holder, width, Vector3(0, height - 0.12, 0.04), Color(1.0, 0.2, 0.7))      # neon tube along the top of the wall
+	VRBuild.neon_tube(holder, width, Vector3(0, height - 0.12, 0.04), Color(1.0, 0.65, 0.25))      # neon tube along the top of the wall
 	if y0 < 0.01:
-		VRBuild.neon_tube(holder, width, Vector3(0, 0.2, 0.04), Color(0.1, 0.9, 1.0))             # and along the floor
-		VRBuild.box(holder, Vector3(width, 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-green", Color(0.95, 1.0, 0.95), Vector2(width / 0.7, 0.34), 1.8))   # tall green washed wood skirting
-		VRBuild.box(holder, Vector3(width, 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-green", Color(0.8, 0.9, 0.8), Vector2(width / 0.7, 0.1), 1.8))   # its top moulding
+		VRBuild.box(holder, Vector3(width, 0.94, 0.045), Vector3(0,0.47,0.032), VRBuild.pbr("oakslat",Color(0.64,0.49,0.34),Vector2(width/1.5,1),0.4))
+		VRBuild.neon_tube(holder, width, Vector3(0, 1.02, 0.065), Color(0.1, 0.9, 1.0))             # and along the floor
+		VRBuild.box(holder, Vector3(width, 0.13, 0.05), Vector3(0, 0.065, 0.025), VRBuild.pbr("wood-navy", Color(0.95, 1.0, 0.95), Vector2(width / 0.7, 0.34), 1.8))   # tall green washed wood skirting
+		VRBuild.box(holder, Vector3(width, 0.025, 0.065), Vector3(0, 0.1425, 0.0325), VRBuild.pbr("wood-navy", Color(0.8, 0.9, 0.8), Vector2(width / 0.7, 0.1), 1.8))   # its top moulding
 
 
 func _lights(root: Node3D) -> void:
 	var specs := [
-		[Vector3(-2.6, 2.7, 1.8), Color(1.0, 0.3, 0.75), 1.3, 6.0],
-		[Vector3(2.6, 2.7, 1.8), Color(0.2, 0.85, 1.0), 1.3, 6.0],
+		[Vector3(-2.6, 2.7, 1.8), Color(1.0, 0.78, 0.55), 1.0, 6.0],
+		[Vector3(2.6, 2.7, 1.8), Color(0.55, 0.8, 1.0), 1.0, 6.0],
 		[Vector3(0.0, 2.8, 5.8), Color(0.35, 0.5, 1.0), 1.1, 6.5],
 	]
 	for s in specs:
@@ -340,7 +342,6 @@ func _back_wall(root: Node3D, font: Font) -> void:
 		else:
 			pinball2 = pb
 	# the wedding poster, left of the left pinball machine on the back wall
-	_signboard(root, Vector3(-3.25, 1.85, BACK_Z), PI, "panel-wedding.jpg", Vector2(1.2, 1.6), Color(1.0, 0.25, 0.65), false)
 	# the snack machine beside the door
 	vending = VendingMachine.new()
 	vending.position = Vector3(1.8, 0, 0.02)        # beside the door, inside on the right
@@ -371,10 +372,6 @@ func _decor(root: Node3D, font: Font) -> void:
 	locker_glow.albedo_color = Color(0.3, 0.9, 1.0, 0.5)
 	VRBuild.quad(root, Vector2(1.7, 1.5), Vector3(skins.position.x, 0.014, skins.position.z + 0.95), locker_glow, Vector3(-PI / 2, 0, 0))
 	# four big backlit glass-panel posters, one in each gap between the machines on the side walls
-	_signboard(root, Vector3(-HALF_W, 2.0, 2.18), PI / 2.0, "panel-fire.jpg", Vector2(1.15, 1.725), Color(1.0, 0.55, 0.15), false)
-	_signboard(root, Vector3(-HALF_W, 2.0, 4.12), PI / 2.0, "panel-sloth.jpg", Vector2(1.15, 1.725), Color(1.0, 0.45, 0.2), false)
-	_signboard(root, Vector3(HALF_W, 2.0, 2.18), -PI / 2.0, "panel-neon.jpg", Vector2(1.15, 1.725), Color(0.7, 0.3, 1.0), false)
-	_signboard(root, Vector3(HALF_W, 2.0, 4.12), -PI / 2.0, "panel-city.jpg", Vector2(1.15, 1.725), Color(1.0, 0.3, 0.7), false)
 
 
 ## A picture hung flat on a side wall (side: +1 left wall, -1 right wall): no frame, just the artwork on a thin dark backing with a soft shadow.

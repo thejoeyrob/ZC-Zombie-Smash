@@ -20,6 +20,8 @@ func _init() -> void:
 	axes = AxeGame.new()
 	root.add_child(axes)
 	axes.build(null)
+	darts.social_handling = false       # these throws are tuned for the strict (Simulation) feel; Social has its own tests (tests/upgrade/social_handling.gd)
+	axes.social_handling = false
 	darts.choose("g_d0_go")
 	axes.choose("g_a1_go")
 
@@ -33,6 +35,7 @@ func _t(ok: bool, what: String) -> void:
 func _throw_dart(v: Vector3) -> void:
 	var t: Throwable = darts.darts[idx]
 	t.node.global_position = Vector3(ShackAnnex.OCHE_X + 0.2, 1.55, float(ShackAnnex.DART_Z[0]))
+	t.pos = t.node.global_position       # (the hand loop keeps pos up to date while a thing is held)
 	t.state = "held"
 	darts.on_release(t, Transform3D.IDENTITY, v, Vector3.ZERO, 0)
 
@@ -41,6 +44,7 @@ func _throw_axe(v: Vector3, w: float) -> void:
 	var t: Throwable = axes.axes[3 + idx]
 	var x := float(ShackAnnex.AXE_X[1])
 	t.node.global_position = Vector3(x, 1.5, ShackAnnex.AXE_LINE_Z)
+	t.pos = t.node.global_position
 	t.state = "held"
 	axes.on_release(t, Transform3D(Basis(Vector3.UP, PI), Vector3(x, 1.5, ShackAnnex.AXE_LINE_Z)), v, Vector3(w, 0, 0), 0)
 

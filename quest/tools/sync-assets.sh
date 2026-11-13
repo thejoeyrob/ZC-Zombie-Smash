@@ -5,6 +5,8 @@ cd "$(dirname "$0")/../.."
 Q=quest/assets
 rm -rf "$Q"; mkdir -p "$Q/art" "$Q/audio" "$Q/fonts"
 node quest/tools/export-data.mjs >/dev/null
+# baked meshes kept as source files (quest/renovation): the bowling ball with real finger holes
+mkdir -p "$Q/renovation"; cp quest/renovation/*.res "$Q/renovation/" 2>/dev/null || true
 # art: everything the screen draws
 for f in arena-*.webp zombie-*.webp boss-*.webp player-*.webp bullet-*.webp pickup-*.webp weapon-*.webp prop-barrel.webp \
          title-bg.webp game-banner.webp joey-reaction-close.webp story-army.webp map-concrete.jpg; do

@@ -82,19 +82,20 @@ func _build_lane(i: int) -> void:
 	lanes[i].label = lbl
 	SportsFinish.panel(self, lbl.position, PI, Vector2(1.16, 0.7))
 	# a panel with three buttons beside the rack, facing the thrower
-	VRBuild.box(self, Vector3(0.82, 0.2, 0.04), Vector3(x, 1.3, _rack_z() + 0.24), VRBuild.mat(Color(0.1, 0.08, 0.1), 0.5))
 	var names := ["mode", "players", "go"]
 	for k in range(3):
 		var bx := x - (float(k) - 1.0) * 0.27
 		var bl := VRBuild.label(self, "", 0.036, Vector3(bx, 1.3, _rack_z() + 0.22), Color(1.0, 0.85, 0.4), Vector3(0, PI, 0), 2, font, true)
 		lanes[i].buttons[names[k]] = {"label": bl, "x": bx}
 	_refresh_buttons(i)
+	for button in lanes[i].buttons.values():
+		button.label.visible = false
 
 
 func _make_axe() -> Node3D:
 	var n := Node3D.new()
 	var wood := VRBuild.tex_mat(load("res://assets/art/tex-wood.jpg"), 0.0, 0.58)
-	var steel := VRBuild.mat(Color(0.62, 0.64, 0.7), 0.3, 0.85)
+	var steel := VRBuild.pbr("metal", Color(0.7,0.72,0.76), Vector2(1,1),0.3,0.85)
 	var edge := VRBuild.mat(Color(0.9, 0.92, 0.95), 0.2, 0.95)
 	VRBuild.cylinder(n, 0.017, 0.40, Vector3(0, 0.1, 0), wood, 0.014, Vector3.ZERO, 10)                  # the handle, from just below the grip to the head
 	VRBuild.box(n, Vector3(0.04, 0.09, 0.05), Vector3(0, 0.26, 0.0), steel)                                  # the poll and eye of the head
@@ -160,7 +161,7 @@ func on_release(t: Throwable, hand_xf: Transform3D, vel: Vector3, angv: Vector3,
 	t.data["hand"] = hand
 	t.pos = t.node.global_position
 	t.basis = hand_xf.basis.orthonormalized()
-	t.vel = vel * 1.25
+	t.vel = SportAssist.launch(vel, Vector3.BACK, maxf(ShackAnnex.AXE_FACE_Z - t.pos.z, 0), 7.0, 16.0) if social_handling else vel * 1.25
 	var sp := t.vel.length()
 	if sp > 16.0:
 		t.vel = t.vel.normalized() * 16.0
@@ -188,9 +189,8 @@ func on_release(t: Throwable, hand_xf: Transform3D, vel: Vector3, angv: Vector3,
 func selector_targets() -> Array:
 	var out: Array = []
 	for i in range(lanes.size()):
-		for nm in lanes[i].buttons:
-			var bx: float = lanes[i].buttons[nm].x
-			out.append({"id": "g_a%d_%s" % [i, nm], "label": "", "xf": Transform3D.IDENTITY, "box": AABB(Vector3(bx - 0.13, 1.2, _rack_z() + 0.1), Vector3(0.26, 0.2, 0.3)), "colour": Color(1.0, 0.7, 0.3), "always": false})
+		var panel := lanes[i].label as Label3D
+		out.append({"id": "setup_a%d" % i, "label": "", "xf": panel.global_transform, "box": AABB(Vector3(-0.72,-0.34,-0.05),Vector3(1.44,0.68,0.1)), "colour": Color(0.85,0.67,0.36), "always": false})
 	return out
 
 
@@ -354,7 +354,7 @@ func _arrive(t: Throwable, prev_edge: Vector3, edge: Vector3, plane: float) -> v
 	for k in range(lanes.size()):
 		if absf(hit.x - _lane_x(k)) < 0.6 and absf(hit.y - ShackAnnex.AXE_Y) < 0.6:
 			lane = k
-	if lane == t.lane and not t.data.get("scored", false) and can_stick(blade_dir, handle, t.vel.normalized(), speed):
+	if lane == t.lane and not t.data.get("scored", false) and ((social_handling and speed > 2.5 and t.vel.z > 1.5) or can_stick(blade_dir, handle, t.vel.normalized(), speed)):
 		var dx := -(hit.x - _lane_x(lane))          # the thrower faces +z: their right is -x
 		var dy := hit.y - (ShackAnnex.AXE_Y - CENTRE_DROP)
 		t.state = "stuck"
@@ -382,7 +382,7 @@ func _text(i: int) -> void:
 	if lbl == null:
 		return
 	if s.state == "idle":
-		lbl.text = "LANE %d  •  %s\nPOINT AT START\nTHEN GRIP AN AXE" % [i + 1, MODES[s.mode]]
+		lbl.text = "LANE %d  •  %s\nPICK UP AN AXE\nSELECT SCREEN FOR SETUP" % [i + 1, MODES[s.mode]]
 		return
 	var t := "%s  •  ROUND %d/%d\n" % [MODES[s.mode], mini(s.round + 1, ROUNDS), ROUNDS]
 	for p in range(s.players):

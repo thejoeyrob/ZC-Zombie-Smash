@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "headset", "scares": "on", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "headset", "scares": "on", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -384,7 +384,11 @@ func _load_settings() -> void:
 	if int(settings.get("ver", 0)) < 2:
 		settings.sharp = 1.0
 		settings.refresh = "72"
-	settings.ver = 3
+	if int(settings.get("ver", 0)) < 5:
+		if int(settings.handtilt) == 0:
+			settings.handtilt = -60
+		settings.foveation = "external"
+	settings.ver = 5
 	_save_settings()
 
 
@@ -519,7 +523,13 @@ func _apply_tier() -> void:
 			iface.render_target_size_multiplier = multiplier
 		# foveation draws the edges of your view at lower detail; the Display page can turn it down or off to see if it is what looks soft
 		var fov := str(settings.get("foveation", "app"))
-		if "foveation_level" in iface:
+		# Mobile renderer uses VRS, not the GLES foveation properties.
+		# External means QGO owns FFR; never layer a second foveation map on it.
+		if RenderingServer.get_current_rendering_method() != "gl_compatibility":
+			get_viewport().vrs_mode = Viewport.VRS_DISABLED if fov in ["off", "external"] else Viewport.VRS_XR
+			iface.vrs_min_radius = 55.0 if fov != "high" else 40.0
+			iface.vrs_strength = 0.35 if fov != "high" else 0.65
+		elif fov != "external" and "foveation_level" in iface:
 			iface.foveation_level = {"off": 0, "low": 1, "high": 3}.get(fov, 1)
 			iface.foveation_dynamic = fov == "app"
 	room.env.glow_enabled = str(settings.glow) == "on" and (str(settings.smooth) != "on" or q_tier == 0)
@@ -912,6 +922,8 @@ func _process(delta: float) -> void:
 	_update_avatar(hs, delta)
 	# (after the hands are posed: the sports code needs each hand's palm, tip and visible pose, which are only worked out there. Before this fix it ran first and
 	# found none of them, so nothing in the hall could ever be picked up.)
+	for sport in room.sports.games:
+		sport.social_handling = str(settings.get("sports_feel", "social")) == "social"
 	room.sports.update(hs, delta, _head_floor(), not menu.open and not locked)
 	_menu_input(hs)
 	_world_inputs(hs)
@@ -1520,6 +1532,13 @@ func _choose(id: String) -> void:
 		audio.ui("switch")
 		_open_menu()
 		return
+	if id.begins_with("setup_"):
+		var kind := id.substr(6, 1)
+		var lane := int(id.substr(7)) + 1
+		menu.set_value({"b": "bowling_lane", "d": "darts_lane", "a": "axe_lane"}[kind], lane)
+		_open_menu()
+		menu.show_page("sports")
+		return
 	if id.begins_with("g_"):
 		room.sports.choose(id)
 		return
@@ -1562,6 +1581,8 @@ func _update_peg_targets() -> void:
 
 func _within_reach(id: String) -> bool:
 	var hp := _head_floor()
+	if id.begins_with("setup_"):
+		return room.sports.active
 	if id.begins_with("g_"):
 		return room.sports.active
 	if id.begins_with("m") and id.substr(1).is_valid_int():

@@ -118,7 +118,7 @@ func build(f: Font) -> void:
 
 func _fresh() -> Dictionary:
 	return {"mode": 0, "players": 1, "state": "idle", "cur": 0, "left": 3, "scores": [], "turn_start": 0, "marks": [], "points": [], "hits": [],
-		"msg": "POINT AT START", "timer": 0.0, "last": "", "label": null, "buttons": {}, "winner": -1, "turn_total": 0}
+		"msg": "SELECT SCREEN FOR SETUP", "timer": 0.0, "last": "", "label": null, "buttons": {}, "winner": -1, "turn_total": 0}
 
 
 func _board_z(b: int) -> float:
@@ -146,10 +146,11 @@ func _build_board_extras(b: int) -> void:
 	var names := ["mode", "players", "go"]
 	for i in range(3):
 		var zz := z + 0.34 - 0.34 * float(i)       # the thrower faces -x: their right is -z, so MODE is on their left
-		VRBuild.box(self, Vector3(0.03, 0.12, 0.3), Vector3(bx + 0.015, 2.0, zz), VRBuild.mat(Color(0.2, 0.16, 0.1), 0.5))
 		var bl := VRBuild.label(self, "", 0.04, Vector3(bx + 0.035, 2.0, zz), Color(1.0, 0.9, 0.5), Vector3(0, PI / 2, 0), 2, font, true)
 		boards[b].buttons[names[i]] = {"label": bl, "z": zz}
 	_refresh_buttons(b)
+	for button in boards[b].buttons.values():
+		button.label.visible = false
 
 
 func _make_dart(b: int) -> Node3D:
@@ -200,7 +201,7 @@ func wake(t: Throwable) -> void:
 
 
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:
-	return hand_xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.0, -0.045))
+	return hand_xf * Transform3D(Basis.IDENTITY, Vector3(0.018, 0.025, -0.085))
 
 
 func on_grab(t: Throwable, _hand: int) -> void:
@@ -219,8 +220,8 @@ func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, _angv: Vector
 	t.data.clear()
 	t.data["hand"] = hand
 	t.pos = t.node.global_position
-	t.vel = vel * THROW_BOOST
-	if t.vel.length() > 14.0:
+	t.vel = SportAssist.launch(vel, Vector3.LEFT, maxf(t.pos.x - ShackAnnex.DART_FACE_X, 0), 6.5, 18.0) if social_handling else vel * THROW_BOOST
+	if not social_handling and t.vel.length() > 14.0:
 		t.vel = t.vel.normalized() * 14.0
 	t.state = "flying"
 	t.t = 0.0
@@ -232,11 +233,9 @@ func on_release(t: Throwable, _hand_xf: Transform3D, vel: Vector3, _angv: Vector
 # ---- controls ------------------------------------------------------------------------------------------------
 func selector_targets() -> Array:
 	var out: Array = []
-	var bx := -ShackAnnex.HALF_W + 0.07
-	for b in range(boards.size()):
-		for nm in boards[b].buttons:
-			var zz: float = boards[b].buttons[nm].z
-			out.append({"id": "g_d%d_%s" % [b, nm], "label": "", "xf": Transform3D.IDENTITY, "box": AABB(Vector3(bx, 1.92, zz - 0.15), Vector3(0.3, 0.16, 0.3)), "colour": Color(1.0, 0.85, 0.3), "always": false})
+	for i in range(boards.size()):
+		var panel := boards[i].label as Label3D
+		out.append({"id": "setup_d%d" % i, "label": "", "xf": panel.global_transform, "box": AABB(Vector3(-0.72,-0.34,-0.05),Vector3(1.44,0.68,0.1)), "colour": Color(0.85,0.67,0.36), "always": false})
 	return out
 
 
@@ -493,7 +492,7 @@ func _text(b: int) -> void:
 	if lbl == null:
 		return
 	if s.state == "idle":
-		lbl.text = "DARTS\n%s  •  %d PLAYER%s\nPOINT AT START" % [MODES[s.mode], s.players, "" if s.players == 1 else "S"]
+		lbl.text = "DARTS\n%s  •  %d PLAYER%s\nSELECT SCREEN FOR SETUP" % [MODES[s.mode], s.players, "" if s.players == 1 else "S"]
 		return
 	var t := ""
 	if s.mode < 2:
