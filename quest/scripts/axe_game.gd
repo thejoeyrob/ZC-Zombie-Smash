@@ -77,9 +77,10 @@ func _build_lane(i: int) -> void:
 	VRBuild.box(self, Vector3(0.8, 0.9, 0.4), Vector3(x, 0.45, _rack_z()), wood)
 	VRBuild.box(self, Vector3(0.84, 0.04, 0.44), Vector3(x, 0.92, _rack_z()), VRBuild.mat(Color(0.3, 0.2, 0.12), 0.6))
 	# the board above the targets: scores
-	var lbl := VRBuild.label(self, "", 0.06, Vector3(x, 2.5, ShackAnnex.AXE_FACE_Z - 0.09), Color(1.0, 0.95, 0.8), Vector3(0, PI, 0), 3, font, true)
+	var lbl := VRBuild.label(self, "", 0.08, Vector3(x, 2.5, ShackAnnex.AXE_FACE_Z - 0.09), Color(1.0, 0.95, 0.8), Vector3(0, PI, 0), 3, font, true)
 	lbl.line_spacing = -6.0
 	lanes[i].label = lbl
+	SportsFinish.panel(self, lbl.position, PI, Vector2(1.16, 0.7))
 	# a panel with three buttons beside the rack, facing the thrower
 	VRBuild.box(self, Vector3(0.82, 0.2, 0.04), Vector3(x, 1.3, _rack_z() + 0.24), VRBuild.mat(Color(0.1, 0.08, 0.1), 0.5))
 	var names := ["mode", "players", "go"]
@@ -92,12 +93,12 @@ func _build_lane(i: int) -> void:
 
 func _make_axe() -> Node3D:
 	var n := Node3D.new()
-	var wood := VRBuild.mat(Color(0.5, 0.33, 0.18), 0.6)
+	var wood := VRBuild.tex_mat(load("res://assets/art/tex-wood.jpg"), 0.0, 0.58)
 	var steel := VRBuild.mat(Color(0.62, 0.64, 0.7), 0.3, 0.85)
 	var edge := VRBuild.mat(Color(0.9, 0.92, 0.95), 0.2, 0.95)
 	VRBuild.cylinder(n, 0.017, 0.40, Vector3(0, 0.1, 0), wood, 0.014, Vector3.ZERO, 10)                  # the handle, from just below the grip to the head
 	VRBuild.box(n, Vector3(0.04, 0.09, 0.05), Vector3(0, 0.26, 0.0), steel)                                  # the poll and eye of the head
-	VRBuild.box(n, Vector3(0.018, 0.11, 0.1), Vector3(0, 0.255, -0.065), steel)                              # the blade
+	VRBuild.side_panel(n, PackedVector2Array([Vector2(-0.015, 0.29), Vector2(-0.08, 0.31), Vector2(-0.12, 0.32), Vector2(-0.12, 0.19), Vector2(-0.07, 0.22), Vector2(-0.015, 0.23)]), -0.009, 0.018, steel)                              # the blade
 	VRBuild.box(n, Vector3(0.006, 0.13, 0.012), Vector3(0, 0.255, -0.118), edge)                             # the cutting edge
 	return n
 
@@ -124,6 +125,18 @@ func things() -> Array:
 		if t.can_grab() and lanes[t.lane].state == "play" and lanes[t.lane].thrown < PER_TURN and not lane_busy(axes, t.lane):
 			out.append(t)
 	return out
+
+
+func idle_things() -> Array:
+	var out: Array = []
+	for t in axes:
+		if t.can_grab() and lanes[t.lane].state != "play":
+			out.append(t)
+	return out
+
+
+func wake(t: Throwable) -> void:
+	_start(t.lane)
 
 
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:
@@ -369,7 +382,7 @@ func _text(i: int) -> void:
 	if lbl == null:
 		return
 	if s.state == "idle":
-		lbl.text = "LANE %d  •  %s\nGRAB AN AXE, STAND AT THE LINE\nPOINT AT START" % [i + 1, MODES[s.mode]]
+		lbl.text = "LANE %d  •  %s\nPOINT AT START\nTHEN GRIP AN AXE" % [i + 1, MODES[s.mode]]
 		return
 	var t := "%s  •  ROUND %d/%d\n" % [MODES[s.mode], mini(s.round + 1, ROUNDS), ROUNDS]
 	for p in range(s.players):

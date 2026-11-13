@@ -9,7 +9,7 @@ const MUS_PATH_MP3 := "res://assets/audio/mus-%s.mp3"
 ## The owner's own productions, played one after the other in the arcade (Lost Inside the Game first), then round again.
 const OWN_TRACKS := ["lostinside", "everything"]
 signal track_changed(id: String)
-const SFX_NAMES := ["click", "chime", "back", "toggle", "key", "error", "page", "pistol", "smg", "shotgun", "dmr", "burst", "hose", "rainbow",
+const SFX_NAMES := ["door-impact", "click", "chime", "back", "toggle", "key", "error", "page", "pistol", "smg", "shotgun", "dmr", "burst", "hose", "rainbow",
 	"bass", "beans", "laser", "remover", "purge", "hit", "kill", "ricochet", "bosshit", "throw", "explosion", "hurt", "breach", "pickup", "heart",
 	"goldheart", "boost1", "boost2", "boost3", "power", "switch", "target", "clear", "alarm", "warn", "doom", "mutation"]
 const MUSIC_NAMES := ["home", "story", "wave1", "wave2", "wave3", "warning", "boss", "finale", "disco", "over", "arcade"]

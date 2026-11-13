@@ -13,6 +13,17 @@ func things() -> Array:
 	return []
 
 
+## Things that are lying ready at a station that has no match running (not started yet, or finished). Taking one starts a new match there, so nobody has to find
+## and press START first.
+func idle_things() -> Array:
+	return []
+
+
+## Starts a match at the station this thing belongs to (called when it is taken from an idle station).
+func wake(_t: Throwable) -> void:
+	pass
+
+
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:
 	return hand_xf
 

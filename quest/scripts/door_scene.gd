@@ -58,11 +58,7 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	var leaf := VRBuild.pbr("wood-green", Color(0.72, 0.8, 0.72), Vector2(1.0, 1.4), 2.2)       # green washed wood door leaves
 	var inset := VRBuild.pbr("wood-green", Color(0.5, 0.56, 0.5), Vector2(1.0, 1.0), 2.6)       # the recessed panels are a shade darker
 	var brass := VRBuild.pbr("metal", Color(1, 1, 1), Vector2(1, 2), 0.9)                     # brushed metal push bars and handles
-	var glass := StandardMaterial3D.new()
-	glass.albedo_color = Color(0.5, 0.65, 0.9, 0.07)
-	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glass.roughness = 0.05
-	glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var glass := _glass_material()
 	for side in [-1, 1]:
 		var cx: float = side * (door_w / 4.0)
 		var lw := door_w / 2.0 - 0.01
@@ -118,7 +114,8 @@ func build(root: Node3D, wall_z: float, half_w: float, height: float, wood: Mate
 	exit_light.light_energy = 0.6
 	exit_light.omni_range = 2.2
 	add_child(exit_light)
-	_build_outside(font)
+	_build_scare()
+	VRBuild.merge_static(self)
 
 
 static func _art(file: String) -> Texture2D:
@@ -126,372 +123,105 @@ static func _art(file: String) -> Texture2D:
 	return t if t is Texture2D else null
 
 
-## Things that move out there so the night never sits still: drifting fog, a fire burning behind the buildings, rising embers,
-## a failing street light and a few far-off figures shuffling along the road.
-func _build_night_life() -> void:
-	var noise := FastNoiseLite.new()
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise.frequency = 0.012
-	var nt := NoiseTexture2D.new()
-	nt.noise = noise
-	nt.width = 512
-	nt.height = 256
-	nt.seamless = true
-	var fsh := Shader.new()
-	fsh.code = """
+# Smoked panes use an inexpensive view-dependent sheen, with no exterior world,
+# reflection cameras, transparent layers, particles or roaming actors.
+var allowed := true
+var _elapsed := 0.0
+var _impact := false
+var _pane_material: ShaderMaterial
+var _scare_textures: Array[Texture2D] = []
+var force_approach := false
+
+func _glass_material() -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = """
 shader_type spatial;
-render_mode unshaded, blend_mix, cull_disabled, depth_draw_never;
-uniform sampler2D noise_tex : repeat_enable;
-uniform vec2 speed = vec2(0.01, 0.0);
-uniform float strength = 0.4;
-uniform vec4 col : source_color = vec4(0.18, 0.2, 0.3, 1.0);
+render_mode cull_disabled;
 void fragment() {
-	float n = texture(noise_tex, UV * vec2(2.0, 1.0) + speed * TIME).r;
-	float m = smoothstep(0.35, 0.85, n) * strength;
-	float edge = smoothstep(0.0, 0.25, UV.y) * smoothstep(1.0, 0.7, UV.y);
-	ALBEDO = col.rgb;
-	ALPHA = m * edge;
+ float fresnel = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 3.0);
+ float streak = (1.0 - smoothstep(0.0, 0.10, abs(UV.x - UV.y * 0.32 - 0.28)));
+ ALBEDO = vec3(0.025, 0.045, 0.065) + vec3(0.06, 0.10, 0.13) * (fresnel + streak * 0.3);
+ ROUGHNESS = 0.24;
+ METALLIC = 0.65;
+ SPECULAR = 0.6;
 }
 """
-	for i in range(5):
-		var fm := ShaderMaterial.new()
-		fm.shader = fsh
-		fm.set_shader_parameter("noise_tex", nt)
-		fm.set_shader_parameter("speed", Vector2(0.012 + i * 0.004, 0.0) * (1.0 if i % 2 == 0 else -1.0))
-		fm.set_shader_parameter("strength", 0.55)
-		var q := VRBuild.quad(self, Vector2(60, 5.5), Vector3(0, 1.4 + i * 0.25, -2.5 - i * 4.0), fm)
-		q.set_meta("dynamic", true)
-	# the fire behind the buildings: a big soft orange glow and a light that flickers like flames
-	var gtex := GradientTexture2D.new()
-	var gg := Gradient.new()
-	gg.colors = PackedColorArray([Color(1.0, 0.55, 0.15, 0.95), Color(0.9, 0.3, 0.05, 0.4), Color(0.5, 0.1, 0.0, 0.0)])
-	gg.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
-	gtex.gradient = gg
-	gtex.fill = GradientTexture2D.FILL_RADIAL
-	gtex.fill_from = Vector2(0.5, 0.5)
-	gtex.fill_to = Vector2(1.0, 0.5)
-	var fire_mat := StandardMaterial3D.new()
-	fire_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	fire_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	fire_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	fire_mat.albedo_texture = gtex
-	_fire_glow = VRBuild.quad(self, Vector2(16, 12), Vector3(9.0, 5.0, -26.5), fire_mat)
-	_fire_glow.set_meta("dynamic", true)
-	_fire_mat = fire_mat
-	_fire_light = OmniLight3D.new()
-	_fire_light.position = Vector3(9.0, 4.0, -20.0)
-	_fire_light.light_color = Color(1.0, 0.5, 0.18)
-	_fire_light.light_energy = 1.5
-	_fire_light.omni_range = 30.0
-	add_child(_fire_light)
-	# embers drifting up from it
-	_embers = CPUParticles3D.new()
-	_embers.position = Vector3(9.0, 7.0, -24.0)
-	_embers.amount = 60
-	_embers.lifetime = 7.0
-	_embers.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	_embers.emission_box_extents = Vector3(3.0, 0.3, 1.5)
-	_embers.direction = Vector3(-0.3, 1.0, 0.2)
-	_embers.spread = 25.0
-	_embers.initial_velocity_min = 0.6
-	_embers.initial_velocity_max = 1.6
-	_embers.gravity = Vector3(0.1, 0.05, 0)
-	_embers.scale_amount_min = 0.5
-	_embers.scale_amount_max = 1.3
-	var em := QuadMesh.new()
-	em.size = Vector2(0.07, 0.07)
-	var emm := StandardMaterial3D.new()
-	emm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	emm.albedo_color = Color(1.0, 0.55, 0.15)
-	emm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	emm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	emm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	em.material = emm
-	_embers.mesh = em
-	add_child(_embers)
-	# a street light that is failing: it dips and gutters, now and then goes out
-	_lamp = OmniLight3D.new()
-	_lamp.position = Vector3(-4.2, 4.2, -9.0)
-	_lamp.light_color = Color(0.85, 0.9, 1.0)
-	_lamp.light_energy = 1.4
-	_lamp.omni_range = 9.0
-	add_child(_lamp)
-	var pole := VRBuild.mat(Color(0.03, 0.03, 0.04), 0.6)
-	VRBuild.cylinder(self, 0.06, 4.2, Vector3(-4.2, 2.1, -9.0), pole, -1.0, Vector3.ZERO, 8)
-	_lamp_bulb = VRBuild.mat(Color(1.0, 1.0, 1.0), 0.4, 0.0, 4.0)
-	_lamp_bulb.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	VRBuild.box(self, Vector3(0.5, 0.08, 0.22), Vector3(-4.2, 4.22, -9.0), _lamp_bulb)
-	# far-off figures: small, grey in the fog, shuffling along the far pavement, never close
-	for i in range(4):
-		var dm := ShaderMaterial.new()
-		dm.shader = zombie_mat_sh.shader
-		dm.set_shader_parameter("tex", load("res://assets/art/" + SHAPES[(i * 3) % SHAPES.size()]))
-		dm.set_shader_parameter("fog", 0.75)
-		var wq := VRBuild.quad(self, Vector2(1.7, 1.7), Vector3(0, 0.9, -13.0 - i * 2.2), dm)
-		wq.set_meta("dynamic", true)
-		_walkers.append({"node": wq, "mat": dm, "x": randf_range(-11.0, 11.0), "dir": 1.0 if i % 2 == 0 else -1.0, "speed": randf_range(0.25, 0.5), "z": -13.0 - i * 2.2, "ph": randf() * 6.0})
+	_pane_material = ShaderMaterial.new()
+	_pane_material.shader = shader
+	return _pane_material
 
-
-func _build_outside(font: Font) -> void:
-	RuinedExterior.build(self)
-	# the night sky and moon
-	var sky := StandardMaterial3D.new()
-	sky.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	var gt := GradientTexture2D.new()
-	var g := Gradient.new()
-	g.colors = PackedColorArray([Color(0.0, 0.0, 0.015), Color(0.012, 0.02, 0.07), Color(0.04, 0.05, 0.13)])
-	g.offsets = PackedFloat32Array([0.0, 0.6, 1.0])
-	gt.gradient = g
-	gt.fill_from = Vector2(0, 0)
-	gt.fill_to = Vector2(0, 1)
-	sky.albedo_texture = gt
-	VRBuild.quad(self, Vector2(220, 80), Vector3(0, 30, -60), sky)
-	var moon := VRBuild.mat(Color(0.85, 0.9, 1.0), 0.5, 0.0, 3.0)
-	moon.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	VRBuild.sphere(self, 1.8, Vector3(-14, 22, -55), moon, 20)
-
-	# a porch light just outside the door, so whatever passes the glass is a black shape against a pool of cold light
-	var haze := StandardMaterial3D.new()
-	haze.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	haze.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	haze.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	var rt := GradientTexture2D.new()
-	var rg := Gradient.new()
-	rg.colors = PackedColorArray([Color(0.8, 0.9, 1.0, 0.8), Color(0.3, 0.4, 0.75, 0.0)])
-	rt.gradient = rg
-	rt.fill = GradientTexture2D.FILL_RADIAL
-	rt.fill_from = Vector2(0.5, 0.5)
-	rt.fill_to = Vector2(1.0, 0.5)
-	haze.albedo_texture = rt
-	glow_mat = haze
-	VRBuild.quad(self, Vector2(4.2, 3.2), Vector3(0, 1.25, -1.35), haze)
-	var bulb := VRBuild.mat(Color(0.9, 0.95, 1.0), 0.4, 0.0, 4.0)
-	bulb.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	VRBuild.box(self, Vector3(0.5, 0.06, 0.2), Vector3(0, 2.75, -0.45), bulb)
-	var porch := OmniLight3D.new()
-	porch.position = Vector3(0, 2.4, -0.9)
-	porch.light_color = Color(0.75, 0.85, 1.0)
-	porch.light_energy = 0.45
-	porch.omni_range = 5.0
-	add_child(porch)
-	var zsh := Shader.new()
-	zsh.code = """
+func _build_scare() -> void:
+	for file in ["zombie-brute.webp", "zombie-berserker.webp", "zombie-toxic.webp"]:
+		_scare_textures.append(_art(file))
+	var shader := Shader.new()
+	shader.code = """
 shader_type spatial;
-render_mode unshaded, cull_disabled, depth_draw_opaque;
+render_mode unshaded, cull_disabled;
 uniform sampler2D tex : source_color, filter_linear_mipmap;
-uniform vec4 fog_col : source_color = vec4(0.05, 0.07, 0.12, 1.0);
-uniform vec4 rim_col : source_color = vec4(0.9, 0.35, 0.1, 1.0);
-uniform float rim = 0.0;
-uniform float fog = 0.0;
-uniform float sway = 0.0;
-uniform float lunge = 0.0;
-uniform float t = 0.0;
-varying float vy;
-void vertex() {
-	float top = 1.0 - UV.y;
-	VERTEX.x += sway * top * top * 0.22 + sin(t * 3.0 + top * 4.0) * 0.012 * top;
-	VERTEX.y += sin(t * 5.0) * 0.01 * top;
-	vy = top;
-}
+uniform float reveal = 0.0;
+varying vec3 local_pos;
+void vertex() { local_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
 void fragment() {
-	vec4 c = texture(tex, UV);
-	if (c.a < 0.35) discard;
-	// dark silhouette: just a faint glint along the edge where the fire behind the buildings catches it
-	float edge = 1.0 - c.a;
-	vec3 body = mix(vec3(0.0), fog_col.rgb, fog);
-	float glint = smoothstep(0.35, 0.9, texture(tex, UV + vec2(0.012, 0.0)).a) - smoothstep(0.35, 0.9, texture(tex, UV - vec2(0.012, 0.0)).a);
-	body += rim_col.rgb * clamp(glint, 0.0, 1.0) * 0.5 * (1.0 - fog) * rim;
-	ALBEDO = body;
+ vec4 c = texture(tex, UV);
+ // Keep the apparition within the glazed opening, never through the timber.
+ if (c.a < 0.5 || local_pos.y < 1.0 || local_pos.y > 2.25 || abs(local_pos.x) > 0.95 || abs(local_pos.x) < 0.08) discard;
+ ALBEDO = c.rgb * reveal;
 }
 """
 	zombie_mat_sh = ShaderMaterial.new()
-	zombie_mat_sh.shader = zsh
-	zombie = VRBuild.quad(self, Vector2(1.6, 1.6), Vector3(8, 1.0, -0.6), zombie_mat_sh)
-	zombie.visible = false
+	zombie_mat_sh.shader = shader
+	zombie_mat_sh.set_shader_parameter("tex", _scare_textures[0])
+	zombie = VRBuild.quad(self, Vector2(1.6, 1.6), Vector3(0, 1.5, 0.012), zombie_mat_sh)
 	zombie.set_meta("dynamic", true)
-	VRBuild.merge_static(self)
-	_build_night_life()
-
+	zombie.visible = false
+	_timer = randf_range(90.0, 180.0)
 
 func _process(delta: float) -> void:
-	_time += delta
-	_night(delta)
 	if zombie == null:
+		return
+	if not allowed:
+		if _walking:
+			_end_pass()
 		return
 	if not _walking:
 		_timer -= delta
 		if _timer <= 0.0:
 			_start_pass()
 		return
-	zombie_mat_sh.set_shader_parameter("t", _time)
-	if _pause > 0.0:
-		zombie.position = Vector3(_x, _y, _z)
+	_elapsed += delta
+	# Silent irregular pause, 140 ms reveal/lunge, a single impact, then withdraw.
+	var t := _elapsed - _pause
+	if t < 0.0:
 		return
-	match _kind:
-		"approach":
-			_approach(delta)
-		_:
-			_pass_by(delta)
-
-
-## The slow one: it comes out of the dark at the far end of the road, shambling toward the glass, stops right outside it,
-## jerks closer, slams and then goes back into the fog.
-func _approach(delta: float) -> void:
-	_appr += delta
-	var t := _appr
-	var walk := 3.2                       # seconds of walking
-	var k := clampf(t / walk, 0.0, 1.0)
-	var near := 0.62
-	if t < walk:
-		var e := k * k * (3.0 - 2.0 * k)
-		_z = lerpf(-11.0, -near, e * 0.98 + k * 0.02)
-		var step := sin(t * 5.2)
-		zombie.position = Vector3(_x + sin(t * 1.3) * 0.25 + step * 0.03, _y + absf(step) * 0.05, _z)
-		zombie.rotation.z = sin(t * 2.6) * 0.07 + 0.06 * sin(t * 5.2)
-		zombie_mat_sh.set_shader_parameter("sway", sin(t * 2.6) * 0.5)
-		zombie_mat_sh.set_shader_parameter("fog", clampf(1.0 - (_z + 11.0) / 8.0, 0.0, 0.85))
-		(zombie.mesh as QuadMesh).size = Vector2.ONE * (_size * (0.45 + 0.55 * clampf((_z + 11.0) / 10.4, 0.0, 1.0)))
-	elif t < walk + 1.0:
-		# it stops, head hanging; a long beat of stillness
-		zombie.position = Vector3(_x, _y, -near)
-		zombie.rotation.z = sin(t * 9.0) * 0.012
-		zombie_mat_sh.set_shader_parameter("sway", sin(t * 1.4) * 0.1)
-		zombie_mat_sh.set_shader_parameter("fog", 0.0)
-	elif t < walk + 1.45:
-		# the lunge at the glass
-		var j := (t - walk - 1.0) / 0.45
-		zombie.position = Vector3(_x, _y - 0.03 * j, -near + 0.38 * j)
-		(zombie.mesh as QuadMesh).size = Vector2.ONE * (_size * (1.0 + 0.9 * j * j))
-		zombie.rotation.z = sin(t * 38.0) * 0.05 * j
-		zombie_mat_sh.set_shader_parameter("sway", 0.0)
-		if not _stopped:
-			_stopped = true
-			scare.emit("stare")
-	elif t < walk + 3.1:
-		# it hammers on the glass, shaking, then drags itself back
-		var j2 := t - walk - 1.45
-		zombie.position = Vector3(_x + sin(t * 55.0) * 0.045 * maxf(0.0, 1.0 - j2), _y - 0.03, -near + 0.38 - 0.1 * j2)
-		zombie.rotation.z = sin(t * 30.0) * 0.04 * maxf(0.0, 1.0 - j2)
-	else:
-		var j3 := (t - walk - 3.1) / 1.2
-		zombie.position = Vector3(_x, _y, -near + 0.28 - 9.0 * j3 * j3)
-		zombie_mat_sh.set_shader_parameter("fog", clampf(j3, 0.0, 0.9))
-		(zombie.mesh as QuadMesh).size = Vector2.ONE * (_size * (1.9 - 1.2 * j3))
-		if j3 >= 1.0:
-			_end_pass()
-
-
-## The others cross the glass at speed. The picture faces the viewer, so it leans into its run and lurches instead of sliding.
-func _pass_by(delta: float) -> void:
-	_x += _dir * _speed * delta
-	var step := sin(_time * (13.0 if _speed > 5.0 else 6.5))
-	zombie.position = Vector3(_x, _y + absf(step) * (0.07 if _kind != "crawl" else 0.025), _z)
-	zombie.rotation.z = -_dir * (0.22 if _speed > 5.0 else 0.12) + step * 0.06
-	zombie_mat_sh.set_shader_parameter("sway", -_dir * (0.6 + 0.4 * step))
-	zombie_mat_sh.set_shader_parameter("fog", 0.3)
-	if absf(_x) > 6.2 and signf(_x) == _dir:
+	var arrival := clampf(t / 0.14, 0.0, 1.0)
+	var retreat := clampf((t - 0.65) / 0.35, 0.0, 1.0)
+	zombie.visible = true
+	zombie.scale = Vector3.ONE * lerpf(0.45, 1.45, arrival * arrival) * (1.0 - retreat * 0.6)
+	zombie.position = Vector3(_x, 1.55 - arrival * 0.08, 0.012)
+	zombie.rotation.z = _dir * (0.16 - arrival * 0.1)
+	zombie_mat_sh.set_shader_parameter("reveal", (0.05 + arrival * 0.9) * (1.0 - retreat))
+	if arrival >= 1.0 and not _impact:
+		_impact = true
+		scare.emit("stare")
+	if t >= 1.0:
 		_end_pass()
 
+func _start_pass() -> void:
+	_walking = true
+	_elapsed = 0.0
+	_impact = false
+	_pause = randf_range(0.1, 0.8)
+	_dir = -1.0 if randf() < 0.5 else 1.0
+	_x = _dir * randf_range(0.12, 0.4)
+	zombie_mat_sh.set_shader_parameter("tex", _scare_textures.pick_random())
 
 func _end_pass() -> void:
 	_walking = false
 	zombie.visible = false
-	if _burst > 0:
-		_burst -= 1
-		_timer = randf_range(0.6, 2.2)
-	else:
-		_timer = randf_range(25.0, 80.0)
+	_timer = randf_range(150.0, 360.0)
 
-
-## Everything out there that moves by itself.
-func _night(delta: float) -> void:
-	if _fire_light != null:
-		var f := 0.8 + 0.2 * sin(_time * 7.0) + 0.12 * sin(_time * 13.3 + 1.0) + 0.1 * sin(_time * 3.1)
-		_fire_light.light_energy = 1.5 * f
-		_fire_mat.albedo_color = Color(1, 1, 1, clampf(0.65 + 0.3 * f, 0.0, 1.0))
-	if _lamp != null:
-		_lamp_out = maxf(0.0, _lamp_out - delta)
-		if _lamp_out <= 0.0 and randf() < delta * 0.06:
-			_lamp_out = randf_range(0.15, 1.1)
-		var flick := 1.0 if int(_time * 23.0) % 5 != 0 else 0.55
-		var level := 0.0 if _lamp_out > 0.0 and int(_time * 40.0) % 3 != 0 else flick
-		_lamp.light_energy = 1.4 * level
-		_lamp_bulb.emission_energy_multiplier = 4.0 * level
-		_lamp_bulb.albedo_color = Color(1, 1, 1) * (0.25 + 0.75 * level)
-	for w in _walkers:
-		w.x += w.dir * w.speed * delta
-		if absf(w.x) > 13.0:
-			w.dir = -w.dir
-			w.x = clampf(w.x, -13.0, 13.0)
-		var step := sin(_time * 3.0 + w.ph)
-		(w.node as MeshInstance3D).position = Vector3(w.x, 0.9 + absf(step) * 0.03, w.z)
-		(w.node as MeshInstance3D).rotation.z = -w.dir * 0.1 + step * 0.04
-		(w.mat as ShaderMaterial).set_shader_parameter("sway", -w.dir * 0.4 * step)
-		(w.mat as ShaderMaterial).set_shader_parameter("t", _time + w.ph)
-
-
-## Development: freeze a zombie of the given picture in front of the glass.
 func debug_show(file: String, at_x := 0.0, size := 1.9) -> void:
-	_walking = true
-	_pause = 9999.0
-	_kind = "dash"
-	zombie_mat_sh.set_shader_parameter("tex", load("res://assets/art/" + file))
-	(zombie.mesh as QuadMesh).size = Vector2(size, size)
+	_start_pass()
+	zombie_mat_sh.set_shader_parameter("tex", _art(file))
 	_x = at_x
-	_y = 0.95
-	_z = -0.7
-	zombie.scale = Vector3.ONE
-	zombie.visible = true
-
-
-func _start_pass() -> void:
-	_walking = true
-	_dir = 1.0 if randf() < 0.5 else -1.0
-	var r := randf()
-	_kind = "approach" if force_approach else ("dash" if r < 0.8 else ("crawl" if r < 0.9 else "tall"))
-	var file: String = SHAPES[randi() % SHAPES.size()]
-	zombie_mat_sh.set_shader_parameter("tex", load("res://assets/art/" + file))
-	_size = 1.5 + randf() * 0.6
-	_z = randf_range(-0.55, -0.9)
-	_y = 0.9
-	_speed = randf_range(9.5, 13.0)
-	_stopped = false
-	_appr = 0.0
-	match _kind:
-		"approach":
-			_x = randf_range(-0.7, 0.7)
-			_size = 1.9
-		"crawl":
-			_speed = randf_range(3.2, 4.5)
-			_size *= 0.75
-			_y = 0.55
-		"tall":
-			_size = 2.4 + randf() * 0.4
-			_y = 1.25
-			_speed = randf_range(5.0, 7.0)
-	if _kind != "approach":
-		_x = -6.0 * _dir
-	(zombie.mesh as QuadMesh).size = Vector2(_size, _size)
-	zombie.scale = Vector3.ONE
-	zombie.rotation = Vector3.ZERO
-	zombie.position = Vector3(_x, _y, _z)
-	zombie.visible = true
 	_pause = 0.0
-	if randf() < 0.22 and _kind != "approach":
-		_burst = 1
-	scare.emit("approach" if _kind == "approach" else _kind)
-
-
-var _size := 1.8
-var force_approach := false
-var _y := 0.9
-var _z := -0.7
-var _fire_glow: MeshInstance3D
-var _fire_mat: StandardMaterial3D
-var _fire_light: OmniLight3D
-var _embers: CPUParticles3D
-var _lamp: OmniLight3D
-var _lamp_bulb: StandardMaterial3D
-var _walkers: Array = []
-var _lamp_out := 0.0
-var _appr := 0.0

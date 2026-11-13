@@ -93,7 +93,10 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 
 
 func _art(file: String, fallback: Texture2D) -> Texture2D:
-	var t = load("res://assets/art/" + file)
+	var path := "res://assets/art/" + file
+	if not ResourceLoader.exists(path):
+		return fallback
+	var t = load(path)
 	return t if t != null else fallback
 
 
@@ -343,8 +346,8 @@ func _back_wall(root: Node3D, font: Font) -> void:
 	vending.position = Vector3(1.8, 0, 0.02)        # beside the door, inside on the right
 	vending.rotation.y = 0.0
 	root.add_child(vending)
-	vending.build(font)
-	blockers.append([vending.position.x, vending.position.z, 0.75])
+	vending.process_mode = Node.PROCESS_MODE_DISABLED
+	vending.visible = false
 
 
 func _decor(root: Node3D, font: Font) -> void:
@@ -356,8 +359,8 @@ func _decor(root: Node3D, font: Font) -> void:
 	jukebox.position = Vector3(3.3, 0, BACK_Z - 0.4)
 	jukebox.rotation.y = PI
 	root.add_child(jukebox)
-	jukebox.build(font)
-	blockers.append([jukebox.position.x, jukebox.position.z - 0.1, 0.55, 0.05])
+	jukebox.process_mode = Node.PROCESS_MODE_DISABLED
+	jukebox.visible = false
 	# the avatar locker: a machine in its own right, right beside the door on the left as you come in, facing the room with a glowing patch of floor in front
 	skins = SkinMachine.new()
 	skins.position = Vector3(-1.85, 0, -0.07)
@@ -389,7 +392,10 @@ func _frame(root: Node3D, t: Texture2D, pos: Vector3, side: float) -> void:
 
 ## A glowing neon tube sign on a wall (yaw turns it to face into the room).
 func _neon_sign(root: Node3D, file: String, pos: Vector3, yaw: float, size: Vector2) -> void:
-	var t = load("res://assets/art/" + file)
+	var path := "res://assets/art/" + file
+	if not ResourceLoader.exists(path):
+		return
+	var t = load(path)
 	if t == null:
 		return
 	var m := VRBuild.tex_mat(t, 0.0, 0.5, true)
@@ -447,8 +453,6 @@ func _spots() -> void:
 	spots.append(["pinball", "PINBALL", pinball.stand_world(), pinball.look_world(), Color(1.0, 0.85, 0.2)])
 	spots.append(["pinball2", "PINBALL", pinball2.stand_world(), pinball2.look_world(), Color(1.0, 0.85, 0.2)])
 	spots.append(["hall", "HALL OF FAME", Vector3(-2.2, 0, 5.95), Vector3(-HALF_W, 1.7, 5.95), Color(1.0, 0.82, 0.25)])
-	spots.append(["vending", "SNACKS", Vector3(1.8, 0, 1.3), Vector3(vending.position.x, 1.0, vending.position.z), Color(1.0, 0.45, 0.4)])
-	spots.append(["jukebox", "JUKEBOX", Vector3(3.3, 0, BACK_Z - 1.5), Vector3(jukebox.position.x, 1.2, jukebox.position.z), Color(1.0, 0.7, 0.3)])
 	spots.append(["skins", "AVATAR LOCKER", Vector3(-1.85, 0, 1.0), Vector3(-1.85, 1.3, -0.1), Color(0.3, 0.9, 1.0)])
 	spots.append(["lounge", "LOUNGE", ARC_CENTRE + Vector3(0, 0, -1.7), ARC_CENTRE + Vector3(0, 0.4, 0), Color(1.0, 0.45, 0.85)])
 	spots.append(["exit", "EXIT", Vector3(0, 0, 0.75), Vector3(0, 1.4, FRONT_Z), Color(0.3, 1.0, 0.45)])
@@ -480,12 +484,6 @@ func collide(p: Vector3) -> Vector3:
 
 
 func animate(t: float) -> void:
-	for f in flickers:
-		if f[4] == _active:
-			continue
-		var m: StandardMaterial3D = f[0]
-		var k: float = 0.78 + 0.22 * sin(t * f[2] + f[3]) + (0.06 if int(t * 7.0 + f[3]) % 17 == 0 else 0.0)
-		m.albedo_color = Color(k, k, k)
 	if ball_mat_spin != null:
 		ball_mat_spin.rotation.y = t * 0.4
 	for l in sign_labels:

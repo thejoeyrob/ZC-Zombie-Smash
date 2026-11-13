@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "handtilt": 0, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "headset", "scares": "on", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -146,10 +146,8 @@ func _ready() -> void:
 	room.pinball2.table.best = progress.pinball_best
 	room.pinball2.table.bonus_balls = progress.codes.has("pinball")
 	room.pinball2.sound.connect(_on_pinball_sound)
-	room.vending.code_entered.connect(_on_code)
-	room.vending.key_pressed.connect(func(k, ok): audio.sfx("key" if ok else "error", 0.7, 0.0, room.vending.global_position + Vector3(0, 1.3, 0.5)); _haptic(-1, 0.2, 0.03))
 	room.pinball.sound.connect(_on_pinball_sound)
-	room.door.scare.connect(func(kind): audio.sfx("doom" if kind != "stare" else "warn", 0.45, 0.0, Vector3(0, 1.4, -0.6)))
+	room.door.scare.connect(func(_kind): audio.sfx("door-impact", 0.7, 0.06, Vector3(0, 1.55, ArcadeRoom.FRONT_Z)))
 	room.prize_wall.grabbed.connect(func(_i, open): audio.sfx("pickup" if open else "switch", 0.7); _haptic(1, 0.35, 0.05))
 	room.prize_wall.dropped.connect(func(_i): audio.sfx("toggle", 0.6))
 	_build_hands()
@@ -216,8 +214,6 @@ func _ready() -> void:
 	audio.set_volumes(float(settings.music), float(settings.effects))
 	cab.set_topper_color(VRMenu.TOPPERS[settings.topper])
 	audio.play_music("ambient", 0.01)
-	room.jukebox.command.connect(_on_jukebox)
-	audio.track_changed.connect(room.jukebox.show_track)
 	screen.best = best
 	if not xr_on:
 		_setup_desktop_camera()
@@ -379,14 +375,17 @@ func _load_settings() -> void:
 			settings.handroll = int(settings.handroll)
 			settings.handtilt = int(settings.handtilt)
 	# Preserve headset clarity: a previously saved adaptive quality value must not silently downgrade the image.
-	settings.smooth = "off"
+	if int(settings.get("ver", 0)) < 3:
+		settings.resolution = "headset"
+		settings.smooth = "on"
+		settings.foveation = "low"
 	# Settings saved by older builds: the old default of 130% picture size is more than the headset can draw in the bigger room (it made the picture soft and
 	# the movement judder), so those start again at 100% and a steady 72 Hz. Anything the player sets from now on is kept.
 	if int(settings.get("ver", 0)) < 2:
 		settings.sharp = 1.0
 		settings.refresh = "72"
-		settings.ver = 2
-		_save_settings()
+	settings.ver = 3
+	_save_settings()
 
 
 func _save_settings() -> void:
@@ -412,10 +411,10 @@ func _on_setting(key: String, value) -> void:
 			_apply_skin(str(value))
 		"body":
 			avatar.set_body_mode(str(value))
-		"sharp":
+		"sharp", "resolution":
 			_apply_sharpness()
 		"glow":
-			room.env.glow_enabled = value == "on"
+			_apply_tier()
 		"smooth":
 			q_tier = 0
 			_apply_tier()
@@ -449,11 +448,9 @@ func _apply_sharpness() -> void:
 
 
 ## ---- keeping the picture smooth ---------------------------------------------------------------------------------------------
-## The headset must draw a new picture every 1/72 of a second. If it falls behind, the picture judders. So the game watches how long
-## frames take and, when they run long, steps the picture quality down a notch (a little less sharp, then lighter edge smoothing);
-## when there is plenty of room it steps back up, never past the player's own Sharpness setting.
-## Off unless the player turns it on. It only ever softens the picture a little (never below 1.0 and the edge smoothing stays at 4x), because a
-## clear picture matters more than a perfect frame rate. Left on automatically it once spiralled down to a blurry, jagged picture.
+## Adaptive lighting preserves requested resolution and 4x MSAA. Two seconds over
+## budget remove bloom, then secondary hall lights; thirty stable seconds restore
+## one tier. Resolution ownership is explicit so QGO is never multiplied by default.
 const TIERS := [{"sharp": 1.3, "msaa": 4}, {"sharp": 1.15, "msaa": 4}, {"sharp": 1.0, "msaa": 4}]
 var q_tier := 0
 var fps_now := 0.0
@@ -476,6 +473,8 @@ var _eye_base_w := 0.0
 
 
 func _eye_multiplier(iface) -> float:
+	if str(settings.get("resolution", "headset")) == "headset":
+		return 1.0
 	var want := _tier_sharp()
 	if _eye_base_w <= 0.0:
 		var prev: float = iface.render_target_size_multiplier
@@ -507,10 +506,7 @@ func _apply_refresh() -> void:
 
 
 func _tier_sharp() -> float:
-	var want := clampf(float(settings.sharp), 0.7, 1.6)
-	if str(settings.smooth) != "on":
-		return want
-	return minf(want, float(TIERS[clampi(q_tier, 0, TIERS.size() - 1)].sharp))
+	return clampf(float(settings.sharp), 1.0, 1.6)
 
 
 func _apply_tier() -> void:
@@ -518,12 +514,18 @@ func _apply_tier() -> void:
 		return
 	var iface := XRServer.find_interface("OpenXR")
 	if iface != null:
-		iface.render_target_size_multiplier = _eye_multiplier(iface)
+		var multiplier := _eye_multiplier(iface)
+		if not is_equal_approx(iface.render_target_size_multiplier, multiplier):
+			iface.render_target_size_multiplier = multiplier
 		# foveation draws the edges of your view at lower detail; the Display page can turn it down or off to see if it is what looks soft
 		var fov := str(settings.get("foveation", "app"))
-		if fov != "app" and "foveation_level" in iface:
+		if "foveation_level" in iface:
 			iface.foveation_level = {"off": 0, "low": 1, "high": 3}.get(fov, 1)
-			iface.foveation_dynamic = false
+			iface.foveation_dynamic = fov == "app"
+	room.env.glow_enabled = str(settings.glow) == "on" and (str(settings.smooth) != "on" or q_tier == 0)
+	for i in range(room.sports.annex.lights.size()):
+		var light: OmniLight3D = room.sports.annex.lights[i]
+		light.visible = str(settings.smooth) != "on" or q_tier < 2 or i % 2 == 1
 	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
 	var msaa := int(t.msaa) if str(settings.smooth) == "on" else 4
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
@@ -567,25 +569,25 @@ func _perf_tick(delta: float) -> void:
 	_perf_n = 0
 	_perf_t = 0.0
 	if fps_label != null and fps_label.visible:
-		fps_label.text = "%d fps  base %d  %s  fov %s" % [int(round(fps_now)), int(_eye_base_w), _eye_size(), str(settings.get("foveation", "app"))]
+		fps_label.text = "%d fps  %s px  edge %s" % [int(round(fps_now)), _eye_size(), str(settings.get("foveation", "app"))]
 	if not xr_on or str(settings.smooth) != "on" or _perf_age < 8.0:
 		return
-	if avg > 0.0158 and q_tier < TIERS.size() - 1:       # slower than about 63 frames a second
+	var hz := float(settings.get("refresh", "72"))
+	var iface := XRServer.find_interface("OpenXR")
+	if iface != null and "display_refresh_rate" in iface:
+		hz = float(iface.display_refresh_rate)
+	var budget := 1.0 / maxf(hz, 72.0)
+	if avg > budget * 1.12 and q_tier < TIERS.size() - 1:       # slower than about 63 frames a second
 		_slow_s += 1.0
 		_fast_s = 0.0
 		if _slow_s >= 2.0:
 			_slow_s = 0.0
 			q_tier += 1
 			_apply_tier()
-	elif avg < 0.0128:                                    # comfortably faster than 72
+	elif avg <= budget * 1.04:                                    # comfortably faster than 72
 		_slow_s = 0.0
 		_fast_s += 1.0
-		var ceiling := 0
-		for i in range(TIERS.size()):
-			if float(TIERS[i].sharp) <= float(settings.sharp) + 0.001:
-				ceiling = i
-				break
-		if _fast_s >= 12.0 and q_tier > ceiling:
+		if _fast_s >= 30.0 and q_tier > 0:
 			_fast_s = 0.0
 			q_tier -= 1
 			_apply_tier()
@@ -899,6 +901,7 @@ func _process(delta: float) -> void:
 	_perf_tick(delta)
 	if xr_on and int(clock * 2.0) != int((clock - delta) * 2.0):
 		_fix_poses()
+	room.door.allowed = str(settings.get("scares", "on")) == "on" and not menu.open and not locked and _head_floor().z < 5.0
 	room.animate(clock)
 	room.prize_wall.animate(delta)
 	selector.relabel("dice", "ROLL" if room.board_game.hint() == "ROLL" else "")
@@ -1172,15 +1175,6 @@ func _world_inputs(hs: Array) -> void:
 	for i in range(hs.size()):
 		tips.append(hs[i].tip)
 		palms.append(hs[i].palm)
-		var k: String = room.vending.key_at(hs[i].tip)
-		if k != "" and k != _key_last[i] and not menu.open:
-			room.vending.press(k)
-		_key_last[i] = k
-	for i2 in range(hs.size()):
-		var jb: String = room.jukebox.button_at(hs[i2].tip)
-		if jb != "" and jb != _jb_last[i2] and not menu.open:
-			room.jukebox.press(jb)
-		_jb_last[i2] = jb
 	var d1 := _head_floor().distance_to(room.pinball.stand_world())
 	var d2 := _head_floor().distance_to(room.pinball2.stand_world())
 	var near: bool = d1 < 1.5 and d1 <= d2 and not menu.open and not locked and (social == null or social.owns("pinball"))
@@ -2065,8 +2059,6 @@ func _run_tour() -> void:
 		[Vector3(-1.8, 2.4, 14.0), Vector3(-0.5, 1.2, 20.5), 3.5, 3.0],
 		[Vector3(-0.5, 1.7, 8.2), Vector3(-3.9, 1.7, 6.2), 3.5, 2.5],                                # back through to the Hall of Fame bay
 		[Vector3(-2.0, 1.65, 5.2), Vector3(-3.95, 1.72, 5.95), 3.0, 3.5],
-		[Vector3(3.0, 1.6, 5.1), room.jukebox.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
-		[Vector3(1.3, 1.6, 1.6), room.vending.global_position + Vector3(0, 1.2, 0), 3.0, 2.5],
 		[Vector3(-1.2, 1.7, 1.0), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.6, 0), 3.5, 2.5, "sit0"],
 		[ArcadeRoom.ARC_CENTRE + Vector3(0, 1.38, -0.62), ArcadeRoom.ARC_CENTRE + Vector3(0, 0.95, 0.05), 3.0, 14.0, "dice"],
 		[Vector3(1.7, 1.1, 3.9), ArcadeRoom.ARC_CENTRE + Vector3(0, 1.0, 0), 3.0, 3.0],

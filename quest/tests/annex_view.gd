@@ -14,6 +14,9 @@ var views := [
 ]
 
 func _initialize() -> void:
+	_build.call_deferred()
+
+func _build() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0:
 		prefix = args[0]

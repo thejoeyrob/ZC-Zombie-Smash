@@ -57,7 +57,13 @@ func set_active(on: bool) -> void:
 func _shell() -> void:
 	var cz := (Z0 + Z1) / 2.0
 	var floor_m := VRBuild.pbr("tiles-bw", Color(0.62, 0.62, 0.68), Vector2(HALF_W * 2.0 / 1.6, DEPTH / 1.6), 0.9)
-	VRBuild.quad(node, Vector2(HALF_W * 2.0, DEPTH), Vector3(0, 0, cz), floor_m, Vector3(-PI / 2, 0, 0))
+	SportsFinish.floor_piece(node, -HALF_W, HALF_W, Z0, FOUL_Z, floor_m)
+	var left := -HALF_W
+	for centre in LANE_X:
+		var edge: float = centre - LANE_W / 2.0 - GUTTER_W
+		SportsFinish.floor_piece(node, left, edge, FOUL_Z, Z1, floor_m)
+		left = centre + LANE_W / 2.0 + GUTTER_W
+	SportsFinish.floor_piece(node, left, HALF_W, FOUL_Z, Z1, floor_m)
 	var ceil_m := VRBuild.pbr("tiles", Color(0.2, 0.2, 0.28), Vector2(HALF_W * 2.0 / 2.4, DEPTH / 2.4), 0.8)
 	VRBuild.quad(node, Vector2(HALF_W * 2.0, DEPTH), Vector3(0, HEIGHT, cz), ceil_m, Vector3(PI / 2, 0, 0))
 	var brick := VRBuild.pbr("brick-light", Color(0.55, 0.42, 0.4), Vector2(1, 1), 1.2)
@@ -129,7 +135,7 @@ func _lobby_signs() -> void:
 
 # ---- darts ---------------------------------------------------------------------------------------------
 func _darts_scenery() -> void:
-	_neon("neon-darts.png", Vector3(-HALF_W + 0.04, 2.95, (DART_Z[0] + DART_Z[1]) / 2.0), PI / 2.0, 0.72)       # DARTS in red tube with a dartboard and dart
+	_neon("neon-darts.png", Vector3(-HALF_W + 0.04, 3.13, (DART_Z[0] + DART_Z[1]) / 2.0), PI / 2.0, 0.4)       # DARTS in red tube with a dartboard and dart
 	var wood := VRBuild.mat(Color(0.12, 0.07, 0.05), 0.5)
 	var rubber := VRBuild.mat(Color(0.05, 0.05, 0.06), 0.8)
 	for bz in DART_Z:
@@ -144,6 +150,7 @@ func _darts_scenery() -> void:
 		face.alpha_scissor_threshold = 0.5
 		VRBuild.cylinder(node, 0.225, 0.04, Vector3(DART_FACE_X - 0.02, DART_Y, bz), VRBuild.mat(Color(0.3, 0.22, 0.14), 0.9), 0.225, Vector3(0, 0, PI / 2), 36)
 		VRBuild.quad(node, Vector2(0.45, 0.45), Vector3(DART_FACE_X + 0.002, DART_Y, bz), face, Vector3(0, PI / 2, 0))
+		SportsFinish.board(node, Vector3(DART_FACE_X + 0.004, DART_Y, bz))
 		# the line you stand behind, a toe-board, and a rubber mat
 		VRBuild.box(node, Vector3(0.04, 0.025, 0.9), Vector3(OCHE_X, 0.0125, bz), VRBuild.mat(Color(0.9, 0.9, 0.85), 0.5, 0.2))
 		VRBuild.box(node, Vector3(1.4, 0.008, 1.0), Vector3(OCHE_X + 0.65, 0.004, bz), rubber)
@@ -153,8 +160,7 @@ func _darts_scenery() -> void:
 # ---- axe throwing ----------------------------------------------------------------------------------------
 func _axe_scenery() -> void:
 	var post := VRBuild.mat(Color(0.12, 0.1, 0.1), 0.5, 0.6)
-	var cage := VRBuild.mat(Color(0.2, 0.2, 0.24, 0.5), 0.5, 0.5)
-	cage.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var cage := VRBuild.mat(Color(0.14, 0.16, 0.17), 0.6, 0.55)
 	var rubber := VRBuild.mat(Color(0.06, 0.05, 0.05), 0.85)
 	# the backing wall of dark wood behind the three targets
 	VRBuild.box(node, Vector3(HALF_W * 0.95, 2.6, 0.06), Vector3(-1.75, 1.35, Z1 - 0.03), VRBuild.pbr("wood-navy", Color(0.5, 0.45, 0.42), Vector2(3.0, 1.0), 1.0))
@@ -173,14 +179,20 @@ func _axe_scenery() -> void:
 		var x: float = (AXE_X[0] - 0.625) + k * (AXE_X[1] - AXE_X[0])
 		VRBuild.box(node, Vector3(0.04, 2.3, 0.04), Vector3(x, 1.15, AXE_LINE_Z + 0.2), post)
 		VRBuild.box(node, Vector3(0.04, 2.3, 0.04), Vector3(x, 1.15, AXE_FACE_Z - 0.1), post)
-		VRBuild.box(node, Vector3(0.012, 1.6, AXE_FACE_Z - AXE_LINE_Z - 0.3), Vector3(x, 1.5, (AXE_FACE_Z + AXE_LINE_Z) / 2.0 + 0.05), cage)
-	_neon("neon-odin.png", Vector3(-1.75, 2.95, Z1 - 0.06), PI, 0.72)       # ODIN'S AXE TOSS, in amber tube with the Norse knot
+		for row in range(11):
+			VRBuild.box(node, Vector3(0.004, 0.004, AXE_FACE_Z - AXE_LINE_Z - 0.3), Vector3(x, 0.7 + row * 0.16, (AXE_FACE_Z + AXE_LINE_Z) / 2.0 + 0.05), cage)
+		for col in range(22):
+			VRBuild.box(node, Vector3(0.004, 1.6, 0.004), Vector3(x, 1.5, AXE_LINE_Z + 0.2 + col * 0.16), cage)
+	_neon("neon-odin.png", Vector3(-1.75, 3.12, Z1 - 0.06), PI, 0.36)       # ODIN'S AXE TOSS, in amber tube with the Norse knot
 
 
 # ---- bowling -----------------------------------------------------------------------------------------------
 func _bowling_scenery() -> void:
 	var lane_len := HEAD_PIN_Z + 1.0 - FOUL_Z
 	var lane_m := VRBuild.tex_mat(load("res://assets/art/lane-wood.png"), 0.0, 0.18)
+	lane_m.clearcoat_enabled = true
+	lane_m.clearcoat = 0.35
+	lane_m.roughness = 0.28
 	lane_m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	var gutter_m := VRBuild.mat(Color(0.05, 0.05, 0.07), 0.45, 0.4)
 	var rail_m := VRBuild.mat(Color(0.08, 0.08, 0.1), 0.4, 0.5)
@@ -200,7 +212,7 @@ func _bowling_scenery() -> void:
 	# the pin deck's back: a dark pit, and the masking unit above it with the big score screens
 	VRBuild.box(node, Vector3(HALF_W - 0.45, 0.5, 1.0), Vector3(2.15, 0.0, HEAD_PIN_Z + 1.1), VRBuild.mat(Color(0.03, 0.03, 0.04), 0.7))
 	VRBuild.box(node, Vector3(HALF_W - 0.45, 1.5, 0.12), Vector3(2.15, 2.5, Z1 - 0.45), VRBuild.mat(Color(0.08, 0.06, 0.12), 0.45, 0.4))
-	_neon("neon-strikers.png", Vector3(2.15, 3.0, Z1 - 0.52), PI, 0.62)       # STRIKERS over the pin deck
+	_neon("neon-strikers.png", Vector3(2.15, 3.13, Z1 - 0.52), PI, 0.34)       # STRIKERS over the pin deck
 	_neon("neon-strikers.png", Vector3(HALF_W - 0.04, 2.35, (FOUL_Z + HEAD_PIN_Z) / 2.0), -PI / 2.0, 0.95)       # and along the wall beside the lanes
 	# the ball return between the two lanes: a low hooded box
 	var mid_x: float = (LANE_X[0] + LANE_X[1]) / 2.0

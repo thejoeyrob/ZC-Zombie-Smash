@@ -140,7 +140,7 @@ func _build_board_extras(b: int) -> void:
 	var bx := -ShackAnnex.HALF_W + 0.07
 	VRBuild.box(self, Vector3(0.03, 0.62, 0.95), Vector3(bx, 2.5, z), VRBuild.mat(Color(0.34, 0.24, 0.14), 0.6))
 	VRBuild.box(self, Vector3(0.035, 0.56, 0.89), Vector3(bx + 0.003, 2.5, z), VRBuild.mat(_col_board, 0.9))
-	var lbl := VRBuild.label(self, "", 0.052, Vector3(bx + 0.025, 2.5, z), Color(0.93, 0.95, 0.88), Vector3(0, PI / 2, 0), 0, font, true)
+	var lbl := VRBuild.label(self, "", 0.072, Vector3(bx + 0.025, 2.5, z), Color(0.93, 0.95, 0.88), Vector3(0, PI / 2, 0), 0, font, true)
 	lbl.line_spacing = -4.0
 	boards[b].label = lbl
 	var names := ["mode", "players", "go"]
@@ -159,11 +159,13 @@ func _make_dart(b: int) -> Node3D:
 	var flight := VRBuild.mat(col, 0.5)
 	flight.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var barrel := VRBuild.cylinder(n, 0.0033, 0.05, Vector3(0, 0, -0.03), steel, 0.0033, Vector3(PI / 2, 0, 0), 8)
-	VRBuild.cylinder(n, 0.0004, 0.028, Vector3(0, 0, -0.068), steel, 0.0022, Vector3(PI / 2, 0, 0), 8)      # the point (top radius is the tip)
+	VRBuild.cylinder(n, 0.0004, 0.028, Vector3(0, 0, -0.068), steel, 0.0022, Vector3(-PI / 2, 0, 0), 12)      # the point (top radius is the tip)
 	VRBuild.cylinder(n, 0.0016, 0.045, Vector3(0, 0, 0.018), VRBuild.mat(Color(0.1, 0.1, 0.12), 0.5), 0.0016, Vector3(PI / 2, 0, 0), 6)
 	for a in [0.0, PI / 2.0]:
-		VRBuild.quad(n, Vector2(0.03, 0.04), Vector3(0, 0, 0.055), flight, Vector3(0, 0, a))
-	barrel.name = "Barrel"
+		VRBuild.quad(n, Vector2(0.03, 0.04), Vector3(0, 0, 0.055), flight, Vector3(PI / 2, a, 0))
+	for j in range(7):
+		VRBuild.cylinder(n, 0.0036, 0.001, Vector3(0, 0, -0.049 + j * 0.005), VRBuild.mat(Color(0.15, 0.16, 0.18), 0.4, 0.8), 0.0036, Vector3(PI / 2, 0, 0), 12)
+	VRBuild.merge_static(n)
 	return n
 
 
@@ -183,6 +185,18 @@ func things() -> Array:
 		if t.can_grab() and boards[t.lane].state == "play" and boards[t.lane].left > 0 and not lane_busy(darts, t.lane):
 			out.append(t)
 	return out
+
+
+func idle_things() -> Array:
+	var out: Array = []
+	for t in darts:
+		if t.can_grab() and boards[t.lane].state != "play":
+			out.append(t)
+	return out
+
+
+func wake(t: Throwable) -> void:
+	_start(t.lane)
 
 
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:

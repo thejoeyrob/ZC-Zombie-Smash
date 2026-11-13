@@ -138,12 +138,14 @@ func _build_lane(i: int) -> void:
 		s.pins.append(p)
 	_place_pins(i, true)
 	# a score display on the masking unit above the pins, one above the lane at the foul line, and the control panel beside the approach
-	var mon := VRBuild.label(self, "", 0.075, Vector3(lx, 2.55, ShackAnnex.HEAD_PIN_Z + 0.9), Color(0.7, 1.0, 0.8), Vector3(0, PI, 0), 3, font, true)
+	var mon := VRBuild.label(self, "", 0.085, Vector3(lx, 2.55, ShackAnnex.HEAD_PIN_Z + 0.83), Color(0.7, 1.0, 0.8), Vector3(0, PI, 0), 3, font, true)
 	mon.line_spacing = -6.0
 	s.board = mon
-	var near := VRBuild.label(self, "", 0.06, Vector3(lx, 2.55, ShackAnnex.FOUL_Z + 0.6), Color(0.7, 1.0, 0.8), Vector3.ZERO, 3, font, true)
+	var near := VRBuild.label(self, "", 0.08, Vector3(lx, 2.55, ShackAnnex.FOUL_Z - 0.12), Color(0.7, 1.0, 0.8), Vector3(0, PI, 0), 3, font, true)
 	near.line_spacing = -6.0
 	s.label = near
+	SportsFinish.panel(self, mon.position, PI, Vector2(1.45, 0.68))
+	SportsFinish.panel(self, near.position, PI, Vector2(1.45, 0.68))
 	var px := lx - 0.78
 	VRBuild.box(self, Vector3(0.04, 0.22, 0.5), Vector3(px, 1.15, ShackAnnex.FOUL_Z - 1.0), VRBuild.mat(Color(0.1, 0.08, 0.1), 0.5))
 	var names := ["players", "go"]
@@ -248,7 +250,7 @@ func _make_pin_mesh() -> ArrayMesh:
 	var prof := [[0.0, 0.0], [0.030, 0.0], [0.040, 0.02], [0.0475, 0.08], [0.0465, 0.12], [0.038, 0.17], [0.028, 0.215], [0.0255, 0.25], [0.029, 0.285], [0.0375, 0.32], [0.041, 0.345], [0.0375, 0.37], [0.02, 0.38], [0.0, 0.38]]
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var seg := 14
+	var seg := 24
 	for i in range(prof.size() - 1):
 		var a: Array = prof[i]
 		var b: Array = prof[i + 1]
@@ -265,7 +267,11 @@ func _make_pin_mesh() -> ArrayMesh:
 				var n: Vector3 = ((tri[1] - tri[0]) as Vector3).cross((tri[2] - tri[0]) as Vector3).normalized()
 				for v in tri:
 					st.set_color(col)
-					st.set_normal(n)
+					var radial := Vector3(v.x, 0, v.z).normalized()
+					var dy: float = float(b[1]) - float(a[1])
+					var dr: float = float(b[0]) - float(a[0])
+					var smooth_normal := Vector3(radial.x * dy, -dr, radial.z * dy).normalized()
+					st.set_normal(smooth_normal if smooth_normal.length_squared() > 0.1 else -n)
 					st.add_vertex(v)
 	return st.commit()
 
@@ -277,6 +283,18 @@ func things() -> Array:
 		if t.can_grab() and lanes[t.lane].state == "play" and lanes[t.lane].phase == "ready":
 			out.append(t)
 	return out
+
+
+func idle_things() -> Array:
+	var out: Array = []
+	for t in balls:
+		if t.can_grab() and lanes[t.lane].state != "play":
+			out.append(t)
+	return out
+
+
+func wake(t: Throwable) -> void:
+	_start(t.lane)
 
 
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:

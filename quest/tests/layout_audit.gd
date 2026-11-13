@@ -61,6 +61,8 @@ func _initialize() -> void:
 	var feet := {}
 	for t in things:
 		var fp := _footprint(t[1])
+		if fp.size() == 0 or is_inf(fp[0].x) or is_nan(fp[0].x):
+			continue                                          # (a machine that is no longer built has nothing to measure)
 		feet[t[0]] = fp
 		for p in fp:
 			if absf(p.x) > hw + 0.001 or p.y > back + 0.001 or p.y < front - 0.001:
@@ -82,6 +84,8 @@ func _initialize() -> void:
 			bad += 1
 	for t in things:
 		var bx := _bounds(t[1])
+		if bx.size == Vector3.ZERO:
+			continue
 		print("  %-22s x %.2f..%.2f  z %.2f..%.2f  top %.2f" % [t[0], bx.position.x, bx.end.x, bx.position.z, bx.end.z, bx.end.y])
 	print("LAYOUT AUDIT OK" if bad == 0 else "LAYOUT AUDIT FAILED (%d)" % bad)
 	quit()

@@ -72,7 +72,7 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 			held[i] = null
 			tracks[i].clear()
 		var grip: bool = bool(h.gripping) or bool(h.trigger)
-		if grip and not grip_prev[i] and held[i] == null:
+		if grip and held[i] == null:
 			_try_grab(i, h)
 		if held[i] != null:
 			if grip:
@@ -96,17 +96,25 @@ func _try_grab(i: int, h: Dictionary) -> void:
 		points.append((h.vis_xf as Transform3D).origin)
 	var best: Throwable = null
 	var best_d := 1.0e9
+	var from_idle := false
 	for g in games:
-		for t in (g as SportGame).things():
-			if not t.can_grab():
-				continue
-			var reach: float = maxf((t as Throwable).radius, 0.2)
-			var d := 1.0e9
-			for p in points:
-				d = minf(d, (p as Vector3).distance_to((t as Throwable).world_pos()))
-			if d < reach and d < best_d:
-				best = t
-				best_d = d
+		for pass_idle in [false, true]:
+			var list: Array = (g as SportGame).idle_things() if pass_idle else (g as SportGame).things()
+			for t in list:
+				if not t.can_grab():
+					continue
+				var reach: float = maxf((t as Throwable).radius, 0.2)
+				var d := 1.0e9
+				for p in points:
+					d = minf(d, (p as Vector3).distance_to((t as Throwable).world_pos()))
+				if d < reach and d < best_d:
+					best = t
+					best_d = d
+					from_idle = pass_idle
+	if best != null and from_idle:
+		(best.game as SportGame).wake(best)          # nobody had started a match here: taking the thing starts one
+		if not (best.game as SportGame).things().has(best):
+			return
 	if best != null:
 		held[i] = best
 		best.held_hand = i

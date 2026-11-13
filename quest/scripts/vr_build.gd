@@ -194,11 +194,14 @@ static func merge_static(parent: Node, deep := false) -> void:
 		var xf: Transform3D = f[1]
 		var m := mi.material_override as StandardMaterial3D
 		var sig := str([m.albedo_color, m.albedo_texture.get_instance_id() if m.albedo_texture != null else 0, m.roughness, m.metallic, m.emission_enabled, m.emission, m.emission_energy_multiplier,
-			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat, mi.cast_shadow, mi.layers])
+			m.transparency, m.cull_mode, m.shading_mode, m.uv1_scale, m.uv1_offset, m.rim_enabled, m.blend_mode, m.alpha_scissor_threshold, m.texture_repeat, m.texture_filter, m.vertex_color_use_as_albedo,
+			m.normal_enabled, m.normal_texture, m.normal_scale, m.roughness_texture, m.roughness_texture_channel,
+			m.metallic_texture, m.ao_enabled, m.ao_texture, m.ao_light_affect,
+			m.clearcoat_enabled, m.clearcoat, m.clearcoat_roughness, mi.cast_shadow, mi.layers])
 		if not groups.has(sig):
 			var st := SurfaceTool.new()
 			st.begin(Mesh.PRIMITIVE_TRIANGLES)
-			groups[sig] = {"mat": m, "st": st}
+			groups[sig] = {"mat": m, "st": st, "shadow": mi.cast_shadow, "layers": mi.layers}
 		(groups[sig].st as SurfaceTool).append_from(mi.mesh, 0, xf)
 		doomed.append(mi)
 	for d in doomed:
@@ -208,6 +211,8 @@ static func merge_static(parent: Node, deep := false) -> void:
 		var merged := MeshInstance3D.new()
 		merged.mesh = (groups[sig].st as SurfaceTool).commit()
 		merged.material_override = groups[sig].mat
+		merged.cast_shadow = groups[sig].shadow
+		merged.layers = groups[sig].layers
 		parent.add_child(merged)
 
 
@@ -439,7 +444,7 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	if n != null:
 		m.normal_enabled = true
 		m.normal_texture = n
-		m.normal_scale = clampf(normal_scale, 0.85, 1.8)     # preserve authored embossed relief; clamp for Quest stability
+		m.normal_scale = clampf(normal_scale * 0.65, 0.1, 1.0)     # preserve authored embossed relief; clamp for Quest stability
 	if r != null:
 		m.roughness_texture = r
 		m.roughness = 1.0
