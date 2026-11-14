@@ -99,7 +99,7 @@ fg.alpha_composite(badge_cutout(392), (60, 60))
 save(fg, "tile-foreground-512x512.png")
 
 # screenshots: five real scenes, 2560x1440, 24-bit
-for i, n in enumerate(["01-overview", "02-backwall", "04-hall_lanes", "05-hall_axes", "06-pinball"], 1):
+for i, n in enumerate(["01-overview", "02-arcade_posters", "03-pinball", "04-bowling_wedding", "05-hall_gallery"], 1):
     im = Image.open(os.path.join(SA, "screenshots", n + ".png")).convert("RGB")
     assert im.size == (2560, 1440), im.size
     save(im, "screenshot-%d-%s.png" % (i, n.split("-", 1)[1]))
