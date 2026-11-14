@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "headset", "scares": "on", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "game", "scares": "on", "sharp": 1.2, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -390,7 +390,12 @@ func _load_settings() -> void:
 		if int(settings.handtilt) == 0:
 			settings.handtilt = -60
 		settings.foveation = "external"
-	settings.ver = 5
+	# Build 6: the picture had gone grainy because the game stopped drawing more than the headset's own default size. A headset that is already
+	# raised (Quest Games Optimiser, a higher resolution in the headset settings) is left alone by the game, so the two never stack.
+	if int(settings.get("ver", 0)) < 6:
+		settings.resolution = "game"
+		settings.sharp = maxf(float(settings.sharp), 1.2)
+	settings.ver = 6
 	_save_settings()
 
 

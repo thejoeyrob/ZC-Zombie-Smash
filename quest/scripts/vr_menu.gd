@@ -66,10 +66,27 @@ func build(root: Node3D, ui_font: Font, initial: Dictionary, build_no := 0) -> v
 	cm.height = 1.0
 	cm.radial_segments = 6
 	beam.mesh = cm
-	beam.material_override = VRBuild.mat(Color(0.6, 0.9, 1.0), 0.4, 0.0, 3.0)
+	cm.top_radius = 0.0025
+	cm.bottom_radius = 0.0025
+	beam.material_override = _on_top(Color(0.55, 0.92, 1.0, 0.95))
 	add_child(beam)
-	dot = VRBuild.sphere(self, 0.008, Vector3.ZERO, VRBuild.mat(Color(1, 1, 1), 0.4, 0.0, 4.0), 8)
+	# the dot where the beam meets the board: a bright core with a soft ring, drawn over the board so you can always see where you are pointing
+	dot = VRBuild.sphere(self, 0.010, Vector3.ZERO, _on_top(Color(1, 1, 1, 1.0)), 10)
+	var ring := VRBuild.sphere(dot, 0.020, Vector3.ZERO, _on_top(Color(0.4, 0.9, 1.0, 0.35)), 10)
+	ring.name = "Ring"
 	set_open(false)
+
+
+## A bright flat colour that is never hidden by the board (the board itself is drawn over everything, so the pointer is drawn after it).
+func _on_top(c: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = c
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.no_depth_test = true
+	m.render_priority = 40
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return m
 
 
 func set_open(on: bool) -> void:
