@@ -2216,6 +2216,12 @@ func _run_shots() -> void:
 	views["wall_graze"] = [Vector3(3.3, 1.5, 6.6), Vector3(-2.0, 1.2, 7.3)]
 	views["floor_graze"] = [Vector3(0, 1.2, 0.4), Vector3(0, 0.0, 3.0)]
 	views["seated"] = [tc + Vector3(0, 1.38, -0.62), tc + Vector3(0, 0.95, 0.05)]
+	views["gal_arc_l"] = [Vector3(2.4, 1.7, 2.8), Vector3(-3.9, 2.4, 3.2)]
+	views["gal_arc_r"] = [Vector3(-2.4, 1.7, 2.8), Vector3(3.9, 2.4, 3.6)]
+	views["gal_back"] = [Vector3(0, 1.7, 3.6), Vector3(0, 2.2, 7.3)]
+	views["gal_hall_l"] = [Vector3(2.0, 1.7, 15.5), Vector3(-3.9, 1.9, 16.5)]
+	views["gal_wedding"] = [Vector3(1.0, 1.7, 8.6), Vector3(3.95, 1.9, 12.4)]
+	views["gal_hall_r"] = [Vector3(-2.0, 1.7, 14.0), Vector3(3.9, 2.0, 16.5)]
 	views["skirt_door"] = [Vector3(-2.6, 0.7, 1.0), Vector3(-2.6, 0.1, ArcadeRoom.FRONT_Z)]
 	# 360 degree preview for the store: six 90 degree faces from one spot (--cube=x,y,z --fov=90, square window)
 	if args.has("fov"):

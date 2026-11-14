@@ -84,28 +84,84 @@ static func build(root: Node3D, font: Font) -> void:
 	for z in [0.8,2.8,4.8,6.8,9.0,12.0,15.0,18.0,20.6]:
 		beam(root,Vector3(7.9,0.12,0.16),Vector3(0,3.22,z))
 		VRBuild.box(root,Vector3(7.6,0.012,0.035),Vector3(0,3.153,z),metal)
-	var characters := [["boss-jordan-stage1.webp","JORDAN","OWN THE NIGHT"],["boss-debo-stage1.webp","DEBO","PLAY FOR GLORY"],["boss-drmantis-stage1.webp","DR MANTIS","ONE MORE ROUND"],["boss-caffeinatedsloth-stage1.webp","SLOTH","STAY IN THE GAME"]]
-	# Gallery above cabinets, not behind controls or at eye level over them.
-	for i in range(4):
-		var side := -1 if i<2 else 1
-		poster(root,Vector3(side*3.92,2.65,2.1+(i%2)*2.25),-side*PI/2,Vector2(1.05,0.70),characters[i],font)
-	# Larger, separated portraits in previously empty sports corridor bays.
-	for i in range(2):
-		poster(root,Vector3(-3.91,1.95,13.8+i*1.65),PI/2,Vector2(1.05,1.48),characters[i+2],font)
-		poster(root,Vector3(3.91,1.95,13.8+i*1.65),-PI/2,Vector2(1.05,1.48),characters[i],font)
+	gallery(root)
 	# Inlaid wayfinding instead of floating instructions.
 	for entry in [["ARCADE  /  LOUNGE",Vector3(0,0.022,1.1)],["SPORTS CLUB",Vector3(0,0.022,8.0)]]:
 		var plaque := Node3D.new();root.add_child(plaque);plaque.position=entry[1];plaque.rotation.x=-PI/2
 		VRBuild.box(plaque,Vector3(1.6,0.28,0.012),Vector3.ZERO,metal)
 		VRBuild.label(plaque,entry[0],0.10,Vector3(0,0,0.008),Color(0.06,0.05,0.03),Vector3.ZERO,0,font)
 
-static func poster(parent: Node3D, at: Vector3, yaw: float, size: Vector2, character: Array, font: Font) -> void:
-	var n:=Node3D.new();parent.add_child(n);n.position=at;n.rotation.y=yaw
-	VRBuild.box(n,Vector3(size.x+0.06,size.y+0.06,0.04),Vector3.ZERO,VRBuild.pbr("metal",Color(0.7,0.52,0.28),Vector2.ONE,0.25,0.65))
-	VRBuild.quad(n,size,Vector3(0,0,0.024),VRBuild.pbr("leather-black",Color(0.35,0.40,0.44),Vector2.ONE,0.25))
-	var texture:=load("res://assets/art/"+str(character[0])) as Texture2D
-	var art:=VRBuild.tex_mat(texture,0,0.9,true)
-	art.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	VRBuild.quad(n,Vector2(size.y*0.72,size.y*0.72),Vector3(-size.x*0.1,size.y*0.05,0.028),art)
-	VRBuild.label(n,str(character[1]),size.y*0.10,Vector3(0,-size.y*0.32,0.031),Color(0.94,0.75,0.39),Vector3.ZERO,0,font)
-	VRBuild.label(n,str(character[2]),size.y*0.038,Vector3(0,-size.y*0.43,0.031),Color(0.8,0.8,0.76),Vector3.ZERO,0,font)
+## The best artwork we have, standing proud of the walls of both rooms with a glow behind each in the picture's own colour.
+## [file, wall, position along the wall (z for the side walls, x for the back wall of the arcade), centre height, picture height, glow]
+const WALL_L := -3.96
+const WALL_R := 3.96
+const GALLERY := [
+	# the arcade, above the machines
+	["battle-jordan.jpg", "L", 1.3, 2.55, 0.95, Color(1.0, 0.5, 0.12)],
+	["battle-discoman.jpg", "L", 3.2, 2.55, 0.95, Color(1.0, 0.2, 0.8)],
+	["battle-drmantis.jpg", "L", 4.6, 2.55, 0.95, Color(0.25, 1.0, 0.45)],
+	["battle-debo.jpg", "R", 1.3, 2.55, 0.95, Color(1.0, 0.7, 0.15)],
+	["battle-fatamy.jpg", "R", 3.2, 2.55, 0.95, Color(1.0, 0.45, 0.25)],
+	["battle-glowinghumanity.jpg", "R", 5.1, 2.55, 0.95, Color(0.6, 1.0, 0.2)],
+	["battle-caffeinatedsloth.jpg", "R", 6.7, 2.55, 0.95, Color(1.0, 0.6, 0.15)],
+	["poster-neon.jpg", "B", -3.2, 2.2, 1.35, Color(0.6, 0.3, 1.0)],
+	["poster-disco.jpg", "B", 3.2, 2.2, 1.35, Color(1.0, 0.25, 0.85)],
+	# the sports hall
+	["poster-mantis.jpg", "L", 13.8, 1.95, 1.45, Color(0.3, 1.0, 0.4)],
+	["poster-fire.jpg", "L", 15.6, 1.95, 1.45, Color(1.0, 0.5, 0.1)],
+	["poster-comic-glowing.jpg", "L", 17.4, 1.95, 1.45, Color(0.5, 1.0, 0.25)],
+	["poster-comic-fatamy.jpg", "L", 19.2, 1.95, 1.45, Color(1.0, 0.3, 0.35)],
+	["panel-wedding.jpg", "R", 11.9, 1.95, 1.5, Color(1.0, 0.35, 0.65)],       # on the bowling wall, by the foul line, in line with the STRIKERS neon
+	["panel-city.jpg", "R", 18.0, 1.95, 1.3, Color(1.0, 0.3, 0.7)],
+]
+
+
+static func gallery(root: Node3D) -> void:
+	for g in GALLERY:
+		var wall: String = g[1]
+		var at := Vector3(WALL_L if wall == "L" else WALL_R if wall == "R" else float(g[2]), float(g[3]), float(g[2]) if wall != "B" else 7.3 - 0.04)
+		var yaw := PI / 2.0 if wall == "L" else -PI / 2.0 if wall == "R" else PI
+		stand_poster(root, str(g[0]), at, yaw, float(g[4]), g[5])
+
+
+## A picture standing off the wall on four steel standoffs in a slim steel frame, lit from within a little, with a soft glow on the wall behind it.
+## yaw turns its face into the room (0 faces +z).
+static func stand_poster(parent: Node3D, file: String, at: Vector3, yaw: float, height: float, glow: Color) -> void:
+	var tex := load("res://assets/art/" + file) as Texture2D
+	if tex == null:
+		return
+	var n := Node3D.new()
+	parent.add_child(n)
+	n.position = at
+	n.rotation.y = yaw
+	var w: float = height * float(tex.get_width()) / float(tex.get_height())
+	var steel := VRBuild.pbr("metal", Color(0.9, 0.9, 0.95), Vector2(2, 1), 0.9)
+	var off := 0.07
+	# the glow on the wall behind it (additive, no hard edge)
+	var halo := StandardMaterial3D.new()
+	halo.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	halo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	halo.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	var gt := GradientTexture2D.new()
+	var gr := Gradient.new()
+	gr.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0.35), Color(1, 1, 1, 0)])
+	gr.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+	gt.gradient = gr
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.0, 0.5)
+	halo.albedo_texture = gt
+	halo.albedo_color = Color(glow.r, glow.g, glow.b, 0.75)
+	VRBuild.quad(n, Vector2(w * 2.1, height * 1.75), Vector3(0, 0, 0.012), halo)
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			VRBuild.cylinder(n, 0.012, off, Vector3(sx * (w / 2.0 - 0.04), sy * (height / 2.0 - 0.04), off / 2.0), steel, -1.0, Vector3(PI / 2, 0, 0), 10)
+	VRBuild.box(n, Vector3(w + 0.05, height + 0.05, 0.03), Vector3(0, 0, off + 0.015), VRBuild.mat(Color(0.03, 0.02, 0.05), 0.6))
+	for e in [[Vector3(w + 0.06, 0.03, 0.05), Vector3(0, height / 2.0 + 0.012, off + 0.025)], [Vector3(w + 0.06, 0.03, 0.05), Vector3(0, -height / 2.0 - 0.012, off + 0.025)],
+			[Vector3(0.03, height + 0.06, 0.05), Vector3(-w / 2.0 - 0.012, 0, off + 0.025)], [Vector3(0.03, height + 0.06, 0.05), Vector3(w / 2.0 + 0.012, 0, off + 0.025)]]:
+		VRBuild.box(n, e[0], e[1], steel)
+	var face := VRBuild.tex_mat(tex, 0.0, 0.5)
+	face.emission_enabled = true
+	face.emission_texture = tex
+	face.emission_energy_multiplier = 0.45
+	VRBuild.quad(n, Vector2(w, height), Vector3(0, 0, off + 0.032), face)
