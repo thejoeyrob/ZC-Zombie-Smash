@@ -311,7 +311,7 @@ func wake(t: Throwable) -> void:
 
 
 func hold_xf(_t: Throwable, hand_xf: Transform3D) -> Transform3D:
-	return hand_xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.065, -0.12))
+	return hand_xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.095, -0.04))
 
 
 func on_grab(t: Throwable, _hand: int) -> void:

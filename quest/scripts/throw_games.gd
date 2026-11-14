@@ -13,6 +13,7 @@ var bowling: BowlingGame
 var games: Array = []
 var tracks: Array = [HandTrack.new(), HandTrack.new()]
 var held: Array = [null, null]
+var frames: Array = [Transform3D.IDENTITY, Transform3D.IDENTITY]       # where each held thing is carried: the hand's point, facing where you point, sideways level
 var grip_prev: Array = [false, false]
 var primary := ["gripping", "gripping"]
 var active := false
@@ -47,6 +48,28 @@ func set_active(on: bool) -> void:
 			_cancel(i)
 
 
+## The way a held thing faces: forward is where you point (the controller's aim, or the line of a bare hand from wrist to knuckles), sideways is level.
+static func hold_frame(h: Dictionary) -> Basis:
+	var raw: Transform3D = h.get("xf", h.get("vis_xf", Transform3D.IDENTITY))
+	var f: Vector3 = -raw.basis.z
+	if not bool(h.get("bare", false)) and h.has("aim_dir"):
+		var a: Vector3 = h.aim_dir
+		if a.is_finite() and a.length_squared() > 0.5:
+			f = a
+	if not f.is_finite() or f.length_squared() < 0.001:
+		f = Vector3(0, 0, 1)
+	f = f.normalized()
+	# never straight up or down, so the sideways direction stays defined
+	var flat := Vector2(f.x, f.z)
+	if absf(f.y) > 0.94:
+		if flat.length() < 0.01:
+			var rf: Vector3 = -raw.basis.z
+			flat = Vector2(rf.x, rf.z) if Vector2(rf.x, rf.z).length() > 0.01 else Vector2(0, 1)
+		flat = flat.normalized() * 0.34
+		f = Vector3(flat.x, 0.94 * signf(f.y), flat.y).normalized()
+	return Basis.looking_at(f, Vector3.UP)
+
+
 ## `hs` are the two hands as vr_main reads them; `at` is where the player is standing.
 func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 	var want: bool = (at.z > ShackAnnex.Z0 - 1.6 and absf(at.x - ShackAnnex.GATE_X) < 3.2) or at.z > ShackAnnex.Z0 + 0.2
@@ -79,12 +102,10 @@ func update(hs: Array, delta: float, at: Vector3, can_play: bool) -> void:
 		if held[i] != null:
 			if bool(h.get(primary[i], false)):
 				var t: Throwable = held[i]
-				var grip_pose: Transform3D = h.vis_xf
-				if t.kind == "dart" and h.has("aim_dir") and not bool(h.get("bare", false)):
-					var aim: Vector3 = h.aim_dir
-					if aim.is_finite() and aim.length_squared() > 0.5 and absf(aim.normalized().dot(Vector3.UP)) < 0.98:
-						grip_pose.basis = Basis.looking_at(aim, Vector3.UP)
-				var xf: Transform3D = (t.game as SportGame).hold_xf(t, grip_pose)
+				# What you hold follows where you point and the height of your hand, not the tilt and roll the visible hand is drawn with
+				# (that tilt is for looks and would turn a dart to the sky and push a ball off to one side).
+				frames[i] = Transform3D(hold_frame(h), (h.vis_xf as Transform3D).origin)
+				var xf: Transform3D = (t.game as SportGame).hold_xf(t, frames[i])
 				t.node.global_transform = xf
 				t.pos = xf.origin
 			else:
@@ -139,7 +160,7 @@ func _release(i: int, h: Dictionary) -> void:
 	t.held_hand = -1
 	var v := (tracks[i] as HandTrack).peak_velocity()
 	var w := (tracks[i] as HandTrack).angular_velocity()
-	(t.game as SportGame).on_release(t, h.vis_xf, v, w, i)
+	(t.game as SportGame).on_release(t, frames[i], v, w, i)
 
 
 ## Cancelling tracking, opening menus or travelling never spends a throw.
