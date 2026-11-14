@@ -41,11 +41,32 @@ func _emit(msg: String, to_hud := true) -> void:
 			hud_lines.pop_front()
 
 
+## What a headset tool (Quest Games Optimiser and the like) is forcing on every app, in plain words; empty when nothing is.
+func overrides_warning() -> String:
+	var out: Array = []
+	var fl: String = str(_props.get("debug.oculus.foveation.level", ""))
+	if fl != "" and fl != "0":
+		out.append("edge blur (FFR) level %s" % fl)
+	var tw: String = str(_props.get("debug.oculus.textureWidth", ""))
+	var th: String = str(_props.get("debug.oculus.textureHeight", ""))
+	if tw != "" or th != "":
+		out.append("eye size %sx%s" % [tw, th])
+	var rr: String = str(_props.get("debug.oculus.refreshRate", ""))
+	if rr != "":
+		out.append("refresh %s Hz" % rr)
+	var gl: String = str(_props.get("debug.oculus.gpuLevel", ""))
+	var cl: String = str(_props.get("debug.oculus.cpuLevel", ""))
+	if gl != "" or cl != "":
+		out.append("cpu/gpu level %s/%s" % [cl, gl])
+	return "" if out.is_empty() else "FORCED BY A HEADSET TOOL: " + ", ".join(out)
+
+
 ## Text for the on-screen readout (hold both thumbstick clicks to show or hide it): the current numbers and the last few changes.
 func hud_text() -> String:
 	var sz: String = _eye()
 	var head := "%d fps  %s  x%s  %dHz  gpu %.1fms  %s" % [int(round(Engine.get_frames_per_second())), sz, str(_prop("render_target_size_multiplier", "?")), int(float(_prop("display_refresh_rate", 0.0))), RenderingServer.viewport_get_measured_render_time_gpu(vp.get_viewport_rid()), _last_fov]
-	return head + "\n" + "\n".join(hud_lines) + "\nreport file: " + ProjectSettings.globalize_path("user://picture-report.txt")
+	var warn := overrides_warning()
+	return head + ("\n" + warn if warn != "" else "") + "\n" + "\n".join(hud_lines) + "\nreport file: " + ProjectSettings.globalize_path("user://picture-report.txt")
 
 
 ## Both thumbstick clicks held for about half a second: returns true once, to switch the readout on or off.
