@@ -34,7 +34,8 @@ func setup(xr_iface: XRInterface, viewport: Viewport) -> void:
 			iface.connect(s, func(): _event(s))
 	if iface.has_signal("refresh_rate_changed"):
 		iface.connect("refresh_rate_changed", func(r): _event("refresh_rate_changed " + str(r)))
-	print("PICTURELOG started  version ", ProjectSettings.get_setting("application/config/version", "?"))
+	print("PICTURELOG started  version ", ProjectSettings.get_setting("application/config/version", "?"), "  window ", DisplayServer.window_get_size(), "  screen ", DisplayServer.screen_get_size())
+	_snapshot("start")
 
 
 func _notification(what: int) -> void:
@@ -92,9 +93,9 @@ func tick(delta: float, where: String) -> void:
 	_last_eye = eye
 	_last_hz = hz
 	_last_fov = fov
-	_last_line = "PERF up=%.0f where=%s fps=%d frame_ms=%.1f worst_ms=%.1f gpu_ms=%.1f cpu_ms=%.1f eye=%s mult=%s fov=%s hz=%d msaa=%s draws=%d tris=%dk" % [
+	_last_line = "PERF up=%.0f where=%s fps=%d frame_ms=%.1f worst_ms=%.1f gpu_ms=%.1f cpu_ms=%.1f eye=%s mult=%s fov=%s hz=%d msaa=%s draws=%d tris=%dk tex_mb=%d" % [
 		_up, where, int(round(float(_frames) / _t)), avg * 1000.0, _worst * 1000.0, gpu, cpu, eye, str(_prop("render_target_size_multiplier", "?")), fov, int(hz),
-		str(vp.msaa_3d), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0)]
+		str(vp.msaa_3d), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0), int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TEXTURE_MEM_USED) / 1048576.0)]
 	print(_last_line)
 	_t = 0.0
 	_frames = 0
