@@ -23,9 +23,47 @@ var _marked_good := false
 var _marked_bad := false
 var _last_line := ""
 var _up := 0.0
+var hud_lines: Array = []            # the last few changes, shown on the in-game readout
+var _file: FileAccess
+var _held_click := 0.0
+var _clicked := false
+
+
+## One line of the report: printed to the log, kept in a file in the game's own folder, and remembered for the on-screen readout.
+func _emit(msg: String, to_hud := true) -> void:
+	print(msg)
+	if _file != null:
+		_file.store_line("%s  %s" % [Time.get_datetime_string_from_system(false, true), msg])
+		_file.flush()
+	if to_hud:
+		hud_lines.append("%d  %s" % [int(_up), msg.substr(0, 90)])
+		while hud_lines.size() > 7:
+			hud_lines.pop_front()
+
+
+## Text for the on-screen readout (hold both thumbstick clicks to show or hide it): the current numbers and the last few changes.
+func hud_text() -> String:
+	var sz: String = _eye()
+	var head := "%d fps  %s  x%s  %dHz  gpu %.1fms  %s" % [int(round(Engine.get_frames_per_second())), sz, str(_prop("render_target_size_multiplier", "?")), int(float(_prop("display_refresh_rate", 0.0))), RenderingServer.viewport_get_measured_render_time_gpu(vp.get_viewport_rid()), _last_fov]
+	return head + "\n" + "\n".join(hud_lines) + "\nreport file: " + ProjectSettings.globalize_path("user://picture-report.txt")
+
+
+## Both thumbstick clicks held for about half a second: returns true once, to switch the readout on or off.
+func readout_toggle(hs: Array, delta: float) -> bool:
+	var both: bool = bool(hs[0].get("click", false)) and bool(hs[1].get("click", false))
+	_held_click = _held_click + delta if both else 0.0
+	if not both:
+		_clicked = false
+	if _held_click > 0.6 and not _clicked:
+		_clicked = true
+		return true
+	return false
 
 
 func setup(xr_iface: XRInterface, viewport: Viewport) -> void:
+	_file = FileAccess.open("user://picture-report.txt", FileAccess.WRITE_READ)
+	if _file != null:
+		_file.seek_end()
 	iface = xr_iface
 	vp = viewport
 	RenderingServer.viewport_set_measure_render_time(vp.get_viewport_rid(), true)
@@ -34,7 +72,7 @@ func setup(xr_iface: XRInterface, viewport: Viewport) -> void:
 			iface.connect(s, func(): _event(s))
 	if iface.has_signal("refresh_rate_changed"):
 		iface.connect("refresh_rate_changed", func(r): _event("refresh_rate_changed " + str(r)))
-	print("PICTURELOG started  version ", ProjectSettings.get_setting("application/config/version", "?"), "  window ", DisplayServer.window_get_size(), "  screen ", DisplayServer.screen_get_size())
+	_emit("PICTURELOG started  window %s  screen %s  file %s" % [str(DisplayServer.window_get_size()), str(DisplayServer.screen_get_size()), ProjectSettings.globalize_path("user://picture-report.txt")])
 	_snapshot("start")
 
 
@@ -51,7 +89,7 @@ func _notification(what: int) -> void:
 
 
 func _event(name: String) -> void:
-	print("EVENT %s up=%.1f" % [name, _up])
+	_emit("EVENT %s up=%.1f" % [name, _up])
 	_snapshot("after event")
 
 
@@ -65,7 +103,7 @@ func _prop(prop: String, fallback = null):
 
 
 func _snapshot(why: String) -> void:
-	print("STATE (%s) eye=%s mult=%s foveation=%s/%s vrs=%s refresh=%s msaa=%s" % [why, _eye(), str(_prop("render_target_size_multiplier", "?")), str(_prop("foveation_level", "n/a")), str(_prop("foveation_dynamic", "n/a")), str(vp.vrs_mode), str(_prop("display_refresh_rate", "?")), str(vp.msaa_3d)])
+	_emit("STATE (%s) eye=%s mult=%s foveation=%s/%s vrs=%s refresh=%s msaa=%s" % [why, _eye(), str(_prop("render_target_size_multiplier", "?")), str(_prop("foveation_level", "n/a")), str(_prop("foveation_dynamic", "n/a")), str(vp.vrs_mode), str(_prop("display_refresh_rate", "?")), str(vp.msaa_3d)])
 
 
 ## Call every frame. `where` says which part of the world you are in (shown in each line).
@@ -85,18 +123,18 @@ func tick(delta: float, where: String) -> void:
 	var hz := float(_prop("display_refresh_rate", 0.0))
 	var fov := "%s/%s/%s" % [str(_prop("foveation_level", "n/a")), str(_prop("foveation_dynamic", "n/a")), str(vp.vrs_mode)]
 	if _last_eye != "" and eye != _last_eye:
-		print("CHANGE eye %s -> %s up=%.1f" % [_last_eye, eye, _up])
+		_emit("CHANGE eye %s -> %s up=%.1f" % [_last_eye, eye, _up])
 	if _last_hz >= 0.0 and not is_equal_approx(hz, _last_hz):
-		print("CHANGE refresh %s -> %s up=%.1f" % [str(_last_hz), str(hz), _up])
+		_emit("CHANGE refresh %s -> %s up=%.1f" % [str(_last_hz), str(hz), _up])
 	if _last_fov != "" and fov != _last_fov:
-		print("CHANGE foveation(level/dynamic/vrs) %s -> %s up=%.1f" % [_last_fov, fov, _up])
+		_emit("CHANGE foveation(level/dynamic/vrs) %s -> %s up=%.1f" % [_last_fov, fov, _up])
 	_last_eye = eye
 	_last_hz = hz
 	_last_fov = fov
 	_last_line = "PERF up=%.0f where=%s fps=%d frame_ms=%.1f worst_ms=%.1f gpu_ms=%.1f cpu_ms=%.1f eye=%s mult=%s fov=%s hz=%d msaa=%s draws=%d tris=%dk tex_mb=%d" % [
 		_up, where, int(round(float(_frames) / _t)), avg * 1000.0, _worst * 1000.0, gpu, cpu, eye, str(_prop("render_target_size_multiplier", "?")), fov, int(hz),
 		str(vp.msaa_3d), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0), int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TEXTURE_MEM_USED) / 1048576.0)]
-	print(_last_line)
+	_emit(_last_line, false)
 	_t = 0.0
 	_frames = 0
 	_worst = 0.0
@@ -115,11 +153,11 @@ func marks(hs: Array, delta: float) -> String:
 		_marked_bad = false
 	if _held_good > 0.5 and not _marked_good:
 		_marked_good = true
-		print("MARK GOOD up=%.1f | %s" % [_up, _last_line])
+		_emit("MARK GOOD up=%.1f | %s" % [_up, _last_line])
 		return "good"
 	if _held_bad > 0.5 and not _marked_bad:
 		_marked_bad = true
-		print("MARK BAD up=%.1f | %s" % [_up, _last_line])
+		_emit("MARK BAD up=%.1f | %s" % [_up, _last_line])
 		return "bad"
 	return ""
 
@@ -144,10 +182,10 @@ func _poll_props(delta: float) -> void:
 				if not now.has(k):
 					changes.append("-%s" % k)
 			if not changes.is_empty():
-				print("OVERRIDES CHANGED up=%.1f %s" % [_up, ", ".join(changes)])
+				_emit("OVERRIDES CHANGED up=%.1f %s" % [_up, ", ".join(changes)])
 				_snapshot("after overrides changed")
 		else:
-			print("OVERRIDES ", now)
+			_emit("OVERRIDES " + str(now))
 		_props = now
 		_have_props = true
 		return

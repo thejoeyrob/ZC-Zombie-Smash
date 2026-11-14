@@ -411,7 +411,10 @@ func _load_settings() -> void:
 		settings.fps = "off"
 		settings.refresh = "72"
 		settings.sports_feel = "social"
-	settings.ver = 7
+	# Build 8 (diagnostic): the picture readout starts switched on so changes can be seen as they happen; both thumbstick clicks held switch it off. Remove before release.
+	if int(settings.get("ver", 0)) < 8:
+		settings.fps = "on"
+	settings.ver = 8
 	_save_settings()
 
 
@@ -618,7 +621,7 @@ func _eye_size() -> String:
 
 func _show_fps(on: bool) -> void:
 	if on and fps_label == null and cam != null:
-		fps_label = VRBuild.label(cam, "", 0.03, Vector3(-0.17, -0.19, -0.6), Color(0.6, 1.0, 0.7), Vector3.ZERO, 6, font, true)
+		fps_label = VRBuild.label(cam, "", 0.022, Vector3(-0.2, -0.2, -0.6), Color(0.6, 1.0, 0.7), Vector3.ZERO, 6, font, true)
 	if fps_label != null:
 		fps_label.visible = on
 
@@ -638,7 +641,7 @@ func _perf_tick(delta: float) -> void:
 	_perf_n = 0
 	_perf_t = 0.0
 	if fps_label != null and fps_label.visible:
-		fps_label.text = "%d fps  %s px  edge %s" % [int(round(fps_now)), _eye_size(), str(settings.get("foveation", "app"))]
+		fps_label.text = picture_log.hud_text() if picture_log != null else "%d fps  %s px" % [int(round(fps_now)), _eye_size()]
 	if not xr_on or str(settings.smooth) != "on" or _perf_age < 8.0:
 		return
 	var hz := float(settings.get("refresh", "72"))
@@ -983,6 +986,10 @@ func _process(delta: float) -> void:
 		if picture_log.marks(hs, delta) != "":
 			_haptic(0, 0.3, 0.12)
 			_haptic(1, 0.3, 0.12)
+		if picture_log.readout_toggle(hs, delta):
+			_on_setting("fps", "off" if str(settings.fps) == "on" else "on")
+			_haptic(0, 0.2, 0.08)
+			_haptic(1, 0.2, 0.08)
 	_pose_hands(hs)
 	_update_avatar(hs, delta)
 	# (after the hands are posed: the sports code needs each hand's palm, tip and visible pose, which are only worked out there. Before this fix it ran first and
