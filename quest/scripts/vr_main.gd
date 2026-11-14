@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "game", "scares": "on", "sharp": 1.2, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "auto", "scares": "on", "sharp": 1.2, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -393,7 +393,7 @@ func _load_settings() -> void:
 	# Build 6: the picture had gone grainy because the game stopped drawing more than the headset's own default size. A headset that is already
 	# raised (Quest Games Optimiser, a higher resolution in the headset settings) is left alone by the game, so the two never stack.
 	if int(settings.get("ver", 0)) < 6:
-		settings.resolution = "game"
+		settings.resolution = "auto"
 		settings.sharp = maxf(float(settings.sharp), 1.2)
 	settings.ver = 6
 	_save_settings()
@@ -483,8 +483,46 @@ const EYE_CAP_W := 3000.0
 var _eye_base_w := 0.0
 
 
+## What a tool such as Quest Games Optimiser has set on the headset for every app (the debug.oculus.* system properties): picture size, edge detail
+## (foveation), refresh rate, CPU and GPU level. Empty when nothing is overridden or when this is not a headset.
+var _overrides: Dictionary = {}
+var _overrides_read := false
+
+
+func _headset_overrides() -> Dictionary:
+	if _overrides_read:
+		return _overrides
+	_overrides_read = true
+	if not OS.has_feature("android"):
+		return _overrides
+	var out: Array = []
+	if OS.execute("getprop", [], out) == 0 and not out.is_empty():
+		for line in str(out[0]).split("\n"):
+			var l := line.strip_edges()
+			if not l.begins_with("[debug.oculus."):
+				continue
+			var parts := l.split("]: [")
+			if parts.size() == 2:
+				var key := parts[0].trim_prefix("[")
+				var val := parts[1].trim_suffix("]")
+				if val != "" and val != "0" and val != "false":
+					_overrides[key] = val
+	print("HEADSET OVERRIDES ", _overrides)
+	return _overrides
+
+
+## True when something outside the game has taken over the picture size or edge detail: the game then draws exactly what it is given.
+func _headset_owns_picture() -> bool:
+	var o := _headset_overrides()
+	for k in o:
+		if str(k).contains("textureWidth") or str(k).contains("textureHeight") or str(k).contains("foveation"):
+			return true
+	return false
+
+
 func _eye_multiplier(iface) -> float:
-	if str(settings.get("resolution", "headset")) == "headset":
+	var who := str(settings.get("resolution", "auto"))
+	if who == "headset" or (who == "auto" and _headset_owns_picture()):
 		return 1.0
 	var want := _tier_sharp()
 	if _eye_base_w <= 0.0:
@@ -546,6 +584,8 @@ func _apply_tier() -> void:
 	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
 	var msaa := int(t.msaa) if str(settings.smooth) == "on" else 4
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
+	if iface != null:
+		print("PICTURE eye=%s multiplier=%.2f owner=%s headset_owns=%s foveation=%s msaa=%d refresh=%s" % [_eye_size(), float(iface.render_target_size_multiplier), str(settings.get("resolution", "auto")), str(_headset_owns_picture()), str(settings.get("foveation", "app")), msaa, str(settings.get("refresh", "72"))])
 
 
 ## The brightness of the game screens on every machine (the Display page's slider). 1.0 shows the picture as drawn; above that it washes out.

@@ -472,7 +472,7 @@ This replaces the selected lane's scores.")
 	_stepper(cf, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
 	var dp: VBoxContainer = _pages.display
 	_heading(dp, "PICTURE")
-	_stepper(dp, "resolution", "Resolution owner", ["headset", "game"], "")
+	_stepper(dp, "resolution", "Resolution owner", ["auto", "headset", "game"], "")
 	_hint(dp, "QGO: Resolution owner HEADSET + Edge detail EXTERNAL. Native 1:1: HEADSET with QGO disabled. To diagnose blur, disable QGO FFR and select OFF here. LOW/HIGH use in-game peripheral shading; do not stack with QGO FFR.")
 	_stepper(dp, "smooth", "Adaptive lighting", ["on", "off"], "")
 	_slider(dp, "sharp", "Game resolution multiplier", 1.0, 1.6, 0.1)
