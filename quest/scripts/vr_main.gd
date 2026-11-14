@@ -256,6 +256,15 @@ func _setup_xr() -> void:
 		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
 		iface.render_target_size_multiplier = _eye_multiplier(iface)          # draw each eye sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
+		# The picture is fixed: no edge-detail (foveation) of our own, so nothing the game or the headset's load can step down while you play.
+		if "foveation_level" in iface:
+			iface.foveation_level = 0
+		if "foveation_dynamic" in iface:
+			iface.foveation_dynamic = false
+		get_viewport().vrs_mode = Viewport.VRS_DISABLED
+		picture_log = PictureLog.new()
+		add_child(picture_log)
+		picture_log.setup(iface, get_viewport())
 		cam = XRCamera3D.new()
 		origin.add_child(cam)
 		print("OpenXR is running")
@@ -395,7 +404,14 @@ func _load_settings() -> void:
 	if int(settings.get("ver", 0)) < 6:
 		settings.resolution = "auto"
 		settings.sharp = maxf(float(settings.sharp), 1.2)
-	settings.ver = 6
+	# Build 7: the picture settings are gone from the menu; the picture is fixed, adaptive lighting is off, foveation is off, sports handling is Social.
+	if int(settings.get("ver", 0)) < 7:
+		settings.smooth = "off"
+		settings.foveation = "off"
+		settings.fps = "off"
+		settings.refresh = "72"
+		settings.sports_feel = "social"
+	settings.ver = 7
 	_save_settings()
 
 
@@ -473,6 +489,7 @@ var _slow_s := 0.0
 var _perf_age := 0.0
 var _rate_set := false
 var fps_label: Label3D
+var picture_log: PictureLog
 
 
 ## How much bigger than the headset's own picture size to draw each eye. The headset (or a tool such as Quest Games Optimiser) may already have
@@ -566,17 +583,12 @@ func _apply_tier() -> void:
 		var multiplier := _eye_multiplier(iface)
 		if not is_equal_approx(iface.render_target_size_multiplier, multiplier):
 			iface.render_target_size_multiplier = multiplier
-		# foveation draws the edges of your view at lower detail; the Display page can turn it down or off to see if it is what looks soft
-		var fov := str(settings.get("foveation", "app"))
-		# Mobile renderer uses VRS, not the GLES foveation properties.
-		# External means QGO owns FFR; never layer a second foveation map on it.
-		if RenderingServer.get_current_rendering_method() != "gl_compatibility":
-			get_viewport().vrs_mode = Viewport.VRS_DISABLED if fov in ["off", "external"] else Viewport.VRS_XR
-			iface.vrs_min_radius = 55.0 if fov != "high" else 40.0
-			iface.vrs_strength = 0.35 if fov != "high" else 0.65
-		elif fov != "external" and "foveation_level" in iface:
-			iface.foveation_level = {"off": 0, "low": 1, "high": 3}.get(fov, 1)
-			iface.foveation_dynamic = fov == "app"
+		# no foveation of our own, ever (see _setup_xr): a picture that changes with load is what looked like a steamy window
+		get_viewport().vrs_mode = Viewport.VRS_DISABLED
+		if "foveation_level" in iface:
+			iface.foveation_level = 0
+		if "foveation_dynamic" in iface:
+			iface.foveation_dynamic = false
 	room.env.glow_enabled = str(settings.glow) == "on" and (str(settings.smooth) != "on" or q_tier == 0)
 	for i in range(room.sports.annex.lights.size()):
 		var light: OmniLight3D = room.sports.annex.lights[i]
@@ -956,6 +968,8 @@ func _fix_poses() -> void:
 func _process(delta: float) -> void:
 	clock += delta
 	_perf_tick(delta)
+	if picture_log != null:
+		picture_log.tick(delta, ("hall" if cam.global_position.z > ShackAnnex.Z0 else "arcade") + (" menu" if menu.open else "") + (" playing" if locked else ""))
 	if xr_on and int(clock * 2.0) != int((clock - delta) * 2.0):
 		_fix_poses()
 	room.door.allowed = str(settings.get("scares", "on")) == "on" and not menu.open and not locked and _head_floor().z < 5.0
@@ -965,6 +979,10 @@ func _process(delta: float) -> void:
 	_update_peg_targets()
 	_calibrate(delta)
 	var hs := _read_hands(delta)
+	if picture_log != null:
+		if picture_log.marks(hs, delta) != "":
+			_haptic(0, 0.3, 0.12)
+			_haptic(1, 0.3, 0.12)
 	_pose_hands(hs)
 	_update_avatar(hs, delta)
 	# (after the hands are posed: the sports code needs each hand's palm, tip and visible pose, which are only worked out there. Before this fix it ran first and

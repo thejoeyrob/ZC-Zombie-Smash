@@ -254,7 +254,7 @@ func _label(text: String, size := 32, color := Color(0.85, 0.9, 1.0)) -> Label:
 	return l
 
 
-const PAGES := [["play", "THE SHACK", Color("#236b60")], ["sports", "SPORTS", Color("#236b60")], ["friends", "FRIENDS", Color("#236b60")], ["avatar", "CHARACTER", Color("#236b60")], ["comfort", "COMFORT", Color("#236b60")], ["display", "AUDIO / VIDEO", Color("#236b60")]]
+const PAGES := [["play", "THE SHACK", Color("#236b60")], ["sports", "SPORTS", Color("#236b60")], ["friends", "FRIENDS", Color("#236b60")], ["avatar", "CHARACTER", Color("#236b60")], ["comfort", "COMFORT", Color("#236b60")], ["display", "SOUND", Color("#236b60")]]
 var LABELS := {
 	"handmode": {"auto": "AUTO", "controllers": "CONTROLLERS", "hands": "BARE HANDS"},
 	"body": {"full": "FULL BODY", "arms": "ARMS ONLY", "hands": "HANDS ONLY"},
@@ -423,8 +423,6 @@ Your unfinished run will be lost.")
 	var sp: VBoxContainer = _pages.sports
 	_heading(sp, "SPORTS NIGHT")
 	_hint(sp, "Play solo or take turns on this headset. Choose your station and rules below, then start a new match. Visit a sport from The Shack to continue an existing match.")
-	_stepper(sp, "sports_feel", "Handling", ["social", "simulation"], "")
-	_hint(sp, "Social: stronger throws, easier axe sticking and gentle bowling pocket assistance. Simulation: unassisted release. Let go of the button you used to pick up.")
 	_stepper(sp, "sports_players", "Local players", [1, 2, 3, 4], "")
 	_heading(sp, "01  STRIKERS BOWLING")
 	_hint(sp, "Grip the ball, swing underarm and release. Wrist rotation adds hook. Ten frames with proper strike, spare and final-frame bonuses.")
@@ -457,30 +455,11 @@ This replaces the selected lane's scores.")
 	_hint(av, "Your appearance updates immediately. The locker by the entrance gives you another place to change.")
 	var cf: VBoxContainer = _pages.comfort
 	_heading(cf, "FIND YOUR COMFORT")
-	_slider(cf, "lift", "Player height", -0.5, 0.8, 0.02)
-	_slider(cf, "reach", "Machine distance", -0.25, 0.4, 0.02)
-	_stepper(cf, "handmode", "Hands", ["auto", "controllers", "hands"], "")
-	_stepper(cf, "pointer", "Pointer hand", ["right", "left"], "")
 	_stepper(cf, "turn", "Turning", ["smooth", "snap"], "")
-	_stepper(cf, "snap", "Snap angle", [30, 45, 60], "°")
-	_slider(cf, "walk", "Walk speed", 0.5, 2.5, 0.1)
-	_slider(cf, "turnspeed", "Smooth turn speed", 30.0, 120.0, 5.0)
+	_stepper(cf, "pointer", "Pointer hand", ["right", "left"], "")
 	_slider(cf, "haptics", "Vibration", 0.0, 1.0, 0.1)
-	_heading(cf, "HAND ALIGNMENT")
-	_hint(cf, "Change these only if the virtual hands do not line up with your controllers.")
-	_stepper(cf, "handroll", "Hand roll", [-90, -60, -30, 0, 30, 60, 90, 180], "°")
-	_stepper(cf, "handtilt", "Hand tilt", [-90, -60, -45, -30, 0, 30, 45, 60, 90], "°")
+	_slider(cf, "lift", "Player height", -0.5, 0.8, 0.02)
 	var dp: VBoxContainer = _pages.display
-	_heading(dp, "PICTURE")
-	_stepper(dp, "resolution", "Resolution owner", ["auto", "headset", "game"], "")
-	_hint(dp, "QGO: Resolution owner HEADSET + Edge detail EXTERNAL. Native 1:1: HEADSET with QGO disabled. To diagnose blur, disable QGO FFR and select OFF here. LOW/HIGH use in-game peripheral shading; do not stack with QGO FFR.")
-	_stepper(dp, "smooth", "Adaptive lighting", ["on", "off"], "")
-	_slider(dp, "sharp", "Game resolution multiplier", 1.0, 1.6, 0.1)
-	_stepper(dp, "refresh", "Refresh rate (Hz)", ["72", "90", "120", "auto"], "")
-	_slider(dp, "screenlight", "Arcade screens", 0.5, 1.15, 0.05)
-	_stepper(dp, "glow", "Neon bloom", ["on", "off"], "")
-	_stepper(dp, "foveation", "Edge detail / FFR", ["external", "off", "low", "high"], "")
-	_stepper(dp, "fps", "Show FPS", ["off", "on"], "")
 	_heading(dp, "SOUND")
 	_stepper(dp, "scares", "Door jump scares", ["on", "off"], "")
 	_slider(dp, "music", "Music", 0.0, 1.0, 0.05)
