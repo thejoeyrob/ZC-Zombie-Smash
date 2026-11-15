@@ -1,0 +1,26 @@
+# Submits the prepared 1.0.1 App Store version for review (owner asked for it on 2026-11-11). Runs when this file changes on this branch, or by hand.
+name: iOS submit update
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/zombie-smash-deployment-stores-mk88wq]
+    paths: [.github/workflows/ios-submit-update.yml]
+concurrency:
+  group: ios-submit-update
+  cancel-in-progress: false
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash2' }}
+      NEW_VERSION: ${{ vars.IOS_APP_VERSION || '1.0.1' }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3' }
+      - run: gem install fastlane --no-document
+      - run: ruby appstore/submit_update.rb

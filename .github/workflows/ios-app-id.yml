@@ -1,0 +1,22 @@
+# Read-only: prints the app's Apple ID and version states. Runs when this file changes on this branch, or by hand.
+name: iOS app id
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/zombie-smash-deployment-stores-mk88wq]
+    paths: [.github/workflows/ios-app-id.yml, appstore/print_app_id.rb]
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash2' }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3' }
+      - run: gem install fastlane --no-document
+      - run: ruby appstore/print_app_id.rb

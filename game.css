@@ -314,16 +314,6 @@ body {
   will-change: transform;
   pointer-events: none;
 }
-.stick-arrows {
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font: 10px Barlow;
-  color: #acb9b7;
-  pointer-events: none;
-}
 .fire-button {
   position: absolute;
   right: 20px;
@@ -680,34 +670,6 @@ body {
   letter-spacing: 0.14em;
   margin-top: 3px;
 }
-.boss-choice {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border-bottom: 1px solid #354038;
-  padding: 8px 0;
-}
-.boss-choice img {
-  width: 48px;
-  height: 55px;
-  object-fit: contain;
-}
-.boss-choice > div {
-  flex: 1;
-}
-.boss-choice b {
-  display: block;
-  font: 900 15px Barlow;
-  color: #e5d4a7;
-}
-.boss-choice button {
-  background: #28382f;
-  border: 1px solid #657564;
-  color: #e9e6d7;
-  padding: 6px 8px;
-  font: 700 11px Barlow;
-  margin-top: 5px;
-}
 .score-result {
   font: 900 53px Barlow;
   color: #ffdc81;
@@ -905,9 +867,6 @@ body {
   fill: none;
   stroke-width: 3;
 }
-.sound-off .wordmark small {
-  color: #a5aaa3;
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
@@ -967,9 +926,6 @@ body {
     color-mix(in srgb, var(--stick) 54%, #5d3d16) 78%,
     #2a1d13
   );
-}
-.stick-arrows {
-  display: none !important;
 }
 .fire-button {
   right: 21px;
@@ -1083,50 +1039,6 @@ body {
 .skin-choice.selected {
   border-color: var(--accent);
 }
-.story-art {
-  display: block;
-  width: 100%;
-  max-height: 265px;
-  object-fit: cover;
-  object-position: center top;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, #4c5149);
-  background: #080c0a;
-}
-.story-copy {
-  margin: 10px 0 12px;
-  padding: 8px 10px;
-  border-left: 3px solid var(--accent);
-  background: #0c1510;
-}
-.story-copy p {
-  margin: 5px 0;
-  font: 700 11px/1.35 Inter;
-  color: #c8d3c5;
-}
-.story-copy b {
-  color: #f2d87b;
-}
-.install-art {
-  object-position: center 18%;
-}
-.scene-dual {
-  position: absolute;
-  inset: 35px 0 58px;
-}
-.scene-dual .scene-art.joey {
-  left: -35px;
-  top: 42px;
-  width: 205px;
-  height: 250px;
-  opacity: 0.92;
-}
-.scene-dual .scene-art.boss-form {
-  right: -14px;
-  top: 24px;
-  width: 225px;
-  height: 270px;
-  animation: boss-enter 0.45s cubic-bezier(0.15, 0.8, 0.3, 1) both;
-}
 .scene-copy {
   z-index: 4;
 }
@@ -1148,40 +1060,6 @@ body {
 .start-art {
   object-fit: contain;
   background: #090e0e;
-}
-.story-art {
-  height: 220px;
-  max-height: none;
-  object-fit: contain;
-  background: #050809;
-}
-.story-copy {
-  min-height: 96px;
-  margin: 8px 0;
-  padding: 8px 10px;
-}
-.story-copy h3 {
-  font: 900 21px/1 Barlow;
-  margin: 0 0 6px;
-  color: var(--accent);
-}
-.story-copy p {
-  font-size: 11px;
-  line-height: 1.45;
-}
-.story-dots {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  margin: 8px;
-}
-.story-dots i {
-  height: 3px;
-  width: 22px;
-  background: #34423a;
-}
-.story-dots .current {
-  background: var(--accent);
 }
 #cinematic {
   display: grid;
@@ -1429,12 +1307,6 @@ body {
 }
 .hud-bottom #healthValue .heart.empty {
   color: #74806f;
-}
-.story-art {
-  height: min(220px, calc(var(--wh, 450px) * 0.42));
-}
-.story-copy {
-  min-height: 78px;
 }
 #joystick:before {
   content: '';
@@ -1702,32 +1574,6 @@ body {
   font: 900 12px Barlow !important;
   letter-spacing: 0.14em;
 }
-.title-ticker {
-  overflow: hidden;
-  white-space: nowrap;
-  margin: 6px -14px 0;
-  border-top: 1px solid #8cff5555;
-  border-bottom: 1px solid #8cff5555;
-  background: #00000099;
-  font:
-    700 9px 'Courier New',
-    monospace;
-  letter-spacing: 0.14em;
-  color: #ff8a4a;
-}
-.title-ticker span {
-  display: inline-block;
-  padding: 2px 0;
-  animation: ticker 26s linear infinite;
-}
-@keyframes ticker {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
 .title-bottom .loading-line {
   margin-top: 5px;
   font:
@@ -1850,8 +1696,7 @@ body {
   .title-screen,
   .title-logo span,
   .title-tag,
-  .press-start,
-  .title-ticker span {
+  .press-start{
     animation: none !important;
   }
 }
@@ -1978,17 +1823,6 @@ body {
   font: 500 10px Inter;
   color: #9eb0a3;
   margin: 2px 0 6px;
-}
-.cheat-state {
-  font: 900 10px Inter;
-  padding: 2px 6px;
-  border-radius: 2px;
-  background: #2c3731;
-  color: #93a597;
-}
-.cheat-state.on {
-  background: #6fe06a;
-  color: #07210a;
 }
 .cheat-code {
   display: flex;
@@ -2171,13 +2005,6 @@ body {
     transform: scale(1.07);
   }
 }
-.title-logo-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
 .title-screen {
   animation: none;
   background: #1a0d08;
@@ -2218,51 +2045,6 @@ body {
     filter: none;
   }
 }
-.title-fire,
-.title-glow,
-.title-shine {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-}
-.title-fire {
-  inset: 0 0 45% 0;
-  background: radial-gradient(ellipse at 50% 20%, #ff8a2a99, #ff4a0000 70%);
-  mix-blend-mode: screen;
-  animation: fireFlicker 2.3s steps(1) infinite;
-}
-@keyframes fireFlicker {
-  0% {
-    opacity: 0.5;
-  }
-  12% {
-    opacity: 0.9;
-  }
-  25% {
-    opacity: 0.6;
-  }
-  41% {
-    opacity: 1;
-  }
-  58% {
-    opacity: 0.55;
-  }
-  76% {
-    opacity: 0.85;
-  }
-  90% {
-    opacity: 0.6;
-  }
-}
-.title-glow {
-  left: 22%;
-  right: 22%;
-  top: 14%;
-  height: 40%;
-  background: radial-gradient(ellipse at 50% 50%, #7dff2a88, #7dff2a00 68%);
-  mix-blend-mode: screen;
-  animation: slimePulse 2.8s ease-in-out infinite;
-}
 @keyframes slimePulse {
   0%,
   100% {
@@ -2273,74 +2055,6 @@ body {
     opacity: 0.95;
     transform: scale(1.06);
   }
-}
-#titleFx {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-}
-.title-shine {
-  left: 8%;
-  right: 8%;
-  top: 46%;
-  height: 12%;
-  overflow: hidden;
-  -webkit-mask: linear-gradient(90deg, #0000, #000 20%, #000 80%, #0000);
-  mask: linear-gradient(90deg, #0000, #000 20%, #000 80%, #0000);
-}
-.title-shine:after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 26%;
-  left: -40%;
-  background: linear-gradient(105deg, #fff0, #ffffffa6, #fff0);
-  mix-blend-mode: overlay;
-  animation: shineSweep 5s ease-in-out 2s infinite;
-}
-@keyframes shineSweep {
-  0% {
-    left: -40%;
-  }
-  35%,
-  100% {
-    left: 130%;
-  }
-}
-.title-bosses {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  margin: 4px 2px 0;
-}
-.title-bosses .tb {
-  flex: 1;
-  height: 36px;
-  border-radius: 6px;
-  background: #00000088;
-  border: 1px solid #ffffff22;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-.title-bosses .tb img {
-  height: 32px;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  filter: brightness(0) opacity(0.55);
-}
-.title-bosses .tb.down {
-  border-color: var(--c);
-  box-shadow: 0 0 8px var(--c);
-  background: #000000aa;
-}
-.title-bosses .tb.down img {
-  filter: none;
 }
 .title-count {
   margin-top: 4px;
@@ -2362,16 +2076,6 @@ body {
 .title-art {
   inset: 0 0 30px 0;
 }
-.title-bosses .tb {
-  height: 32px;
-}
-.title-bosses .tb img {
-  height: 28px;
-  filter: brightness(0) invert(0.32);
-}
-.title-bosses .tb.down img {
-  filter: none;
-}
 
 /* 7.18: clear animated logo, art underneath, and the coffee screen. */
 .title-art {
@@ -2388,15 +2092,6 @@ body {
 .title-screen {
   background:
     radial-gradient(ellipse at 50% 0%, #ff6a1f55, #0000 55%), linear-gradient(#1b0b06, #0a0504 65%);
-}
-.title-fire {
-  inset: 0 0 60% 0;
-}
-.title-glow {
-  top: 32%;
-}
-.title-shine {
-  display: none;
 }
 .title-logo {
   margin: 4px 0 0;
@@ -2744,3 +2439,514 @@ body {
   color: #ff7a2f;
   text-shadow: 0 0 6px #ff7a2f88;
 }
+
+/* LAUNCH ART: ivory console label contrast */
+body[data-release-skin="pocket-arcade"] .wordmark,
+body[data-release-skin="pocket-arcade"] .wordmark b,
+body[data-release-skin="pocket-arcade"] .wordmark small,
+body[data-release-skin="pocket-arcade"] .deck-label,
+body[data-release-skin="pocket-arcade"] .engraving { color: #173b3e; text-shadow: none; }
+
+/* Release polish: show complete scene artwork, then dissolve in only after decoding. */
+#cinematic .scene-clip { object-fit: contain; opacity: 0; transition: opacity 180ms ease-out; }
+#cinematic.clip-ready .scene-clip { opacity: 1; }
+#cinematic.clip-mode:not(.clip-ready) > :not(video):not(.scene-next) { visibility: visible; }
+#cinematic .scene-next { min-height: 44px; padding: 10px 16px; background: #0b100fe8; border: 1px solid #b7d4b866; border-radius: 9px; }
+/* A consistent inset rim keeps every existing finish crisp without changing the arena. */
+.shell-art { border-radius: 22px; box-shadow: inset 0 0 0 1px #ffffff20, inset 0 -2px 5px #0008; }
+.skin-thumbnail { border-radius: 7px; box-shadow: 0 4px 12px #0007; }
+.skin-choice { border-radius: 12px; transition: border-color 120ms ease, background-color 120ms ease; }
+.skin-choice.selected { background: #183025; box-shadow: inset 0 0 0 1px #b7ff4366; }
+.skin-choice:focus-visible, .scene-next:focus-visible { outline: 2px solid #dcff9a; outline-offset: 2px; }
+.segmented { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  #cinematic .scene-clip, .skin-choice { transition: none; }
+}
+/* Existing finishes: ivory title contrast and the Neon shell's white outside corners. */
+body[data-release-skin="arctic"] .wordmark,
+body[data-release-skin="arctic"] .wordmark b,
+body[data-release-skin="arctic"] .wordmark small { color: #173b3e; text-shadow: none; }
+body[data-release-skin="neon"] .shell-art { border-radius: 23px 23px 45px 45px; }
+.skin-choice[data-skin="neon"] .skin-thumbnail,
+.skin-choice[data-preview="neon"] .skin-thumbnail { border-radius: 4px 4px 9px 9px; }
+.segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 174px; border: 0; gap: 4px; flex: 0 0 174px; }
+.segmented button { min-width: 0; min-height: 36px; border: 1px solid #526157; border-radius: 5px; }
+.segmented button + button { border: 1px solid #526157; }
+.segmented button:last-child { grid-column: 1 / -1; }
+
+/* 7.24 illustrated campaign: fixed cabinet geometry, readable comic captions. */
+.title-screen {background: #050807;}
+.title-screen:before {background:linear-gradient(180deg,#07131188 0%,#07131108 35%,#071311bb 66%,#071311f2 100%);z-index:1;animation:none;}
+.title-ui {z-index:4;}
+.title-logo {animation:none;filter:drop-shadow(0 3px 3px #000);}
+
+/* Gentle movement preserves the original illustration and avoids body warping. */
+
+/* Joey's shocked reaction trembles. */
+@keyframes joey-tremble {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  15% { transform: translate(-3px, 2px) rotate(-1.2deg); }
+  30% { transform: translate(3px, -2px) rotate(1deg); }
+  45% { transform: translate(-2px, -2px) rotate(-0.8deg); }
+  60% { transform: translate(2px, 3px) rotate(1.2deg); }
+  80% { transform: translate(-3px, 1px) rotate(-1deg); }
+}
+.scene-name + .scene-figures .scene-art.joey { animation: reveal 0.4s ease-out both, joey-tremble 0.28s linear 0.4s infinite; }
+@media (prefers-reduced-motion: reduce) {  .scene-name + .scene-figures .scene-art.joey { animation: none; } }
+
+/* 7.25.0: one line per skin name so every tile lines up. */
+.skin-choice b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; height: 1.2em; margin: 7px 0 4px; }
+
+/* 7.25.0: boss scenes are built from three depth layers that drift at different speeds:
+   a soft, slow background, the sharp middle ground, and a fast foreground edge with drifting embers. */
+
+/* 7.26.0: the eight illustrated skins (body.deck3d) get purpose-built 3D controls. The tap areas stay flat and
+   full-size; only the artwork inside them is drawn in perspective, so response is unchanged. The flat skins keep the
+   original button style.
+   Per-skin offsets line each control up with that skin's painted sockets. */
+
+body.deck3d #joystick { translate: var(--jx, 0) var(--jy, 0); background: none; box-shadow: none; }
+body.deck3d #joystick.sped { box-shadow: none; }
+body.deck3d #joystick.sped .stick-knob { filter: drop-shadow(0 0 7px var(--accent)); }
+body.deck3d .stick-track { inset: auto; left: 50%; top: 50%; width: var(--jw, 88px); height: var(--jh, 58px); margin: calc(var(--jh, 58px) / -2) 0 0 calc(var(--jw, 88px) / -2); border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 38%, #1c2024 0, #050607 64%, #000 100%);
+  box-shadow: inset 0 6px 10px #000, inset 0 -2px 3px #ffffff30, 0 0 0 3px #aab3b7, 0 0 0 4px #0c0e0f, 0 4px 0 3px #22282b, 0 9px 8px 3px #000a; }
+body.deck3d .stick-track::before, body.deck3d .stick-track::after { content: ''; position: absolute; top: 50%; margin-top: -6px; width: 0; height: 0; border: 6px solid transparent; opacity: 0.4; transition: opacity 0.08s, filter 0.08s; }
+body.deck3d .stick-track::before { left: 5px; border-right: 9px solid var(--accent); border-left: 0; }
+body.deck3d .stick-track::after { right: 5px; border-left: 9px solid var(--accent); border-right: 0; }
+body.deck3d #joystick.push-l .stick-track::before, body.deck3d #joystick.push-r .stick-track::after { opacity: 1; filter: drop-shadow(0 0 5px var(--accent)); }
+body.deck3d #joystick::after { content: ''; position: absolute; z-index: 0; left: 50%; margin-left: -5px; top: calc(50% - 34px); width: 10px; height: 34px; pointer-events: none;
+  transform-origin: 50% 100%; transform: skewX(calc(var(--lean, 0) * -33deg));
+  background: linear-gradient(90deg, #15181a, #a9b1b4 42%, #343a3d 70%, #0c0e0f); border-radius: 3px; }
+body.deck3d .stick-knob { z-index: 1; width: 38px; height: 38px; left: 50%; top: 50%; margin: -51px 0 0 -19px; border: 0; border-radius: 50%; --ball: var(--accent);
+  background: radial-gradient(ellipse at 33% 24%, #fffffff0 0 3%, #ffffff70 7%, transparent 20%), radial-gradient(circle at 50% 108%, color-mix(in srgb, var(--ball) 70%, #fff) 0, transparent 40%), radial-gradient(circle at 45% 40%, var(--ball) 0, color-mix(in srgb, var(--ball) 55%, #000) 62%, #050505 100%);
+  box-shadow: 0 8px 7px #000a, inset -3px -5px 8px #0007, inset 2px 3px 5px #fff6; }
+
+body.deck3d .fire-button { translate: var(--fx, 0) var(--fy, 0); width: 100px; height: 100px; padding: 0; background: none; border: 0; box-shadow: none; }
+body.deck3d .fire-button::before { content: ''; position: absolute; left: 50%; top: 50%; width: var(--fd, 96px); height: var(--fd, 96px); margin: calc(var(--fd, 96px) / -2) 0 0 calc(var(--fd, 96px) / -2); border-radius: 50%; pointer-events: none;
+  transform: perspective(620px) rotateX(var(--ft, 50deg)); box-shadow: 0 0 12px color-mix(in srgb, var(--fire) 80%, transparent), 0 0 4px color-mix(in srgb, var(--fire) 60%, transparent); opacity: 0.3; animation: glow-pulse 2.6s ease-in-out infinite; }
+body.deck3d .fire-inner { position: absolute; left: 50%; top: 50%; width: var(--fd, 96px); height: var(--fd, 96px); margin: calc(var(--fd, 96px) / -2) 0 0 calc(var(--fd, 96px) / -2); border: 0; border-radius: 50%;
+  transform: perspective(620px) rotateX(var(--ft, 50deg)); transform-style: preserve-3d;
+  background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa);
+  box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 8px 7px #000a; }
+body.deck3d .fire-inner::before { content: ''; position: absolute; inset: 9%; border-radius: 50%; transform: translateZ(1px);
+  background: radial-gradient(circle at 50% 38%, #1a1d1f 0, #040505 72%); box-shadow: inset 0 6px 9px #000, inset 0 -2px 3px #ffffff25; }
+body.deck3d .fire-inner .crosshair { display: block; position: absolute; left: 21%; top: 21%; width: 58%; height: 58%; border: 0; border-radius: 50%; opacity: 1; transform: translateZ(6px);
+  background: color-mix(in srgb, var(--fire) 28%, #0d0102); box-shadow: 0 0 0 2px #00000070; }
+body.deck3d .fire-inner .crosshair::before, body.deck3d .fire-inner .crosshair::after { display: none; }
+body.deck3d .fire-inner::after { content: ''; position: absolute; inset: 15%; border-radius: 50%; transform: translateZ(13px); transition: transform 0.06s, filter 0.06s;
+  background: radial-gradient(ellipse at 33% 22%, #ffffffee 0 3%, #ffffff80 6%, transparent 21%), radial-gradient(ellipse at 50% 106%, color-mix(in srgb, var(--fire) 60%, #fff) 0, transparent 44%), radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--fire) 60%, #fff) 0, var(--fire) 52%, color-mix(in srgb, var(--fire) 42%, #1c0205) 100%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fire) 36%, #0d0102), 0 0 0 4px #000a, inset 0 -7px 9px #0006, inset 0 3px 4px #ffffff66; }
+body.deck3d .fire-inner b { position: absolute; inset: 0; bottom: auto; height: 100%; display: flex; align-items: center; justify-content: center; font: 900 15px Barlow, sans-serif; letter-spacing: 0.12em; transform: translateZ(14px); z-index: 2; text-shadow: 0 2px 2px #5b0610, 0 0 6px #ffffff40; }
+body.deck3d .fire-button.pressed { filter: none; }
+body.deck3d .fire-button.pressed::before { display: none; }
+body.deck3d .fire-button.pressed .fire-inner { transform: perspective(620px) rotateX(var(--ft, 50deg)); border: 0; background: conic-gradient(from 200deg, #f7f9fa, #7d868a, #1c2225, #b4bcc0, #fff, #6a7276, #1a1f22, #d3d9dc, #f7f9fa); box-shadow: 0 1px 0 #4a5154, 0 2px 0 #3d4346, 0 3px 0 #2f3437, 0 4px 0 #22272a, 0 5px 0 #15191b, 0 0 26px 6px var(--fire), 0 0 8px 2px #fff8; }
+body.deck3d .fire-button.pressed .fire-inner::after { transform: translateZ(8px);
+  background: radial-gradient(ellipse at 33% 22%, #fff 0 5%, #ffffffa0 9%, transparent 26%), radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--fire) 40%, #fff) 0, color-mix(in srgb, var(--fire) 70%, #fff) 40%, var(--fire) 100%); }
+body.deck3d .fire-button.pressed .fire-inner b { transform: translateZ(9px); }
+@keyframes glow-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+body.deck3d .grenade-button { translate: var(--gx, 0) var(--gy, 0); width: 56px; height: 56px; border: 0; background: none; box-shadow: none; filter: none; opacity: 1; color: #3a2600; }
+body.deck3d .grenade-button .g3 { display: block; position: absolute; left: 50%; top: 50%; width: var(--gd, 58px); height: var(--gd, 58px); margin: calc(var(--gd, 58px) / -2) 0 0 calc(var(--gd, 58px) / -2); border: 3px solid #30dcff; border-radius: 50%; box-sizing: border-box;
+  transform: perspective(520px) rotateX(var(--gt, 50deg)); transform-style: preserve-3d; pointer-events: none;
+  box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 9px #30dcff, 0 0 18px #30dcffa0, inset 0 0 9px #30dcffaa; }
+body.deck3d .grenade-button::before { content: ''; position: absolute; left: 50%; top: 50%; width: var(--gd, 58px); height: var(--gd, 58px); margin: calc(var(--gd, 58px) / -2) 0 0 calc(var(--gd, 58px) / -2); border-radius: 50%; pointer-events: none;
+  transform: perspective(520px) rotateX(var(--gt, 50deg)); box-shadow: 0 0 12px #30dcff, 0 0 24px #30dcffc0; opacity: 0.3; animation: glow-pulse 1.7s ease-in-out infinite; }
+body.deck3d .grenade-button.empty::before, body.deck3d .grenade-button:active:not(.empty)::before { display: none; }
+body.deck3d .grenade-button .g3::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #12181a, #030506 74%); box-shadow: inset 0 5px 8px #000; transform: translateZ(1px); }
+body.deck3d .grenade-button .g3 i { display: block; position: absolute; inset: 17%; border-radius: 50%; transform: translateZ(5px); background: #6b4700; box-shadow: 0 0 0 2px #00000070; }
+body.deck3d .grenade-button .g3::after { content: ''; position: absolute; inset: 12%; border-radius: 50%; transform: translateZ(11px);
+  background: radial-gradient(ellipse at 33% 22%, #fffffff0 0 4%, #ffffff80 8%, transparent 24%), radial-gradient(ellipse at 50% 106%, #fff3a0 0, transparent 46%), radial-gradient(circle at 50% 40%, #fff0a0 0, #ffd21c 46%, #c58b00 100%);
+  box-shadow: 0 0 0 2px #8a5f00, 0 0 0 3px #000a, inset 0 -5px 7px #8a5a0066, inset 0 2px 3px #fff9; transition: transform 0.06s, filter 0.06s; }
+body.deck3d .grenade-button .g3 svg { position: absolute; left: 50%; top: 50%; width: 19px; height: 23px; margin: -11px 0 0 -9.5px; transform: translateZ(12px); stroke: #3a2600; stroke-width: 2.4; fill: none; z-index: 2; }
+body.deck3d .grenade-button b { z-index: 3; background: #1e1500; border: 1px solid #ffd21c; color: #ffe27a; right: 7px; bottom: 7px; }
+body.deck3d .grenade-button.empty .g3 { border-color: #22404a; box-shadow: 0 1px 0 #11222a, 0 2px 0 #0b161b, 0 3px 0 #070d10, 0 4px 0 #040809; animation: none; }
+body.deck3d .grenade-button.empty .g3::after { background: radial-gradient(ellipse at 33% 22%, #fff8 0 4%, transparent 22%), radial-gradient(circle at 50% 40%, #d8cc9a, #8f8040 60%, #5a4d1b 100%); }
+body.deck3d .grenade-button:active:not(.empty) { transform: none; filter: none; }
+body.deck3d .grenade-button:active:not(.empty) .g3::after { transform: translateZ(7px);
+  background: radial-gradient(ellipse at 33% 22%, #fff 0 5%, #ffffffa0 9%, transparent 26%), radial-gradient(circle at 50% 42%, #ffffe8 0, #ffe85a 52%, #e8ac00 100%); }
+body.deck3d .grenade-button:active:not(.empty) .g3 { animation: none; border-color: #b2f6ff; box-shadow: 0 1px 0 #0a4152, 0 2px 0 #08323f, 0 3px 0 #062833, 0 4px 0 #041c24, 0 0 14px #8ff0ff, 0 0 30px #30dcff, inset 0 0 14px #8ff0ff; }
+.deck-menu .m3 { display: contents; }
+body.deck3d .deck-menu { translate: var(--mx, 0) var(--my, 0); width: var(--mw, 78px); height: var(--mh, 30px); margin-left: calc(var(--mw, 78px) / -2); padding: 0; border: 0; background: none; box-shadow: none; filter: none; animation: none; color: var(--accent); }
+body.deck3d .deck-menu:active, body.deck3d .deck-menu.pressed { transform: none; filter: none; box-shadow: none; }
+body.deck3d .deck-menu .m3 { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 8px; pointer-events: none;
+  transform: perspective(520px) rotateX(var(--mt, 40deg)); transform-style: preserve-3d;
+  background: linear-gradient(#0b0e10, #050607); border: 1px solid color-mix(in srgb, var(--accent) 55%, #000);
+  box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 9px 8px #000b, 0 0 7px color-mix(in srgb, var(--accent) 30%, transparent); }
+body.deck3d .deck-menu::before { content: ''; position: absolute; inset: 0; border-radius: 8px; pointer-events: none; transform: perspective(520px) rotateX(var(--mt, 40deg)); box-shadow: 0 0 13px color-mix(in srgb, var(--accent) 60%, transparent); opacity: 0.25; animation: glow-pulse 3.4s ease-in-out infinite; }
+body.deck3d .deck-menu.pressed::before, body.deck3d .deck-menu:active::before { display: none; }
+body.deck3d .deck-menu .m3::before { content: ''; position: absolute; inset: 1px; border-radius: 7px; transform: translateZ(3px); background: #080a0b; box-shadow: 0 0 0 1px #000a; }
+body.deck3d .deck-menu .m3::after { content: ''; position: absolute; inset: 2px; border-radius: 6px; transform: translateZ(8px); transition: transform 0.06s;
+  background: linear-gradient(#5d686e 0, #2f383c 14%, #171c1f 60%, #0f1315 100%); box-shadow: inset 0 1px 0 #ffffff80, inset 0 -3px 5px #0008, 0 0 0 1px #000c; }
+body.deck3d .deck-menu .m3 > * { position: relative; z-index: 2; transform: translateZ(9px); transition: transform 0.06s; text-shadow: 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent), 0 1px 1px #000; }
+body.deck3d .deck-menu.pressed .m3::after, body.deck3d .deck-menu:active .m3::after { transform: translateZ(4px); background: linear-gradient(#7a868d 0, #3c474c 14%, #232a2e 60%, #181d20 100%); }
+body.deck3d .deck-menu.pressed .m3 > *, body.deck3d .deck-menu:active .m3 > * { transform: translateZ(5px); }
+body.deck3d .deck-menu.pressed .m3, body.deck3d .deck-menu:active .m3 { animation: none; box-shadow: 0 1px 0 #1d2326, 0 2px 0 #14181b, 0 3px 0 #0a0c0d, 0 0 16px var(--accent); }
+body.deck3d .engraving { display: none; }
+body.deck3d .console-header .wordmark { padding: 2px 12px 1px; border-radius: 9px; background: linear-gradient(#000000b8, #000000d8); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000), 0 2px 4px #000a; text-align: center; }
+body.deck3d .console-header .wordmark small { display: block; max-width: 150px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.15em; }
+body.deck3d .deck-label { top: 127px; left: 50%; width: 112px; height: auto; margin-left: 0; transform: translateX(-50%); translate: var(--lx, 0) var(--ly, 0); padding: 2px 6px; border-radius: 7px; background: #000000c8;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, #000); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font: 700 8.5px/1.4 Barlow, sans-serif; letter-spacing: 0.17em; text-transform: uppercase; color: #e9ecec; }
+
+/* A slim glass cover and shadow around the screen opening so it reads as a real display set into the console. */
+.screen-glass { position: absolute; left: var(--wx, 16px); top: var(--wy, 55px); width: var(--ww, 343px); height: var(--wh, 450px); z-index: 3; pointer-events: none; border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #ffffff1c, inset 0 0 12px 3px #000000b8, inset 0 2px 1px #ffffff2e;
+  background: linear-gradient(118deg, #ffffff1c 0, #ffffff08 16%, #fff0 30%), linear-gradient(#0000 80%, #0000002e); }
+
+/* 7.26.0: studio intro, how-to card on the start screen, skin type chooser. */
+#startPrompt > div { padding: 12px 14px 10px; width: min(300px, 92%); animation: none; }
+#startPrompt h3 { margin: 0 0 8px; font: 900 15px Barlow, sans-serif; letter-spacing: 0.2em; color: var(--accent); }
+#startPrompt ul { list-style: none; margin: 0 0 8px; padding: 0; text-align: left; display: grid; gap: 6px; }
+#startPrompt li { display: flex; align-items: center; gap: 9px; font: 600 12px/1.25 Inter, sans-serif; color: #dfe6e2; }
+#startPrompt li i { flex: none; min-width: 44px; padding: 4px 0; text-align: center; font: 900 11px Barlow, sans-serif; font-style: normal; letter-spacing: 0.08em; color: #fff; background: #1a2320; border: 1px solid color-mix(in srgb, var(--accent) 60%, #fff3); border-radius: 6px; }
+#startPrompt li b { display: inline; font: 900 12px Barlow, sans-serif; letter-spacing: 0.06em; color: #fff; }
+#startPrompt .goal { margin: 0 0 9px; padding: 8px 9px; text-align: center; font: 600 11px/1.3 Inter, sans-serif; color: #f0d4d0; background: #3a0b0e; border: 1px solid #ff5a55; border-radius: 6px; }
+#startPrompt .goal b { display: block; margin-bottom: 2px; font: 900 14px Barlow, sans-serif; letter-spacing: 0.06em; color: #ff7b72; }
+#startPrompt .go { font-size: 17px; animation: prompt-pulse 1.1s ease-in-out infinite; }
+.skin-group-card { display: flex; align-items: center; gap: 10px; width: 100%; margin: 10px 0; padding: 16px 14px; text-align: left; color: #fff; background: #17201c; border: 1px solid color-mix(in srgb, var(--accent) 45%, #333); border-radius: 10px; }
+.skin-group-card b { flex: 1; font: 900 17px Barlow, sans-serif; letter-spacing: 0.06em; }
+.skin-group-card span { font: 700 12px Inter, sans-serif; color: #a7b5ae; }
+.skin-group-card i { font-style: normal; font-size: 26px; line-height: 1; color: var(--accent); }
+.back-link { display: inline-block; margin: 0 0 8px; padding: 8px 14px; font: 800 14px Barlow, sans-serif; letter-spacing: 0.1em; color: var(--accent); background: #111915; border: 1px solid color-mix(in srgb, var(--accent) 45%, #333); border-radius: 8px; }
+
+/* flat skins keep the original grenade button: the new 3D wrapper adds nothing there. */
+.grenade-button .g3 { display: contents; }
+.grenade-button .g3 i { display: none; }
+body.deck3d .grenade-button .g3 { display: block; }
+body.deck3d .grenade-button .g3 i { display: block; }
+
+/* 7.27.1: each control is fitted to the inner edge of its painted socket (measured per skin), with a hairline gap so it sits inside the border. */
+body[data-release-skin="joeyrob"] { --jx: -0.95px; --jy: 21.64px; --jw: 82.99px; --jh: 59.58px; --fx: 0.78px; --fy: 17.06px; --fd: 84.08px; --ft: 42.06deg; --gx: -3.98px; --gy: -14.03px; --gd: 46.59px; --gt: 36.99deg; --mx: -0.11px; --my: 12.81px; --mw: 70.83px; --mh: 38.59px; }
+body[data-release-skin="jordan"] { --jx: -1.17px; --jy: 4.52px; --jw: 86.38px; --jh: 52.99px; --fx: 3.22px; --fy: -0.05px; --fd: 86.8px; --ft: 49.81deg; --gx: -4.61px; --gy: 9.06px; --gd: 41.06px; --gt: 50.25deg; --mx: -0.11px; --my: -0.16px; --mw: 82.38px; --mh: 28.06px; }
+body[data-release-skin="glowinghumanity"] { --jx: -7.22px; --jy: 14.62px; --jw: 91.28px; --jh: 61.5px; --fx: 8.53px; --fy: 9.88px; --fd: 91px; --ft: 44.85deg; --gx: -3.44px; --gy: 11.9px; --gd: 52.14px; --gt: 51.57deg; --mx: 0.43px; --my: 9.42px; --mw: 74.09px; --mh: 26.38px; }
+body[data-release-skin="debo"] { --jx: -2.98px; --jy: 23.77px; --jw: 73.63px; --jh: 55.86px; --fx: 4.92px; --fy: 19.45px; --fd: 76.2px; --ft: 38.93deg; --gx: -2.9px; --gy: -16.36px; --gd: 54.39px; --gt: 42.88deg; --mx: 0.42px; --my: -21.13px; --mw: 76.39px; --mh: 43.73px; }
+body[data-release-skin="caffeinatedsloth"] { --jx: 0.22px; --jy: 20.26px; --jw: 82.13px; --jh: 56.92px; --fx: 0.66px; --fy: 15.8px; --fd: 83.19px; --ft: 43.86deg; --gx: -3.98px; --gy: -4.58px; --gd: 51.22px; --gt: 49.2deg; --mx: 0.53px; --my: 10.32px; --mw: 72.95px; --mh: 33.32px; }
+body[data-release-skin="discoman"] { --jx: -0.21px; --jy: 15.68px; --jw: 72.89px; --jh: 49.79px; --fx: 1.1px; --fy: 11.41px; --fd: 74.18px; --ft: 44.88deg; --gx: -4.51px; --gy: 14.27px; --gd: 45.39px; --gt: 44.04deg; --mx: 0.1px; --my: 10.17px; --mw: 68.24px; --mh: 26.38px; }
+body[data-release-skin="fatamy"] { --jx: -3.5px; --jy: 11.54px; --jw: 80px; --jh: 44.69px; --fx: 4.49px; --fy: 7.11px; --fd: 80.82px; --ft: 53.98deg; --gx: -4.61px; --gy: 9.12px; --gd: 49.84px; --gt: 56.36deg; --mx: 0px; --my: -3.14px; --mw: 82.35px; --mh: 32.64px; }
+body[data-release-skin="drmantis"] { --jx: -6.91px; --jy: 10.05px; --jw: 90.97px; --jh: 55.12px; --fx: 8.22px; --fy: 5.25px; --fd: 90.61px; --ft: 49.92deg; --gx: -4.39px; --gy: 9.01px; --gd: 52.94px; --gt: 50.8deg; --mx: 0.1px; --my: 4.53px; --mw: 87.59px; --mh: 28.47px; }
+
+body[data-release-skin="joeyrob"] { --ly: 8px; }
+body[data-release-skin="jordan"] { --ly: -10.4px; }
+body[data-release-skin="glowinghumanity"] { --ly: -2.8px; }
+body[data-release-skin="debo"] { --ly: -16.8px; }
+body[data-release-skin="caffeinatedsloth"] { --ly: 3.9px; }
+body[data-release-skin="discoman"] { --ly: -2.4px; }
+body[data-release-skin="fatamy"] { --ly: -9.3px; }
+body[data-release-skin="drmantis"] { --ly: -5.6px; }
+
+/* 7.30.0: coffee screen cast (Joey Rob the dev and Caffeinated Sloth), compact tip buttons with a how-many stepper. */
+.coffee-art { flex: none; height: calc(var(--ww, 312px) * 0.4); }
+.coffee-joey { position: absolute; left: 3%; bottom: 0; height: 100%; animation: slothSway 3.1s ease-in-out infinite; filter: drop-shadow(0 6px 6px #000); }
+.coffee-art .coffee-sloth { left: auto; right: 3%; scale: -1 1; }
+.coffee-art .coffee-cup { right: auto; left: 50%; translate: -50% 0; height: 62%; }
+.bmc.tip { flex-direction: column; gap: 1px; padding: 8px 4px; font-size: 12px; letter-spacing: 0.04em; animation: none; box-shadow: 0 3px 0 #b89800, 0 0 12px #ffdd0066; }
+.bmc.tip b { font: 900 13px Barlow, sans-serif; }
+.bmc.tip span { font: 800 12px Inter; }
+.coffee-title { font-size: calc(var(--ww, 312px) * 0.165); }
+.coffee-art { height: calc(var(--ww, 312px) * 0.34); }
+.coffee-ui { padding-top: 10px; padding-bottom: 8px; }
+.coffee-ui .coffee-copy { font-size: 11px; line-height: 1.35; }
+body.deck3d .fire-inner b { display: none; }
+
+/* 7.31.0: map name moves onto the game screen; the toast stays inside the screen window. */
+body.deck3d .deck-label { display: none; }
+.map-tag { display: none; position: absolute; left: 6px; top: 5px; z-index: 2; padding: 2px 7px; border-radius: 6px; background: #00000070; color: #ffffffb8; font: 800 8px/1.4 Barlow, sans-serif; letter-spacing: 0.18em; text-transform: uppercase; pointer-events: none; }
+body.deck3d .map-tag { display: block; }
+#toast { left: calc(var(--wx, 16px) + 8px); right: auto; width: calc(var(--ww, 343px) - 16px); box-sizing: border-box; overflow-wrap: anywhere; }
+#toast { top: calc(var(--wy, 55px) + var(--wh, 450px) - 130px); }
+
+/* 7.33.0: the "let through" counter is ten zombie faces that light up as zombies get past the line. */
+.base-status { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.base-status small { font: 800 6px Inter, sans-serif; letter-spacing: 0.1em; color: #b9c3b9; }
+.base-status b { display: grid; grid-template-columns: repeat(5, 11px); gap: 1px 2px; font-size: 0; }
+.base-status.hit b { animation: zcount-shake 0.5s; }
+@keyframes zcount-shake { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-2px, 1px) rotate(-3deg); } 30% { transform: translate(2px, -1px) rotate(3deg); } 45% { transform: translate(-2px, 0) rotate(-2deg); } 60% { transform: translate(2px, 1px) rotate(2deg); } 80% { transform: translate(-1px, 0); } }
+.zpop { position: absolute; left: 50%; bottom: 100%; width: 34px; height: 34px; margin-left: -17px; z-index: 6; pointer-events: none; animation: zpop-up 1s ease-out forwards; }
+.zpop svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 6px #ff3b3b) drop-shadow(0 2px 2px #000); animation: zhead-shake 0.12s linear 6; }
+.zpop circle:first-child { fill: #9bff4a; stroke: #1b2a10; stroke-width: 1.4; }
+.zpop .zeye { stroke: #3b0707; stroke-width: 1.6; fill: none; }
+.zpop .zeye2 { fill: #3b0707; }
+.zpop .zmouth { stroke: #3b0707; stroke-width: 1.6; fill: none; }
+@keyframes zpop-up { 0% { transform: translateY(8px) scale(0.4); opacity: 0; } 15% { transform: translateY(0) scale(1.15); opacity: 1; } 70% { transform: translateY(-4px) scale(1); opacity: 1; } 100% { transform: translateY(-12px) scale(0.9); opacity: 0; } }
+@keyframes zhead-shake { 0%, 100% { transform: translate(0, 0) rotate(0); } 25% { transform: translate(-2px, 1px) rotate(-10deg); } 75% { transform: translate(2px, -1px) rotate(10deg); } }
+@media (prefers-reduced-motion: reduce) { .base-status.hit b, .zpop svg { animation: none; } }
+
+/* Original artwork colours: avoid a full-canvas colour-processing pass during combat. */
+#gameCanvas { filter: none; }
+
+/* The screen glass carries a slow sheen across the whole display. */
+.screen-glass::after {
+  content: ''; position: absolute; inset: 0; border-radius: 4px; overflow: hidden; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, #ffffff00 42%, #ffffff2e 50%, #ffffff00 58%, transparent 62%);
+  background-size: 260% 100%; background-position: 160% 0; animation: screen-sheen 7s ease-in-out 2s infinite;
+}
+@keyframes screen-sheen { 0% { background-position: 160% 0; } 28%, 100% { background-position: -60% 0; } }
+@media (prefers-reduced-motion: reduce) { .screen-glass::after { animation: none; opacity: 0; } }
+
+/* 7.33.2: the sweep belongs to the Home Screen (whole screen, replacing the narrow sweep over the title);
+   the game screen glass no longer sweeps. */
+.screen-glass::after { display: none; }
+
+/* Smooth boss scenes: no blur, masks or blend modes. One big framed panel that slides in, with a clearly visible
+   pan and zoom on the picture. The game canvas drops its colour filter while a scene is showing. */
+body.in-scene #gameCanvas { filter: none; }
+
+/* 7.33.3: the logo's own sweep is removed; one sweep crosses the whole Home Screen, over the artwork and the title. */
+.title-logo:after { display: none; }
+
+/* Preserve the authoritative cabinet and comic window geometry. */
+
+/* 7.34.1 layered scenes: the stage fills the whole game window (no tilted, cropped frame). */
+/* Comic frame over the art: ink border, paper edge, halftone corners. */
+
+/* Opening story cards. */
+
+/* Admin scene select. */
+
+/* 7.36 finished comic films */
+/* Opt-in media styling only. Load AFTER game.css once all new films are installed.
+   No cabinet coordinates, skin artwork, controls or gameplay canvas sizes change.
+   The existing clip-ready lifecycle must be removed on end/skip/error/scene exit. */
+.screen.clip-live .playfield {
+  position: static;
+  overflow: visible;
+}
+.screen.clip-live #cinematic {
+  position: absolute;
+  inset: 0 !important;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  transform: none;
+  animation: none;
+  z-index: 30 !important;
+  background: #101017;
+}
+.screen.clip-live > :is(.hud-top,.hud-bottom,.boost-meter) {
+  visibility: hidden;
+}
+#cinematic.clip-mode.clip-ready .scene-clip {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: none;
+  z-index: 3;
+}
+#cinematic.clip-mode.clip-ready::before,
+#cinematic.clip-mode.clip-ready::after { display: none; }
+#cinematic.clip-mode.clip-ready > :not(video):not(.scene-next) { visibility: hidden; }
+#cinematic.clip-mode.clip-ready .scene-next {
+  position: absolute;
+  inset: auto 4px 4px auto;
+  min-width: 44px;
+  min-height: 44px;
+  z-index: 5;
+}
+.story-full video { object-fit: contain; object-position: center; }
+
+/* The scene film splits apart into the game: two stills slide off, nothing else moves. */
+#cinematic.splitting { background: transparent !important; }
+#cinematic.splitting > :not(.split-halves) { visibility: hidden; }
+#cinematic.splitting > .split-halves, #cinematic.splitting > .split-halves canvas { visibility: visible !important; }
+.screen.clip-live.clip-split > :is(.hud-top, .hud-bottom, .boost-meter) { visibility: visible; }
+.split-halves { position: absolute; inset: 0; z-index: 9; pointer-events: none; overflow: visible; }
+.split-halves canvas { position: absolute; inset: 0; width: 100%; height: 100%; will-change: transform; }
+.split-top { animation: split-up 0.42s cubic-bezier(0.55, 0, 0.9, 0.4) forwards; }
+.split-bottom { animation: split-down 0.42s cubic-bezier(0.55, 0, 0.9, 0.4) forwards; }
+@keyframes split-up { to { transform: translate(-6%, -108%); } }
+@keyframes split-down { to { transform: translate(6%, 108%); } }
+
+/* 7.53: indicator lamps. #powerLed (beside ON) is on every skin; #weaponLed is the retro console's lower lamp.
+   Cosmetic only: driven by data-led / data-weapon / data-menu on #cabinet (see leds() in game.js).
+   Power strip frames: off, green, red. Special strip frames: dormant, dim, active. */
+#powerLed, #weaponLed { position: absolute; display: none; pointer-events: none; z-index: 4; background-repeat: no-repeat; }
+#powerLed { display: block; left: 349px; top: 21px; width: 16.5px; height: 16.5px; margin: -8.25px 0 0 -8.25px; border-radius: 50%; background-image: url('./retro-led-power.png'); background-size: 300% 100%; background-position: 0 0; }
+#powerLed::after { content: 'ON'; position: absolute; left: calc(100% - 1px); top: 50%; transform: translateY(-50%); font: 900 6px/1 'Barlow Condensed', Barlow, sans-serif; letter-spacing: 0.08em; color: #ffffffa8; text-shadow: 0 1px 1px #000c; }
+#cabinet[data-led="on"] #powerLed, #cabinet[data-led="low"] #powerLed { background-position: 100% 0; }
+#cabinet[data-led="low"]:not([data-paused="1"]) #powerLed { animation: led-low 1.1s step-end infinite; }
+#cabinet.led-breach:not([data-paused="1"]) #powerLed { animation: led-breach 0.34s step-end infinite; }
+@keyframes led-low { 0% { background-position: 100% 0; } 60% { background-position: 0 0; } }
+@keyframes led-breach { 0% { background-position: 100% 0; } 50% { background-position: 50% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  #cabinet[data-led="low"] #powerLed { animation: none !important; background-position: 100% 0; box-shadow: 0 0 0 2px #ff6a5a99, 0 0 7px 2px #ff2a1acc; }
+  #cabinet.led-breach #powerLed { animation: none !important; background-position: 50% 0; }
+}
+@keyframes weapon-flash { 0% { opacity: 1; } 6% { opacity: 0; } 100% { opacity: 0; } }
+
+/* 7.53: retro console (JW grey handheld). The shell has no controls baked in; the sprites sit over the unchanged
+   hit areas, sized in % of each control so the deck scaling and tap targets stay exactly as before. */
+body[data-release-skin="retro-handheld"] #powerLed { left: 326.6px; top: 14px; }
+body[data-release-skin="retro-handheld"] #powerLed::after { content: none; }
+body[data-release-skin="retro-handheld"] #weaponLed { display: block; left: 322px; top: 619.5px; width: 17.5px; height: 17.5px; margin: -8.75px 0 0 -8.75px; border-radius: 50%; background-image: url('./retro-led-weapon.png'); background-size: 300% 100%; background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #weaponLed::after { content: ''; position: absolute; inset: 0; background: inherit; background-position: 100% 0; opacity: 0; filter: drop-shadow(0 0 3px #ff2a1a); }
+body[data-release-skin="retro-handheld"] #cabinet[data-weapon="active"] #weaponLed::after { opacity: 1; }
+body[data-release-skin="retro-handheld"] #cabinet[data-weapon="ready"]:not([data-paused="1"]) #weaponLed::after { animation: weapon-flash 4s step-end infinite; }
+@media (prefers-reduced-motion: reduce) {
+  body[data-release-skin="retro-handheld"] #cabinet[data-weapon="ready"] #weaponLed::after { animation: none !important; opacity: 1; background-position: 50% 0; filter: none; }
+}
+#grenadeLed, #ledBar { display: none; position: absolute; pointer-events: none; z-index: 4; }
+body[data-release-skin="retro-handheld"] #ledBar { display: block; left: 101px; top: 6.2px; width: 173px; height: 11.8px; }
+body[data-release-skin="retro-handheld"] #grenadeLed { display: none; left: 213.5px; top: 534.8px; width: 11.4px; height: 13.8px; box-sizing: border-box; padding: 1.8px; border-radius: 2px; background: #030405; border: 1px solid #74777c; box-shadow: inset 0 1px 3px #000, inset 0 0 0 1px #000, 0 1px 0 #ffffff26, 0 0 0 1px #0c0d0f; }
+body[data-release-skin="retro-handheld"] #grenadeLed canvas { display: block; width: 100%; height: 100%; }
+body[data-release-skin="retro-handheld"] .shell-art { background: var(--skin-art) 0 0 / 375px 667px no-repeat; }
+body[data-release-skin="retro-handheld"] #cabinet > .shell-art .shell-slice { display: none; }
+body[data-release-skin="retro-handheld"] :is(.console-header, .engraving, .deck-label) { visibility: hidden; }
+body[data-release-skin="retro-handheld"] :is(#joystick, #grenadeButton, #fireButton, #menuButton) { background: none !important; border: 0 !important; box-shadow: none !important; filter: none !important; }
+body[data-release-skin="retro-handheld"] :is(#joystick, #grenadeButton, #fireButton, #menuButton)::after { content: ''; position: absolute; pointer-events: none; background-repeat: no-repeat; background-size: 300% 100%; }
+body[data-release-skin="retro-handheld"] :is(.stick-track, .stick-knob, .fire-inner, .m3) { visibility: hidden; }
+/* Tap areas on this skin are the drawn controls: the element itself ignores touches and a ::before shaped like the
+   artwork takes them (the element's own size is untouched, so the stick travel and everything else is unchanged). */
+body[data-release-skin="retro-handheld"] :is(#joystick, #fireButton, #grenadeButton, #menuButton) { pointer-events: none; }
+body[data-release-skin="retro-handheld"] :is(#joystick, #fireButton, #grenadeButton, #menuButton)::before { content: ''; position: absolute; pointer-events: auto; background: none; border-radius: 50%; }
+body[data-release-skin="retro-handheld"] #joystick::before { inset: -14.65% -2.17% 10.35% -2.17%; }
+body[data-release-skin="retro-handheld"] #fireButton::before { inset: -7.16% 3.4% 13.96% 3.4%; }
+body[data-release-skin="retro-handheld"] #grenadeButton::before { inset: -7.2%; }
+body[data-release-skin="retro-handheld"] #menuButton::before { inset: -10.5% -13.2%; border-radius: 999px; }
+body[data-release-skin="retro-handheld"] .grenade-button .g3 { display: none !important; }
+body[data-release-skin="retro-handheld"] #joystick::after { inset: -0.1%; background-image: url('./retro-stick.png'); background-position: 50% 0; transform: scale(1.25); transform-origin: 50% 100%; }
+body[data-release-skin="retro-handheld"] #joystick[data-dir="-1"]::after { background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #joystick[data-dir="1"]::after { background-position: 100% 0; }
+body[data-release-skin="retro-handheld"] #joystick.sped::after { filter: drop-shadow(0 0 6px var(--accent)); }
+body[data-release-skin="retro-handheld"] #fireButton::after { inset: -5.95%; background-image: url('./retro-fire.png'); background-position: 0 0; transform: translateY(-10.56%); }
+body[data-release-skin="retro-handheld"] #fireButton.story-hint::after { animation: fire-hint 1.1s step-end infinite; }
+body[data-release-skin="retro-handheld"] #fireButton.pressed::after { animation: none; background-position: 50% 0; }
+@keyframes fire-hint { 0% { background-position: 0 0; } 50% { background-position: 100% 0; } }
+body[data-release-skin="retro-handheld"] #grenadeButton { opacity: 1; }
+body[data-release-skin="retro-handheld"] #grenadeButton::after { inset: -21.6%; background-image: url('./retro-grenade.png'); background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #grenadeButton:active:not(.empty)::after,
+body[data-release-skin="retro-handheld"] #grenadeButton.pressed:not(.empty)::after { background-position: 50% 0; }
+body[data-release-skin="retro-handheld"] #grenadeButton.empty::after { background-position: 100% 0; }
+body[data-release-skin="retro-handheld"] #grenadeButton b { visibility: hidden; z-index: 2; right: -16%; bottom: -16%; min-width: 15px; padding: 1px 2px; background: #11161c; color: #f4f1e6; border: 1px solid #8e91a2; border-radius: 5px; font: 900 10px Barlow, sans-serif; text-align: center; }
+body[data-release-skin="retro-handheld"] #menuButton::after { inset: -18.9% -22.05%; background-image: url('./retro-menu.png'); background-position: 0 0; }
+body[data-release-skin="retro-handheld"] #cabinet[data-menu="1"] #menuButton::after { background-position: 100% 0; }
+body[data-release-skin="retro-handheld"] #menuButton:active::after,
+body[data-release-skin="retro-handheld"] #menuButton.pressed::after { background-position: 50% 0 !important; }
+/* 7.51: bottom info bar. Same band as before; only the essentials, larger and grouped:
+   hearts over weapon and ammo, the four stored-weapon slots, and a plain LET THROUGH counter. */
+.hud-bottom { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 5px; }
+.hud-bottom .hud-left { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 1px; flex: 0 0 auto; min-width: 82px; }
+.hud-bottom #healthValue, .hud-bottom #healthValue:not(.tenhearts), #healthValue.tenhearts { display: flex; gap: 1px; min-width: 0; font-size: 12px; line-height: 12px; letter-spacing: 0; }
+#healthValue.tenhearts { font-size: 8px; line-height: 12px; gap: 0; }
+.hud-bottom .weapon-status { display: flex; align-items: baseline; gap: 4px !important; min-width: 0; line-height: 10px; }
+.hud-bottom .weapon-status b { font-size: 9.5px; letter-spacing: 0.02em; }
+.hud-bottom .weapon-status span { font-size: 9.5px; }
+.hud-bottom .weapon-rack { min-width: 0; gap: 3px !important; flex: 0 0 auto; }
+.hud-bottom .weapon-rack button { width: 31px; min-width: 31px; height: 24px; font-size: 8px; letter-spacing: 0; opacity: 0.5; }
+.hud-bottom .weapon-rack button small { font-size: 8.5px; line-height: 9px; }
+.hud-bottom .weapon-rack button.ready, .hud-bottom .weapon-rack button.equipped { opacity: 1; }
+.base-status { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0 !important; min-width: 0; margin-right: 1px; }
+.base-status small { display: none; }
+.base-status b { display: grid; grid-template-columns: repeat(5, 12px); gap: 1px 1.5px; font-size: 0; }
+.zface { width: 12px; height: 12px; overflow: visible; }
+.zface circle:first-child { fill: #26322b; stroke: #55655a; stroke-width: 1; }
+.zface .zeye { stroke: #55655a; stroke-width: 1.4; fill: none; }
+.zface .zeye2 { fill: #55655a; }
+.zface .zmouth { stroke: #55655a; stroke-width: 1.4; fill: none; }
+.zface.lit circle:first-child { fill: #9bff4a; stroke: #e8ffb0; filter: drop-shadow(0 0 3px #ff3b3b) drop-shadow(0 0 5px #ff3b3b99); }
+.zface.lit .zeye { stroke: #5a0b0b; }
+.zface.lit .zeye2 { fill: #5a0b0b; }
+.zface.lit .zmouth { stroke: #5a0b0b; }
+.hud-bottom .weapon-rack button { width: 29px; min-width: 29px; }
+
+/* 7.61: power-on. 0-0.9 s the console fades in on a black screen; the lamp blinks red then holds steady; a bright line
+   flashes across the middle of the screen and opens to the full screen like a CRT warming up; the flat white JW EDS mark
+   fades in, its four colour blocks arrive one by one, and it fades out to the Home Screen, which builds up in stages. */
+#cabinet { animation: cab-in 0.9s ease-out both; }
+@keyframes cab-in { from { opacity: 0; } to { opacity: 1; } }
+#studioIntro { position: absolute; left: var(--wx); top: var(--wy); width: var(--ww); height: var(--wh); z-index: 100; display: flex; align-items: center; justify-content: center; background: #000; overflow: hidden; animation: studio-out 0.6s ease 4.6s forwards; }
+#studioIntro::before { content: ''; position: absolute; inset: 0; background: #e8fff3; box-shadow: 0 0 30px 8px #9fffd0; opacity: 0; transform: scale(0.02, 0.012); animation: crt-flash 0.6s ease-out 1.9s forwards; }
+#studioIntro .jw { position: relative; width: 64%; aspect-ratio: 834 / 351; opacity: 0; animation: studio-in 0.8s ease 2.5s forwards; }
+#studioIntro .jw img { display: block; width: 100%; height: 100%; }
+#studioIntro .jw i { position: absolute; border-radius: 1.5px; opacity: 0; animation: studio-block 0.3s ease forwards; }
+@keyframes crt-flash { 0% { opacity: 1; transform: scale(0.02, 0.012); } 30% { opacity: 1; transform: scale(1, 0.012); } 70% { opacity: 0.95; transform: scale(1, 1); } 100% { opacity: 0; transform: scale(1, 1); } }
+@keyframes studio-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes studio-block { from { opacity: 0; } to { opacity: 1; } }
+@keyframes studio-out { to { opacity: 0; visibility: hidden; } }
+#cabinet[data-boot="1"] #powerLed { background-position: 0 0 !important; animation: led-boot 1.4s step-end 0.9s both !important; }
+@keyframes led-boot { 0%, 33% { background-position: 0 0; } 17%, 50% { background-position: 100% 0; } 66% { background-position: 0 0; } 83%, 100% { background-position: 100% 0; } }
+/* Home Screen: background first, then the title, then everything else. */
+body:not(.intro-done) .title-art, body:not(.intro-done) .title-top, body:not(.intro-done) .title-bottom { opacity: 0; }
+body.intro-done .title-art { animation: home-in 0.7s ease-out both; }
+body.intro-done .title-top { animation: home-in-up 0.7s ease-out 0.55s both; }
+body.intro-done .title-bottom { animation: home-in-up 0.7s ease-out 1.2s both; }
+@keyframes home-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes home-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body.intro-done .title-art, body.intro-done .title-top, body.intro-done .title-bottom { animation: none; } }
+
+/* 7.54: home screen (PRESS FIRE, boss silhouettes) and the retro player-entry screen. */
+.press-fire { display: block; width: 100%; padding: 0; background: none !important; border: 0 !important; box-shadow: none !important; color: #fff3b0; text-align: center; animation: blink 1s steps(2, jump-none) infinite; }
+.press-fire .press-start { animation: none !important; padding: 2px 0 0; }
+.press-fire small { display: block; margin-top: 1px; font: 800 calc(var(--ww, 322px) * 0.032) Barlow, sans-serif; letter-spacing: 0.34em; color: #fff3b0; text-shadow: 0 0 8px #ffb000, 1px 1px #000; }
+.title-bosses { display: flex; justify-content: space-between; gap: 4px; margin: 6px 2px 0; }
+.title-bosses .tb { flex: 1; height: 32px; border-radius: 6px; background: #00000088; border: 1px solid #ffffff22; display: grid; place-items: center; overflow: hidden; }
+.title-bosses .tb img { height: 28px; width: auto; max-width: 100%; object-fit: contain; filter: brightness(0) invert(0.32); }
+.title-bosses .tb.down { border-color: var(--c); box-shadow: 0 0 8px var(--c); background: #000000aa; }
+.title-bosses .tb.down img { filter: none; }
+.title-count { margin-top: 4px; font: 800 8px Inter, sans-serif; letter-spacing: 0.16em; color: #ffd9a0; text-align: center; text-shadow: 0 0 4px #000; }
+.player-screen { position: relative; margin: -18px -20px; width: calc(100% + 40px); height: var(--wh, 445px); box-sizing: border-box; padding: 34px 30px 22px; overflow: auto; background: #000 radial-gradient(ellipse at 50% 40%, #07200f 0%, #000 70%); color: #3dff6e; font-family: 'Courier New', Menlo, Consolas, monospace; text-transform: uppercase; text-shadow: 0 0 4px #3dff6e55; display: flex; flex-direction: column; }
+.player-screen::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #0000 0 2px, #00000038 2px 3px); }
+.player-screen .pl-title { font-size: 15px; font-weight: 700; letter-spacing: 0.3em; }
+.player-screen .pl-sub { margin: 6px 0 30px; padding-bottom: 12px; border-bottom: 1px solid #3dff6e88; font-size: 9px; letter-spacing: 0.26em; color: #2fb556; }
+.player-screen form { display: flex; flex-direction: column; gap: 14px; }
+.player-screen .pl-label { font-size: 10px; letter-spacing: 0.2em; }
+.player-screen .pl-label::after { content: '\2588'; margin-left: 6px; animation: pl-cursor 1s steps(2, jump-none) infinite; }
+@keyframes pl-cursor { 50% { opacity: 0; } }
+.player-screen input { box-sizing: border-box; width: 100%; height: 34px; padding: 0 10px; background: #000; color: #3dff6e; border: 1px solid #3dff6e; border-radius: 0; font: 700 14px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.14em; text-transform: uppercase; caret-color: #3dff6e; outline: none; text-shadow: 0 0 4px #3dff6e55; }
+.player-screen input::placeholder { color: #1e7a38; }
+.player-screen input:read-only { border-style: dashed; }
+.player-screen input:focus { box-shadow: 0 0 0 3px #000, 0 0 0 4px #3dff6e66; }
+.player-screen .pl-btn { box-sizing: border-box; width: 100%; min-height: 34px; padding: 0 10px; background: #000; color: #3dff6e; border: 1px solid #3dff6e; border-radius: 0; font: 700 12px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.26em; text-transform: uppercase; text-shadow: 0 0 4px #3dff6e55; cursor: pointer; }
+.player-screen .pl-btn:active:not(:disabled), .player-screen .pl-btn:focus-visible { background: #3dff6e; color: #000; text-shadow: none; outline: none; }
+.player-screen .pl-btn:disabled { color: #2a5a37; border-color: #1c3d26; text-shadow: none; cursor: default; }
+.player-screen .pl-rule { margin: 12px 0 6px; border-top: 1px dashed #1f7f3a; }
+.player-screen .pl-main { min-height: 38px; font-size: 13px; }
+.player-screen .pl-back { margin-top: auto; align-self: flex-start; padding: 8px 2px; background: none; border: 0; color: #2fb556; font: 700 10px 'Courier New', Menlo, Consolas, monospace; letter-spacing: 0.24em; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .press-fire { animation: none; } .player-screen .pl-label::after { animation: none; } }
+
+/* 7.59: on the retro console the blue ring is nine separate LEDs; one lights, clockwise from the top, for each grenade in hand. */
+#grenadeRing { display: none; }
+body[data-release-skin="retro-handheld"] #grenadeRing { display: block; position: absolute; left: -21.6%; top: -21.6%; width: 143.2%; height: 143.2%; z-index: 1; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #cabinet { animation: none; } #studioIntro { animation: studio-out 0.6s ease 2.4s forwards; } #studioIntro::before { display: none; } #studioIntro .jw, #studioIntro .jw i { animation: none; opacity: 1; } #cabinet[data-boot="1"] #powerLed { animation: none !important; background-position: 100% 0 !important; } }
+
+/* 7.61.6: no selection, magnifier loupe, long-press menu, image drag or double-tap zoom anywhere in the game (text fields stay editable). */
+html, body, body * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img, canvas, video {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+html, body {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+/* 7.62: joystick topper colours and designs. */
+body[data-release-skin="retro-handheld"][data-topper="red"] #joystick::after { background-image: url('./retro-stick-red.png'); }
+body[data-release-skin="retro-handheld"][data-topper="blue"] #joystick::after { background-image: url('./retro-stick-blue.png'); }
+body[data-release-skin="retro-handheld"][data-topper="green"] #joystick::after { background-image: url('./retro-stick-green.png'); }
+body[data-release-skin="retro-handheld"][data-topper="grey"] #joystick::after { background-image: url('./retro-stick-grey.png'); }
+body[data-release-skin="retro-handheld"][data-topper="camo"] #joystick::after { background-image: url('./retro-stick-camo.png'); }
+body[data-release-skin="retro-handheld"][data-topper="candy"] #joystick::after { background-image: url('./retro-stick-candy.png'); }
+body[data-release-skin="retro-handheld"][data-topper="checker"] #joystick::after { background-image: url('./retro-stick-checker.png'); }
+body[data-release-skin="retro-handheld"][data-topper="rainbow"] #joystick::after { background-image: url('./retro-stick-rainbow.png'); }
+body[data-release-skin="retro-handheld"][data-topper="galaxy"] #joystick::after { background-image: url('./retro-stick-galaxy.png'); }
+body[data-release-skin="retro-handheld"][data-topper="lava"] #joystick::after { background-image: url('./retro-stick-lava.png'); }
+body[data-topper]:not([data-topper="yellow"]) .stick-knob { --ball: var(--topper); --stick: var(--topper); }
+.topper-label { margin: 14px 0 6px; font: 800 11px Barlow, sans-serif; letter-spacing: 0.12em; color: #8fa397; }
+.topper-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.topper-choice { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; background: #15201d; border: 2px solid transparent; border-radius: 10px; color: #e2e6d9; min-width: 0; }
+.topper-choice.selected { border-color: #f5d18b; background: #1b2824; }
+.topper-choice b { font: 700 11px Barlow, sans-serif; letter-spacing: 0.04em; }
+.topper-ball { width: 56px; height: 56px; border-radius: 50%; background-repeat: no-repeat; background-size: 318px 106px; background-position: -130.6px -25px; box-shadow: 0 3px 6px #0009; }

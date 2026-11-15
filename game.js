@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  // The packaged iPhone app loads from capacitor://; on the web we keep the install and admin tools.
+  // The packaged iPhone app loads from capacitor://; on the web we keep the install tool.
   const nativeApp = location.protocol === 'capacitor:' || !!window.Capacitor?.isNativePlatform?.();
   const newId = () =>
     crypto.randomUUID?.() ??
@@ -42,6 +42,7 @@
   // Finished scene clips and extra console skins are listed by scripts/sync-art.mjs.
   // A scene with no listed clip, or a clip that fails to load, uses the built-in scene.
   let sceneClips = {};
+  let soundPreview = 0;
   const failedClips = new Set();
   fetch('./scene-clips.json')
     .then((r) => r.json())
@@ -49,6 +50,68 @@
       sceneClips = j.clips || {};
     })
     .catch(() => {});
+  // Each film's panel entry times (seconds). FIRE jumps to the next panel instead of skipping the whole scene.
+  let sceneBeats = {};
+  fetch('./scene-beats.json')
+    .then((r) => r.json())
+    .then((j) => {
+      sceneBeats = j.beats || {};
+    })
+    .catch(() => {});
+  // Seek a playing film to its next panel; false when every panel has already been shown.
+  function beatNext(video, key) {
+    const list = sceneBeats[key];
+    if (!video || !list || !Number.isFinite(video.currentTime)) return false;
+    const next = list.find((t) => t > video.currentTime + 0.25);
+    if (next === undefined) return false;
+    video.currentTime = next;
+    video.play?.()?.catch?.(() => {});
+    return true;
+  }
+  function sceneAdvance() {
+    const v = document.querySelector('#cinematic video.scene-clip');
+    if (v && beatNext(v, v.dataset.key)) return;
+    // Both close-ups are showing: the picture splits apart straight into the game.
+    if (v && game.scene) {
+      v._endScene?.();
+      return;
+    }
+    game.advanceScene();
+  }
+  // The last frame is copied onto two canvases (a diagonal cut) that slide off the screen, so the game appears
+  // underneath. Nothing but two stills moves, and the video itself is released at once.
+  function splitAway(box, done) {
+    if (box.classList.contains('splitting')) return;
+    const v = box.querySelector('video.scene-clip');
+    if (!v || !v.videoWidth || matchMedia('(prefers-reduced-motion:reduce)').matches) {
+      done();
+      return;
+    }
+    box.classList.add('splitting');
+    box.closest('.screen')?.classList.add('clip-split');
+    const wrap = document.createElement('div');
+    wrap.className = 'split-halves';
+    for (const [name, clip] of [
+      ['top', 'polygon(0 0, 100% 0, 100% 57%, 0 43%)'],
+      ['bottom', 'polygon(0 43%, 100% 57%, 100% 100%, 0 100%)'],
+    ]) {
+      const cv = document.createElement('canvas');
+      cv.width = v.videoWidth;
+      cv.height = v.videoHeight;
+      cv.getContext('2d').drawImage(v, 0, 0);
+      cv.className = 'split-' + name;
+      cv.style.clipPath = clip;
+      wrap.appendChild(cv);
+    }
+    box.appendChild(wrap);
+    v.pause();
+    setTimeout(() => {
+      wrap.remove();
+      box.classList.remove('splitting');
+      box.closest('.screen')?.classList.remove('clip-split');
+      done();
+    }, 430);
+  }
   let pendingReload = false;
   function reloadWhenSafe() {
     if (!pendingReload || (typeof game !== 'undefined' && game.active && !paused)) return;
@@ -57,7 +120,8 @@
   }
   // BOT_ before a player name switches on cheat mode: it is never shown, it dispenses the secret skins
   // and it opens the CHEATS menu, where every cheat has a code made of joystick flicks and button taps.
-  const BOT_PREFIX = /^bot_/i;
+  // Case sensitive: BOT_ exactly.
+  const BOT_PREFIX = /^BOT_/;
   const parseName = (raw) => {
     raw = String(raw ?? '').trim();
     const isBot = BOT_PREFIX.test(raw);
@@ -98,7 +162,6 @@
   let ready = false,
     paused = true,
     landscape = false,
-    admin = false,
     run = null,
     pendingName = '',
     sceneKey = '',
@@ -108,7 +171,8 @@
     saveClock = 0,
     toastTimer,
     installPrompt,
-    lastFit = '';
+    lastFit = '',
+    fitDirty = true; // the layout is measured when the window changes, not on every frame
   let storyStep = 0,
     storyTimer = null,
     storyVideo = null,
@@ -138,10 +202,24 @@
     stickDir = 0;
     game.resetInput();
     $('stickKnob').style.transform = 'translateX(0)';
+    $('joystick').style.setProperty('--lean', '0deg');
     $('fireButton').classList.remove('pressed');
     $('joystick').setAttribute('aria-valuenow', '0');
+    stickLamp(0);
+  }
+  let pendingSave = null;
+  function queueSave() {
+    if (pendingSave !== null) return;
+    const callback = () => { pendingSave = null; save(); };
+    pendingSave = window.requestIdleCallback
+      ? window.requestIdleCallback(callback, {timeout: 1200}) : setTimeout(callback, 0);
   }
   function save() {
+    if (pendingSave !== null) {
+      if (window.requestIdleCallback) window.cancelIdleCallback(pendingSave);
+      else clearTimeout(pendingSave);
+      pendingSave = null;
+    }
     if (run && game.active && !game.over)
       write('zs7-run', {
         engine: game.snapshot(),
@@ -152,32 +230,27 @@
         localStorage.removeItem('zs7-run');
       } catch {}
   }
-  function pause() {
+  function pause(immediate = false) {
     paused = true;
     clearInput();
-    audio.pause();
+    audio.pause(immediate);
+    $('cinematic').querySelector('video')?.pause();
     save();
     reloadWhenSafe();
   }
-  // The music for a boss fight: Debo and Disco Man have their own themes.
-  const bossTrack = (id) => (id === 'debo' ? 'debo' : id === 'discoman' ? 'disco' : 'boss');
   function resume() {
     if (!game.active || game.over || landscape) return;
     paused = false;
     accumulator = 0;
     lastTime = performance.now();
     audio.resume();
-    audio.playMusic(
-      game.scene?.kind === 'arrival' && !(game.scene.bossId === 'debo' && game.scene.phase >= 2)
-        ? 'entrance'
-        : game.boss
-          ? bossTrack(game.boss.bossId)
-          : game.scene?.bossId === 'debo' && game.scene.phase >= 2
-            ? 'debo'
-            : 'main',
-    );
+    const bossId = game.boss?.bossId || game.scene?.bossId;
+    if (bossId) audio.setBoss(bossId);
+    audio.setWave(game.wave);
+    audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : game.boss ? 'boss' : 'main');
   }
   function closePanel() {
+    soundPreview++;
     endPreview();
     // The menu was opened during the story: carry on with the clip that was playing.
     if (storyActive && panel !== 'story') {
@@ -185,15 +258,18 @@
       showStory(pendingName, storyStep);
       return;
     }
+    const wasMenu = panel === 'menu';
     panel = '';
     $('overlay').hidden = true;
     clearInput();
     if (game.active && !game.over) {
       if (!awaitStart) resume();
+      if (wasMenu && !awaitStart && performance.now() - menuOpenedAt < 6000) armCheats();
     } else showStart();
     $('menuButton').focus({ preventScroll: true });
   }
   function showPanel(kind, title, html, { closable = true, start = false } = {}) {
+    soundPreview++;
     if (kind !== 'skins') endPreview();
     clearTimeout(storyTimer);
     pause();
@@ -206,389 +282,67 @@
         ? `<div class="panel-head"><h2>${esc(title)}</h2>${closable ? '<button data-action="close" aria-label="Close panel">×</button>' : ''}</div>`
         : '') + `<div class="panel-content ${start ? 'start-panel' : ''}">${html}</div>`;
   }
+  // The Home Screen and player entry play their own looping tune. It is only wanted here; the engine starts it as soon as
+  // it is awake (and once the power-on sequence has finished).
+  function menuMusic() {
+    audio.paused = false;
+    audio.playMusic('home');
+  }
+  for (const type of ['pointerdown', 'touchend', 'click', 'keydown'])
+    addEventListener(type, () => audio.ctx?.state !== 'running' && audio.unlock(), { capture: true });
   function showStart() {
     storyActive = false;
     $('fireButton')?.classList.remove('story-hint');
     awaitStart = false;
     $('startPrompt').hidden = true;
-    const name = read('zs7-name', ''),
-      saved = read('zs7-run', null),
-      hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
+    const hi = Object.entries(scores.best || {}).sort((a, b) => b[1] - a[1])[0] || ['', 0],
       beaten = beatenBosses();
     showPanel(
       'start',
       '',
-      `<div class="title-screen"><div class="title-art" aria-hidden="true"></div><i class="title-glow" aria-hidden="true"></i><i class="title-fire" aria-hidden="true"></i><canvas id="titleFx" aria-hidden="true"></canvas><i class="title-shine" aria-hidden="true"></i><div class="title-ui"><div class="title-top"><div class="title-hi"><span>1UP <b>${esc(parseName(name).name || '---')}</b></span><span>HI <b>${Number(hi[1]).toLocaleString()}</b> ${esc(hi[0].toUpperCase())}</span></div><h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><form id="startForm"><label class="name-field">PLAYER NAME<input name="username" id="username" value="${esc(name)}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="ENTER NAME" required></label><button class="primary-action press-start" id="startButton" ${ready ? '' : 'disabled'}>${ready ? '▶ PRESS START ◀' : 'LOADING THE HORDE…'}</button></form>${saved?.engine?.active ? `<button class="secondary-action title-continue" data-action="continue">CONTINUE ${esc(saved.run?.name)} · WAVE ${saved.engine.wave}</button>` : ''}<div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? 'NO LOGIN · NO ADS · V' + APP_VER : 'Loading game artwork…'}</div></div></div></div>`,
+`<div class="title-screen"><div class="title-art" aria-hidden="true"></div><div class="title-ui"><div class="title-top">${hi[1] > 0 ? `<div class="title-hi"><span>HIGH SCORE <b>${Number(hi[1]).toLocaleString()}</b></span></div>` : ''}<h1 class="title-logo" aria-label="Zombie Smash"><span class="tl-1" aria-hidden="true">${[...'ZOMBIE'].map((ch, i) => `<i class="l" style="--i:${i}">${ch}</i>`).join('')}</span><span class="tl-2" aria-hidden="true">${[...'SMASH'].map((ch, i) => `<i class="l" style="--i:${i + 6}">${ch}</i>`).join('')}</span></h1><div class="title-tag">HOLD THE LINE</div></div><div class="title-bottom"><button class="press-fire" data-action="player" aria-label="Press fire to start the game"><b class="press-start">PRESS FIRE</b><small>TO START GAME</small></button><div class="title-bosses" aria-label="Bosses defeated">${BOSSES.map((b) => `<span class="tb ${beaten.has(b.id) ? 'down' : ''}" style="--c:${b.accent}"><img src="./${b.sprites[0]}" alt="${esc(b.name)}"></span>`).join('')}</div><div class="title-count">${beaten.size} OF ${BOSSES.length} BOSSES DOWN</div><div class="loading-line" id="loadingLine">${ready ? '' : 'Loading game artwork…'}</div></div></div></div>`,
       { start: true, closable: false },
     );
-    titleEmbers();
+    $('fireButton').classList.add('story-hint');
+    menuMusic();
   }
-  // Embers drifting up the title art. Runs only while the title screen is on show.
-  function titleEmbers() {
-    const cv = $('titleFx');
-    if (!cv || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-    const rect = cv.getBoundingClientRect(),
-      dpr = Math.min(2, devicePixelRatio || 1),
-      w = (cv.width = Math.max(1, Math.round(rect.width * dpr))),
-      h = (cv.height = Math.max(1, Math.round(rect.height * dpr))),
-      c = cv.getContext('2d'),
-      mk = (fresh) => ({
-        x: Math.random() * w,
-        y: fresh ? h + Math.random() * 40 : Math.random() * h,
-        r: (0.8 + Math.random() * 1.8) * dpr,
-        v: (14 + Math.random() * 38) * dpr,
-        a: Math.random() * 6.28,
-        s: 0.6 + Math.random() * 1.6,
-        hue: 18 + Math.random() * 28,
-      }),
-      sparks = Array.from({ length: 46 }, () => mk(false));
-    let last = performance.now();
-    const loop = (now) => {
-      if (!cv.isConnected) return;
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      c.clearRect(0, 0, w, h);
-      c.globalCompositeOperation = 'lighter';
-      for (const p of sparks) {
-        p.y -= p.v * dt;
-        p.a += p.s * dt;
-        p.x += Math.sin(p.a) * 12 * dpr * dt;
-        if (p.y < -10) Object.assign(p, mk(true));
-        const fade = Math.min(1, p.y / (h * 0.5)),
-          g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
-        g.addColorStop(0, `hsla(${p.hue},100%,70%,${0.85 * fade})`);
-        g.addColorStop(1, `hsla(${p.hue},100%,50%,0)`);
-        c.fillStyle = g;
-        c.beginPath();
-        c.arc(p.x, p.y, p.r * 4, 0, 6.28);
-        c.fill();
-      }
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
+  // Player entry: its own screen. A name that was already entered is shown locked, with CHANGE to edit it;
+  // without one the box is open and CHANGE is greyed out. CONTINUE appears only when a run was left half played.
+  function showPlayer() {
+    $('fireButton')?.classList.remove('story-hint');
+    const raw = String(read('zs7-name', '') || ''),
+      named = !!raw && scores.validName(parseName(raw).name),
+      saved = read('zs7-run', null),
+      half = !!(saved?.engine?.active && saved?.run?.name);
+    showPanel(
+      'player',
+      '',
+      `<div class="player-screen"><div class="pl-title">ZOMBIE SMASH</div><div class="pl-sub">PLAYER REGISTRATION</div><form id="playerForm" autocomplete="off"><label class="pl-label" for="username">&gt; ENTER PLAYER NAME</label><input name="username" id="username" value="${esc(named ? raw : '')}" maxlength="24" minlength="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="NAME_" required ${named ? 'readonly' : ''}><button type="button" class="pl-btn" id="nameChange" data-action="name-change" ${named ? '' : 'disabled'}>CHANGE</button><div class="pl-rule"></div><button type="submit" class="pl-btn pl-main" id="newGameBtn" ${ready ? '' : 'disabled'}>NEW GAME</button>${half ? `<button type="button" class="pl-btn pl-main" data-action="continue">CONTINUE · WAVE ${Number(saved.engine.wave) || 1}</button>` : ''}</form><button type="button" class="pl-back" data-action="home">&lt; BACK</button></div>`,
+      { start: true, closable: false },
+    );
+    menuMusic();
   }
   // Retro attract mode: a low-resolution canvas scaled up with hard pixels. Joey shoots zombies down a street under a red moon.
   let titleBounds = null;
-  function titleScene() {
-    const cv = $('titleCanvas');
-    if (!cv) return;
-    const rect = cv.getBoundingClientRect(),
-      W = 150,
-      H = Math.max(180, Math.round((W * rect.height) / Math.max(1, rect.width)));
-    cv.width = W;
-    cv.height = H;
-    const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
-    const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches,
-      imgs = {},
-      names = [
-        'player-transparent',
-        'zombie-normal',
-        'zombie-runner',
-        'zombie-helmet',
-        'zombie-toxic',
-        'zombie-brute',
-        'bullet-pistol',
-      ];
-    for (const n of names) {
-      const im = new Image();
-      im.src = './' + n + '.webp';
-      imgs[n] = im;
-    }
-    if (!titleBounds)
-      fetch('./art-bounds.json')
-        .then((r) => r.json())
-        .then((b) => {
-          titleBounds = b;
-        })
-        .catch(() => {
-          titleBounds = {};
-        });
-    const hz = Math.round(H * 0.31),
-      stars = Array.from({ length: 42 }, () => [
-        Math.random() * W,
-        Math.random() * hz * 0.9,
-        Math.random() * 6,
-      ]),
-      city = (minH, maxH, minW, maxW) => {
-        const a = [];
-        let x = -6;
-        while (x < W + 20) {
-          const w = minW + Math.random() * (maxW - minW);
-          a.push([x, w, minH + Math.random() * (maxH - minH), Math.random()]);
-          x += w + Math.random() * 2;
-        }
-        return a;
-      },
-      far = city(10, 30, 8, 16),
-      near = city(6, 22, 10, 20);
-    const sprite = (n, cx, base, h, flash) => {
-      const im = imgs[n];
-      if (!im || !im.complete || !im.naturalWidth) return;
-      const b = (titleBounds && titleBounds[n + '.webp']) || [
-          0,
-          0,
-          im.naturalWidth,
-          im.naturalHeight,
-        ],
-        s = h / b[3],
-        w = b[2] * s;
-      c.drawImage(
-        im,
-        b[0],
-        b[1],
-        b[2],
-        b[3],
-        Math.round(cx - w / 2),
-        Math.round(base - h),
-        Math.round(w),
-        Math.round(h),
-      );
-      if (flash) {
-        c.globalCompositeOperation = 'lighter';
-        c.globalAlpha = 0.7;
-        c.drawImage(
-          im,
-          b[0],
-          b[1],
-          b[2],
-          b[3],
-          Math.round(cx - w / 2),
-          Math.round(base - h),
-          Math.round(w),
-          Math.round(h),
-        );
-        c.globalAlpha = 1;
-        c.globalCompositeOperation = 'source-over';
-      }
-    };
-    const kinds = [
-        'zombie-normal',
-        'zombie-normal',
-        'zombie-runner',
-        'zombie-helmet',
-        'zombie-toxic',
-        'zombie-brute',
-      ],
-      joeyBase = Math.round(H * 0.645),
-      joey = { x: W / 2, cool: 0, fire: 0 },
-      zs = [],
-      bullets = [],
-      bits = [],
-      pops = [];
-    let t = 0,
-      spawn = 0.2,
-      last = performance.now();
-    const px = (x, y, w, h, col) => {
-      c.fillStyle = col;
-      c.fillRect(Math.round(x), Math.round(y), w, h);
-    };
-    function step(dt) {
-      t += dt;
-      spawn -= dt;
-      if (spawn <= 0 && zs.length < 6) {
-        spawn = 0.75 + Math.random() * 0.7;
-        const k = kinds[Math.floor(Math.random() * kinds.length)];
-        zs.push({
-          x: 22 + Math.random() * (W - 44),
-          y: hz + 2,
-          k,
-          hp: k === 'zombie-brute' ? 4 : k === 'zombie-helmet' ? 3 : 2,
-          flash: 0,
-          v: k === 'zombie-runner' ? 13 : 7 + Math.random() * 3,
-        });
-      }
-      for (const z of zs) {
-        z.y += z.v * dt;
-        z.flash = Math.max(0, z.flash - dt);
-      }
-      const target = zs.filter((z) => z.y < joeyBase - 10).sort((a, b) => b.y - a.y)[0];
-      if (target) joey.x += Math.max(-40 * dt, Math.min(40 * dt, target.x - joey.x));
-      else joey.x += (W / 2 - joey.x) * Math.min(1, dt * 2);
-      joey.cool -= dt;
-      joey.fire = Math.max(0, joey.fire - dt);
-      if (target && target.y > H * 0.44 && Math.abs(target.x - joey.x) < 5 && joey.cool <= 0) {
-        joey.cool = 0.26;
-        joey.fire = 0.07;
-        bullets.push({ x: joey.x, y: joeyBase - 34 });
-      }
-      for (const b of bullets) {
-        b.y -= 125 * dt;
-        for (const z of zs) {
-          const s = 0.42 + 0.58 * Math.min(1, (z.y - hz) / (joeyBase - hz)),
-            hh = 42 * s;
-          if (!z.dead && !b.dead && Math.abs(b.x - z.x) < 7 * s && b.y < z.y && b.y > z.y - hh) {
-            b.dead = true;
-            z.hp--;
-            z.flash = 0.08;
-            if (z.hp <= 0) {
-              z.dead = true;
-              pops.push({
-                x: z.x,
-                y: z.y - hh,
-                life: 0.9,
-                txt: '+' + (z.k === 'zombie-brute' ? 700 : z.k === 'zombie-runner' ? 180 : 120),
-              });
-              for (let i = 0; i < 10; i++)
-                bits.push({
-                  x: z.x,
-                  y: z.y - hh / 2,
-                  vx: (Math.random() - 0.5) * 70,
-                  vy: -Math.random() * 50,
-                  life: 0.5,
-                  col: i % 3 ? '#9cff65' : '#fff6c0',
-                });
-            }
-          }
-        }
-        if (b.y < hz - 4) b.dead = true;
-      }
-      for (const q of bits) {
-        q.x += q.vx * dt;
-        q.y += q.vy * dt;
-        q.vy += 120 * dt;
-        q.life -= dt;
-      }
-      for (const p of pops) {
-        p.y -= 14 * dt;
-        p.life -= dt;
-      }
-      for (let i = zs.length - 1; i >= 0; i--)
-        if (zs[i].dead || zs[i].y > joeyBase + 4) zs.splice(i, 1);
-      for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].dead) bullets.splice(i, 1);
-      for (let i = bits.length - 1; i >= 0; i--) if (bits[i].life <= 0) bits.splice(i, 1);
-      for (let i = pops.length - 1; i >= 0; i--) if (pops[i].life <= 0) pops.splice(i, 1);
-    }
-    function draw() {
-      const g = c.createLinearGradient(0, 0, 0, hz);
-      g.addColorStop(0, '#10061e');
-      g.addColorStop(0.55, '#3a1250');
-      g.addColorStop(1, '#a02a3a');
-      c.fillStyle = g;
-      c.fillRect(0, 0, W, hz + 1);
-      for (const s of stars) if (Math.floor(t * 2 + s[2]) % 3) px(s[0], s[1], 1, 1, '#f4efd0');
-      const mx = W * 0.74,
-        my = hz * 0.38;
-      c.fillStyle = '#ff6a4a33';
-      c.beginPath();
-      c.arc(mx, my, 20, 0, 7);
-      c.fill();
-      c.fillStyle = '#ff6a4a55';
-      c.beginPath();
-      c.arc(mx, my, 16, 0, 7);
-      c.fill();
-      c.fillStyle = '#ffd6a0';
-      c.beginPath();
-      c.arc(mx, my, 12, 0, 7);
-      c.fill();
-      px(mx - 5, my - 4, 3, 3, '#e8b27c');
-      px(mx + 2, my + 2, 4, 3, '#e8b27c');
-      const sky = (arr, col, sp, lit) => {
-        const off = (t * sp) % 1000;
-        for (const b of arr) {
-          const x = ((((b[0] - off) % (W + 40)) + W + 40) % (W + 40)) - 20;
-          px(x, hz - b[2], Math.round(b[1]), Math.round(b[2]), col);
-          if (lit)
-            for (let yy = hz - b[2] + 3; yy < hz - 3; yy += 5)
-              for (let xx = x + 2; xx < x + b[1] - 2; xx += 4)
-                if ((xx * 7 + yy * 13 + Math.floor(t * 1.5 + b[3] * 9)) % 7 === 0)
-                  px(xx, yy, 1, 2, '#ffd25a');
-        }
-      };
-      sky(far, '#24103a', 1.2, false);
-      sky(near, '#140a24', 2.6, true);
-      c.fillStyle = '#1a1222';
-      c.fillRect(0, hz, W, H - hz);
-      const road = c.createLinearGradient(0, hz, 0, H);
-      road.addColorStop(0, '#3a1a30');
-      road.addColorStop(1, '#120c18');
-      c.fillStyle = road;
-      c.beginPath();
-      c.moveTo(W / 2 - 4, hz);
-      c.lineTo(W / 2 + 4, hz);
-      c.lineTo(W * 1.18, H);
-      c.lineTo(-W * 0.18, H);
-      c.fill();
-      c.strokeStyle = '#5a3d58';
-      c.lineWidth = 1;
-      c.beginPath();
-      c.moveTo(W / 2 - 4, hz);
-      c.lineTo(-W * 0.18, H);
-      c.moveTo(W / 2 + 4, hz);
-      c.lineTo(W * 1.18, H);
-      c.stroke();
-      for (let k = 0; k < 9; k++) {
-        const u = ((k + t * 0.55) % 9) / 9,
-          y = hz + (H - hz) * u * u;
-        px(
-          W / 2 - (1 + 3 * u) / 2,
-          y,
-          Math.max(1, Math.round(1 + 3 * u)),
-          Math.max(1, Math.round(2 + 7 * u)),
-          '#d8c15a',
-        );
-      }
-      for (const z of zs.slice().sort((a, b) => a.y - b.y)) {
-        const s = 0.42 + 0.58 * Math.min(1, (z.y - hz) / (joeyBase - hz));
-        c.fillStyle = '#00000066';
-        c.fillRect(Math.round(z.x - 7 * s), Math.round(z.y - 1), Math.round(14 * s), 2);
-        sprite(z.k, z.x + Math.sin(t * 4 + z.x) * 0.7, z.y, 42 * s, z.flash > 0);
-      }
-      c.fillStyle = '#00000066';
-      c.fillRect(Math.round(joey.x - 9), joeyBase - 1, 18, 2);
-      sprite('player-transparent', joey.x, joeyBase, 40, false);
-      if (joey.fire > 0) {
-        px(joey.x - 2, joeyBase - 46, 4, 5, '#fff6c0');
-        px(joey.x - 1, joeyBase - 50, 2, 4, '#ffb340');
-        px(joey.x - 5, joeyBase - 44, 3, 2, '#ffb340');
-        px(joey.x + 2, joeyBase - 44, 3, 2, '#ffb340');
-      }
-      for (const b of bullets) {
-        px(b.x - 1, b.y, 2, 5, '#fff6c0');
-        px(b.x, b.y - 2, 1, 2, '#ffb340');
-      }
-      for (const q of bits) px(q.x, q.y, 2, 2, q.col);
-      c.fillStyle = '#ffe094';
-      c.font = 'bold 8px Barlow, sans-serif';
-      c.textAlign = 'center';
-      for (const p of pops) {
-        c.globalAlpha = Math.min(1, p.life * 2);
-        c.fillStyle = '#000';
-        c.fillText(p.txt, Math.round(p.x) + 1, Math.round(p.y) + 1);
-        c.fillStyle = '#ffe094';
-        c.fillText(p.txt, Math.round(p.x), Math.round(p.y));
-        c.globalAlpha = 1;
-      }
-    }
-    function frame(now) {
-      if (!cv.isConnected) return;
-      const dt = Math.min(0.05, (now - last) / 1000 || 0);
-      last = now;
-      if (!document.hidden) {
-        step(reduced ? 0 : dt);
-        draw();
-      }
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-  }
   function menu() {
     if (panel === 'menu') {
       closePanel();
       return;
     }
+    menuOpenedAt = performance.now();
     showPanel(
       'menu',
       'GAME MENU',
-      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${nativeApp ? '<button class="menu-action" data-action="icons">APP ICON <small>Change your home screen icon →</small></button>' : ''}${SHOW_COFFEE ? '<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>' : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW RUN <small>Choose a player name →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}${nativeApp ? '' : `<button class="menu-action" data-action="admin">${admin ? 'ADMIN CONTROLS' : 'ADMIN CODE'} <small>${admin ? 'Bosses & cheats →' : 'Unlock tools →'}</small></button>`}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
+      `${game.active ? '<button class="primary-action" data-action="close">RESUME GAME</button>' : '<button class="primary-action" data-action="home">PLAY ZOMBIE SMASH</button>'}<button class="menu-action" data-action="skins">CONSOLE SKINS <small>${SKINS.filter((x) => !skinLocked(x)).length} of ${SKINS.length} unlocked →</small></button>${coffeeOn() ? `<button class="menu-action" data-action="coffee">BUY ME A COFFEE <small>Support the developer →</small></button>` : ''}<button class="menu-action" data-action="board">HIGH SCORES <small>The leaderboard →</small></button><button class="menu-action" data-action="sound">MUSIC & SOUND <small>Set your mix →</small></button><button class="menu-action" data-action="story">THE STORY <small>Replay the comic →</small></button><button class="menu-action" data-action="help">HOW TO PLAY <small>Controls & boosts →</small></button><button class="menu-action" data-action="privacy">PRIVACY POLICY <small>How leaderboard data is used →</small></button>${nativeApp ? '' : '<button class="menu-action" data-action="install">INSTALL GAME <small>Play from Home Screen →</small></button>'}${game.active ? '<button class="menu-action" data-action="restart">NEW GAME <small>Start over as the same player →</small></button><button class="menu-action" data-action="home">HOME SCREEN <small>Back to the title →</small></button>' : ''}${bot ? '<button class="menu-action cheat-entry" data-action="cheats">CHEATS <small>BOT mode · codes →</small></button>' : ''}<p class="menu-note">${run ? 'Playing as ' + esc(run.name) : 'Zombie Smash'} · v${APP_VER}<br>Portrait arcade · Joey Rob vs Dr Mantis</p>`,
     );
   }
-  // A thank-you / tip screen shown after PRESS START, before the story. One switch turns it off.
-  // Hidden inside the iPhone app so App Review has nothing to object to; the web version still shows it.
-  const SHOW_COFFEE = !nativeApp,
-    COFFEE_URL = 'https://buymeacoffee.com/JoeyRob';
+  // A thank-you screen shown after PRESS START, before the story. Web version only: a Buy Me a Coffee link.
+  // The iPhone app has no tip jar and no in-app purchases.
+  const COFFEE_URL = 'https://buymeacoffee.com/JoeyRob';
+  // Web only: the iPhone app has no tip jar, so coffeeOn() is false there.
+  const coffeeOn = () => !nativeApp;
   let coffeeNext = null;
-  function showCoffee(next, fromMenu = false) {
+  function showCoffee(next, fromMenu = false, skipLabel = '') {
     coffeeNext = next;
     const beans = Array.from(
       { length: 14 },
@@ -598,7 +352,7 @@
     showPanel(
       'coffee',
       '',
-      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p><a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a><button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
+      `<div class="coffee-screen"><div class="coffee-beans" aria-hidden="true">${beans}</div><div class="coffee-ui"><div class="coffee-kicker">ENJOYING THE FIGHT?</div><h2 class="coffee-title"><span>FUEL</span><span>THE DEV</span></h2><div class="coffee-art" aria-hidden="true"><img class="coffee-joey" src="./player-victory.webp" alt=""><img class="coffee-sloth" src="./boss-caffeinatedsloth-stage1.webp" alt=""><svg class="coffee-cup" viewBox="0 0 120 120"><g class="steam"><path d="M38 34c-8-8 8-14 0-24M60 34c-8-8 8-14 0-24M82 34c-8-8 8-14 0-24" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g><path d="M22 42h76l-8 56a10 10 0 0 1-10 8H40a10 10 0 0 1-10-8z" fill="#fff6dc" stroke="#2a160a" stroke-width="5" stroke-linejoin="round"/><path d="M98 52h8a12 12 0 0 1 0 28h-12" fill="none" stroke="#2a160a" stroke-width="5" stroke-linecap="round"/><path d="M26 50h68l-2 14H28z" fill="#6b3a1a"/><path d="M44 64v14c0 5 8 5 8 0V64M70 64v22c0 6 9 6 9 0V64" fill="#7dff2a" stroke="#2a8a10" stroke-width="2"/><text x="60" y="95" text-anchor="middle" font-family="Barlow,sans-serif" font-weight="900" font-size="20" fill="#2a160a">ZS</text></svg></div><p class="coffee-copy">Zombie Smash is <b>free</b>. No ads. No login. If you're having fun, you can help the next boss get built.</p><a class="bmc" href="${COFFEE_URL}" target="_blank" rel="noopener noreferrer"><span class="bmc-cup">☕</span> BUY JOEY A COFFEE</a><button class="coffee-skip" data-action="coffee-skip">${fromMenu ? 'BACK TO MENU' : skipLabel || 'NOT NOW · ON TO THE STORY ▶'}</button></div></div>`,
       { start: true, closable: false },
     );
   }
@@ -615,17 +369,24 @@
     pendingName = name;
     pendingBot = isBot;
     if (!skipIntro) {
-      if (SHOW_COFFEE) showCoffee(() => showStory(name, 0));
+      if (coffeeOn()) showCoffee(() => showStory(name, 0));
       else showStory(name, 0);
       return;
     }
-    beginRun(name);
+    // Every run starts with the coffee screen (web version only), then plays.
+    if (coffeeOn()) showCoffee(() => beginRun(name), false, 'NOT NOW · PLAY ▶');
+    else beginRun(name);
   }
   // The intro is three animated clips (burned-in captions) that fill the gameplay screen.
   // FIRE skips exactly one clip per press, and each clip moves on by itself when it ends.
   let storyActive = false,
-    storyPreload = null;
+    storyPreload = null,
+    storyWatchdog = null,
+    storyLoadToken = 0;
   function showStory(name, index = 0) {
+    const token = ++storyLoadToken;
+    clearInterval(storyWatchdog);
+    if (storyPreload) { storyPreload.removeAttribute('src'); storyPreload.load?.(); storyPreload = null; }
     pendingName = name;
     storyStep = index;
     storyActive = true;
@@ -641,27 +402,45 @@
       audio.resume();
       audio.playMusic('story');
     }
-    const v = $('storyVideo');
-    storyVideo = v;
-    v.onended = () => {
-      if (storyActive && panel === 'story') storyNext();
+    const playVideo = () => {
+      const v = $('storyVideo');
+      storyVideo = v;
+      v.onended = () => {
+        if (token === storyLoadToken && storyActive && panel === 'story') storyNext();
+      };
+      // If a clip cannot load, move on instead of leaving a black screen.
+      v.onerror = () => {
+        setTimeout(() => {
+          if (token === storyLoadToken && storyActive && panel === 'story' && storyVideo === v) storyNext();
+        }, 400);
+      };
+      let lastProgress = performance.now(), lastPosition = -1;
+      storyWatchdog = setInterval(() => {
+        if (token !== storyLoadToken || !storyActive || panel !== 'story') return;
+        const now = performance.now();
+        if (document.hidden || v.currentTime > lastPosition + 0.01) { lastProgress = now; lastPosition = v.currentTime; }
+        else if (now - lastProgress > 12000) storyNext();
+      }, 1000);
+      v.src = `./story-${index + 1}.mp4`;
+      v.currentTime = 0;
+      v.play().catch(() => {});
+      audio.sfx('page', 0.7);
+      if (index < 2) {
+        storyPreload = document.createElement('video');
+        storyPreload.preload = 'auto';
+        storyPreload.muted = true;
+        storyPreload.src = `./story-${index + 2}.mp4`;
+      }
     };
-    // If a clip cannot load, move on instead of leaving a black screen.
-    v.onerror = () => {
-      setTimeout(() => {
-        if (storyActive && panel === 'story' && storyVideo === v) storyNext();
-      }, 400);
-    };
-    v.src = `./story-${index + 1}.mp4`;
-    v.currentTime = 0;
-    v.play().catch(() => {});
-    audio.sfx('whoosh', 0.7);
-    if (index < 2) {
-      storyPreload = document.createElement('video');
-      storyPreload.preload = 'auto';
-      storyPreload.muted = true;
-      storyPreload.src = `./story-${index + 2}.mp4`;
+    playVideo();
+  }
+  // A FIRE press brings in the next close-up panel first; once both are shown it moves to the next part of the story.
+  function storySkip() {
+    if (storyActive && beatNext(storyVideo, 'story-' + (storyStep + 1))) {
+      haptics.impact('LIGHT', 'ui', 0, true);
+      return;
     }
+    storyNext();
   }
   function storyNext() {
     if (!storyActive) return;
@@ -670,17 +449,24 @@
     else storyEnd();
   }
   function storyEnd() {
+    ++storyLoadToken;
+    clearInterval(storyWatchdog);
     storyActive = false;
     $('fireButton').classList.remove('story-hint');
     const v = $('storyVideo');
     if (v) {
       v.onended = null;
+      v.onerror = null;
       v.pause();
       v.removeAttribute('src');
       v.load?.();
     }
     storyVideo = null;
-    storyPreload = null;
+    if (storyPreload) {
+      storyPreload.removeAttribute('src');
+      storyPreload.load?.();
+      storyPreload = null;
+    }
     $('overlay').classList.remove('story-mode');
     $('overlay').innerHTML = '';
     if (storyReplay) {
@@ -706,14 +492,18 @@
     resume();
     return true;
   }
+  // Gamepads are only polled once one has announced itself.
+  let padOn = false;
+  addEventListener('gamepadconnected', () => (padOn = true));
   function padWatch() {
     try {
-      const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean),
+      const pad = padOn ? Array.from(navigator.getGamepads?.() || []).find(Boolean) : null,
         any = !!pad && pad.buttons.some((b) => b.pressed);
       if (any && !padHeld) {
         if (storyActive) {
-          if (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed) storyNext();
+          if (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed) storySkip();
         } else if (awaitStart) startNow();
+        else if (panel === 'start' && (pad.buttons[0]?.pressed || pad.buttons[7]?.pressed)) showPlayer();
       }
       padHeld = any;
     } catch {}
@@ -724,18 +514,7 @@
     write('zs7-story-seen', true);
     bot = pendingBot;
     run = { id: newId(), name, ticket: null, submitted: false, bot };
-    if (bot) {
-      const added = unlockSecretSkins();
-      setTimeout(
-        () =>
-          toast(
-            added
-              ? 'BOT MODE · ' + added + ' SECRET SKINS DISPENSED · CHEATS MENU UNLOCKED'
-              : 'BOT MODE · CHEATS MENU UNLOCKED',
-          ),
-        600,
-      );
-    }
+    if (bot) unlockSecretSkins();
     const thisRun = run;
     thisRun.ticketPromise = scores.begin(name).then((ticket) => {
       thisRun.ticket = ticket;
@@ -752,6 +531,8 @@
   }
   let previewing = '';
   function paintSkin(skin) {
+    document.body.dataset.releaseSkin = skin.id;
+    document.body.classList.toggle('deck3d', !!skin.deck3d);
     for (const [k, v] of Object.entries({
       '--skin-art': `url('./${skin.file}')`,
       '--accent': skin.accent,
@@ -762,6 +543,21 @@
     }))
       document.body.style.setProperty(k, v);
     document.querySelector('.shell-art').innerHTML = ZSConsole.markup(skin);
+    window.ZSLedBar?.wake();
+  }
+  // Joystick topper: five plain colours and six funky designs. The retro console has a drawn picture of each; other consoles
+  // take the colour (a funky design gives its main colour there).
+  const TOPPERS = [
+    { id: 'yellow', name: 'YELLOW', c: '#f5b800' }, { id: 'red', name: 'RED', c: '#e5251d' }, { id: 'blue', name: 'BLUE', c: '#2377e6' },
+    { id: 'green', name: 'GREEN', c: '#1fcf45' }, { id: 'grey', name: 'GREY', c: '#b4b8ba' },
+    { id: 'camo', name: 'CAMO', c: '#6b7a3a', funky: 1 }, { id: 'candy', name: 'CANDY CANE', c: '#e82833', funky: 1 },
+    { id: 'checker', name: 'CHEQUERED', c: '#d8dadc', funky: 1 }, { id: 'rainbow', name: 'RAINBOW', c: '#35c8f0', funky: 1 },
+    { id: 'galaxy', name: 'GALAXY', c: '#6a35c9', funky: 1 }, { id: 'lava', name: 'LAVA', c: '#e8620a', funky: 1 },
+  ];
+  function applyTopper(id) {
+    const t = TOPPERS.find((x) => x.id === id) || TOPPERS[0];
+    document.body.dataset.topper = t.id;
+    document.body.style.setProperty('--topper', t.c);
   }
   function applySkin(id) {
     // An extra skin is still loading at start-up, so the saved choice is only overwritten by a real match.
@@ -783,42 +579,12 @@
     if (!previewing) return;
     const skin = SKINS.find((x) => x.id === previewing);
     previewing = '';
-    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'toxic') && !skinLocked(x));
+    const saved = SKINS.find((x) => x.id === read('zs7-skin', 'retro-handheld') && !skinLocked(x));
     paintSkin(saved || SKINS[0]);
     if (skin) toast(lockText(skin));
   }
-  const ICON_CHOICES = [
-    ['', 'soldierzombie', 'Screaming Zombie'],
-    ['ZSIconPrev', 'prev', 'Zombie Soldier'],
-    ['ZSIconVivid', 'vivid', 'Soldier Vivid'],
-    ['ZSIconGritty', 'yours', 'Gritty Zombie'],
-    ['ZSIconClassic', 'classic', 'Classic Hand'],
-    ['ZSIconSlime', 'slime', 'Slime Hand'],
-    ['ZSIconMoon', 'moon', 'Blood Moon'],
-    ['ZSIconZombie', 'zombie', 'Shattered'],
-    ['ZSIconSoldier', 'soldier', 'Joey Rob'],
-  ];
-  function iconPlugin() {
-    try {
-      return nativeApp ? window.Capacitor?.registerPlugin?.('AppIcon') : null;
-    } catch {
-      return null;
-    }
-  }
-  async function iconPanel() {
-    const plugin = iconPlugin();
-    let now = '';
-    try {
-      now = (await plugin.get()).name || '';
-    } catch {}
-    showPanel(
-      'icons',
-      'APP ICON',
-      `<p class="menu-note">Pick the icon for your home screen. iPhone shows a short confirmation when it changes.</p><div class="skin-options">${ICON_CHOICES.map(([id, file, label]) => `<button class="skin-choice ${now === id ? 'selected' : ''}" data-icon="${id}" data-icon-key="${file}"><img src="./icon-opt-${file}.webp" alt="" style="height:96px;width:96px;margin:6px auto;border-radius:22px;object-fit:cover"><b>${label}</b></button>`).join('')}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
-    );
-  }
-  function skins() {
-    const current = read('zs7-skin', 'toxic'),
+  function skins(group) {
+    const current = read('zs7-skin', 'retro-handheld'),
       open = SKINS.filter((x) => !skinLocked(x)).length,
       tile = (s) => {
         const locked = skinLocked(s),
@@ -826,18 +592,36 @@
           badge = locked ? (boss ? 'BEAT ' + boss.name.split(' ')[0] : 'SECRET') : '';
         return `<button class="skin-choice ${current === s.id && !locked ? 'selected' : ''} ${locked ? 'locked' : ''} ${previewing === s.id ? 'previewing' : ''}" ${locked ? `data-preview="${s.id}"` : `data-skin="${s.id}" aria-pressed="${current === s.id}"`}><span class="skin-thumbnail" aria-hidden="true"><span class="skin-miniature" style="--accent:${s.accent};--stick:${s.stick};--fire:${s.fire};--grenade:${s.grenade}">${ZSConsole.markup(s)}<i class="preview-screen"></i><i class="preview-stick"></i><i class="preview-fire"></i><i class="preview-grenade"></i></span></span><b>${s.name}</b>${locked ? `<small>🔒 ${badge}</small>` : ''}</button>`;
       },
-      section = (title, list) =>
-        `<h3 class="skin-group">${title}<span>${list.filter((x) => !skinLocked(x)).length} of ${list.length}</span></h3><div class="skin-options">${list.map(tile).join('')}</div>`,
+      grid = (list) => `<div class="skin-options">${list.map(tile).join('')}</div>`,
       characters = SKINS.filter((x) => x.group === 'character'),
-      customs = SKINS.filter((x) => x.group !== 'character');
+      customs = SKINS.filter((x) => x.group !== 'character'),
+      count = (list) => `${list.filter((x) => !skinLocked(x)).length} of ${list.length}`;
+    if (!group)
+      return showPanel(
+        'skins',
+        'CHOOSE YOUR CONSOLE',
+        `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p><button class="skin-group-card" data-action="skins-char"><b>SPECIAL CHARACTER SKINS</b><span>${count(characters)} unlocked</span><i aria-hidden="true">›</i></button><button class="skin-group-card" data-action="skins-custom"><b>CUSTOM SKINS</b><span>${count(customs)} unlocked</span><i aria-hidden="true">›</i></button><button class="skin-group-card" data-action="skins-topper"><b>JOYSTICK TOPPER</b><span>${TOPPERS.length} colours</span><i aria-hidden="true">›</i></button><button class="secondary-action" data-action="menu">‹ BACK TO MENU</button>`,
+      );
+    if (group === 'topper') {
+      const now = read('zs7-topper', 'yellow'),
+        ball = (t) => `<span class="topper-ball" style="background-image:url('./${t.id === 'yellow' ? 'retro-stick' : 'retro-stick-' + t.id}.png')"></span>`,
+        tile = (t) => `<button class="topper-choice ${now === t.id ? 'selected' : ''}" data-topper="${t.id}" aria-pressed="${now === t.id}">${ball(t)}<b>${t.name}</b></button>`;
+      return showPanel(
+        'skins',
+        'JOYSTICK TOPPER',
+        `<button class="back-link" data-action="skins">‹ BACK</button><p class="menu-note">Pick the colour of the joystick ball. The funky designs are drawn on the retro console; other consoles use the closest colour.</p><div class="topper-label">COLOURS</div><div class="topper-options">${TOPPERS.filter((t) => !t.funky).map(tile).join('')}</div><div class="topper-label">FUNKY</div><div class="topper-options">${TOPPERS.filter((t) => t.funky).map(tile).join('')}</div><button class="secondary-action" data-action="skins">‹ BACK TO SKIN TYPES</button>`,
+      );
+    }
+    const list = group === 'char' ? characters : customs;
     showPanel(
       'skins',
-      'CHOOSE YOUR CONSOLE',
-      `<p class="menu-note">${open} of ${SKINS.length} unlocked. Tap a locked skin to try it on; it goes back when you close the menu. Character skins unlock as you beat each boss.</p>${section('SPECIAL CHARACTER SKINS', characters)}${section('CUSTOM SKINS', customs)}<p class="menu-note">Same arena, same controls, same aim — whichever finish you pick.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      group === 'char' ? 'CHARACTER SKINS' : 'CUSTOM SKINS',
+      `<button class="back-link" data-action="skins">‹ BACK</button><p class="menu-note">${count(list)} unlocked. Same arena, same controls, same aim — whichever finish you pick.</p>${grid(list)}<button class="secondary-action" data-action="skins">‹ BACK TO SKIN TYPES</button>`
     );
   }
   async function board() {
-    showPanel('board', 'HIGH SCORES', '<p class="menu-note">Loading the board…</p>');
+    const local = () => '';
+    showPanel('board', 'HIGH SCORES', local()+'<p class="menu-note">Connecting to the global board…</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>');
     const result = await scores.board();
     if (panel !== 'board') return;
     const rows = Array.isArray(result.rows) ? result.rows : [],
@@ -855,23 +639,34 @@
           ? `<div class="board-row you"><b class="rank">YOU</b><span>${esc(me)}<small>YOUR BEST · NOT ON THE BOARD</small></span><b class="points">${mine.toLocaleString()}</b></div>`
           : '';
     $('overlay').querySelector('.panel-content').innerHTML =
-      `<p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>Original records are preserved. New runs use your player name.</p>${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
+      local() + `<h3 class="skin-group">LEADERBOARD · ALL PLAYERS</h3><p class="menu-note">${result.online ? 'Online leaderboard' : 'Saved leaderboard · offline'}${result.online ? '' : `<br>Could not reach the online board${result.error ? ' (' + esc(result.error) + ')' : ''}.`}<br>A fresh leaderboard: finish a run to claim the top spot.</p>${rows.length ? '' : '<p class="menu-note">No scores yet.</p>'}${rows.map((r, i) => `<div class="board-row ${isCheat(r) ? 'cheat' : ''}"><b class="rank">${i + 1}</b><span>${esc(plain(nameOf(r)))}${isCheat(r) ? '<i class="cheat-mark" title="A cheat code was used">✦</i>' : ''}${r.legacy ? '<small>ORIGINAL RECORD</small>' : ''}</span><b class="points">${scoreOf(r).toLocaleString()}</b></div>`).join('')}${youRow}${result.online ? '' : '<button class="secondary-action" data-action="board">TRY AGAIN</button>'}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`;
   }
   function sound() {
-    const set = ['original', 'chip', 'early'].includes(audio.settings.set)
-      ? audio.settings.set
-      : 'new';
     showPanel(
       'sound',
       'MUSIC & SOUND',
-      `<p class="menu-note">Sound plays even when your iPhone is on silent. Pick the sound set, set your mix, and choose whether the phone buzzes.</p><div class="setting"><span>SOUND SET</span><span class="segmented"><button data-sound-set="new" aria-pressed="${set === 'new'}" class="${set === 'new' ? 'on' : ''}">NEW</button><button data-sound-set="chip" aria-pressed="${set === 'chip'}" class="${set === 'chip' ? 'on' : ''}">DARK</button><button data-sound-set="early" aria-pressed="${set === 'early'}" class="${set === 'early' ? 'on' : ''}">OLD</button><button data-sound-set="original" aria-pressed="${set === 'original'}" class="${set === 'original' ? 'on' : ''}">ORIGINAL</button></span></div><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note">Set your music and effects mix. Sound may play even with the iPhone silent switch on.</p><label class="setting">MUSIC <input aria-label="Music volume" data-volume="music" type="range" min="0" max="100" value="${audio.settings.music * 100}"></label><label class="setting">EFFECTS <input aria-label="Effects volume" data-volume="effects" type="range" min="0" max="100" value="${audio.settings.effects * 100}"></label><label class="setting">HAPTICS <input type="checkbox" data-haptics ${haptics.on ? 'checked' : ''}></label><button class="secondary-action" data-action="preview-sound">PREVIEW MIX</button><button class="secondary-action" data-action="fix-sound">NO SOUND? RESET AUDIO</button><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function help() {
     showPanel(
       'help',
       'HOLD THE LINE',
-      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+      `<p class="menu-note"><strong>MOVE</strong> — slide the left joystick sideways. Joey stays on his defence line.<br><br><strong>FIRE</strong> — hold the red button. Drag and fire together.<br><br><strong>GRENADE</strong> — tap the blue centre button. The grenade travels straight up Joey's current lane — there is no auto-aim. Line yourself up first.<br><br><strong>BOOST</strong> — chain kills within 7 seconds: 10 kills = ×2, 20 = ×4, 30 = ×10. Taking damage or letting a zombie into camp breaks the chain.<br><br><strong>WATCH THE HORDE</strong> — runners warn before charging, toxic zombies fire slime, Fuse tanks can chain-react, and Bulwark shields open between pulses. DMR rounds and grenades punch through shields.<br><br><strong>BARRELS</strong> — shoot the red hazard barrels. Their blast radius is 20% of the arena width and can chain into nearby barrels. Debo’s thrown barrels land inside a wide marked ring: move clear of the whole ring, or shoot them early near him.<br><br><strong>PICKUPS</strong> — drops are deliberately rarer. Walk into a drop or shoot it to collect it; drops stay about 15 seconds, even through boss scenes. A gold heart adds a bonus life, up to 10. Special guns are stored in the four HUD slots; tap the stored weapon you want, even while moving. You can hold one ammo run of each gun type.<br><br><strong>ARENA TARGETS</strong> — shoot all three numbered floor lights to trigger the arena boost. They recharge after 12 seconds. Zombies emerge from marked floor entrances and fan out into the arena.<br><br><strong>BOSSES</strong> — a new boss arrives every second wave. Watch the warning before each attack. Defeat Mantis to reach infinite survival.<br><br><strong>STORY SCENES</strong> — tap FIRE to bring in the next panel; tap again to move on.<br><br>MENU — the button under the grenade pauses the game and opens the menu.<br><br>Keyboard: ← → or A / D · Space = fire · G = grenade · P = pause.<br>Gamepad: left stick · A / right trigger = fire · B = grenade.</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+    );
+  }
+  // The privacy policy is bundled with the app and shown inside it (no browser needed); the web copy is the fallback.
+  async function privacyPanel() {
+    let body = '';
+    try {
+      const html = await (await fetch('./privacy.html')).text();
+      body = new DOMParser().parseFromString(html, 'text/html').querySelector('main')?.innerHTML || '';
+    } catch {}
+    if (!body) body = '<p>The privacy policy is available at <a href="https://zc2.quest/privacy.html" target="_blank" rel="noopener">zc2.quest/privacy.html</a>.</p>';
+    showPanel(
+      'privacy',
+      'PRIVACY POLICY',
+      `<div class="menu-note privacy-text" style="text-align:left">${body}</div><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
   function install() {
@@ -881,40 +676,6 @@
       'TAKE THE HORDE WITH YOU',
       `<img class="start-art" src="./game-banner.webp" alt="Zombie Smash game advertisement"><h3 style="font:900 26px Barlow;color:#ffdc8b;margin:12px 0">SEVEN BOSSES. ONE LAST STAND.</h3><p class="menu-note">Big boss reveals. Explosive weapons. Your next high score.<br>Launch straight from your Home Screen, and play offline once the game has finished downloading.</p>${installed ? '<p class="menu-note">✓ You’re already playing the installed game.</p>' : installPrompt ? '<button class="primary-action" data-action="install-now">INSTALL ZOMBIE SMASH</button>' : '<p class="menu-note"><strong>iPhone / iPad</strong><br>Open this game in Safari. Tap Share, then “Add to Home Screen”.<br><br><strong>Android</strong><br>Open your browser menu and choose “Install app” or “Add to Home screen”.</p>'}<p class="menu-note" id="offlineStatus">${read('zs7-offline-ready', false) ? 'Game download complete · offline play ready.' : 'Keep the game open while its artwork and music download.'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
-  }
-  function adminPanel() {
-    if (!admin) {
-      showPanel(
-        'admin',
-        'ADMIN CODE',
-        `<p class="menu-note">Use your existing admin code to unlock boss selection and practice cheats.</p><form id="adminForm"><label class="name-field">ADMIN CODE<input type="password" name="code" id="adminCode" autocomplete="off" required></label><button class="primary-action">UNLOCK</button></form><p class="menu-note" id="adminStatus"></p>`,
-      );
-      return;
-    }
-    showPanel(
-      'admin',
-      'BOSSES & CHEATS',
-      `<p class="menu-note">Using a cheat or boss jump makes the run practice-only. Practice scores never enter the board.</p><label class="setting">INVINCIBLE <input type="checkbox" data-cheat="invincible" ${game.invincible ? 'checked' : ''}></label><label class="setting">UNLIMITED AMMO <input type="checkbox" data-cheat="infiniteAmmo" ${game.infiniteAmmo ? 'checked' : ''}></label><label class="setting">10 HEARTS (5 RED + 5 GOLD) <input type="checkbox" data-cheat="tenHearts" ${(game.maxLives || 5) > 5 ? 'checked' : ''}></label><button class="secondary-action" data-action="grenades">REFILL GRENADES</button><div style="display:flex;gap:5px">${Object.keys(
-        ZSEngine.GUNS,
-      )
-        .map(
-          (g) =>
-            `<button class="secondary-action" data-gun="${g}" style="font-size:11px">${g.toUpperCase()}</button>`,
-        )
-        .join(
-          '',
-        )}</div>${BOSSES.map((b) => `<div class="boss-choice"><img src="./${b.sprites[0]}" alt=""><div><b>${b.name}</b>${Array.from({ length: b.stages }, (_, i) => `<button data-boss="${b.id}" data-stage="${i + 1}">FORM ${i + 1}</button>`).join(' ')}</div></div>`).join('')}`,
-    );
-  }
-  function practice() {
-    if (!admin) return false;
-    if (!run || !game.active) {
-      run = { id: newId(), name: read('zs7-name', 'Player'), ticket: null };
-      game.reset();
-      game.start();
-    }
-    game.practice = true;
-    return true;
   }
   // Cheat codes. Tokens: L / R = joystick pushed fully left / right (release between), F = FIRE tap, G = GRENADE tap.
   // Codes only work in BOT mode, while playing, with about two seconds at most between taps.
@@ -961,17 +722,6 @@
       },
     },
     {
-      id: 'wave',
-      name: 'SKIP WAVE',
-      info: 'Clears the current wave.',
-      seq: 'RLRLFF',
-      run: () => {
-        if (game.boss || game.scene) return;
-        game.enemies = [];
-        game.spawned = game.resolved = game.target;
-      },
-    },
-    {
       id: 'boss',
       name: 'JUMP TO NEXT BOSS',
       info: 'Starts the next boss you have not beaten.',
@@ -1001,8 +751,17 @@
       return ticket;
     });
   }
+  // Codes only work for 10 seconds after the arming gesture: open the MENU and close it again (press MENU twice,
+  // or open it and tap RESUME) within 6 seconds. Normal play can never trigger a cheat by accident.
+  let cheatArmedUntil = 0,
+    menuOpenedAt = 0;
+  function armCheats() {
+    cheatArmedUntil = performance.now() + 10000;
+    cheatBuf = '';
+  }
   function feedToken(token) {
     if (paused || !game.active || game.over) return;
+    if (performance.now() > cheatArmedUntil) return;
     const now = performance.now();
     if (now - cheatLast > 2200) cheatBuf = '';
     cheatLast = now;
@@ -1010,20 +769,15 @@
     const hit = CHEATS.find((c) => cheatBuf.endsWith(c.seq));
     if (!hit) return;
     cheatBuf = '';
+    cheatArmedUntil = 0; // each cheat needs a fresh arming
     const wasPractice = game.practice;
     if (!bot) markCheated();
     hit.run();
     // Some cheats flag the engine as practice-only; outside BOT mode the run still counts (it is marked instead).
     game.practice = bot ? true : wasPractice;
     save();
-    audio.sfx('boost');
+    audio.sfx('power');
     haptics.notify('SUCCESS', 'cheat', 0);
-    toast(
-      'CHEAT · ' +
-        hit.name +
-        (hit.state ? (hit.state() ? ' ON' : ' OFF') : '') +
-        (bot ? ' · scores off' : ' · score marked ✦'),
-    );
   }
   function trackStick(axis) {
     const dir = axis < -0.6 ? -1 : axis > 0.6 ? 1 : Math.abs(axis) < 0.25 ? 0 : stickDir;
@@ -1036,17 +790,47 @@
     showPanel(
       'cheats',
       'CHEATS',
-      `<p class="menu-note">BOT mode is on. While you play, enter a code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button. Keep each tap within about 2 seconds. Any cheat makes the run practice-only: scores stay off the board. Outside BOT mode the same codes work too, and the score counts but is marked ✦ on the board.</p>${CHEATS.map(
+      `<p class="menu-note"><strong>HOW TO USE A CHEAT</strong><br>1. While playing, press MENU, then press MENU again (or tap RESUME) within 6 seconds. Nothing is shown: cheats are now armed.<br>2. Within 10 seconds enter the code on the console: push the joystick fully ◀ or ▶ (let go between pushes) and tap FIRE or the grenade button, each tap within about 2 seconds.<br>3. Each cheat needs a fresh arming. Any cheat makes the run practice-only in BOT mode; outside BOT mode the score counts but is marked ✦ on the board.</p>${CHEATS.map(
         (c) =>
-          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b>${c.state ? `<span class="cheat-state ${c.state() ? 'on' : ''}">${c.state() ? 'ON' : 'OFF'}</span>` : ''}</div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
-      ).join('')}<button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
+          `<div class="cheat-row"><div class="cheat-top"><b>${c.name}</b></div><small>${c.info}</small><div class="cheat-code">${[...c.seq].map((t) => `<i class="code-chip ${t}">${glyph[t]}</i>`).join('')}</div></div>`,
+      ).join('')}<p class="menu-note"><strong>FRAME LOG</strong> (per second: fps, longest gap ms, script ms avg/max per frame)<br>${prof.lines.length ? prof.lines.slice(-20).map(esc).join('<br>') : 'none yet'}</p><p class="menu-note"><strong>AUDIO</strong><br>${audio.status().map(esc).join('<br>')}</p><p class="menu-note"><strong>SLOW FRAMES</strong> (over 70 ms)<br>${slowFrames.length ? slowFrames.slice(-12).map(esc).join('<br>') : 'none yet'}</p><button class="secondary-action" data-action="menu">BACK TO MENU</button>`,
     );
   }
-  function results(reason) {
+  const slowFrames = [];
+  // BOT_ testers only: where each second of play went (milliseconds of script work per frame against the gap between frames).
+  const prof = (() => {
+    const lines = [], acc = { n: 0, gap: 0, maxGap: 0, step: [0, 0], draw: [0, 0], hud: [0, 0], t: performance.now() };
+    const rec = (k, ms) => { acc[k][0] += ms; acc[k][1] = Math.max(acc[k][1], ms); };
+    return {
+      lines,
+      add: rec,
+      frame(gap) {
+        acc.n++; acc.gap += gap; acc.maxGap = Math.max(acc.maxGap, gap);
+        if (performance.now() - acc.t < 1000) return;
+        const f = (k) => (acc[k][0] / Math.max(1, acc.n)).toFixed(1) + '/' + acc[k][1].toFixed(0);
+        lines.push(`w${game.wave}${game.boss ? ' boss' : ''} ${acc.n}fps gap max ${Math.round(acc.maxGap)} · step ${f('step')} draw ${f('draw')} hud ${f('hud')}`);
+        if (lines.length > 40) lines.shift();
+        acc.n = acc.gap = acc.maxGap = 0; acc.step = [0, 0]; acc.draw = [0, 0]; acc.hud = [0, 0]; acc.t = performance.now();
+      },
+    };
+  })();
+  let coffeeShownFor = null;
+  function results(reason, afterCoffee = false) {
+    // The coffee screen also appears when a run ends (web version only); the score is saved first.
+    if (coffeeOn() && !afterCoffee && !game.practice && coffeeShownFor !== run?.id) {
+      coffeeShownFor = run?.id;
+      save();
+      submitScore();
+      showCoffee(() => results(reason, true), false, 'NOT NOW · SEE MY SCORE ▶');
+      return;
+    }
+    const prevBest = Object.values(scores.best || {}).reduce((m, v) => Math.max(m, Number(v) || 0), 0);
+    audio.playMusic('over');
+    if (!game.practice && game.score > prevBest && !audio.holding()) audio.stinger('highscore');
     showPanel(
       'results',
       game.practice ? 'PRACTICE COMPLETE' : 'RUN COMPLETE',
-      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : run?.cheated ? 'Cheats used · your score will be marked ✦ on the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
+      `<div style="text-align:center"><p class="menu-note">${esc(run?.name)} · ${esc(reason)}</p><div class="score-result">${game.score.toLocaleString()}</div><div class="result-stats"><span><b>${game.wave}</b>WAVE</span><span><b>${game.kills}</b>KILLS</span><span><b>${game.bossesDown.length}</b>BOSSES</span></div><p class="menu-note" id="scoreStatus">${game.practice ? 'Practice run · not added to the board.' : 'Saving your score…'}</p><button class="primary-action" data-action="retry">ONE MORE RUN</button><button class="secondary-action" data-action="board">HIGH SCORES</button><button class="secondary-action" data-action="home">CHANGE PLAYER NAME</button></div>`,
       { closable: false },
     );
     save();
@@ -1057,6 +841,7 @@
     run.submitted = true;
     const completed = run,
       record = {
+        id: run.id,
         name: run.name,
         score: game.score,
         kills: game.kills,
@@ -1064,6 +849,8 @@
         wave: game.wave,
         practice: game.practice,
       };
+    scores.recordLocal(record);
+    save();
     if (run.ticketPromise) await run.ticketPromise;
     const result = await scores.finish({ ...record, ticket: completed.ticket });
     if (run !== completed) return;
@@ -1090,19 +877,21 @@
         haptics.impact(
           data.gun === 'shotgun' || data.gun === 'dmr' ? 'MEDIUM' : 'LIGHT',
           'shot',
-          data.gun === 'smg' ? 85 : 55,
+          data.gun === 'smg' ? 130 : 95,
         );
         break;
       case 'hit':
-        haptics.impact('LIGHT', 'hit', data.boss ? 70 : 90);
+        haptics.impact('LIGHT', 'hit', data.boss ? 120 : 160);
         break;
       case 'kill':
-        haptics.impact('MEDIUM', 'kill', 60);
+        haptics.impact('MEDIUM', 'kill', 110);
         break;
       case 'hurt':
         haptics.notify('ERROR', 'hurt', 0);
         break;
       case 'breach':
+        zombiePop();
+        ledBreach(true);
         haptics.notify('WARNING', 'breach', 0);
         break;
       case 'explosion':
@@ -1139,6 +928,7 @@
         break;
     }
   }
+  const SPECIAL_SOUND = new Set(['hose', 'rainbow', 'bass', 'beans', 'laser', 'remover', 'purge']);
   function event(type, data) {
     if (type === 'bossDown' && game.scene?.bossId && !game.practice) {
       const id = game.scene.bossId,
@@ -1150,47 +940,41 @@
         if (skin) toast(skin.name + ' skin unlocked · Menu → Console Skins');
       }
     }
-    if (type === 'panel' && data.phase === 2 && game.scene?.bossId === 'debo') {
-      audio.playMusic('debo'); // the boss reveal: Debo's theme starts as he appears
-    }
-    if (type === 'entrance' && data.id === 'debo') audio.buffer('music-debo.mp3'); // preload
+    if (type === 'entrance' || type === 'fight') audio.setBoss(data.id);
+    if (type === 'wave') audio.setWave(data.wave);
+    // The boss warning score plays through the whole arrival comic; the fight music starts when the fight does.
     if (type === 'music') {
-      const debo = game.scene?.bossId === 'debo' || game.boss?.bossId === 'debo';
-      if (game.scene?.kind === 'arrival')
-        audio.playMusic(debo && game.scene.phase >= 2 ? 'debo' : 'entrance');
-      else audio.playMusic(debo && data.track === 'boss' ? 'debo' : data.track);
+      audio.playMusic(game.scene?.kind === 'arrival' ? 'entrance' : data.track);
       return;
     }
-    const sounds = {
-      shot: data.gun,
-      kill: 'hit',
-      ricochet: 'ricochet',
-      boost: 'boost',
-      breach: 'hurt',
-      clear: 'pickup',
-      hurt: 'hurt',
-      pickup: 'pickup',
-      throw: 'throw',
-      explosion: 'grenade',
-      entrance: 'alarm',
-      panel: 'whoosh',
-      mutation: 'alarm',
-      bossAttack: 'boss-attack',
-      bossDown: 'victory',
-      death: 'loss',
+    const pick = {
+      shot: () => (data.id && SPECIAL_SOUND.has(data.id) ? data.id : data.gun),
+      kill: () => 'kill',
+      hit: () => (data.boss ? 'bosshit' : 'hit'),
+      ricochet: () => 'ricochet',
+      target: () => 'target',
+      boost: () => (data?.multiplier ? (data.multiplier >= 10 ? 'boost3' : data.multiplier >= 4 ? 'boost2' : 'boost1') : 'power'),
+      breach: () => 'breach',
+      clear: () => 'clear',
+      hurt: () => 'hurt',
+      pickup: () => (data.type === 'heart' ? 'heart' : data.type === 'goldheart' ? 'goldheart' : 'pickup'),
+      throw: () => 'throw',
+      explosion: () => 'explosion',
+      entrance: () => 'alarm',
+      panel: () => 'page',
+      mutation: () => 'mutation',
+      bossAttack: () => 'warn',
+      weaponUse: () => 'switch',
     };
-    // The new sound set closes a boss fight and a defeat with music stingers instead of the old effects.
-    if (audio.synthMode && type === 'bossDown') audio.stinger('victory');
-    else if (audio.synthMode && type === 'death') audio.stinger('defeat');
-    else if (sounds[type])
-      audio.sfx(sounds[type], type === 'kill' ? 0.55 : type === 'entrance' ? 0.6 : 1);
+    const vol = { kill: 0.9, hit: 0.7, shot: 0.85, ricochet: 0.8, entrance: 0.8, clear: 0.9 };
+    if (type === 'bossDown') audio.stinger('victory');
+    else if (type === 'death') audio.stinger('defeat');
+    else if (type === 'wave' && data.wave > 1) audio.sting('wavestart');
+    else if (pick[type]) audio.sfx(pick[type](), vol[type] ?? 1);
     buzz(type, data);
-    if (type === 'fight') {
-      audio.playMusic(bossTrack(data.id));
-      audio.sfx('doom');
-    }
+    if (type === 'fight') audio.sfx('doom');
     if (type === 'over') results(data.reason);
-    if (type === 'wave') save();
+    if (type === 'wave') queueSave();
   }
   // Which finished clip (if any) covers the scene that is playing now.
   function sceneClipFor(s) {
@@ -1198,7 +982,7 @@
     if (!s.bossId || (s.kind === 'arrival' && s.phase < 2)) return null;
     const name =
         s.kind === 'arrival'
-          ? 'intro'
+          ? ((s.startStage || 1) > 1 ? 'form' + s.startStage : 'intro')
           : s.kind === 'mutation'
             ? 'form' + s.stage
             : s.kind === 'down'
@@ -1211,88 +995,132 @@
   }
   function unclipBox(box) {
     box.style.bottom = box.style.zIndex = '';
-    box.closest('.screen')?.classList.remove('clip-full');
+    box.closest('.screen')?.classList.remove('clip-full', 'clip-live');
+  }
+  function removeSceneClip(box) {
+    const v = box.querySelector('video.scene-clip');
+    if (!v) return;
+    v._dispose?.();
+    v.pause();
+    v.removeAttribute('src');
+    v.load();
+    v.remove();
   }
   function mountSceneClip(box, s, file) {
     const v = document.createElement('video');
+    const originalDuration = s.duration;
+    const phase = s.phase;
+    let disposed = false,
+      lastProgress = performance.now(),
+      lastTime = -1;
+    const current = () => !disposed && game.scene === s && s.phase === phase && v.isConnected;
+    const restore = () => {
+      if (!current()) return;
+      failedClips.add(file);
+      s.mediaControlled = false;
+      s.duration = originalDuration;
+      s.time = 0;
+      removeSceneClip(box);
+      box.classList.remove('clip-mode', 'clip-ready');
+      unclipBox(box);
+      sceneKey = '';
+    };
     v.className = 'scene-clip';
+    v.dataset.key = file.replace(/^scene-|\.mp4$/g, '');
     v.muted = true;
     v.playsInline = true;
     v.setAttribute('playsinline', '');
     v.setAttribute('webkit-playsinline', '');
+    v.setAttribute('aria-label', 'Boss scene');
     v.preload = 'auto';
-    v.src = './' + file;
-    box.classList.add('clip-mode');
-    // The picture starts at the bottom edge of the score bar and runs down behind the weapon bar.
-    const screen = box.closest('.screen');
-    if (screen) {
-      const sr = screen.getBoundingClientRect(),
-        br = box.getBoundingClientRect(),
-        k = br.width / box.offsetWidth || 1;
-      box.style.bottom = `${(br.bottom - sr.bottom) / k}px`;
-      box.style.zIndex = '30';
-      screen.classList.add('clip-full');
-    }
-    // Hold the last frame instead of letting the player jump back to the start.
-    v.addEventListener('ended', () => {
-      try {
-        v.pause();
-        v.currentTime = Math.max(0, v.duration - 0.05);
-      } catch {}
+    s.mediaControlled = true;
+    s.time = 0;
+    v.addEventListener('playing', () => {
+      if (!current()) return;
+      lastProgress = performance.now();
+      box.classList.add('clip-ready');
+      box.closest('.screen')?.classList.add('clip-live');
     });
-    // The scene lasts exactly as long as the clip.
-    v.addEventListener('loadedmetadata', () => {
-      if (game.scene === s && Number.isFinite(v.duration)) {
-        s.duration = Math.max(0.5, v.duration + 0.25);
+    // The film ends on the two close-ups; leaving is a split into the game (also used when FIRE skips the last hold).
+    v._endScene = () => {
+      if (!current() || v._leaving) return;
+      v._leaving = true;
+      splitAway(box, () => {
+        if (game.scene !== s) return;
+        s.mediaControlled = false;
+        s.duration = 0.05;
         s.time = 0;
+      });
+    };
+    v.addEventListener('ended', () => v._endScene());
+    v.addEventListener('error', restore);
+    const watchdog = setInterval(() => {
+      if (!current()) return;
+      if (paused || document.hidden) {
+        lastProgress = performance.now();
+        return;
       }
-    });
-    // A clip that cannot be played falls back to the built-in scene.
-    v.addEventListener('error', () => {
-      failedClips.add(file);
-      v.remove();
-      box.classList.remove('clip-mode');
-      unclipBox(box);
-
-      sceneKey = '';
-    });
+      if (v.currentTime > lastTime + 0.01) {
+        lastTime = v.currentTime;
+        lastProgress = performance.now();
+      }
+      if (!v.ended && performance.now() - lastProgress > 4500) restore();
+    }, 250);
+    v._dispose = () => {
+      disposed = true;
+      clearInterval(watchdog);
+    };
     box.prepend(v);
-    v.play().catch(() => {});
+    box.classList.add('clip-mode');
+    v.src = './' + file;
+    v.play().catch(() => {
+      if (current() && !paused && !document.hidden) restore();
+    });
   }
+  let sceneIdle = false;
   function cinematic() {
     const s = game.scene,
       box = $('cinematic');
+    document.body.classList.toggle('in-scene', !!s);
     if (!s) {
+      // Nothing to tidy once the box is already clean: writing the same attributes every frame made the browser
+      // re-style the whole game screen 60 times a second.
+      if (sceneIdle) return;
+      sceneIdle = true;
       box.hidden = true;
       sceneKey = '';
-      box.classList.remove('clip-mode');
+      box.classList.remove('clip-mode', 'clip-ready');
 
       unclipBox(box);
-      box.querySelector('video.scene-clip')?.remove();
+      removeSceneClip(box);
       return;
     }
+    sceneIdle = false;
     const clip = sceneClipFor(s);
     const playing = box.querySelector('video.scene-clip');
     if (playing) {
       if (paused) playing.pause();
-      else if (playing.paused && playing.readyState > 2) playing.play().catch(() => {});
+      else if (!playing._leaving && !playing.ended && playing.paused && playing.readyState > 2)
+        playing.play().catch(() => {});
     }
     const key = [s.kind, s.bossId, s.phase, s.stage].join(':');
     if (sceneKey === key) return;
+    removeSceneClip(box);
     sceneKey = key;
     box.hidden = false;
-    box.classList.remove('clip-mode');
+    box.classList.remove('clip-mode', 'clip-ready');
     const b = BOSSES.find((b) => b.id === s.bossId);
 
     unclipBox(box);
     box.className = s.kind === 'down' ? 'scene-down' : '';
     box.style.setProperty('--scene-color', b?.accent || '#b45139');
     let content = '';
-    if (s.kind === 'arrival' && s.phase === 0)
+    if (clip) content = '';
+    else if (s.kind === 'arrival'  && s.phase === 0)
       content = '<div class="scene-alert">WARNING!<small>HOSTILE APPROACHING</small></div>';
     else if (s.kind === 'mutation') {
       const reaction = s.stage === 3;
-      content = `<div class="scene-name long">${esc(b.name)}<span>FORM ${s.stage} OF ${b.stages} · ${reaction ? 'FINAL MUTATION' : 'TRANSFORMATION'}</span></div><div class="scene-figures ${reaction ? 'dual' : ''}">${reaction ? '<img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts to the final mutation">' : ''}<img class="scene-art" src="./${b.sprites[s.stage - 1]}" alt="${esc(b.name)} form ${s.stage}"></div><div class="scene-copy"><small>${reaction ? 'JOEY ROB' : 'THREAT EVOLVING'}</small><p>${esc(b.stageLines[s.stage - 1] || b.react)}</p></div>`;
+      content = `<div class="scene-name long">${esc(b.name)}<span>${reaction ? 'FINAL MUTATION' : 'TRANSFORMATION'}</span></div><div class="scene-figures ${reaction ? 'dual' : ''}">${reaction ? '<img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts to the final mutation">' : ''}<img class="scene-art" src="./${b.sprites[s.stage - 1]}" alt="${esc(b.name)} form ${s.stage}"></div><div class="scene-copy"><small>${reaction ? 'JOEY ROB' : 'THREAT EVOLVING'}</small><p>${esc(b.stageLines[s.stage - 1] || b.react)}</p></div>`;
     } else if (s.kind === 'arrival' && s.phase === 1)
       content = `<div class="scene-name">JOEY ROB<span>SOMETHING’S COMING…</span></div><div class="scene-figures"><img class="scene-art joey" src="./joey-reaction-close.webp" alt="Joey Rob reacts in shock"></div><div class="scene-copy"><small>JOEY ROB</small><p>${esc(b.announce)}</p></div>`;
     else if (b) {
@@ -1300,71 +1128,161 @@
       content = `<div class="scene-name ${b.name.length > 14 ? 'long' : ''}">${s.kind === 'down' ? 'BOSS DOWN' : esc(b.name)}<span>${esc(b.title)}</span></div><div class="scene-figures"><img class="scene-art" src="./${b.sprites[(s.stage || s.startStage || 1) - 1]}" alt="${esc(b.name)}"></div><div class="scene-copy"><small>${esc(b.name)}</small><p>${esc(line)}</p></div>`;
     } else
       content = '<div class="scene-alert">LINE BROKEN<small>THE HORDE GOT THROUGH</small></div>';
-    box.innerHTML =
-      '<div class="scene-backdrop"></div><div class="scene-lines"></div>' +
-      content +
-      '<button class="scene-next" id="advanceScene">CONTINUE →</button>';
-    box.onclick = () => {
-      if (!paused) game.advanceScene();
+    // While a finished film is mounted the box stays empty: the built-in cards below are only the fallback for a film that fails.
+    box.innerHTML = clip ? '' : '<div class="scene-backdrop"></div><div class="scene-lines"></div>' + content;
+    box.onclick = (e) => {
+      if (!paused && e.target.closest('.scene-next')) sceneAdvance();
     };
     if (clip) mountSceneClip(box, s, clip);
   }
 
+  // A zombie got through: a shaking zombie head pops up over the counter.
+  function zombiePop() {
+    const box = $('baseStatus');
+    if (!box) return;
+    box.classList.remove('hit');
+    void box.offsetWidth;
+    box.classList.add('hit');
+    const pop = document.createElement('i');
+    pop.className = 'zpop';
+    pop.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>';
+    box.appendChild(pop);
+    setTimeout(() => pop.remove(), 1000);
+  }
+  // The HUD only touches the page when a value changes. Writing the same text, class or width every frame
+  // forced the phone to restyle (and sometimes re-layout) the whole console 60 times a second.
+  const hudCache = Object.create(null),
+    hudEl = Object.create(null),
+    hel = (id) => hudEl[id] || (hudEl[id] = $(id));
+  function hudSet(key, value, apply) {
+    if (hudCache[key] === value) return;
+    hudCache[key] = value;
+    apply(value);
+  }
+  const hudText = (id, value) => hudSet(id, String(value), (t) => (hel(id).textContent = t));
+  let nameCache = '',
+    nameAt = -1e9;
+  function savedName() {
+    const t = performance.now();
+    if (t - nameAt > 1000) {
+      nameAt = t;
+      nameCache = read('zs7-name', '');
+    }
+    return nameCache;
+  }
+  const weaponButtons = {};
+  // The retro console's joystick art shows one of three positions; the other skins ignore this.
+  function stickLamp(dir) {
+    hudSet('stickDir', dir, (v) => (hel('joystick').dataset.dir = v));
+  }
+  // Indicator lamps (cosmetic only). data-led / data-weapon / data-menu on the cabinet are the whole interface:
+  // the lamps are drawn in CSS and nothing here touches the simulation, timing, saves or input.
+  let breachTimer = 0;
+  function ledBreach(on) {
+    clearTimeout(breachTimer);
+    hel('cabinet').classList.toggle('led-breach', on);
+    if (on) window.ZSLedBar?.alert('BREACH ' + Math.min(10, game.breaches) + '/10', 'red');
+    if (on) breachTimer = setTimeout(() => ledBreach(false), 1700);
+  }
+  function leds() {
+    const lamps = ZSConsole.leds(game, !awaitStart);
+    hudSet('led:power', lamps.power, (v) => {
+      hel('cabinet').dataset.led = v;
+      if (v === 'off') ledBreach(false);
+    });
+    hudSet('led:weapon', lamps.weapon, (v) => (hel('cabinet').dataset.weapon = v));
+    hudSet('led:paused', paused || document.hidden, (v) => (hel('cabinet').dataset.paused = v ? '1' : ''));
+    hudSet('led:menu', paused && !!panel && game.active && !awaitStart, (v) => (hel('cabinet').dataset.menu = v ? '1' : ''));
+    {
+      const started = game.active && !awaitStart && !game.over,
+        boss = game.boss ? ZSData.BOSSES.find((b) => b.id === game.boss.bossId)?.name || '' : '',
+        map = started ? MAPS[ZSData.mapIndex(game.wave)].name : '';
+      const page = storyActive ? 'story' : panel || (awaitStart ? 'ready' : game.scene ? 'scene' : game.over ? 'over' : started ? 'play' : 'start');
+      hudSet('bar', [page, started, game.over, game.wave, map, boss, run?.name || '', page === 'results' ? game.score : '', bot].join('|'), () =>
+        window.ZSLedBar?.set({ page, started, over: !!game.over, wave: game.wave, map, boss, name: run?.name || '', score: game.score, bot }),
+      );
+      hudSet('lowhp', started && game.player.lives === 1, (v) => v && window.ZSLedBar?.alert('LOW HEALTH', 'red'));
+      const sp = started && game.player.special && ZSEngine.SPECIALS.find((s) => s.id === game.player.special.id);
+      hudSet('spec', sp ? sp.id : '', (v) => v && window.ZSLedBar?.alert(sp.name, 'green'));
+    }
+  }
   function hud() {
     const p = game.player;
-    $('joystick').classList.toggle('sped', (p.speedUp || 0) > 0);
-    $('waveValue').textContent = game.wave;
-    $('leftValue').textContent = game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved);
-    $('scoreValue').textContent = game.score.toLocaleString();
-    $('bestValue').textContent = scores.getBest(run?.name || read('zs7-name', '')).toLocaleString();
+    leds();
+    hudSet('sped', (p.speedUp || 0) > 0, (v) => hel('joystick').classList.toggle('sped', v));
+    hudText('waveValue', game.wave);
+    hudText('leftValue', game.boss ? 'BOSS' : Math.max(0, game.target - game.resolved));
+    hudSet('score', game.score, (v) => (hel('scoreValue').textContent = v.toLocaleString()));
+    hudSet('best', scores.getBest(run?.name || savedName()), (v) => (hel('bestValue').textContent = v.toLocaleString()));
     {
       const max = game.maxLives || 5,
-        l = Math.max(0, p.lives),
-        el = $('healthValue');
-      el.classList.toggle('tenhearts', max > 5);
-      if (el.dataset.health !== max + ':' + l) {
+        l = Math.max(0, p.lives);
+      hudSet('hearts', max + ':' + l + ':' + p.lives, () => {
+        const el = hel('healthValue');
+        el.classList.toggle('tenhearts', max > 5);
         el.dataset.health = max + ':' + l;
         el.innerHTML = Array.from(
           { length: max },
           (_, i) =>
             `<span class="heart${i >= 5 ? ' gold' : ''}${i < l ? '' : ' empty'}">${i < l ? '♥' : '♡'}</span>`,
         ).join('');
-      }
+        el.setAttribute('aria-label', p.lives + ' hearts');
+      });
     }
-    $('healthValue').setAttribute('aria-label', p.lives + ' hearts');
-    $('gunValue').textContent = ZSEngine.GUNS[p.gun].name;
-    $('ammoValue').textContent = !Number.isFinite(p.ammo) || game.infiniteAmmo ? '∞' : p.ammo;
-    $('baseValue').textContent = game.breaches + '/10';
-    $('grenadeValue').textContent = p.grenades;
-    $('grenadeButton').classList.toggle('empty', p.grenades === 0);
-    $('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + p.grenades + ' remaining');
-    $('boostText').textContent = 'BOOST ×' + game.multiplier;
-    $('boostFill').style.width = Math.max(0, (game.comboLeft / 7) * 100) + '%';
-    $('comboText').textContent =
+    const special = p.special && ZSEngine.SPECIALS.find((s) => s.id === p.special.id);
+    hudText('gunValue', special ? special.name : ZSEngine.GUNS[p.gun].name);
+    hudText('ammoValue', special ? Math.ceil(p.special.left) + 's' : !Number.isFinite(p.ammo) || game.infiniteAmmo ? '∞' : p.ammo);
+    {
+      const n = Math.min(10, game.breaches);
+      hudSet('breach', n, () => {
+        const el = hel('baseValue');
+        el.dataset.n = n;
+        el.setAttribute('aria-label', n + ' of 10 zombies through');
+        el.innerHTML = Array.from(
+          { length: 10 },
+          (_, i) => `<svg class="zface${i < n ? ' lit' : ''}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/><path class="zeye" d="M4.5 7.5l4 1.2M15.5 7.5l-4 1.2"/><circle class="zeye2" cx="7" cy="9.5" r="1.7"/><circle class="zeye2" cx="13" cy="9.5" r="1.7"/><path class="zmouth" d="M5.5 14.5l1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8 1.6-1.8 1.6 1.8"/></svg>`,
+        ).join('');
+      });
+    }
+    hudSet('grenades', p.grenades, (v) => {
+      hel('grenadeValue').textContent = v;
+      window.ZSLedBar?.grenades(v);
+      window.ZSLedBar?.ring(v);
+      hel('grenadeButton').classList.toggle('empty', v === 0);
+      hel('grenadeButton').setAttribute('aria-label', 'Throw grenade, ' + v + ' remaining');
+    });
+    hudText('boostText', 'BOOST ×' + game.multiplier);
+    hudSet('boostFill', Math.round(Math.max(0, game.comboLeft / 7) * 200) / 2, (v) => (hel('boostFill').style.width = v + '%'));
+    hudText(
+      'comboText',
       game.combo >= 30
         ? '×10 · KEEP IT GOING'
         : (game.combo < 10 ? 10 : game.combo < 20 ? 20 : 30) -
-          game.combo +
-          ' KILLS TO ×' +
-          (game.combo < 10 ? 2 : game.combo < 20 ? 4 : 10);
+            game.combo +
+            ' KILLS TO ×' +
+            (game.combo < 10 ? 2 : game.combo < 20 ? 4 : 10),
+    );
     for (const gun of ['smg', 'shotgun', 'dmr', 'burst']) {
-      const el = $('inv-' + gun);
       const active = p.gun === gun,
         ammo = active ? p.ammo : p.inventory?.[gun] || 0;
-      if (el) el.textContent = ammo || '—';
-      const btn = document.querySelector(`[data-weapon="${gun}"]`);
-      if (btn) {
-        btn.disabled = active || !(ammo > 0);
-        btn.classList.toggle('ready', ammo > 0);
-        btn.classList.toggle('equipped', active);
-        btn.setAttribute(
-          'aria-label',
-          `${active ? 'Equipped' : 'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`,
-        );
-      }
+      hudSet('w:' + gun, active + ':' + ammo, () => {
+        const el = $('inv-' + gun);
+        if (el) el.textContent = ammo || '—';
+        const btn = weaponButtons[gun] || (weaponButtons[gun] = document.querySelector(`[data-weapon="${gun}"]`));
+        if (btn) {
+          btn.disabled = active || !(ammo > 0);
+          btn.classList.toggle('ready', ammo > 0);
+          btn.classList.toggle('equipped', active);
+          btn.setAttribute(
+            'aria-label',
+            `${active ? 'Equipped' : 'Use'} ${ZSEngine.GUNS[gun].name}, ${ammo} rounds`,
+          );
+        }
+      });
     }
-    $('mapLabel').textContent = MAPS[Math.min(6, Math.floor((game.wave - 1) / 2))].name;
-    $('headerName').textContent = run?.name || 'JOEY ROB VS DR MANTIS';
+    const mapName = MAPS[ZSData.mapIndex(game.wave)].name;
+    hudSet('map', mapName, (v) => (hel('mapLabel').textContent = hel('mapTag').textContent = v));
+    hudText('headerName', run?.name || 'JOEY ROB VS DR MANTIS');
   }
   function inputs() {
     let axis =
@@ -1373,8 +1291,10 @@
         (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0),
       fire = touchFire || keys.has('Space'),
       grenade = false;
+    stick.classList.toggle('push-l', axis < -0.15);
+    stick.classList.toggle('push-r', axis > 0.15);
     try {
-      const pad = Array.from(navigator.getGamepads?.() || []).find(Boolean);
+      const pad = padOn ? Array.from(navigator.getGamepads?.() || []).find(Boolean) : null;
       if (pad) {
         if (Math.abs(pad.axes[0] || 0) > 0.14) axis = pad.axes[0];
         if (pad.buttons[14]?.pressed) axis = -1;
@@ -1399,7 +1319,7 @@
       keyboard = focused && vv && vv.height < innerHeight * 0.78,
       newLandscape = w > h * 1.04;
     landscape = newLandscape;
-    $('rotateGate').hidden = !landscape;
+    if ($('rotateGate').hidden === landscape) $('rotateGate').hidden = !landscape;
     if (landscape) {
       if (game.active && !paused) {
         pause();
@@ -1414,11 +1334,11 @@
         0 ||
         (navigator.standalone === true ? 20 : 0),
       bottom = parseFloat(safe.getPropertyValue('--safe-bottom')) || 0,
-      scale = Math.min(w / 375, h / 667),
-      edge0 = (h - 667 * scale) / 2,
-      T = Math.max(edge0, top + 2 - 11 * scale),
-      shift = Math.max(0, top + 2 - (T + 3 * scale)) / scale,
-      key = w + 'x' + h + '@' + scale.toFixed(4) + '/' + top;
+      usableHeight = Math.max(1, h - top - bottom),
+      scale = Math.min(w / 375, usableHeight / 667),
+      T = top + (usableHeight - 667 * scale) / 2,
+      shift = 0,
+      key = w + 'x' + h + '@' + scale.toFixed(4) + '/' + top + '/' + bottom;
     if (key === lastFit) return;
     lastFit = key;
     document.documentElement.style.setProperty('--console-scale', scale);
@@ -1428,30 +1348,59 @@
     $('cabinet').style.top = T + 333.5 * scale + 'px';
     renderer.resize();
   }
+  let lastDraw = -Infinity, lastHud = -Infinity;
   function frame(now) {
-    fit();
-    if (storyActive || awaitStart) padWatch();
-    const dt = Math.min(0.1, (now - lastTime) / 1000 || 0);
+    if (fitDirty) {
+      fitDirty = false;
+      fit();
+    }
+    if (storyActive || awaitStart || panel === 'start') padWatch();
+    const elapsed = now - lastTime;
+    // BOT_ testers: remember the last slow frames (over 70 ms) and what was happening, shown in the CHEATS page.
+    if (bot && elapsed > 70 && elapsed < 2000 && !paused && game.active)
+      slowFrames.push(Math.round(elapsed) + 'ms · wave ' + game.wave + (game.scene ? ' · ' + game.scene.kind + ' scene' : game.boss ? ' · boss' : '') + ' · ' + game.enemies.length + ' zombies');
+    if (slowFrames.length > 40) slowFrames.shift();
+    if (bot && !paused && game.active) prof.frame(elapsed);
+    const dt = Math.min(0.1, elapsed / 1000 || 0);
+    renderer.observeFrame(elapsed, !paused && !landscape && !document.hidden && ready && !game.scene);
     lastTime = now;
     if (!paused && !landscape && !document.hidden && ready) {
       inputs();
       accumulator += dt;
       let steps = 0;
+      const tStep = bot ? performance.now() : 0;
       while (accumulator >= 1 / 60 && steps++ < 6) {
         game.step(1 / 60);
         accumulator -= 1 / 60;
       }
+      if (bot) prof.add('step', performance.now() - tStep);
       saveClock += dt;
       if (saveClock > 5) {
         saveClock = 0;
-        save();
+        queueSave();
       }
     } else accumulator = 0;
-    renderer.draw(game);
-    cinematic();
-    hud();
+    if (!document.hidden) {
+      // Keep controls and simulation at full rate; avoid drawing a static menu or the same 60 Hz pose at 120 Hz.
+      const interval = paused || game.scene ? 1000 / 15 : 1000 / 60;
+      if (now - lastDraw >= interval - 0.5) {
+        const tDraw = bot ? performance.now() : 0;
+        renderer.draw(game);
+        if (bot) prof.add('draw', performance.now() - tDraw);
+        lastDraw = now - ((now - (Number.isFinite(lastDraw) ? lastDraw : now)) % interval);
+      }
+      cinematic();
+      if (now - lastHud >= 1000 / 30) {
+        const tHud = bot ? performance.now() : 0;
+        hud();
+        if (bot) prof.add('hud', performance.now() - tHud);
+        lastHud = now;
+      }
+    }
     requestAnimationFrame(frame);
   }
+  // iOS toolbars and the keyboard can change the size without a resize event: re-measure twice a second.
+  setInterval(() => (fitDirty = true), 500);
   let flickDir = 0,
     flickUntil = 0,
     stickHist = [],
@@ -1461,7 +1410,7 @@
   // Past full deflection the centre follows the thumb so reversing is instant, and a quick flick gives a short full-speed burst.
   function moveStick(e) {
     if (e.pointerId !== stickId || stickOrigin === null) return;
-    const range = stick.getBoundingClientRect().width * 0.16,
+    const range = stick.getBoundingClientRect().width * 0.13,
       list = e.getCoalescedEvents?.().length ? e.getCoalescedEvents() : [e];
     for (const ev of list) {
       let dx = ev.clientX - stickOrigin;
@@ -1477,17 +1426,20 @@
       while (stickHist.length > 1 && now - stickHist[0][0] > 150) stickHist.shift();
       stickVal = dx / range;
       const a = Math.abs(stickVal);
-      touchAxis = a < 0.1 ? 0 : Math.sign(stickVal) * Math.pow((a - 0.1) / 0.9, 0.8);
+      touchAxis = a < 0.04 ? 0 : Math.sign(stickVal) * Math.pow((a - 0.04) / 0.96, 0.7);
       const moved = ev.clientX - stickHist[0][1];
-      if (Math.abs(moved) > range * 0.4) {
+      if (Math.abs(moved) > range * 0.3) {
         flickDir = Math.sign(moved);
-        flickUntil = now + 170;
+        flickUntil = now + 200;
       }
     }
     $('stickKnob').style.transform = `translateX(${stickVal * 25}px)`;
+    stick.style.setProperty('--lean', stickVal.toFixed(2));
+    stickLamp(stickVal < -0.3 ? -1 : stickVal > 0.3 ? 1 : 0);
     stick.setAttribute('aria-valuenow', Math.round(touchAxis * 100));
   }
   stick.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || stickId !== null) return;
     if (awaitStart || storyActive) {
       e.preventDefault();
       startNow();
@@ -1504,22 +1456,55 @@
     audio.unlock();
   });
   stick.addEventListener('pointermove', moveStick);
+  function releaseStick() {
+    stickId = null;
+    stickOrigin = null;
+    flickUntil = 0;
+    touchAxis = 0;
+    stickVal = 0;
+    $('stickKnob').style.transform = 'translateX(0)';
+    stick.style.setProperty('--lean', '0');
+    stick.setAttribute('aria-valuenow', '0');
+    stickLamp(0);
+  }
+  function releaseFire() {
+    touchFire = false;
+    fireId = null;
+    $('fireButton').classList.remove('pressed');
+  }
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
     stick.addEventListener(type, (e) => {
-      if (e.pointerId === stickId) {
-        stickId = null;
-        stickOrigin = null;
-        flickUntil = 0;
-        touchAxis = 0;
-        stickVal = 0;
-        $('stickKnob').style.transform = 'translateX(0)';
-        stick.setAttribute('aria-valuenow', '0');
-      }
+      if (e.pointerId === stickId) releaseStick();
     });
+  // iPhone can swallow a finger-up (edge swipes, banners, calls). Never leave the stick or FIRE held:
+  // release on any window-level lift/cancel, when no finger is left on the screen, and when the app loses focus.
+  for (const type of ['pointerup', 'pointercancel'])
+    addEventListener(type, (e) => {
+      if (e.pointerId === stickId) releaseStick();
+      if (e.pointerId === fireId) releaseFire();
+    }, true);
+  for (const type of ['touchend', 'touchcancel'])
+    addEventListener(type, (e) => {
+      if (e.touches.length === 0) {
+        if (stickId !== null) releaseStick();
+        if (fireId !== null) releaseFire();
+      }
+    }, true);
+  addEventListener('blur', () => {
+    if (stickId !== null) releaseStick();
+    if (fireId !== null) releaseFire();
+  });
   $('fireButton').addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || fireId !== null) return;
+    if (panel === 'start') {
+      e.preventDefault();
+      audio.ui('chime');
+      showPlayer();
+      return;
+    }
     if (storyActive) {
       e.preventDefault();
-      storyNext();
+      storySkip();
       return;
     }
     if (awaitStart) {
@@ -1529,13 +1514,18 @@
     }
     feedToken('F');
     if (!paused) haptics.impact('MEDIUM', 'press', 0, true);
-    if (paused || !game.active || game.scene) return;
+    if (paused || !game.active) return;
     e.preventDefault();
     fireId = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
     touchFire = true;
     e.currentTarget.classList.add('pressed');
     audio.unlock();
+    // During a boss scene a press (or holding FIRE) skips ahead once the scene has run for a couple of seconds.
+    if (game.scene) {
+      if (game.scene.bossId && game.scene.time >= 0.4) sceneAdvance();
+      return;
+    }
     game.fire();
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
@@ -1565,7 +1555,7 @@
   // is held on the joystick, which made guns selectable only after letting go.
   function equipStored(weapon) {
     if (paused || !game.useStored(weapon)) return;
-    audio.sfx('pickup');
+    audio.sfx('switch');
     haptics.impact('MEDIUM', 'weapon', 0, true);
     toast(ZSEngine.GUNS[weapon].name + ' equipped');
   }
@@ -1613,10 +1603,20 @@
   });
   addEventListener('keydown', (e) => {
     if (/INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    if (panel === 'start') {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) {
+          audio.ui('chime');
+          showPlayer();
+        }
+      }
+      return;
+    }
     if (storyActive) {
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
-        if (!e.repeat) storyNext();
+        if (!e.repeat) storySkip();
       }
       return;
     }
@@ -1667,29 +1667,18 @@
   });
   $('overlay').addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (e.target.id === 'startForm') {
+    if (e.target.id === 'playerForm') {
       if (ready) start($('username').value);
-    }
-    if (e.target.id === 'adminForm') {
-      const button = e.target.querySelector('button'),
-        code = $('adminCode').value;
-      $('adminCode').value = '';
-      button.disabled = true;
-      try {
-        admin = (await scores.admin(code)) === true;
-        if (admin) adminPanel();
-        else $('adminStatus').textContent = 'Code not accepted. Try again.';
-      } catch {
-        $('adminStatus').textContent = 'Could not verify the code. Check your connection.';
-      } finally {
-        button.disabled = false;
-      }
     }
   });
   // Every menu button, skin tile and switch gives a light tap.
   $('overlay').addEventListener('pointerdown', (e) => {
     const b = e.target.closest('button:not(:disabled)');
-    if (b) haptics.impact('LIGHT', 'ui', 0, true);
+    if (b) {
+      haptics.impact('LIGHT', 'ui', 0, true);
+      const act = b.dataset.action;
+      audio.ui(b.id === 'newGameBtn' || act === 'continue' || act === 'player' || act === 'retry' || act === 'newgame-go' ? 'chime' : act === 'menu' || act === 'home' || act === 'close' ? 'back' : act === 'sound' || b.closest('.setting') ? 'toggle' : 'click');
+    }
     if (storyActive && storyVideo?.paused) storyVideo.play().catch(() => {});
   });
   $('overlay').addEventListener('change', (e) => {
@@ -1704,28 +1693,10 @@
       haptics.set(e.target.checked);
       return;
     }
-    const cheat = e.target.dataset.cheat;
-    if (cheat && admin && practice()) {
-      if (cheat === 'tenHearts') game.setTenHearts(e.target.checked);
-      else game[cheat] = e.target.checked;
-      save();
-      toast('Practice mode · scores off');
-    }
   });
   $('overlay').addEventListener('click', async (e) => {
     const button = e.target.closest('button');
     if (!button) return;
-    if (button.dataset.iconKey !== undefined) {
-      try {
-        await iconPlugin().set({ name: button.dataset.icon });
-        document.querySelectorAll('[data-icon-key]').forEach((b) => {
-          b.classList.toggle('selected', b === button);
-        });
-      } catch (err) {
-        toast('Could not change the icon: ' + (err?.message || 'unsupported'));
-      }
-      return;
-    }
     if (button.dataset.preview) {
       previewSkin(button.dataset.preview);
       document.querySelectorAll('.skin-choice').forEach((b) => {
@@ -1733,18 +1704,14 @@
       });
       return;
     }
-    if (button.dataset.soundSet) {
-      audio.setSoundSet(button.dataset.soundSet);
-      document.querySelectorAll('[data-sound-set]').forEach((b) => {
-        const on = b.dataset.soundSet === button.dataset.soundSet;
-        b.classList.toggle('on', on);
+    if (button.dataset.topper) {
+      applyTopper(button.dataset.topper);
+      write('zs7-topper', button.dataset.topper);
+      document.querySelectorAll('[data-topper]').forEach((b) => {
+        const on = b.dataset.topper === button.dataset.topper;
+        b.classList.toggle('selected', on);
         b.setAttribute('aria-pressed', on);
       });
-      audio.resume();
-      audio.sfx('pickup');
-      setTimeout(() => {
-        if (paused) audio.pause();
-      }, 1200);
       return;
     }
     if (button.dataset.skin) {
@@ -1756,21 +1723,23 @@
       });
       return;
     }
-    if (button.dataset.boss && admin) {
-      practice();
-      game.skipBoss(button.dataset.boss, Number(button.dataset.stage));
-      sceneKey = '';
-      closePanel();
-      save();
-      return;
-    }
-    if (button.dataset.gun && admin) {
-      practice();
-      game.equip(button.dataset.gun);
-      toast('Weapon ready · practice mode');
-      return;
-    }
     switch (button.dataset.action) {
+      case 'player':
+        showPlayer();
+        break;
+      case 'home':
+        showStart();
+        break;
+      case 'name-change': {
+        const box = $('username');
+        if (box) {
+          box.readOnly = false;
+          box.focus();
+          box.select();
+        }
+        button.disabled = true;
+        break;
+      }
       case 'close':
         closePanel();
         break;
@@ -1783,8 +1752,14 @@
       case 'skins':
         skins();
         break;
-      case 'icons':
-        iconPanel();
+      case 'skins-char':
+        skins('char');
+        break;
+      case 'skins-custom':
+        skins('custom');
+        break;
+      case 'skins-topper':
+        skins('topper');
         break;
       case 'coffee':
         showCoffee(menu, true);
@@ -1801,6 +1776,9 @@
       case 'sound':
         sound();
         break;
+      case 'privacy':
+        privacyPanel();
+        break;
       case 'help':
         help();
         break;
@@ -1810,15 +1788,16 @@
       case 'install':
         if (!nativeApp) install();
         break;
-      case 'admin':
-        if (!nativeApp) adminPanel();
-        break;
       case 'restart':
         showPanel(
           'restart',
           'START A NEW RUN?',
-          `<p class="menu-note">Your current run will end without submitting its score.</p><button class="primary-action" data-action="home">CHOOSE PLAYER & START</button><button class="secondary-action" data-action="close">KEEP PLAYING</button>`,
+          `<p class="menu-note">Your current run will end without submitting its score.</p><button class="primary-action" data-action="newgame-go">START A NEW GAME</button><button class="secondary-action" data-action="home">CHOOSE A DIFFERENT PLAYER</button><button class="secondary-action" data-action="close">KEEP PLAYING</button>`,
         );
+        break;
+      case 'newgame-go':
+        if (run?.name) start((run.bot ? 'BOT_' : '') + run.name, true);
+        else showStart();
         break;
       case 'retry':
         start((run.bot ? 'BOT_' : '') + run.name, true);
@@ -1827,34 +1806,47 @@
         storyReplay = true;
         showStory(parseName(read('zs7-name', 'Player')).name || 'Player', 0);
         break;
-      case 'grenades':
-        if (practice()) {
-          game.player.grenades = 9;
-          toast('Grenades refilled · practice mode');
-        }
-        break;
       case 'continue':
         {
           const saved = read('zs7-run', null);
-          if (ready && saved && game.restore(saved.engine)) {
+          if (!ready) return;
+          if (saved?.run && typeof saved.run.name === 'string' &&
+              typeof saved.run.id === 'string' && game.restore(saved.engine)) {
             run = saved.run;
             bot = !!run.bot;
             sceneKey = '';
             closePanel();
+          } else {
+            try { localStorage.removeItem('zs7-run'); } catch {}
+            showStart();
+            toast('That saved run could not be restored. Start a new game; your best scores are kept.');
           }
         }
         break;
-      case 'preview-sound':
+      case 'fix-sound': {
+        audio.reset();
+        toast('Audio reset · playing a test sound');
+        setTimeout(() => audio.sfx('pickup'), 350);
+        break;
+      }
+      case 'preview-sound': {
+        const preview = ++soundPreview;
         audio.resume();
         audio.playMusic('main');
-        ['pistol', 'hit', 'shotgun', 'grenade', 'pickup'].forEach((n, i) =>
-          setTimeout(() => audio.sfx(n), 500 + i * 650),
+        ['pistol', 'kill', 'shotgun', 'explosion', 'pickup'].forEach((n, i) =>
+          setTimeout(
+            () => {
+              if (preview === soundPreview && panel === 'sound') audio.sfx(n);
+            },
+            500 + i * 650,
+          ),
         );
         haptics.impact('MEDIUM', 'preview', 0, true);
         setTimeout(() => {
-          if (paused) audio.pause();
+          if (preview === soundPreview && paused) audio.pause();
         }, 5000);
         break;
+      }
       case 'install-now':
         if (installPrompt) {
           await installPrompt.prompt();
@@ -1866,12 +1858,15 @@
   });
   addEventListener('resize', () => {
     lastFit = '';
+    fitDirty = true;
   });
   visualViewport?.addEventListener('resize', () => {
     lastFit = '';
+    fitDirty = true;
   });
   screen.orientation?.addEventListener('change', () => {
     lastFit = '';
+    fitDirty = true;
   });
   addEventListener('blur', () => {
     clearInput();
@@ -1882,7 +1877,7 @@
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      pause();
+      pause(true);
       storyVideo?.pause();
       if (game.active && !panel && !awaitStart) menu();
     } else {
@@ -1894,9 +1889,18 @@
     }
   });
   for (const ev of ['pageshow', 'focus']) addEventListener(ev, () => audio.revive());
+  // iOS can silently interrupt audio mid-game (calls, alerts, Siri): the engine checks itself and restarts what is missing.
+  setInterval(() => audio.watchdog(), 2500);
   for (const ev of ['pointerdown', 'touchend'])
-    document.addEventListener(ev, () => audio.revive(), { capture: true, passive: true });
+    document.addEventListener(ev, () => audio.revive(true), { capture: true, passive: true });
   addEventListener('pagehide', save);
+  // No loupe, selection, double-tap zoom or pinch zoom anywhere in the app (text fields stay usable).
+  const editable = (e) => e.target?.closest?.('input,textarea');
+  for (const ev of ['selectstart', 'dblclick', 'dragstart'])
+    document.addEventListener(ev, (e) => { if (!editable(e)) e.preventDefault(); }, { capture: true });
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend'])
+    document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchend', () => getSelection()?.removeAllRanges?.(), { passive: true, capture: true });
   document.addEventListener('contextmenu', (e) => {
     if (!e.target.closest?.('input,textarea')) e.preventDefault();
   });
@@ -1904,8 +1908,14 @@
     e.preventDefault();
     installPrompt = e;
   });
+  // Move the former default to the new standard once; preserve other chosen skins.
+  if (!read('zs7-retro-default', false)) {
+    if (read('zs7-skin', 'toxic-pop') === 'toxic-pop') write('zs7-skin', 'retro-handheld');
+    write('zs7-retro-default', true);
+  }
   ZSConsole.apply();
-  applySkin(read('zs7-skin', 'toxic'));
+  applyTopper(read('zs7-topper', 'yellow'));
+  applySkin(read('zs7-skin', 'retro-handheld'));
   fetch('./skins-extra.json')
     .then((r) => r.json())
     .then((j) => {
@@ -1919,11 +1929,12 @@
           !SKINS.some((x) => x.id === s.id)
         ) {
           s.group = 'character';
+          s.deck3d = true; // illustrated 3D decks get the 3D controls (the build regenerates this file)
           if (s.id !== 'joeyrob') s.boss = s.id;
           SKINS.push(s);
           added++;
         }
-      if (added) applySkin(read('zs7-skin', 'toxic'));
+      if (added) applySkin(read('zs7-skin', 'retro-handheld'));
     })
     .catch(() => {});
   showStart();
@@ -1935,12 +1946,8 @@
     })
     .then(() => {
       ready = true;
-      if (panel === 'start') {
-        const b = $('startButton');
-        b.disabled = false;
-        b.textContent = '▶ PRESS START ◀';
-        $('loadingLine').textContent = 'NO LOGIN · NO ADS · V' + APP_VER;
-      }
+      if (panel === 'start') $('loadingLine').textContent = '';
+      if (panel === 'player' && $('newGameBtn')) $('newGameBtn').disabled = false;
       renderer.draw(game);
     })
     .catch((error) => {
@@ -1981,6 +1988,33 @@
       }
     });
   }
+  {
+    const intro = $('studioIntro');
+    if (!intro) document.body.classList.add('intro-done');
+    if (intro) {
+      $('cabinet').dataset.boot = '1';
+      audio.gated = true;
+      // Power-on sound: started in step with the CSS animation (its elapsed time is read from the animation itself).
+      audio.unlock().then(() =>
+        audio.boot(() => {
+          const a = intro.getAnimations?.({ subtree: true })?.[0];
+          return a ? (Number(a.currentTime) || 0) / 1000 : 0;
+        }),
+      );
+      const done = (skipped) => {
+        if (!intro.isConnected) return;
+        if (skipped === true) audio.stopBoot(0.35);
+        intro.remove();
+        delete $('cabinet').dataset.boot;
+        document.body.classList.add('intro-done');
+        audio.gated = false;
+        audio.playMusic(audio.wantTrack || 'home');
+      };
+      intro.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(true); });
+      setTimeout(done, 5400);
+    }
+  }
+  window.ZSLedBar?.init();
   window.ZSInspect = () => ({
     world: { width: ZSData.W, height: ZSData.H },
     player: { x: game.player.x, y: game.player.y },

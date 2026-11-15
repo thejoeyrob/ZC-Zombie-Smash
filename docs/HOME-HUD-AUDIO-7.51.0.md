@@ -1,0 +1,7 @@
+# 7.51.0 — home screen, info bar, one audio set
+
+- **Home screen:** the original title screen is back (zombie-hand artwork, green/red logo, name box, PRESS START). Less busy than before: the boss-silhouette row, the light sweep, the embers canvas and the glow layers are gone; only the high score, the logo, the name box, START and a one-line boss count remain.
+- **Info bar (under the arena):** same band, same screen geometry. Hearts sit over the weapon name and ammo (bigger hearts), the four stored-weapon slots are slightly slimmer and dimmed until they hold ammo, and the ten tiny zombie faces are replaced by a plain LET THROUGH counter: a large number out of 10 with a ten-pip bar that turns amber from 6 and red from 8. The zombie face still pops up when one gets through.
+- **Sound effects:** one set, rebuilt in a 16-bit idiom (pulse/triangle voices, soft noise, small room) with a modern low-pass and gentle saturation so nothing is harsh: pistol, SMG, scatter, DMR, pulse, hit, hurt, grenade, throw, ricochet, boost, alarm, whoosh, boss warning, victory and loss. Gunfire peaks around -6 dBFS (the old files peaked at about -1). The pickup chime stays the one chosen earlier.
+- **Boss music:** a new loop (E minor, 150 bpm, 12.8 s, pulse lead, triangle bass, arpeggio and drums) replaces the old boss render, so the fight is clearly different from the wave music. Disco Man's tune and the victory/defeat stingers are unchanged.
+- Removed unused audio: the NEW-set files, `sfx-pickup`, and the three recorded music files nothing played.

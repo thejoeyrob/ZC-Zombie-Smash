@@ -1,0 +1,233 @@
+# Runs HERE (this repo holds the Apple secrets) but builds from thejoeyrob/zombie-smash-consoles main. Builds the iPhone app (game cartridge + phone console) and uploads it to App Store Connect (TestFlight).
+# Run manually: Actions -> "iOS TestFlight" -> Run workflow. Same bundle and signing as the approved app (docs/PLATFORMS.md).
+# Build numbers continue from the old repo (last upload there was build 144), so they always go up: run number + 200.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   APPLE_TEAM_ID   10-character Team ID (developer.apple.com -> Membership details)
+#   ASC_KEY_ID      App Store Connect API key ID
+#   ASC_ISSUER_ID   App Store Connect issuer ID
+#   ASC_KEY_P8      full contents of the AuthKey_XXXX.p8 file (or the same file base64-encoded)
+# Optional repository variable:
+#   IOS_BUNDLE_ID    bundle ID registered in App Store Connect (default com.thejoeyrob.zombiesmash2)
+#   IOS_APP_VERSION  version shown on the App Store (default 1.0.1). Must be higher than the released 1.0. Raise it for each new release.
+#                    The build number is set automatically and always increases.
+name: iOS update (consoles build)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/zombie-smash-deployment-stores-mk88wq]
+    paths: [.github/workflows/ios-update.yml]
+
+concurrency:
+  group: ios-update
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: consoles/phone
+    env:
+      BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID || 'com.thejoeyrob.zombiesmash2' }}
+      APP_VERSION: ${{ vars.IOS_APP_VERSION || '1.0.1' }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - name: Check secrets are set
+        shell: bash
+        working-directory: .
+        run: |
+          missing=""
+          for v in TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets (names may differ, see workflow header):$missing"
+            exit 1
+          fi
+
+      - name: Get the consoles repo (phone console, iOS assets)
+        uses: actions/checkout@v4
+        with:
+          repository: thejoeyrob/zombie-smash-consoles
+          ref: main
+          path: consoles
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Use the newest stable Xcode
+        shell: bash
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app | grep -v -i -E 'beta|rc' | sort -V | tail -1)
+          sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+
+      - name: Read pinned game version
+        id: lock
+        working-directory: consoles
+        run: echo "version=$(node -p "require('./cartridge.lock.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Get the game cartridge
+        uses: actions/checkout@v4
+        with:
+          repository: thejoeyrob/zombie-smash-game
+          ref: v${{ steps.lock.outputs.version }}
+          token: ${{ secrets.GAME_REPO_TOKEN || github.token }}
+          path: game
+
+      - name: Build the cartridge, assemble the console and test
+        shell: bash
+        run: |
+          (cd ../../game && node scripts/build-cartridge.mjs)
+          npm ci
+          node scripts/assemble-www.mjs ../../game/dist/cartridge
+          npm test
+          jq --arg id "$BUNDLE_ID" '.appId = $id' capacitor.config.json > "$RUNNER_TEMP/cap.json"
+          mv "$RUNNER_TEMP/cap.json" capacitor.config.json
+
+      - name: Create the iOS project
+        shell: bash
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Apply icon, splash and Info.plist settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSETS=ios/App/App/Assets.xcassets
+          cp ios-assets/icon-1024.png "$ASSETS/AppIcon.appiconset/AppIcon-512@2x.png"
+          for f in splash-2732x2732.png splash-2732x2732-1.png splash-2732x2732-2.png; do
+            cp ios-assets/splash-2732.png "$ASSETS/Splash.imageset/$f"
+          done
+          PB=/usr/libexec/PlistBuddy
+          P=ios/App/App/Info.plist
+          $PB -c "Delete :UISupportedInterfaceOrientations" "$P" || true
+          $PB -c "Add :UISupportedInterfaceOrientations array" "$P"
+          $PB -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$P"
+          $PB -c "Delete :UISupportedInterfaceOrientations~ipad" "$P" || true
+          $PB -c "Delete :ITSAppUsesNonExemptEncryption" "$P" || true
+          $PB -c "Add :ITSAppUsesNonExemptEncryption bool false" "$P"
+          $PB -c "Delete :UIStatusBarHidden" "$P" || true
+          $PB -c "Add :UIStatusBarHidden bool true" "$P"
+          $PB -c "Delete :UIViewControllerBasedStatusBarAppearance" "$P" || true
+          $PB -c "Add :UIViewControllerBasedStatusBarAppearance bool false" "$P"
+          plutil -lint "$P"
+
+      - name: Keep sound on when the iPhone is on silent
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          p = 'ios/App/App/AppDelegate.swift'
+          s = open(p).read()
+          marker = '// Override point for customization after application launch.'
+          if 'AVAudioSession' in s:
+              print('AppDelegate already sets an audio session')
+          elif marker not in s or 'import UIKit' not in s:
+              print('::warning::AppDelegate layout changed; relying on the web audio session only')
+          else:
+              s = s.replace('import UIKit', 'import UIKit\nimport AVFoundation', 1)
+              s = s.replace(
+                  marker,
+                  marker
+                  + '\n        do {\n'
+                  + '            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])\n'
+                  + '            try AVAudioSession.sharedInstance().setActive(true)\n'
+                  + '        } catch {}',
+                  1,
+              )
+              open(p, 'w').write(s)
+              print('Added a playback audio session to AppDelegate')
+          PY
+          sed -n 1,20p ios/App/App/AppDelegate.swift
+
+      - name: Re-activate the audio session when the app comes back
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          p = 'ios/App/App/AppDelegate.swift'
+          s = open(p).read()
+          hook = 'func applicationDidBecomeActive(_ application: UIApplication) {'
+          code = (
+              '\n        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])'
+              '\n        try? AVAudioSession.sharedInstance().setActive(true)'
+          )
+          if 'applicationDidBecomeActive' in s and 'setActive(true)\n' not in s.split(hook)[1][:400]:
+              s = s.replace(hook, hook + code, 1)
+              if 'import AVFoundation' not in s:
+                  s = s.replace('import UIKit', 'import UIKit\nimport AVFoundation', 1)
+              open(p, 'w').write(s)
+              print('Audio session is re-activated on becoming active')
+          else:
+              print('::warning::applicationDidBecomeActive not found or already patched')
+          PY
+
+      - name: Write App Store Connect API key
+        shell: bash
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          if printf '%s' "$ASC_KEY_P8" | grep -q 'BEGIN PRIVATE KEY'; then
+            printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          else
+            printf '%s' "$ASC_KEY_P8" | base64 --decode > "$KEY"
+          fi
+          chmod 600 "$KEY"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY" || { echo "::error::ASC_KEY_P8 is not a valid .p8 key"; exit 1; }
+          echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
+
+      # Built unsigned: the team has no registered devices, so no development profile exists.
+      # The export step below signs with a distribution profile via the API key.
+      - name: Archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$APP_VERSION" \
+            CURRENT_PROJECT_VERSION="$((${{ github.run_number }} + 200))" \
+            TARGETED_DEVICE_FAMILY=1
+
+      - name: Export and upload to App Store Connect
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove API key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8

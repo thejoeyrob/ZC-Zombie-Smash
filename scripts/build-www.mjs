@@ -1,15 +1,18 @@
+import { fileURLToPath } from 'node:url';
 import { readFileSync, mkdirSync, rmSync, copyFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const out = join(root, 'www');
 const match = readFileSync(join(root, 'sw.js'), 'utf8').match(/const ASSETS\s*=\s*\[(.*?)\];/s);
 if (!match) throw new Error('Could not find the ASSETS list in sw.js');
 
 const files = new Set([...match[1].matchAll(/['"]([^'"]+)['"]/g)].map(m => m[1].replace(/^\.\//, '')));
-for (const extra of ['index.html', 'manifest.webmanifest', 'privacy.html']) files.add(extra);
+for (const extra of ['index.html', 'manifest.webmanifest', 'privacy.html', 'support.html']) files.add(extra);
 files.delete('sw.js');
 
+const absent = [...files].filter(f => !existsSync(join(root,f)));
+if (absent.length) throw new Error('Missing build assets: '+absent.join(', '));
 rmSync(out, { recursive: true, force: true });
 let bytes = 0;
 const missing = [];
