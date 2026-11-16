@@ -24,6 +24,7 @@ var _marked_bad := false
 var _last_line := ""
 var _up := 0.0
 var hud_lines: Array = []            # the last few changes, shown on the in-game readout
+signal overrides_changed
 var _file: FileAccess
 var _held_click := 0.0
 var _clicked := false
@@ -203,6 +204,8 @@ func _poll_props(delta: float) -> void:
 				if not now.has(k):
 					changes.append("-%s" % k)
 			if not changes.is_empty():
+				_props = now
+				overrides_changed.emit()
 				_emit("OVERRIDES CHANGED up=%.1f %s" % [_up, ", ".join(changes)])
 				_snapshot("after overrides changed")
 		else:

@@ -56,7 +56,7 @@ var turn_ready := true
 var trig_prev := [false, false]
 var tele_busy := false
 const SETTINGS_PATH := "user://settings.json"
-var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "auto", "scares": "on", "sharp": 1.2, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
+var settings := {"music": 0.55, "effects": 0.8, "lift": 0.0, "reach": 0.0, "turn": "smooth", "turnspeed": 90, "snap": 45, "walk": 1.5, "haptics": 1.0, "topper": "yellow", "pointer": "right", "assist": "off", "handroll": 0, "sports_feel": "social", "handtilt": -60, "hud": "on", "battle": "JORDAN", "skin": "human_joeyrob", "body": "full", "handmode": "auto", "resolution": "auto", "scares": "on", "sharp": 1.0, "refresh": "72", "ver": 2, "glow": "on", "smooth": "off", "fps": "off", "screenlight": 0.85, "foveation": "app"}
 var progress := VRProgress.new()
 var run_bosses := 0
 var run_grenades := 0
@@ -265,6 +265,8 @@ func _setup_xr() -> void:
 		picture_log = PictureLog.new()
 		add_child(picture_log)
 		picture_log.setup(iface, get_viewport())
+		picture_log.overrides_changed.connect(func():
+			_apply_tier())
 		cam = XRCamera3D.new()
 		origin.add_child(cam)
 		print("OpenXR is running")
@@ -414,7 +416,11 @@ func _load_settings() -> void:
 	# Build 8 (diagnostic): the picture readout starts switched on so changes can be seen as they happen; both thumbstick clicks held switch it off. Remove before release.
 	if int(settings.get("ver", 0)) < 8:
 		settings.fps = "on"
-	settings.ver = 8
+	# Build 9: no boost of our own by default (the earlier 20% made the game too heavy to hold its frame rate on a headset); the picture is the headset's size.
+	if int(settings.get("ver", 0)) < 9:
+		settings.sharp = 1.0
+		settings.resolution = "auto"
+	settings.ver = 9
 	_save_settings()
 
 
@@ -533,7 +539,13 @@ func _headset_overrides() -> Dictionary:
 
 ## True when something outside the game has taken over the picture size or edge detail: the game then draws exactly what it is given.
 func _headset_owns_picture() -> bool:
-	var o := _headset_overrides()
+	var o: Dictionary = _headset_overrides()
+	if picture_log != null and picture_log._have_props:
+		o = {}
+		for k in picture_log._props:
+			var v := str(picture_log._props[k])
+			if v != "" and v != "0" and v != "false":
+				o[k] = v
 	for k in o:
 		if str(k).contains("textureWidth") or str(k).contains("textureHeight") or str(k).contains("foveation"):
 			return true
@@ -592,12 +604,17 @@ func _apply_tier() -> void:
 			iface.foveation_level = 0
 		if "foveation_dynamic" in iface:
 			iface.foveation_dynamic = false
-	room.env.glow_enabled = str(settings.glow) == "on" and (str(settings.smooth) != "on" or q_tier == 0)
+	# While a headset tool forces a bigger picture, edge blur or a higher refresh rate, the game is asked to draw far more than it can hold: it draws
+	# lighter (2x smoothing, no bloom) so the frame rate holds, instead of dropping frames the headset then has to patch up.
+	var forced := xr_on and _headset_owns_picture()
+	room.env.glow_enabled = str(settings.glow) == "on" and not forced and (str(settings.smooth) != "on" or q_tier == 0)
 	for i in range(room.sports.annex.lights.size()):
 		var light: OmniLight3D = room.sports.annex.lights[i]
 		light.visible = str(settings.smooth) != "on" or q_tier < 2 or i % 2 == 1
 	var t: Dictionary = TIERS[clampi(q_tier, 0, TIERS.size() - 1)]
 	var msaa := int(t.msaa) if str(settings.smooth) == "on" else 4
+	if forced:
+		msaa = 2
 	get_viewport().msaa_3d = Viewport.MSAA_4X if msaa >= 4 else (Viewport.MSAA_2X if msaa == 2 else Viewport.MSAA_DISABLED)
 	if iface != null:
 		print("PICTURE eye=%s multiplier=%.2f owner=%s headset_owns=%s foveation=%s msaa=%d refresh=%s" % [_eye_size(), float(iface.render_target_size_multiplier), str(settings.get("resolution", "auto")), str(_headset_owns_picture()), str(settings.get("foveation", "app")), msaa, str(settings.get("refresh", "72"))])
