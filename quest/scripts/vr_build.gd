@@ -16,14 +16,12 @@ static func mat(color: Color, rough := 0.7, metal := 0.0, emit := 0.0, emit_colo
 		m.normal_texture = load("res://assets/art/pbr-%s-n.png" % finish)
 		m.normal_scale = 0.14 if metal > 0.4 else 0.24  # enhanced normal scale
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-		m.anisotropy_enabled = true
-		m.anisotropy = 2.0  # enhance distant detail with anisotropic filtering
 	if emit > 0.0:
 		m.emission_enabled = true
 		m.emission = emit_color if emit_color.a > 0.0 else color
 		m.emission_energy_multiplier = emit
 	# Enhanced far-field rendering: improve detail preservation at distance
-	m.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
+	m.texture_repeat = true
 	m.uv1_scale = Vector3(1.0, 1.0, 1.0)
 	m.texture_mipmap_bias = -0.4  # enhance distant textures
 	return m
@@ -42,10 +40,8 @@ static func tex_mat(t: Texture2D, emit := 0.0, rough := 0.8, unshaded_mode := fa
 	m.albedo_color = tint
 	m.roughness = rough
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	m.anisotropy_enabled = true
-	m.anisotropy = 2.0  # enhance distant detail rendering
 	# Ensure textures stay crisp at distance
-	m.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
+	m.texture_repeat = true
 	m.texture_mipmap_bias = -0.35  # sharpen distant textures
 	if unshaded_mode:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -481,8 +477,6 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	m.uv1_scale = Vector3(uv.x, uv.y, 1)
 	m.texture_repeat = true
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	m.anisotropy_enabled = true
-	m.anisotropy = 2.1  # improved distant detail
 	m.texture_mipmap_bias = -0.4  # enhance LOD quality
 	# Ensure consistent quality at distance
 	m.cull_mode = BaseMaterial3D.CULL_BACK

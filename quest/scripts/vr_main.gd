@@ -257,10 +257,7 @@ func _setup_xr() -> void:
 		get_viewport().use_xr = true
 		get_viewport().msaa_3d = Viewport.MSAA_4X
 		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
-		
-		# Optimize texture scaling to prevent mipmap degradation at distance
-		get_viewport().textures_per_second = 0  # unlimited texture quality refresh
-		
+
 		iface.render_target_size_multiplier = _eye_multiplier(iface)          # draw each eye sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
 		# The picture is fixed: no edge-detail (foveation) of our own, so nothing the game or the headset's load can step down while you play.

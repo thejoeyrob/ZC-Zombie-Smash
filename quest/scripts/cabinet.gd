@@ -343,7 +343,7 @@ func _build_sides(poly: Array, body: Material) -> void:
 		# Enhanced cabinet side artwork with improved visual quality at distance
 		var pm := VRBuild.tex_mat(side_art, 0.18, 0.5)  # reduced roughness from 0.55 to 0.5 for sharper appearance
 		pm.cull_mode = BaseMaterial3D.CULL_DISABLED
-		pm.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
+		pm.texture_repeat = true
 		# Add normal mapping for depth perception
 		pm.normal_enabled = true
 		pm.normal_scale = 0.08
