@@ -135,15 +135,18 @@ func point(origin: Vector3, dir: Vector3, trigger_down: bool, with_beam := true)
 		dot.visible = false
 		beam.visible = false
 		return false
+	# Extended range for better menu accessibility
 	var t := (global_position - origin).dot(n) / denom
-	if t < 0.05 or t > 6.0:
+	if t < 0.03 or t > 8.0:  # increased from 0.05 to 8.0 to handle varied pointing distances
 		_cancel_pointer()
 		dot.visible = false
 		beam.visible = false
 		return false
 	var hit := origin + dir * t
 	var l := to_local(hit)
-	var over := absf(l.x) <= SIZE.x / 2.0 and absf(l.y) <= SIZE.y / 2.0
+	# Add slight margin to detection for more forgiving targeting
+	var margin := 0.02
+	var over := absf(l.x) <= SIZE.x / 2.0 + margin and absf(l.y) <= SIZE.y / 2.0 + margin
 	if with_beam:
 		_show_beam(origin, hit, over)
 	else:

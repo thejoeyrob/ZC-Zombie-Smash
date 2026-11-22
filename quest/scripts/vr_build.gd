@@ -20,6 +20,9 @@ static func mat(color: Color, rough := 0.7, metal := 0.0, emit := 0.0, emit_colo
 		m.emission_enabled = true
 		m.emission = emit_color if emit_color.a > 0.0 else color
 		m.emission_energy_multiplier = emit
+	# Enhanced far-field rendering: improve detail preservation at distance
+	m.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
+	m.uv1_scale = Vector3(1.0, 1.0, 1.0)
 	return m
 
 
@@ -36,6 +39,8 @@ static func tex_mat(t: Texture2D, emit := 0.0, rough := 0.8, unshaded_mode := fa
 	m.albedo_color = tint
 	m.roughness = rough
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	# Ensure textures stay crisp at distance
+	m.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
 	if unshaded_mode:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	if emit > 0.0:

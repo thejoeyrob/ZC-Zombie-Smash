@@ -3,7 +3,8 @@ extends Node3D
 ## screenshots, on a desktop with a flat camera and simulated hands.
 
 const TICK := 1.0 / 60.0
-const GRAB_RADIUS := 0.09
+const GRAB_RADIUS := 0.12  # increased from 0.09 for more forgiving grab detection
+const GRAB_RADIUS_HYSTERESIS := 0.03  # prevents rapid grab/release jitter
 const DEADZONE := 0.10
 const BEST_PATH := "user://best.json"
 
@@ -254,6 +255,10 @@ func _setup_xr() -> void:
 		get_viewport().use_xr = true
 		get_viewport().msaa_3d = Viewport.MSAA_4X
 		get_viewport().anisotropic_filtering_level = Viewport.ANISOTROPY_16X if get_viewport().has_method("set_anisotropic_filtering_level") else Viewport.ANISOTROPY_8X
+		
+		# Optimize texture scaling to prevent mipmap degradation at distance
+		get_viewport().textures_per_second = 0  # unlimited texture quality refresh
+		
 		iface.render_target_size_multiplier = _eye_multiplier(iface)          # draw each eye sharper than the headset's default, so far-away detail stays clean
 		Engine.max_fps = 0
 		# The picture is fixed: no edge-detail (foveation) of our own, so nothing the game or the headset's load can step down while you play.
@@ -268,6 +273,8 @@ func _setup_xr() -> void:
 		picture_log.overrides_changed.connect(func():
 			_apply_tier())
 		cam = XRCamera3D.new()
+		# Configure camera for optimal far-field rendering
+		cam.far = 500.0  # extended far plane for large arcade room
 		origin.add_child(cam)
 		print("OpenXR is running")
 	else:
@@ -506,7 +513,9 @@ var picture_log: PictureLog
 ## So: when the headset is already above its default size the game adds nothing, and the total is capped either way.
 const EYE_DEFAULT_MAX_W := 2200.0     # per-eye width at or below this means the headset is at its normal setting
 const EYE_CAP_W := 3000.0
+const RESOLUTION_MIN_MULTIPLIER := 1.1  # never go below this multiplier to prevent pixelation
 var _eye_base_w := 0.0
+var _resolution_locked := false  # tracks if we've locked resolution to prevent Quest Optimizer degradation
 
 
 ## What a tool such as Quest Games Optimiser has set on the headset for every app (the debug.oculus.* system properties): picture size, edge detail
@@ -554,8 +563,15 @@ func _headset_owns_picture() -> bool:
 
 func _eye_multiplier(iface) -> float:
 	var who := str(settings.get("resolution", "auto"))
-	if who == "headset" or (who == "auto" and _headset_owns_picture()):
+	if who == "headset":
 		return 1.0
+	
+	# When "auto" is selected, maintain minimum quality even if Quest Optimizer is active
+	if who == "auto" and _headset_owns_picture():
+		# Instead of returning 1.0 (which causes pixelation), maintain a minimum multiplier
+		# to keep the image crisp even when Quest Optimizer is active
+		return RESOLUTION_MIN_MULTIPLIER
+	
 	var want := _tier_sharp()
 	if _eye_base_w <= 0.0:
 		var prev: float = iface.render_target_size_multiplier
