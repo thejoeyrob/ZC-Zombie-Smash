@@ -240,9 +240,12 @@ func _button(text: String, color := Color("#23333d"), size := 34) -> Button:
 	b.add_theme_font_size_override("font_size", size)
 	b.add_theme_color_override("font_color", Color.WHITE)
 	b.add_theme_color_override("font_hover_color", Color("#ffffff"))
-	b.add_theme_stylebox_override("normal", _style(color, Color(1, 1, 1, 0.12)))
-	b.add_theme_stylebox_override("hover", _style(color.lightened(0.15), Color("#69d6bb")))
-	b.add_theme_stylebox_override("pressed", _style(color.darkened(0.2), Color("#69d6bb")))
+	# Enhanced styling with better contrast and depth
+	b.add_theme_stylebox_override("normal", _style(color, Color(0.4, 0.95, 0.85, 0.3), 10))
+	b.add_theme_stylebox_override("hover", _style(color.lightened(0.2), Color("#69d6bb", 1.0), 10))
+	b.add_theme_stylebox_override("pressed", _style(color.darkened(0.15), Color("#69d6bb", 1.0), 10))
+	b.add_theme_stylebox_override("disabled", _style(color.darkened(0.3), Color(0.3, 0.3, 0.3, 0.2), 10))
+	b.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5))
 	b.focus_mode = Control.FOCUS_NONE
 	return b
 
@@ -257,7 +260,14 @@ func _label(text: String, size := 32, color := Color(0.85, 0.9, 1.0)) -> Label:
 	return l
 
 
-const PAGES := [["play", "THE SHACK", Color("#236b60")], ["sports", "SPORTS", Color("#236b60")], ["friends", "FRIENDS", Color("#236b60")], ["avatar", "CHARACTER", Color("#236b60")], ["comfort", "COMFORT", Color("#236b60")], ["display", "SOUND", Color("#236b60")]]
+const PAGES := [
+	["play", "GAMES", Color("#236b60")], 
+	["sports", "SPORTS", Color("#236b60")], 
+	["friends", "MULTIPLAYER", Color("#236b60")], 
+	["avatar", "CHARACTER", Color("#236b60")], 
+	["comfort", "CONTROLS", Color("#236b60")], 
+	["display", "GRAPHICS", Color("#236b60")]
+]
 var LABELS := {
 	"handmode": {"auto": "AUTO", "controllers": "CONTROLLERS", "hands": "BARE HANDS"},
 	"body": {"full": "FULL BODY", "arms": "ARMS ONLY", "hands": "HANDS ONLY"},
@@ -457,16 +467,30 @@ This replaces the selected lane's scores.")
 	_stepper(av, "body", "Visible body", ["full", "arms", "hands"], "")
 	_hint(av, "Your appearance updates immediately. The locker by the entrance gives you another place to change.")
 	var cf: VBoxContainer = _pages.comfort
-	_heading(cf, "FIND YOUR COMFORT")
+	_heading(cf, "CONTROLS & COMFORT")
+	_heading(cf, "HAND CONTROLS")
 	_stepper(cf, "turn", "Turning", ["smooth", "snap"], "")
+	_stepper(cf, "turnspeed", "Turn speed (smooth)", ["45", "90", "135"], "°/s")
+	_stepper(cf, "snap", "Snap turn angle", ["30", "45", "90"], "°")
 	_stepper(cf, "pointer", "Pointer hand", ["right", "left"], "")
-	_slider(cf, "haptics", "Vibration", 0.0, 1.0, 0.1)
+	_stepper(cf, "assist", "Grab assist (auto-aim)", ["off", "on"], "")
+	_heading(cf, "COMFORT & ACCESSIBILITY")
+	_slider(cf, "haptics", "Vibration feedback", 0.0, 1.0, 0.1)
 	_slider(cf, "lift", "Player height", -0.5, 0.8, 0.02)
+	_stepper(cf, "walk", "Walk speed", ["1.0", "1.5", "2.0"], "x")
+	_stepper(cf, "sports_feel", "Sports physics", ["social", "competitive"], "")
 	var dp: VBoxContainer = _pages.display
+	_heading(dp, "GRAPHICS & SOUND")
+	_heading(dp, "GRAPHICS")
+	_slider(dp, "sharp", "Visual sharpness", 1.0, 1.6, 0.05)
+	_stepper(dp, "resolution", "Resolution", ["auto", "headset"], "")
+	_stepper(dp, "refresh", "Refresh rate", ["72", "90", "120", "auto"], "")
+	_stepper(dp, "glow", "Bloom effect", ["on", "off"], "")
+	_stepper(dp, "screenlight", "Screen brightness", ["0.5", "0.7", "0.85", "1.0"], "")
 	_heading(dp, "SOUND")
 	_stepper(dp, "scares", "Door jump scares", ["on", "off"], "")
-	_slider(dp, "music", "Music", 0.0, 1.0, 0.05)
-	_slider(dp, "effects", "Effects", 0.0, 1.0, 0.05)
+	_slider(dp, "music", "Music volume", 0.0, 1.0, 0.05)
+	_slider(dp, "effects", "Effects volume", 0.0, 1.0, 0.05)
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 16)
 	root.add_child(footer)
