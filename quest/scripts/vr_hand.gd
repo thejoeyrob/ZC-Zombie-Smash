@@ -179,14 +179,17 @@ func clear_tracked() -> void:
 
 
 func _process(delta: float) -> void:
-	var k := 1.0 - exp(-delta * 22.0)
+	# Enhanced smoothing for better responsiveness while maintaining stability
+	# Increased from 22.0 to 28.0 for snappier hand response, but tracking changes at 30.0 for stability
+	var k := 1.0 - exp(-delta * 28.0)
 	if not tracked.is_empty():
 		for key in tracked:
 			var want: Array = tracked[key]
 			var have: Array = tracked_shown.get(key, want)
 			var out: Array = []
 			for i in range(want.size()):
-				out.append(lerpf(float(have[i]), float(want[i]), 1.0 - exp(-delta * 30.0)))
+				# Increased tracking smoothing from 30.0 to 35.0 for more responsive hand tracking
+				out.append(lerpf(float(have[i]), float(want[i]), 1.0 - exp(-delta * 35.0)))
 			tracked_shown[key] = out
 		for f in FINGERS:
 			var a: Array = tracked_shown.get(f[0], [0.2, 0.3, 0.2])

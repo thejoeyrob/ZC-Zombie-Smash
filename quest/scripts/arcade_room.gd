@@ -377,6 +377,20 @@ func _decor(root: Node3D, font: Font) -> void:
 	locker_glow.albedo_color = Color(0.3, 0.9, 1.0, 0.5)
 	VRBuild.quad(root, Vector2(1.7, 1.5), Vector3(skins.position.x, 0.014, skins.position.z + 0.95), locker_glow, Vector3(-PI / 2, 0, 0))
 	# four big backlit glass-panel posters, one in each gap between the machines on the side walls
+	# Left side posters
+	var poster_left_1 = _art("poster-radiant.jpg", null)
+	if poster_left_1:
+		_frame(root, poster_left_1, Vector3(0, 1.8, 2.25), 1.0)
+	var poster_left_2 = _art("poster-neon.jpg", null)
+	if poster_left_2:
+		_frame(root, poster_left_2, Vector3(0, 1.8, 4.1), 1.0)
+	# Right side posters
+	var poster_right_1 = _art("poster-fire.jpg", null)
+	if poster_right_1:
+		_frame(root, poster_right_1, Vector3(0, 1.8, 2.25), -1.0)
+	var poster_right_2 = _art("poster-disco.jpg", null)
+	if poster_right_2:
+		_frame(root, poster_right_2, Vector3(0, 1.8, 4.1), -1.0)
 
 
 ## A picture hung flat on a side wall (side: +1 left wall, -1 right wall): no frame, just the artwork on a thin dark backing with a soft shadow.

@@ -466,7 +466,7 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	if ao != null:
 		m.ao_enabled = true
 		m.ao_texture = ao
-		m.ao_light_affect = 0.8
+		m.ao_light_affect = 0.9  # increased from 0.8 for stronger occlusion effect
 	if mt != null:
 		m.metallic_texture = mt
 		m.metallic = 1.0
@@ -475,5 +475,7 @@ static func pbr(name: String, tint := Color.WHITE, uv := Vector2.ONE, normal_sca
 	m.uv1_scale = Vector3(uv.x, uv.y, 1)
 	m.texture_repeat = true
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	# Ensure consistent quality at distance
+	m.cull_mode = BaseMaterial3D.CULL_BACK
 	return m
 
