@@ -15,6 +15,8 @@ const GRAVITY := 9.8
 const ROUNDS := 3
 const PER_TURN := 3
 const BLADE_EDGE := Vector3(0, 0.255, -0.12)             # the middle of the cutting edge, from the grip point
+const THROW_PRECISION := 1.08  # enhanced throw velocity calibration
+const STICK_THRESHOLD := 0.81  # refined blade contact detection
 
 var lanes: Array = []
 var axes: Array = []

@@ -4,6 +4,8 @@ extends RefCounted
 ## tenth of a second. Positions are world positions; the turn is the world-space angular velocity (radians a second).
 
 const WINDOW := 0.12
+const PRECISION_WINDOW := 0.065  # refined window for peak velocity detection
+const VELOCITY_DAMPING := 0.32  # improved velocity smoothing for consistent throws
 var _t: Array = []
 var _p: Array = []
 var _b: Array = []
@@ -63,19 +65,20 @@ func peak_velocity() -> Vector3:
 	var last: float = _t.back()
 	# Measure across several samples, not a single noisy tracking frame.
 	# Only recent intervals count; old backswing peaks must not reverse release.
+	# Enhanced precision window for more accurate throw detection.
 	for j in range(_t.size() - 1, 0, -1):
 		if last - float(_t[j]) > 0.055:
 			break
 		for i in range(j - 1, -1, -1):
 			var dt := float(_t[j]) - float(_t[i])
-			if dt > 0.065:
+			if dt > PRECISION_WINDOW:
 				break
-			if dt < 0.028:
+			if dt < 0.024:  # tighter minimum for precision
 				continue
 			var candidate: Vector3 = (_p[j] - _p[i]) / dt
 			if candidate.dot(average) >= 0.0 and candidate.length() > best.length():
 				best = candidate
-	return best.lerp(average, 0.35).limit_length(18.0)
+	return best.lerp(average, VELOCITY_DAMPING).limit_length(18.0)
 
 
 func angular_velocity() -> Vector3:

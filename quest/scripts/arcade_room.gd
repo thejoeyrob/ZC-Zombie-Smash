@@ -63,15 +63,15 @@ func build(root: Node3D, screen_tex: Texture2D, banner: Texture2D, font: Font, p
 	env.adjustment_saturation = 1.04
 	env.adjustment_contrast = 1.055
 	env.glow_enabled = true
-	env.glow_intensity = 0.35
-	env.glow_strength = 0.68
+	env.glow_intensity = 0.38  # enhanced glow for better material perception
+	env.glow_strength = 0.72  # improved glow falloff
 	env.glow_bloom = 0.0
-	env.glow_hdr_threshold = 1.0
+	env.glow_hdr_threshold = 0.95  # refined HDR threshold for precise bloom
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	for lv in [0, 1, 3, 5, 6]:
 		env.set_glow_level(lv, 0.0)                  # only two soft, wide levels: cheap and gentle
-	env.set_glow_level(2, 1.0)
-	env.set_glow_level(4, 0.6)
+	env.set_glow_level(2, 1.1)  # enhanced bloom on mids
+	env.set_glow_level(4, 0.65)  # improved highlights
 	var we := WorldEnvironment.new()
 	we.environment = env
 	root.add_child(we)

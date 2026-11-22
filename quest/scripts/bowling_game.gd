@@ -12,8 +12,10 @@ const PIN_SPACING := 0.305
 const ROW_SPACING := 0.264
 const LANE_END := ShackAnnex.HEAD_PIN_Z + 0.95
 const PIT_FLOOR := -0.45
-const HOOK_GAIN := 0.06
-const HOOK_MAX := 0.9
+const HOOK_GAIN := 0.07  # enhanced hook sensitivity for better control
+const HOOK_MAX := 0.95  # extended hook range
+const BALL_MAX_SPEED := 11.5  # slightly increased max speed
+const PRECISION_DAMPING := 0.94  # enhanced ball trajectory precision
 const BALL_COLOURS := [Color(0.1, 0.25, 0.85), Color(0.75, 0.1, 0.25)]
 
 var lanes: Array = []

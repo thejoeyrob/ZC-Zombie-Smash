@@ -26,6 +26,8 @@ const GREEN := Color(0.35, 1.0, 0.45)
 const AMBER := Color(1.0, 0.75, 0.2)
 const GREY := Color(0.75, 0.78, 0.8)
 const PAUSE_ITEMS := ["RESUME GAME", "SAVE STATE", "LOAD STATE", "RESTART GAME", "EXIT TO LIBRARY"]
+const EMU_PERFORMANCE_MODE := true  # optimized emulator performance settings
+const EMU_FRAME_SKIP := 1  # adaptive frame skipping for stability
 
 var viewport: SubViewport
 var files: Array = []          # {name, file, path, system, size}

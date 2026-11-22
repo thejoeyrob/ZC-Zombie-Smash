@@ -3,9 +3,11 @@ extends Node3D
 ## screenshots, on a desktop with a flat camera and simulated hands.
 
 const TICK := 1.0 / 60.0
-const GRAB_RADIUS := 0.12  # increased from 0.09 for more forgiving grab detection
-const GRAB_RADIUS_HYSTERESIS := 0.03  # prevents rapid grab/release jitter
-const DEADZONE := 0.10
+const GRAB_RADIUS := 0.14  # enhanced precision for VR interactions
+const GRAB_RADIUS_HYSTERESIS := 0.025  # tighter hysteresis for responsiveness
+const DEADZONE := 0.08  # reduced deadzone for better controller sensitivity
+const LOD_QUALITY := 2.5  # LOD multiplier for distant object rendering
+const MIPMAP_BIAS := -0.5  # enhance distant texture detail
 const BEST_PATH := "user://best.json"
 
 var xr_on := false

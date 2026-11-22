@@ -649,7 +649,10 @@ func button_at(local: Vector3, reach_above := 0.05) -> String:
 			q = front_panel.transform.affine_inverse() * in_cab
 			reach = minf(reach_above, 0.04)
 		var d := Vector2(q.x - b.pos.x, q.z - b.pos.z).length()
-		if d <= maxf(float(b.radius), 0.04) + 0.015 and q.y > -0.03 and q.y < reach:
+		# Enhanced precision: tighter radius detection + extended reach above button
+		var button_radius := maxf(float(b.radius) * 1.08, 0.038)  # slight margin for precise touch
+		var detection_height := reach * 1.15  # extend reach for better responsiveness
+		if d <= button_radius + 0.012 and q.y > -0.035 and q.y < detection_height:
 			return k
 	return ""
 

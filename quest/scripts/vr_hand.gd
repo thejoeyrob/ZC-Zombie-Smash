@@ -19,6 +19,9 @@ var thumb: Array = []
 var curl := {"index": 0.0, "grip": 0.0, "thumb": 0.0}
 var nail_mat: StandardMaterial3D
 var shown := {"index": 0.0, "grip": 0.0, "thumb": 0.0}
+var raycast_offset := 0.032  # precise hand tip position for raycasting
+var interaction_boost := 1.15  # haptic feedback amplifier for tactile precision
+var tracking_smoothing := 0.08  # smooth tracking for stable interactions
 
 
 var gauntlet: Array = []           # the long sleeve and cuff: hidden when the avatar's own forearm joins the wrist

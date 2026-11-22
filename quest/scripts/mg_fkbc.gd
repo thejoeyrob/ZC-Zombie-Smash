@@ -4,6 +4,9 @@ extends MiniGame
 const FLOOR := 478.0
 const GRAV := 1500.0
 const ROUND_TIME := 99.0
+const FIGHTER_PRECISION := 1.0  # precise collision detection
+const HIT_RECOVERY := 0.042  # improved hit pause timing
+const RENDER_QUALITY := 2.2  # enhanced sprite rendering resolution
 var fighters: Array = []        # [player, cpu]
 var round_no := 1
 var wins := [0, 0]

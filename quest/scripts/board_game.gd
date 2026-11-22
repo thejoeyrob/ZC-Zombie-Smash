@@ -21,6 +21,8 @@ const NAMES := ["OPEN SEAT", "OPEN SEAT", "OPEN SEAT", "OPEN SEAT"]          # t
 const COLOURS := [Color(0.34, 0.85, 0.27), Color(0.95, 0.2, 0.2), Color(1.0, 0.63, 0.14), Color(0.68, 0.45, 0.98)]   # match the stools: green, red, amber, purple
 const PIECES := ["GREEN PEGS", "RED PEGS", "AMBER PEGS", "PURPLE PEGS"]
 const TOP_Y := 0.0               # pegs stand on the board surface (this node sits on it)
+const BUTTON_PRECISION := 0.045  # enhanced button collision detection
+const PIECE_SNAP_DISTANCE := 0.025  # improved piece positioning accuracy
 
 var players: Array = []          # {name, pegs: [4], occupant, wins, human}
 var peg_nodes: Array = []        # [seat][peg] -> Node3D

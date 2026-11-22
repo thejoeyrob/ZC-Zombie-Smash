@@ -16,7 +16,9 @@ const R_DBL_OUT := 0.170
 const R_BOARD := 0.225
 const R_SURROUND := 0.31
 const GRAVITY := 9.8
-const THROW_BOOST := 1.35
+const THROW_BOOST := 1.4  # enhanced dart throw velocity
+const PRECISION_STICK := 0.82  # tighter stick detection for better hit recognition
+const DART_DRAG := 0.98  # improved flight physics
 
 var boards: Array = []           # per board: the game's state (see _fresh)
 var darts: Array = []            # Throwables
