@@ -1,2 +1,2 @@
 ALPHA
-Sports hall items can now be picked up (hands were being read before they were posed), neon signs, Truckin and Drivin machine, new JW EDS games, picture 100 percent at steady 72 Hz, one-tap Friends room
+Fatty's Game Shack v0.2.0-alpha: Comprehensive VR enhancements. Visual quality improved (LOD optimized, MSAA 3x, enhanced mipmaps for sharp distant textures). Hand interactions refined for immediate button response and reliable grabs. Bowling hook control enhanced. Darts flight physics improved. Axe throwing accuracy calibrated. Board game pieces snap into place. FKBC Battle Game fully integrated (Joe Wraps vs Jack/John/Justin/Paul). Emulator performance optimized.
