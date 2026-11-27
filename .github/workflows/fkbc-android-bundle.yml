@@ -1,0 +1,75 @@
+name: FKBC Android bundle (Zombie Smash key)
+# Builds the FKBC Coaches Console Android bundle (public repo thejoeyrob/FKBC-COACHES-CONSOLE)
+# and signs it with this repo's release key (secrets RELEASE_KEYSTORE_B64 / RELEASE_KEYSTORE_PASSWORD),
+# so it can be uploaded by hand to Google Play Console. Changes nothing in this repo's game.
+on:
+  push:
+    branches: [fkbc-android-bundle]
+  workflow_dispatch:
+concurrency:
+  group: fkbc-android-bundle
+  cancel-in-progress: false
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: thejoeyrob/FKBC-COACHES-CONSOLE
+          ref: main
+          path: fkbc
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: fkbc/mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Prepare Android SDK
+        run: |
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+      - name: Install and sync the web app
+        working-directory: fkbc/mobile
+        run: |
+          npm ci
+          npm run sync
+      - name: Restore the release key and find its alias
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RELEASE_KEYSTORE_B64:-}" ] || [ -z "${RELEASE_KEYSTORE_PASSWORD:-}" ]; then
+            echo "::error::RELEASE_KEYSTORE_B64 or RELEASE_KEYSTORE_PASSWORD is missing in this repo"; exit 1
+          fi
+          echo "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          ALIAS=$(keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass "$RELEASE_KEYSTORE_PASSWORD" | sed -n 's/^Alias name: //p' | head -1)
+          if [ -z "$ALIAS" ]; then echo "::error::Could not read an alias from the keystore"; exit 1; fi
+          echo "Key alias: $ALIAS"
+          echo "FKBC_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "FKBC_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+      - name: Build the signed release bundle
+        working-directory: fkbc/mobile/android
+        env:
+          FKBC_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          FKBC_KEY_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          FKBC_VERSION_NAME: "1.0.0"
+        run: FKBC_VERSION_CODE=$((GITHUB_RUN_NUMBER + 50)) ./gradlew --no-daemon bundleRelease
+      - name: Check the signature
+        run: |
+          set -euo pipefail
+          AAB=fkbc/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          ls -la "$AAB"
+          jarsigner -verify "$AAB" | tail -2
+          keytool -printcert -jarfile "$AAB" | grep -E "Owner|SHA256" | head -3
+          echo "versionCode: $((GITHUB_RUN_NUMBER + 50))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fkbc-coaches-console-signed-aab
+          path: fkbc/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
